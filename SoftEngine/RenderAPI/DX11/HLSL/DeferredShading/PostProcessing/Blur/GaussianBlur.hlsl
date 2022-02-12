@@ -20,16 +20,17 @@ cbuffer Info : register(b2)
 	//row_major float4x4 padding2;
 };
 
-//const static float weight[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
-const static float weight[4] = { 0.175240144, 0.165770069, 0.140321344, 0.106288522 };
+const static float weight[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+//const static float weight[4] = { 0.175240144, 0.165770069, 0.140321344, 0.106288522 };
 //const static float weight[4] = { 0.00159151943, 0.001518361155, 0.00156003464, 0.49612584449 };
-#define TOTAL_WEIGHT 4
+//const static float weight[4] = { 0.142, 0.142, 0.142, 0.142 };
+#define TOTAL_WEIGHT 5
 
-float4 main(PS_INPUT input) : SV_TARGET
+float4 main(PS_INPUT input) : SV_TARGET0
 {
 	float3 pixelColor = scene.Sample(defaultSampler, input.textCoord).xyz * weight[0];
 
-	float2 texelSize = float2(1.5f / width, 1.5f / height);
+	float2 texelSize = float2(1.f / width, 1.f / height);
 
 	if (type == 0)
 	{
@@ -49,7 +50,6 @@ float4 main(PS_INPUT input) : SV_TARGET
 			pixelColor += scene.Sample(defaultSampler, input.textCoord - float2(0.0f, texelSize.y * i)).xyz * weight[i];
 		}
 	}
-
 	
 	return float4(pixelColor, 1.0f);
 }

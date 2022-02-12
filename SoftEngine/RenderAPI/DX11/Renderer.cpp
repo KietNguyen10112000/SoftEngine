@@ -27,6 +27,8 @@ DX11Renderer::DX11Renderer()
 
 DX11Renderer::~DX11Renderer()
 {
+    if (m_postProcessor) delete m_postProcessor;
+
     m_rasterizerState->Release();
     m_dsv->Release();
     m_mainRtv->Release();
@@ -298,8 +300,6 @@ DeferredRenderer::~DeferredRenderer()
     RenderPipelineManager::Release(&m_shadowVisualizeRpl);
     RenderPipelineManager::Release(&m_visualizeBPRRpl);
 #endif // _DEBUG
-    
-    delete m_postProcessor;
 }
 
 void DeferredRenderer::CreateRtvs()
@@ -494,15 +494,14 @@ void DeferredRenderer::Present()
 {
     if (!m_doneLighting) DoLighting();
     
-    if (m_postProcessor) m_postProcessor->Apply();
-    else
+    if (!m_postProcessor || !m_postProcessor->Run())
     {
         m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, 0);
         m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_lastSceneSrv);
         Render(m_lastPresentRpl, m_screenQuad);
     }
 
-    m_dxgiSwapChain->Present(0, 0);
+    //m_dxgiSwapChain->Present(1, 0);
 
     m_d3dDeviceContext->PSSetShaderResources(0, m_totalRtvUsed + 4, &m_rtvShader[m_totalRtvUsed]);
     m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
@@ -717,7 +716,7 @@ void DeferredRenderer::VisualizePositionNormalDiffuseSpecular()
 
     m_d3dDeviceContext->PSSetShaderResources(3, m_totalRtvUsed + 1, &m_rtvShader[m_totalRtvUsed]);
 
-    m_dxgiSwapChain->Present(0, 0);
+    //m_dxgiSwapChain->Present(0, 0);
 
     m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
 #endif
@@ -741,7 +740,7 @@ void DeferredRenderer::VisualizeShadowDepthMap()
 
     m_d3dDeviceContext->PSSetShaderResources(0, m_totalRtvUsed + 2, &m_rtvShader[m_totalRtvUsed]);
 
-    m_dxgiSwapChain->Present(0, 0);
+    //m_dxgiSwapChain->Present(0, 0);
 
     m_d3dDeviceContext->PSSetShaderResources(0, 8, &m_rtvShader[m_totalRtvUsed]);
     m_d3dDeviceContext->OMSetRenderTargets(3, &m_rtv[m_totalRtvUsed], nullptr);
@@ -760,7 +759,7 @@ void DeferredRenderer::VisualizePBR()
 
     m_d3dDeviceContext->PSSetShaderResources(3, m_totalRtvUsed + 1, &m_rtvShader[m_totalRtvUsed]);
 
-    m_dxgiSwapChain->Present(0, 0);
+    //m_dxgiSwapChain->Present(0, 0);
 
     m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
 #endif
@@ -789,20 +788,5 @@ void DeferredRenderer::VisualizeBackgroundRenderPipeline(int arg)
 void DeferredRenderer::CreatePostProcessor()
 {
     ////dont need these rtv for post processing
-    //std::vector<ID3D11ShaderResourceView*> freeRtvSrv = {
-    //    m_rtvShader[RTV_INDEX::COLOR],
-    //    m_rtvShader[RTV_INDEX::NORMAL_SHININESS],
-    //    m_rtvShader[RTV_INDEX::METALLIC_ROUGHNESS_AO]
-    //};
-    //std::vector<ID3D11RenderTargetView*> freeRtv = {
-    //    m_rtv[RTV_INDEX::COLOR],
-    //    m_rtv[RTV_INDEX::NORMAL_SHININESS],
-    //    m_rtv[RTV_INDEX::METALLIC_ROUGHNESS_AO]
-    //};
-    //m_postProcessor = new DX11PostProcessor(this, m_mainRtv, 
-    //    &freeRtv[0], &freeRtvSrv[0], freeRtvSrv.size(), m_lastSceneSrv, m_dsvShader, 
-    //    m_rtvShader[RTV_INDEX::POSITION_SPECULAR]);
-
-    ////m_postProcessor->Add(PostProcessor::LIGHT_BLUR);
-    //m_postProcessor->Add(PostProcessor::LIGHT_SCATTERING);
+    m_postProcessor = new DX11PostProcessor(this);
 }

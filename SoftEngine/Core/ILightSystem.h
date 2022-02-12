@@ -11,8 +11,11 @@
 
 struct LightSystemInfo
 {
-	Vec3 environmentAmbient;
+	Vec3 environmentAmbient = { 0.2f, 0.2f, 0.2f };
 	uint32_t numLight = 0;
+
+	Vec3 offsetPixelLightFactor = { 0.f, 0.f, 0.f };
+	float depthBias = 0.000033f;
 };
 
 //Use mega texture depth map 
@@ -96,9 +99,10 @@ public:
 	Vec3 dir;
 	Vec3 color;
 
-private:
 	//type of light
 	uint32_t type;
+
+private:
 	//index in m_lights, default value is non indexed
 	uint32_t index = UINT32_MAX;
 	//index in m_activeLights, default value is non indexed
@@ -159,6 +163,7 @@ protected:
 	//all lights in space
 	std::vector<Light> m_lights;
 
+public:
 	struct ExtraDataDirLight
 	{
 		//Mat4x4 vpMat;
@@ -172,6 +177,28 @@ protected:
 		//uint16_t shadowIndex = UINT16_MAX;
 	};
 
+	struct ExtraDataCSMDirLight
+	{
+		ShadowAlloc alloc[4] = {};
+		
+		Mat4x4* view = 0;
+		Mat4x4* proj = 0;
+		Mat4x4 prevProj;
+
+		Vec3 projCorners[8];
+		Vec3 centers[ShadowMap_NUM_CASCADE];
+		float radiuses[ShadowMap_NUM_CASCADE];
+		float depthThres[ShadowMap_NUM_CASCADE];
+
+		void Follow(Mat4x4* view, Mat4x4* projection);
+
+		//separet proj frustum
+		//newThres count must == ShadowMap_NUM_CASCADE, or something unexpected will happen
+		void Separate(float* newThres, float maxLength = -1);
+
+		bool Update(LightID id, LightSystem* sys);
+	};
+
 	struct ExtraDataPointLight
 	{
 		//Mat4x4 vpMat[6];
@@ -182,6 +209,7 @@ protected:
 		//uint16_t shadowIndex = UINT16_MAX;
 	};
 
+protected:
 	//index is shadowID
 	std::vector<void*> m_lightExtraData;
 
@@ -226,6 +254,9 @@ protected:
 	//do update to GPU
 	std::set<uint32_t> m_updateActiveShadowLights;
 
+public:
+	LightSystemInfo m_info;
+	bool m_needUpdateInfo = false;
 
 public:
 	LightSystem(uint32_t dim);
@@ -287,10 +318,20 @@ public:
 	//return view * projection matrix that present shadow
 	Mat4x4* GetShadow(LightID id);
 
+	template <typename T>
+	T* GetLightExData(LightID id) { return (T*)m_lightExtraData[id]; }
+
 	//use for point light and spot light
 	void UpdateShadow(LightID id, float fov = -1, float near = -1, float far = -1, float w = -1, float h = -1);
 
 	void ForceUpdateShadow(LightID id);
+
+public:
+	inline void UpdateEnv(const LightSystemInfo& info)
+	{
+		m_needUpdateInfo = true;
+		m_info = info;
+	}
 	
 public:
 	inline virtual bool BeginShadow(LightID id) { return false; };

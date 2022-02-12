@@ -22,6 +22,12 @@ file(GLOB_RECURSE
     ${PROJECT_SOURCE_DIR}/SoftEngine/Libs/*/include/
 )
 
+file(GLOB_RECURSE 
+    IMGUI_SRC
+    LIST_DIRECTORIES true
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/imgui/*.cpp"
+)
+
 
 add_executable (SoftEngine "SoftEngine.cpp" "SoftEngine.h"
 	#"Source/Renderer.cpp"
@@ -29,7 +35,7 @@ add_executable (SoftEngine "SoftEngine.cpp" "SoftEngine.h"
 
     #"Engine/Engine.cpp"
     ${SOURCES1}
-    #${LIBS_SRC}
+    ${IMGUI_SRC}
 )
 
 option(DX11_RENDERER "Use directX 11 as render api" ON)
@@ -52,6 +58,7 @@ target_include_directories(SoftEngine PUBLIC
                           "${PROJECT_SOURCE_DIR}/SoftEngine"
                           #"${PROJECT_SOURCE_DIR}/SoftEngine/Libs/DirectXTex/include"
                           ${LIBS_SRC}
+                          "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/imgui"
 )
 
 #find_library(DIRECT_X_TEX DirectXTexD "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/DirectXTex/bin")

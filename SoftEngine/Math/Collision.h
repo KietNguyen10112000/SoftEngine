@@ -4,6 +4,8 @@
 
 #include "Math.h"
 
+#include <vector>
+
 namespace Math
 {
 
@@ -196,6 +198,126 @@ inline Vec3 PlaneToPlane(const Plane3D& p1, const Plane3D& p2) noexcept
 }
 
 
+
+class Frustum
+{
+public:
+	Vec3 m_corners[8];
+
+public:
+	inline Frustum() {};
+	Frustum(const Mat4x4& projection);
+	inline ~Frustum() {};
+
+public:
+	static void GetFrustumCorners(std::vector<Vec3>& corners, const Mat4x4& projection);
+	static void GetFrustumCorners(Vec3* corners, const Mat4x4& projection);
+	static void GetProjectionMatrix(Mat4x4& out, Vec3* corners);
+
+	static void GetBoundingSphere(Vec3* corners, Vec3* outCenter, float* outRadius);
+
+public:
+	inline void FromProjectionMatrix(const Mat4x4& projection) { GetFrustumCorners(&m_corners[0], projection); };
+
+};
+
+inline Frustum::Frustum(const Mat4x4& projection)
+{
+	GetFrustumCorners(&m_corners[0], projection);
+}
+
+
+inline void Frustum::GetFrustumCorners(std::vector<Vec3>& corners, const Mat4x4& projection)
+{
+	corners.clear();
+	corners.resize(8);
+	GetFrustumCorners(&corners[0], projection);
+}
+
+inline void Frustum::GetFrustumCorners(Vec3* corners, const Mat4x4& projection)
+{
+	Vec4 hcorners[8];
+
+	hcorners[0] = Vec4(-1, 1, 0, 1);
+	hcorners[1] = Vec4(1, 1, 0, 1);
+	hcorners[2] = Vec4(1, -1, 0, 1);
+	hcorners[3] = Vec4(-1, -1, 0, 1);
+
+	hcorners[4] = Vec4(-1, 1, 1, 1);
+	hcorners[5] = Vec4(1, 1, 1, 1);
+	hcorners[6] = Vec4(1, -1, 1, 1);
+	hcorners[7] = Vec4(-1, -1, 1, 1);
+
+	Mat4x4 inverseProj = GetInverse(projection);
+
+	for (int i = 0; i < 8; i++) {
+		hcorners[i] = hcorners[i] * inverseProj;
+		hcorners[i] = hcorners[i] * (1 / hcorners[i].w);
+
+		corners[i] = Vec3(hcorners[i].x, hcorners[i].y, hcorners[i].z);
+	}
+}
+
+//void CalBoundingSphere(std::vector<Vec3>& corners, Vec3* outCenter, float* outRadius)
+//{
+//	//0-----1
+//	//|     |
+//	//3-----2
+//	auto* farPlane = &corners[4];
+//	auto* nearPlane = &corners[0];
+//	
+//	Vec3 center = {};
+//	for (size_t i = 0; i < 8; i++)
+//	{
+//		center = center + corners[i];
+//	}
+//	center = center / 8.0f;
+//
+//	float r = 0;
+//	for (size_t i = 0; i < 8; i++)
+//	{
+//		r = max((center - corners[i]).Length(), r);
+//	}
+//
+//	*outRadius = r;
+//	*outCenter = center;
+//}
+
+//2nd method
+inline void Frustum::GetBoundingSphere(Vec3* corners, Vec3* outCenter, float* outRadius)
+{
+	//0-----1
+	//|     |
+	//3-----2
+	auto* farPlane = &corners[4];
+	auto* nearPlane = &corners[0];
+
+	auto& p1 = nearPlane[0];
+	auto& p2 = nearPlane[2];
+
+	auto& p3 = farPlane[0];
+	auto& p4 = farPlane[2];
+
+	auto c1 = (p1 + p3) / 2.0f;
+	auto c2 = (p3 + p4) / 2.0f;
+
+	Plane3D plane1 = Plane3D(c1, p3 - p1);
+	Plane3D plane2 = Plane3D(c2, p4 - p3);
+
+	//plane contains p1, p2, p3
+	Plane3D plane3 = Plane3D(p1, p2, p3);
+
+	//must contains p4
+	//assert(IsFloatEqual(plane3.Value(p4), 0, 0.001f));
+
+	auto line = plane1.Intersect(plane2);
+
+	auto center = line.Intersect(plane3);
+
+	auto radius = (center - p1).Length();
+	*outCenter = center;
+	*outRadius = radius;
+}
 
 
 };

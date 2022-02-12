@@ -16,10 +16,13 @@
 
 #define PI								3.14159265359f
 
-#define DEPTH_BIAS						0.00005f
+//#define DEPTH_BIAS						0.00005f
+#define DEPTH_BIAS						envDepthBias
 
 #define PBR_LIT_FACTOR					10
 
+
+//#define USE_PIXEL_LIGHT_OFFSET 1
 
 struct Light
 {
@@ -55,6 +58,9 @@ cbuffer LightSystemInfo : register(b1)
 {
 	float3 environmentAmbient;
 	unsigned int numberLight;
+
+	float3 offsetPixelLightFactor;
+	float envDepthBias;
 };
 
 struct NormalShadingPixel
@@ -211,10 +217,31 @@ uint CubeFaceID(float3 dir)
 	return maxIndex;
 }
 
+float3 OffsetPixelLight(in Light light, in float3 pixelPos, in float3 normal)
+{
+	float3 pToL = light.pos - pixelPos;
+	float lenPtoL = length(pToL);
+
+	float3 dir1 = pToL / lenPtoL;
+
+	float cosAlpha = dot(normal, dir1);
+	float lenN = cosAlpha * lenPtoL;
+
+	float3 surfaceL = normalize(pToL - lenN * normal);
+
+	return -surfaceL * (
+		offsetPixelLightFactor.x + lenPtoL * offsetPixelLightFactor.y + lenPtoL * lenPtoL * offsetPixelLightFactor.z
+		);
+}
+
 
 //for dir and spot light
-float DoDirSpotLightShadow(Light light, LightShadow shadow, float3 pixelPos)
+float DoDirSpotLightShadow(in Light light, in LightShadow shadow, float3 pixelPos, in float3 normal)
 {
+#ifdef USE_PIXEL_LIGHT_OFFSET
+	pixelPos += OffsetPixelLight(light, pixelPos, normal);
+#endif
+
 	float percentLight = 0;
 
 	float4 posInLightVP = mul(float4(pixelPos, 1.0f), shadow.viewProj[0]);
@@ -243,17 +270,21 @@ float DoDirSpotLightShadow(Light light, LightShadow shadow, float3 pixelPos)
 		}
 		percentLight = percentLight / 16.0f;
 	}
-	else
+	/*else
 	{
 		percentLight = 1;
-	}
+	}*/
 
 	return percentLight;
 }
 
-float DoPointLightShadow(Light light, LightShadow shadow, float3 pixelPos)
+float DoPointLightShadow(in Light light, in LightShadow shadow, float3 pixelPos, in float3 normal)
 {
-	float3 dir = normalize(pixelPos - light.pos);
+#ifdef USE_PIXEL_LIGHT_OFFSET
+	pixelPos += OffsetPixelLight(light, pixelPos, normal);
+#endif
+
+	float3 dir = pixelPos - light.pos;
 
 	uint faceID = CubeFaceID(dir);
 
@@ -266,7 +297,7 @@ float DoPointLightShadow(Light light, LightShadow shadow, float3 pixelPos)
 	float bias = max(abs(dx), abs(dy)) * 5;
 	pixelDepth = pixelDepth - bias;*/
 
-	float percentLight = 1;
+	float percentLight = 0;
 
 	if (saturate(pixelDepth) == pixelDepth)
 	{
@@ -346,8 +377,12 @@ const static float SHADOW_MAP_CASCADE_BAND_WIDTH[] = {
 	0.000001f
 };
 
-float DoCSMDirLightShadow(Light light, LightShadow shadow, float3 pixelPos, float pixelDepthInScreen)
+float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos, float pixelDepthInScreen, in float3 normal)
 {
+#ifdef USE_PIXEL_LIGHT_OFFSET
+	pixelPos += OffsetPixelLight(light, pixelPos, normal);
+#endif
+
 	//=====================choose shadow cascade=============================
 	//shadow.viewProj[SHADOW_MAP_NUM_CASCADE] as memory to store depthThres
 	const float4 depthThres = shadow.viewProj[SHADOW_MAP_NUM_CASCADE][0];
@@ -358,6 +393,8 @@ float DoCSMDirLightShadow(Light light, LightShadow shadow, float3 pixelPos, floa
 	float findex = dot(comparison, float4(1, 1, 1, 1));
 	int index = min((int)findex, SHADOW_MAP_NUM_CASCADE - 1);
 	//=======================================================================
+
+	//return index / 4.0f;
 
 	float percentLight = CalCSMDirLit(pixelPos, shadow, index);
 
@@ -576,7 +613,8 @@ float4 DoNormalShading(NormalShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pixelPos);
+				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pixelPos, pixel.normal);
 				//shadowCount++;
 			}
 		}
@@ -587,7 +625,8 @@ float4 DoNormalShading(NormalShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoPointLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pixelPos);
+				percentLight = DoPointLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pixelPos, pixel.normal);
 				//shadowCount++;
 			}
 		}
@@ -598,7 +637,8 @@ float4 DoNormalShading(NormalShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pixelPos);
+				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pixelPos, pixel.normal);
 				//shadowCount++;
 			}
 		}
@@ -609,7 +649,8 @@ float4 DoNormalShading(NormalShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoCSMDirLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pixelPos, pixel.depth);
+				percentLight = DoCSMDirLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pixelPos, pixel.depth, pixel.normal);
 			}
 		}
 		break;
@@ -641,7 +682,8 @@ float4 DoPBRShading(PBRShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pos);
+				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pos, pixel.normal);
 			}
 		}
 		break;
@@ -651,7 +693,8 @@ float4 DoPBRShading(PBRShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoPointLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pos);
+				percentLight = DoPointLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pos, pixel.normal);
 			}
 		}
 		break;
@@ -661,7 +704,8 @@ float4 DoPBRShading(PBRShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pos);
+				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pos, pixel.normal);
 			}
 		}
 		break;
@@ -671,7 +715,8 @@ float4 DoPBRShading(PBRShadingPixel pixel)
 
 			if (lights[i].activeShadowIndex != UINT32_MAX)
 			{
-				percentLight = DoCSMDirLightShadow(lights[i], shadows[lights[i].activeShadowIndex], pixel.pos, pixel.depth);
+				percentLight = DoCSMDirLightShadow(lights[i], shadows[lights[i].activeShadowIndex], 
+					pixel.pos, pixel.depth, pixel.normal);
 			}
 		}
 		break;

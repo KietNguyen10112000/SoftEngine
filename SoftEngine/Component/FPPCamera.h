@@ -57,6 +57,7 @@ inline FPPCamera::FPPCamera(const Vec3& position, const Vec3& focusPos,
 	m_rotateX = asin(direction.y);
 	m_rotateY = atan2(direction.x, direction.z);
 
+	m_frustum.FromProjectionMatrix(m_proj);
 }
 
 inline void FPPCamera::Update(Engine* engine)

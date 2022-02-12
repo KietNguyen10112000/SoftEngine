@@ -10,7 +10,6 @@
 #include <Renderer.h>
 
 #include <Math/Math.h>
-#include <Math/Collision.h>
 
 #include <Resource.h>
 #include <RenderPipeline.h>
@@ -31,7 +30,11 @@
 
 #include <Component/AnimObject.h>
 
-#include <Component/Frustum.h>
+#include <PostProcessor.h>
+
+#include <imgui.h>
+#include <imgui_impl_dx11.h>
+#include <imgui_impl_win32.h>
 
 ICamera* cam = nullptr;
 
@@ -81,229 +84,74 @@ PBRMultiMeshAnimObject* animModelObj = nullptr;
 
 IRenderableObject* lightObj1 = nullptr;
 
-//float radius = 0;
-//Vec3 center = {};
-
-std::vector<float> radiuses;
-std::vector<Vec3> centers;
-std::vector<float> depthThres;
-
-void GetRandomSpace(const Vec3& dir, Vec3* outTangent, Vec3* outBitangent)
+struct GaussianBlurData
 {
-	auto& tangent = *outTangent;
-	auto& bitangent = *outBitangent;
+	uint32_t type;
+	float width;
+	float height;
+	float downscale;
+};
 
-	Vec3 c1 = CrossProduct(dir, Vec3(0.0, 0.0, 1.0));
-	Vec3 c2 = CrossProduct(dir, Vec3(0.0, 1.0, 0.0));
+struct LumaData
+{
+	float thres;
+	Vec3 factor;
+};
 
-	if (c1.Length() > c2.Length())
+struct BloomData
+{
+	union
 	{
-		tangent = c1;
-	}
-	else
-	{
-		tangent = c2;
-	}
-
-	tangent.Normalize();
-
-	bitangent = CrossProduct(tangent, dir);
-	bitangent.Normalize();
-}
-
-void CalBoundingSphere(std::vector<Vec3>& corners, Vec3* outCenter, float* outRadius)
-{
-	//0-----1
-	//|     |
-	//3-----2
-	auto* farPlane = &corners[4];
-	auto* nearPlane = &corners[0];
-
-	auto& p1 = nearPlane[0];
-	auto& p2 = nearPlane[2];
-
-	auto& p3 = farPlane[0];
-	auto& p4 = farPlane[2];
-
-	auto c1 = (p1 + p3) / 2.0f;
-	auto c2 = (p3 + p4) / 2.0f;
-
-	Plane3D plane1 = Plane3D(c1, p3 - p1);
-	Plane3D plane2 = Plane3D(c2, p4 - p3);
-
-	//plane contains p1, p2, p3
-	Plane3D plane3 = Plane3D(p1, p2, p3);
-
-	//must contains p4
-	assert(IsFloatEqual(plane3.Value(p4), 0, 0.001f));
-
-	auto line = plane1.Intersect(plane2);
-
-	auto center = line.Intersect(plane3);
-
-	auto radius = (center - p1).Length();
-	*outCenter = center;
-	*outRadius = radius;
-}
-
-//void CalBoundingSphere(std::vector<Vec3>& corners, Vec3* outCenter, float* outRadius)
-//{
-//	//0-----1
-//	//|     |
-//	//3-----2
-//	auto* farPlane = &corners[4];
-//	auto* nearPlane = &corners[0];
-//	
-//	Vec3 center = {};
-//	for (size_t i = 0; i < 8; i++)
-//	{
-//		center = center + corners[i];
-//	}
-//	center = center / 8.0f;
-//
-//	float r = 0;
-//	for (size_t i = 0; i < 8; i++)
-//	{
-//		r = max((center - corners[i]).Length(), r);
-//	}
-//
-//	*outRadius = r;
-//	*outCenter = center;
-//}
-
-Mat4x4 Tie(const Vec3& dir, const Mat4x4& _view, const Vec3& center, float radius)
-{
-	auto centerInWolrdSpace = ConvertVector(Vec4(center, 1.0f) * _view);
-
-	const float nearOffset = 1000.f;
-
-	Mat4x4 proj;
-	proj.SetOrthographicLH(radius * 2.0f, radius * 2.0f, 0, radius * 2.0f + nearOffset);
-	
-	Mat4x4 view;
-	auto pos = centerInWolrdSpace - dir.Normal() * (radius + nearOffset);
-
-	view.SetLookAtLH(pos, centerInWolrdSpace, { 0,1,0 });
-
-	auto vp = view * proj;
-
-	const float factor = 1024.0f / 2;
-
-	//origin must be on a line on pixel grid
-	Vec4 shadowOrigin = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	shadowOrigin = shadowOrigin * vp;
-	shadowOrigin = shadowOrigin * factor;
-
-	Vec4 roundedOrigin = Vec4(std::floor(shadowOrigin.x), std::floor(shadowOrigin.y), 0, 0);
-	Vec4 roundOffset = roundedOrigin - shadowOrigin;
-	roundOffset = roundOffset / factor;
-
-	proj.SetPosition(roundOffset.x, roundOffset.y, 0);
-
-	return view * proj;
-}
-
-void SeparateFrustum(const Mat4x4& proj, std::vector<Vec3>& corners, std::vector<std::vector<Vec3>>& frustums)
-{
-	//std::vector<Vec3> corners;
-	//Frustum::GetFrustumCorners(corners, cam->ProjectionMatrix());
-
-	auto* farPlane = &corners[4];
-	auto* nearPlane = &corners[0];
-
-	Vec3 dir[4] = {};
-
-	for (size_t i = 0; i < 4; i++)
-	{
-		dir[i] = (farPlane[i] - nearPlane[i]).Normalize();
-	}
-
-	float thres[ShadowMap_NUM_CASCADE] = {
-		50,
-		100,
-		150,
-		150
+		GaussianBlurData gaussian = {};
+		LumaData luma;
 	};
+};
 
-	float totalLength = thres[0] + thres[1] + thres[2] + thres[3];
-	float expectLength = (farPlane[0] - nearPlane[0]).Length();
+ShaderVar* bloomSV = 0;
+BloomData bloomData;
 
-	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
-	{
-		thres[i] = (thres[i] / totalLength) * expectLength;
-	}
 
-	float count = 0;
-	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
-	{
-		auto c = count + thres[i];
+WNDPROC g_oldHWNDHandle = 0;
 
-		std::vector<Vec3> temp =  {
-			//near plane
-			nearPlane[0] + dir[0] * count, 
-			nearPlane[1] + dir[1] * count,
-			nearPlane[2] + dir[2] * count,
-			nearPlane[3] + dir[3] * count,
+extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND, UINT, WPARAM, LPARAM);
 
-			//far plane
-			nearPlane[0] + dir[0] * c, 
-			nearPlane[1] + dir[1] * c, 
-			nearPlane[2] + dir[2] * c, 
-			nearPlane[3] + dir[3] * c
-		};
+LRESULT WndHandle2(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	if (ImGui_ImplWin32_WndProcHandler(hWnd, uMsg, wParam, lParam))
+		return true;
 
-		auto farPlaneCenter = (temp[4] + temp[5] + temp[6] + temp[7]) / 4.0f;
-		auto v = Vec4(farPlaneCenter, 1.0f) * proj;
-		v = v / v.w;
+	if (g_oldHWNDHandle) return g_oldHWNDHandle(hWnd, uMsg, wParam, lParam);
 
-		depthThres.push_back(v.z);
-
-		frustums.push_back(temp);
-
-		count = c;		
-	}
-	
+	return false;
 }
 
-void CalBoundingSphere(ICamera* cam)
+void InitImgui(Window* window)
 {
-	std::vector<Vec3> corners;
-	Frustum::GetFrustumCorners(corners, cam->ProjectionMatrix());
+	auto hwnd = window->GetNativeHandle();
+	// Setup Dear ImGui context
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-	std::vector<std::vector<Vec3>> frustums;
-	SeparateFrustum(cam->ProjectionMatrix(), corners, frustums);
+	// Setup Dear ImGui style
+	ImGui::StyleColorsDark();
+	//ImGui::StyleColorsClassic();
 
-	for (size_t i = 0; i < frustums.size(); i++)
-	{
-		float r = 0;
-		Vec3 center;
+	// Setup Platform/Renderer backends
+	ImGui_ImplWin32_Init(hwnd);
+	ImGui_ImplDX11_Init(DX11Global::renderer->m_d3dDevice, DX11Global::renderer->m_d3dDeviceContext);
 
-		CalBoundingSphere(frustums[i], &center, &r);
-
-		centers.push_back(center);
-		radiuses.push_back(r);
-	}
+	constexpr int GWL_WNDPROC_ = -4;
+	g_oldHWNDHandle = (WNDPROC)SetWindowLongPtr(hwnd, GWL_WNDPROC_, (LONG_PTR)WndHandle2);
 }
 
-void TieProjShadow(class LightSystem* lightSys, ICamera* cam)
+void DestroyImgui()
 {
-	auto& light = lightSys->GetLight(shadowLight1);
-	auto shadowProj = lightSys->GetShadow(shadowLight1);
-	auto camProj = cam->ProjectionMatrix();
-	auto camView = cam->ViewMatrix();
-
-	for (size_t i = 0; i < centers.size(); i++)
-	{
-		shadowProj[i] = Tie(light.dir, camView, centers[i], radiuses[i]);
-	}
-
-	float* p = (float*)&shadowProj[ShadowMap_NUM_CASCADE];
-	for (size_t i = 0; i < depthThres.size(); i++)
-	{
-		p[i] = depthThres[i];
-	}
-
-	lightSys->ForceUpdateShadow(0);
+	ImGui_ImplDX11_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
 }
 
 Engine::Engine(const wchar_t* title, int width, int height) : Window(title, width, height)
@@ -327,38 +175,39 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 
 	void* args[] = { GetNativeHandle() };
 	m_renderer = new DeferredRenderer(2, width, height, 1, args);
-	
+
 	Global::renderer = Renderer();
 
-	cam = new FPPCamera({ 0, 50, 0 }, { 0,50,50 }, ConvertToRadians(75), 1, 1000, width / (float)height);
+	cam = new FPPCamera({ 0, 50, 0 }, { 0,50,50 }, ConvertToRadians(60), 0.5, 1000, width / (float)height);
 	m_renderer->SetTargetCamera(cam);
 
-	CalBoundingSphere(cam);
-	
+	shadowLight1 = m_renderer->LightSystem()->NewLight(LIGHT_TYPE::POINT_LIGHT, 0,
+		0.1f, 1.69f, 0.02f, 20.f, { 10,20,0 }, { -1, -1, -1 }, { 1, 1, 1 });
+
+	shadowLight2 = m_renderer->LightSystem()->NewLight(LIGHT_TYPE::SPOT_LIGHT, ConvertToRadians(60),
+		0.1f, 0.1f, 0.04f, 40.f, { 30,30,30 }, { -1, -1, -1 }, { 1, 1, 1 });
+
+	//m_renderer->LightSystem()->AddLight(shadowLight1);
+	m_renderer->LightSystem()->AddLight(shadowLight2);
+
+	m_renderer->LightSystem()->AddShadow(shadowLight2, SHADOW_MAP_QUALITY::HIGH);
+	//m_renderer->LightSystem()->AddShadow(shadowLight1, SHADOW_MAP_QUALITY::HIGH);
+
+	m_renderer->LightSystem()->Log();
+
 	spaceCoord = new SpaceCoordinate();
 
 	spaceCoord->DisplayGrid() = false;
 
-	skyBox = new SkyCube(L"D:/KEngine/ResourceFile/temp_img/Skybox/skybox1_low.png");
+	skyBox = new SkyCube(L"D:/KEngine/ResourceFile/temp_img/skybox-blue-night-sky.png");
 	m_renderer->AttachSkyBox(skyBox);
-
-	//====================init scene object=================================================
-
-	shadowLight1 = m_renderer->LightSystem()->NewLight(LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT, 0,
-		0.1f, 0.1f, 0.1f, 0.7f, { 10,20,0 }, { 0, -1, -1 }, { 1, 1, 1 });
-
-	m_renderer->LightSystem()->AddLight(shadowLight1);
-	m_renderer->LightSystem()->AddShadow(shadowLight1, SHADOW_MAP_QUALITY::HIGH);
-	//m_renderer->LightSystem()->AddShadowEx(shadowLight1, )
-
-	m_renderer->LightSystem()->Log();
 
 	obj1 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj1->Transform() *= GetScaleMatrix(1, 1, 1);
+	obj1->Transform() *= GetScaleMatrix(1, 5, 0.5f);
 	obj1->Transform().SetPosition(0, 0, 10);
 
 	obj2 = new BasicObject(
@@ -366,41 +215,86 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 		L"D:/KEngine/ResourceFile/temp_img/Blue.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj2->SetPosition(0, 0, -10);
+	obj2->SetPosition(0, 0, -20);
 
 	obj3 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj3->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
-	obj3->Transform().SetPosition(45, 20, 0);
+	obj3->Transform().SetScale(1, 5, 0.5f);
+	//obj3->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
+	obj3->Transform().SetPosition(0, 0, 20);
 
 
 	obj4 = new BasicObject(
-		L"D:/KEngine/ResourceFile/model/simple_model/SuzanneSmooth.obj",
+		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj4->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
-	obj4->Transform().SetPosition(-45, 20, 0);
+	obj4->Transform().SetScale(1, 5, 0.5f);
+	//obj4->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
+	obj4->Transform().SetPosition(0, 0, 0);
 
 
 	obj5 = new BasicObject(
-		L"D:/KEngine/ResourceFile/model/simple_model/teapot.obj",
+		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj5->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
-	obj5->Transform().SetPosition(0, 20, 45);
+	obj5->Transform().SetScale(1, 5, 10.f);
+	//obj5->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
+	obj5->Transform().SetPosition(0, 0, 60);
 
 	obj6 = new BasicObject(
-		L"D:/KEngine/ResourceFile/model/simple_model/teapot.obj",
+		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Blue.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj6->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
-	obj6->Transform().SetPosition(0, 20, -45);
+	obj6->Transform().SetScale(0.5f, 3, 10.0f);
+	//obj6->Transform() *= GetRotationAxisMatrix({ 1, 0, 0 }, PI / 2);
+	obj6->Transform().SetPosition(0, 20, 15);
+
+
+	//5 wall
+	float d = 100;
+	float h = 50;
+
+	wall1 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/PBRModel test/Wall.obj",
+		L"D:/KEngine/ResourceFile/temp_img/white.png",
+		GetScaleMatrix(2.f, 50.f, 50.f)
+	);
+	wall1->SetPosition(d, h, 0);
+
+	wall2 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/PBRModel test/Wall.obj",
+		L"D:/KEngine/ResourceFile/temp_img/white.png",
+		GetScaleMatrix(5.f, 5.f, 5.f)
+	);
+	wall2->SetPosition(-d, h, 0);
+
+	wall3 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/PBRModel test/Wall.obj",
+		L"D:/KEngine/ResourceFile/temp_img/white.png",
+		GetScaleMatrix(5.f, 5.f, 5.f)
+	);
+	wall3->Transform().SetRotationY(PI / 2).SetPosition(0, h, d);
+
+	wall4 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/PBRModel test/Wall.obj",
+		L"D:/KEngine/ResourceFile/temp_img/white.png",
+		GetScaleMatrix(5.f, 5.f, 5.f)
+	);
+	wall4->Transform().SetRotationY(PI / 2).SetPosition(0, h, -d);
+
+	wall5 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/PBRModel test/Wall.obj",
+		L"D:/KEngine/ResourceFile/temp_img/white.png",
+		GetScaleMatrix(5.f, 5.f, 5.f)
+	);
+	wall5->Transform().SetRotationZ(PI / 2).SetPosition(0, d + h, 0);
+
 
 	//objs make shadow
 	renderList.push_back(obj1);
@@ -413,50 +307,14 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 
 
 	float unit = 0.8f;
-
 	heightMap = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/Plane.obj",
 		L"D:/KEngine/ResourceFile/temp_img/white.png",
-		GetScaleMatrix(2000, 2000, 2000)
+		GetScaleMatrix(1000, 1000, 1000)
 	);
 	heightMap->Transform().SetTranslation(0, -15, 0);
 
-	unit = 1.f;
-	size_t dimX = 64;
-	gerstnerWater = new GerstnerWavesWater(dimX, dimX, 15, unit, unit);
-	gerstnerWater->SetPosition(-unit * dimX * 0.5f, -10, -unit * dimX * 0.5f);
-
-	/*std::vector<PBRMaterialPath> paths = {
-		{
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/character diffuse.png",
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/character normals.png",
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/character specular.png",
-			L"",
-			L"",
-		},
-		{
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/weapons diffuse.png",
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/weapons normals.png",
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/weapons specular.png",
-			L"",
-			L""
-		},
-		{
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/character diffuse.png",
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/character normals.png",
-			L"D:/KEngine/ResourceFile/model/character/globin/textures/lowRes/character specular.png",
-			L"",
-			L"",
-
-		},
-	};
-	animModelObj = new PBRMultiMeshAnimObject(L"D:/KEngine/ResourceFile/model/character/globin/globin.fbx", 
-		paths, GetScaleMatrix(0.1, 0.1, 0.1));
-	animModelObj->Animator().SetAnimation(11);
-	animModelObj->Animator().Reset();*/
-
-
-	lightObj1 = new BasicObject(
+	/*lightObj1 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/white.png"
 	);
@@ -469,46 +327,172 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	RenderPipelineManager::Release(&temp);
 
 	lightObj1->Transform().SetScale(0.5, 0.5, 0.5);
-	lightObj1->Transform().SetPosition({ 10,20,0 });
+	lightObj1->Transform().SetPosition({ 10,20,0 });*/
 
+	
 
-	for (size_t i = 0; i < 100; i++)
+	//=================================test post processing======================================
+	auto postproc = m_renderer->PostProcessor();
+	/*auto position = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
+	auto normal = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::NORMAL_AND_SHININESS);
+	auto color = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::COLOR);*/
+	
+	bloomSV = new ShaderVar(&bloomData, sizeof(bloomData));
+
+	constexpr static float DOWN_RES_FACTOR = 1.0f;
+
+	auto lastscene = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::LIGHTED_SCENE);
+	auto screenSurface = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::SCREEN_BUFFER);
+
+	auto output1 = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
+	auto layer2 = postproc->MakeLayer({ output1 });
+
+	auto gausianBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/GaussianBlur");
+	auto combinePS = Resource::Get<PixelShader>(L"PostProcessing/Blur/PSCombine");
+
+	struct Temp
 	{
-		renderList.push_back(new BasicObject(
-			L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
-			L"D:/KEngine/ResourceFile/temp_img/Copper.png"
-		));
-		auto& back = renderList.back();
+		ShaderVar* buf;
+		float w;
+		float h;
+	};
 
-		auto pos = Vec3(Random::Float(-100, 100), 0, Random::Float(-1000, 1000));
-		auto rot = Vec3(Random::Float(-PI, PI), Random::Float(-PI, PI), Random::Float(-PI, PI));
+	static Temp _opaque = {};
+	_opaque.buf = bloomSV;
+	_opaque.w = m_width;
+	_opaque.h = m_height;
 
-		back->Transform() *= GetRotationMatrix(rot.x, rot.y, rot.z);
-		back->Transform().SetPosition(pos);
+	//god rays post program
+	auto godRays = postproc->MakeProgram("God Rays");
+	auto godRayOutput0 = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
 
+	auto scenePosition = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
+
+	auto godRaysInputLayer = postproc->MakeLayer({ scenePosition });
+
+	auto godRaysLayer1 = postproc->MakeLayer({ godRayOutput0 , lastscene });
+
+	auto screenLayer = postproc->MakeLayer({ screenSurface });
+
+	auto godRaysPS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/GodRays_PS");
+	auto godRaysCombinePS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/Combine");
+
+	//auto biBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/BilateralBlur");
+
+	if (!godRays->IsCrafted())
+	{
+		godRays->Append(godRaysInputLayer);
+
+		godRays->Append(godRaysPS, &_opaque,
+			[](IRenderer*, void* opaque)
+			{
+				ShaderVar* buf = _opaque.buf;
+				bloomData.gaussian.type = 0;
+				bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
+				bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
+				bloomData.gaussian.downscale = DOWN_RES_FACTOR;
+				buf->Update(&bloomData, sizeof(bloomData));
+				RenderPipeline::PSSetVar(buf, 2);
+			}
+		);
+
+		//for (size_t i = 0; i < 5; i++)
+		//{
+		godRays->Append(godRaysLayer1);
+		//=================2 pass Gaussian Blur=============================
+		godRays->Append(gausianBlurPS, &_opaque,
+			[](IRenderer*, void* opaque)
+			{
+				ShaderVar* buf = _opaque.buf;
+				bloomData.gaussian.type = 0;
+				bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
+				bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
+				buf->Update(&bloomData, sizeof(bloomData));
+			}
+		);
+
+		godRays->Append(layer2);
+
+		godRays->Append(gausianBlurPS, &_opaque,
+			[](IRenderer* renderer, void* opaque)
+			{
+				ShaderVar* buf = _opaque.buf;
+				bloomData.gaussian.type = 1;
+				buf->Update(&bloomData, sizeof(bloomData));
+			}
+		);
+		//=================End 2 pass Gaussian Blur==========================
+		//}
+
+		godRays->Append(godRaysLayer1);
+
+		godRays->Append(godRaysCombinePS);
+		godRays->Append(screenLayer);
+
+		auto ret = godRays->Craft();
+		if (ret != "OK")
+		{
+			exit(2);
+		}
 	}
 
+	auto postprocChain = postproc->MakeProcessChain("Bloom Effect");
+
+	if (!postprocChain->IsCrafted())
+	{	
+		postprocChain->Append(
+			{
+				// programs
+				{
+					//re-run
+					{ godRays, true }
+				},
+
+				{
+					{
+						{ {0, 0}, {0, 0} }
+					}
+				}
+			}
+		);
+
+		auto ret = postprocChain->Craft();
+		/*if (ret != "OK")
+		{
+			exit(2);
+		}*/
+	}
+	
+
+	postproc->SetProcessChain(postprocChain);
+
+	Resource::Release(&gausianBlurPS);
+	//Resource::Release(&lumaPS);
+	Resource::Release(&combinePS);
+
+	Resource::Release(&godRaysPS);
+	Resource::Release(&godRaysCombinePS);
+
+	InitImgui(this);
 }
 
 Engine::~Engine()
 {
+	DestroyImgui();
+
+	delete bloomSV;
+
 	delete cam;
 	delete spaceCoord;
 	delete skyBox;
 	delete basicObject;
 	delete basicObject1;
-	/*delete obj1;
+	delete obj1;
 	delete obj2;
 	delete obj3;
 	delete obj4;
 	delete obj5;
-	delete obj6;*/
-
-	for (size_t i = 0; i < renderList.size(); i++)
-	{
-		delete renderList[i];
-	}
-
+	delete obj6;
 	delete wall1;
 	delete wall2;
 	delete wall3;
@@ -536,6 +520,79 @@ Engine::~Engine()
 	Random::UnInitialize();
 }
 
+void ImGuiShowLight(IRenderer* renderer, LightID id)
+{
+	static float lowspeed = 0.01f;
+	static float midspeed = 0.1f;
+	static float highspeed = 1.f;
+	static float high1speed = 5.f;
+
+	auto& light = renderer->LightSystem()->GetLight(id);
+
+	static Vec3 tempDir = light.dir;
+
+	bool change = false;
+
+	ImGui::Begin(("Light " + std::to_string(id)).c_str());
+
+	const char* text = 0;
+	switch (light.type)
+	{
+	case 0:
+		text = "Direction Light";
+		break;
+	case 1:
+		text = "Point Light";
+		break;
+	case 2:
+		text = "Spot Light";
+		break;
+	default:
+		break;
+	}
+	ImGui::Text(text);
+
+	change |= ImGui::DragFloat3("Position", &light.pos.x, midspeed, -FLT_MAX, FLT_MAX);
+	change |= ImGui::DragFloat3("Direction", &tempDir.x, lowspeed, -FLT_MAX, FLT_MAX);
+
+	change |= ImGui::DragFloat3("Color", &light.color.x, lowspeed, 0, 1);
+	change |= ImGui::DragFloat("Power", &light.power, highspeed, 1, FLT_MAX);
+	change |= ImGui::DragFloat("Spot Angle", &light.spotAngle, lowspeed, 0, PI);
+	
+	change |= ImGui::DragFloat("Constant Attenuation", &light.constantAttenuation, lowspeed, 0.0001f, FLT_MAX);
+	change |= ImGui::DragFloat("Linear Attenuation", &light.linearAttenuation, lowspeed, 0.0001f, FLT_MAX);
+	change |= ImGui::DragFloat("Quadratic Attenuation", &light.quadraticAttenuation, lowspeed, 0.0001f, FLT_MAX);
+
+	ImGui::End();
+
+	if (change)
+	{
+		light.dir = tempDir.Normal();
+		renderer->LightSystem()->UpdateLight(id);
+		renderer->LightSystem()->UpdateShadow(id);
+	}
+}
+
+void ImGuiShowLightSystemInfo(IRenderer* renderer)
+{
+	static float lowspeed = 0.001f;
+
+	auto& info = renderer->LightSystem()->m_info;
+
+	bool change = false;
+
+	ImGui::Begin("Light System Info");
+	change |= ImGui::DragFloat3("Env ambient", &info.environmentAmbient.x, lowspeed, -FLT_MAX, FLT_MAX);
+	change |= ImGui::DragFloat3("Offset pixel light", &info.offsetPixelLightFactor.x, lowspeed, -FLT_MAX, FLT_MAX);
+	change |= ImGui::DragFloat("Depth bias", &info.depthBias, 0.0000001, -FLT_MAX, FLT_MAX, "%.6f");
+	ImGui::End();
+
+	if (change)
+	{
+		renderer->LightSystem()->UpdateEnv(info);
+	}
+}
+
 
 void Engine::Update()
 {
@@ -546,20 +603,51 @@ void Engine::Update()
 	m_time += m_deltaTime / _TIME_FACTOR;
 
 	Sleep(2);
-	
+
 	//do update
 	//auto d = PI / 5 * FDeltaTime();
 
 	static bool lock = true;
 	static int visualizeArg = 0;
 
-	if(!lock) cam->Update(this);
+	if (!lock) cam->Update(this);
+
+	static int rotDir = 0;
+
+	if (Input()->GetPressKey(LEFT_ARROW))
+	{
+		rotDir++;
+	}
+	if (Input()->GetPressKey(RIGHT_ARROW))
+	{
+		rotDir--;
+	}
+
+	if (rotDir > 0)
+	{
+		Mat4x4 temp;
+		for (size_t i = 0; i < 6; i++)
+		{
+			auto& light = m_renderer->LightSystem()->GetLight(lights[i]);
+			temp.SetPosition(light.pos);
+			temp *= GetRotationYMatrix(FDeltaTime() * (PI / 6));
+			light.pos = temp.GetPosition();
+
+			m_renderer->LightSystem()->UpdateLight(lights[i]);
+			//m_renderer->LightSystem()->UpdateShadow(lights[i]);
+		}
+	}
 
 	if (Input()->GetPressKey(TAB))
 	{
 		lock = !lock;
 		Input()->SetLockMouse(!lock, 500, 200);
 		Input()->SetHideCursor(!lock);
+	}
+
+	if (Input()->GetPressKey('Q'))
+	{
+		visualizeArg = (visualizeArg + 1) % 3;
 	}
 
 	if (Input()->GetPressKey('1'))
@@ -579,7 +667,77 @@ void Engine::Update()
 		visualizeArg = 3;
 	}*/
 
-	gerstnerWater->Update(this);
+	static bool moveLight1 = false;
+	static float light1Timer = 0;
+	static bool rotateLight2 = false;
+	static bool moveLight1WithCam = false;
+	//static float counter = 0;
+
+	if (Input()->GetPressKey('H'))
+	{
+		moveLight1 = !moveLight1;
+	}
+	if (Input()->GetPressKey('U'))
+	{
+		rotateLight2 = !rotateLight2;
+	}
+	if (Input()->GetPressKey('E'))
+	{
+		moveLight1WithCam = !moveLight1WithCam;
+	}
+
+	if (moveLight1)
+	{
+		light1Timer += FDeltaTime();
+
+		auto& light = m_renderer->LightSystem()->GetLight(shadowLight1);
+
+		//light.pos = light.pos + Vec3(0, 0, 30) * sin(2 * counter);
+		light.pos.z = 30 * sin(2 * light1Timer);
+
+		m_renderer->LightSystem()->UpdateLight(shadowLight1);
+		m_renderer->LightSystem()->UpdateShadow(shadowLight1);
+
+		//lightObj1->Transform().SetPosition(light.pos);
+
+	}
+
+	if (rotateLight2)
+	{
+		auto& light = m_renderer->LightSystem()->GetLight(shadowLight2);
+
+		auto newDir = Vec4(light.dir, 0) * GetRotationYMatrix(FDeltaTime());
+
+		//light.dir = Vec3(trans.x, trans.y, trans.z);
+
+		//auto shadowVP = m_renderer->LightSystem()->GetShadow(shadowLight2);
+
+		//auto newPos = Vec4(light.pos, 1.0f) * GetRotationYMatrix(FDeltaTime());
+
+		//auto focusPos = Vec3(newPos.x, newPos.y, newPos.z) + light.dir;
+
+		//light.pos = Vec3(newPos.x, newPos.y, newPos.z);
+		light.dir = Vec3(newDir.x, newDir.y, newDir.z).Normalize();
+
+		m_renderer->LightSystem()->UpdateLight(shadowLight2);
+		m_renderer->LightSystem()->UpdateShadow(shadowLight2);
+	}
+
+	if (moveLight1WithCam)
+	{
+		auto& light = m_renderer->LightSystem()->GetLight(shadowLight1);
+
+		auto cam = m_renderer->GetTargetCamera();
+
+		light.pos = m_renderer->GetTargetCamera()->GetPosition()
+			- cam->ViewMatrix().GetUpwardDir().Normalize() * 5
+			- cam->ViewMatrix().GetLeftwardDir().Normalize() * 5;
+
+		m_renderer->LightSystem()->UpdateLight(shadowLight1);
+		m_renderer->LightSystem()->UpdateShadow(shadowLight1);
+	}
+
+	//gerstnerWater->Update(this);
 
 	static size_t currentAnim = 0;
 	if (Input()->GetPressKey('M'))
@@ -609,22 +767,7 @@ void Engine::Update()
 		animModelObj->Animator().SetDuration(cDuration - 1);
 	}
 
-	if (Input()->GetPressKey(UP_ARROW))
-	{
-		auto& light = m_renderer->LightSystem()->GetLight(shadowLight1);
-		light.power += 0.01f;
-		m_renderer->LightSystem()->UpdateLight(shadowLight1);
-	}
-	if (Input()->GetPressKey(DOWN_ARROW))
-	{
-		auto& light = m_renderer->LightSystem()->GetLight(shadowLight1);
-		light.power -= 0.01f;
-		m_renderer->LightSystem()->UpdateLight(shadowLight1);
-	}
-
 	//animModelObj->Update(this);
-
-	TieProjShadow(m_renderer->LightSystem(), m_renderer->GetTargetCamera());
 
 	//must be the last update
 	m_renderer->LightSystem()->Update();
@@ -640,10 +783,30 @@ void Engine::Update()
 		m_renderer->VisualizeBackgroundRenderPipeline(visualizeArg);
 	}
 	else
+	{
 		m_renderer->Present();
+	}
+		
 #else
 	m_renderer->Present();
 #endif // _DEBUG
+
+	//==================================ImGui=================================================
+	// just for test
+	// will use wxwidgets or java or C# GUI with remote renderer
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	ImGuiShowLight(m_renderer, shadowLight2);
+	ImGuiShowLightSystemInfo(m_renderer);
+
+	DX11Global::renderer->m_d3dDeviceContext->OMSetRenderTargets(1, &DX11Global::renderer->m_mainRtv, 0);
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	//==================================ImGui=================================================
+
+	DX11Global::renderer->m_dxgiSwapChain->Present(1, 0);
 }
 
 void Engine::Render()
@@ -659,12 +822,18 @@ void Engine::Render()
 
 	//animModelObj->Render(m_renderer);
 
+	//lightObj1->Render(m_renderer);
+
 	heightMap->Render(m_renderer);
+
+	wall1->Render(m_renderer);
+	wall2->Render(m_renderer);
+	wall3->Render(m_renderer);
+	wall4->Render(m_renderer);
+	wall5->Render(m_renderer);
 
 	spaceCoord->Render(m_renderer);
 
-	lightObj1->Render(m_renderer);
-	
 	if (m_renderer->LightSystem()->BeginShadow(shadowLight1))
 	{
 		for (auto& obj : renderList)
@@ -674,8 +843,13 @@ void Engine::Render()
 		m_renderer->LightSystem()->EndShadow(shadowLight1);
 	}
 
-	m_renderer->BeginTransparency();
-	gerstnerWater->Render(m_renderer);
-	m_renderer->EndTransparency();
-	
+	if (m_renderer->LightSystem()->BeginShadow(shadowLight2))
+	{
+		for (auto& obj : renderList)
+		{
+			obj->Render(m_renderer);
+		}
+		m_renderer->LightSystem()->EndShadow(shadowLight2);
+	}
+
 }

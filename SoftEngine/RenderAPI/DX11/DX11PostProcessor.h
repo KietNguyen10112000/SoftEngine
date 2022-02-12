@@ -2,73 +2,101 @@
 
 #include <PostProcessor.h>
 
-#include "Renderer.h"
+#include <set>
 
-#define _DX11PostProcessor_NEED_BUFFER 8
+#include <d3d11.h>
+
+class DX11Renderer;
+class PixelShader;
+class VertexShader;
 
 class DX11PostProcessor : public PostProcessor
 {
-protected:
-	enum PS_INDEX
+public:
+	static constexpr size_t START_SRV_REGISTER = 4;
+
+	class DX11PostProcessChain : public ProcessChain
 	{
-		PS_SHADER_AVAILABLE_RESOURCE_START_SLOT = 4,
-		PS_SHADER_AVAILABLE_CBUFFER_START_SLOT = 2
+	public:
+		struct InOutIndex
+		{
+			size_t inputIndex;
+			size_t inputCount;
+			size_t outputIndex;
+			size_t outputCount;
+			Program::PrevCallData* data;
+		};
+
+	public:
+		//not own
+		std::vector<ID3D11ShaderResourceView*> m_SRVs;
+		//not own
+		std::vector<ID3D11RenderTargetView*> m_RTVs;
+
+		std::vector<D3D11_VIEWPORT> m_VPs;
+
+		std::vector<InOutIndex> m_ioID;
+
+		ID3D11ShaderResourceView* m_lastOutput = 0;
+
+		DX11PostProcessor* m_owner = 0;
+
+	public:
+		// Inherited via ProcessChain
+		virtual std::string Craft() override;
 	};
 
-	//not own
-	ID3D11Device* m_d3dDevice = 0;
-	ID3D11DeviceContext* m_d3dContext = 0;
-	//not own
-	ID3D11RenderTargetView* m_mainRtv = 0;
-	//not own
-	ID3D11RenderTargetView* m_rtv[8] = {};
-	ID3D11ShaderResourceView* m_rtvSrv[8] = {};
-	//not own
-	ID3D11ShaderResourceView* m_targetSrv = 0;
-	ID3D11ShaderResourceView* m_depthSrv = 0;
-	ID3D11ShaderResourceView* m_positionSrv = 0;
+public:
+	struct CacheTexture2D
+	{
+		ID3D11RenderTargetView* rtv;
+		ID3D11ShaderResourceView* srv;
 
-	void(__thiscall DX11PostProcessor::* m_postProcessingFunc[10])() = {};
-
-	ID3D11ShaderResourceView* m_lastSceneSrv = 0;
-
-	DX11Renderer* m_renderer = 0;
+		friend bool operator<(const CacheTexture2D& left, const CacheTexture2D& right)
+		{
+			return memcmp(&left, &right, sizeof(CacheTexture2D)) < 0;
+		}
+	};
 
 	//own
-	VertexBuffer* m_quad = 0;
+	std::vector<
+		std::map<
+			Vec2,
+			std::vector<CacheTexture2D>,
+			bool(*)(const Vec2&, const Vec2&)
+		>
+	> m_textures;
 
-	//just need 1 vs but many ps
-	VertexShader* m_vs = 0;
-	PixelShader* m_lastPS = 0;
-	std::vector<PixelShader*> m_pixelShaders;
+	std::set<PixelShader*> m_ps;
 
-	DynamicShaderVar* m_cbuffer = 0;
+	std::set<CacheTexture2D> m_tempInputTextures;
+	std::set<CacheTexture2D> m_inUseTextures;
 
-	float m_width = 0;
-	float m_height = 0;
+	//not own
+	//normal, position, roughness, ...
+	std::vector<CacheTexture2D> m_readOnlyTextures;
+
+	VertexShader* m_screenVS = 0;
 
 public:
-	//all freeRtv has same dimensions
-	DX11PostProcessor(
-		DX11Renderer* renderer,
-		ID3D11RenderTargetView* mainRtv,
-		ID3D11RenderTargetView** freeRtv, 
-		ID3D11ShaderResourceView** freeRtvSrv, size_t count, 
-		ID3D11ShaderResourceView* targetBuffer,
-		ID3D11ShaderResourceView* depthBuffer, 
-		ID3D11ShaderResourceView* positionBuffer);
-
+	DX11PostProcessor(DX11Renderer* renderer);
 	~DX11PostProcessor();
 
-private:
-	void InitPostProcessingFunction();
-
-public:
-	void LightBlur();
-	void LightScatting();
+protected:
+	void InitReadOnlyTexture(DX11Renderer* renderer);
 
 public:
 	// Inherited via PostProcessor
-	virtual void Apply() override;
+	virtual ProcessChain* MakeProcessChain(const std::string& name) override;
+
+	virtual bool Run() override;
+
+public:
+	CacheTexture2D AllocTexture2D(const Texture2DData& data);
+
+	CacheTexture2D* TryGetTexture2D(std::vector<CacheTexture2D>& textures, size_t id, const Texture2DData& data);
+
+	void AllocLayer(Layer& layer, DX11PostProcessChain* chain, bool input);
+	void AllocIOLayer(Layer& inputLayer, Layer& outputLayer, DX11PostProcessChain* chain);
 
 };

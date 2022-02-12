@@ -2,6 +2,8 @@
 #include <vector>
 #include <iostream>
 
+#include <Math/Collision.h>
+
 Light::Light(
 	uint32_t type,
 	float spotAngle, 
@@ -242,6 +244,8 @@ void LightSystem::DeleteLight(LightID id)
 {
 	m_lightFreeSpaces.insert(id);
 	m_lights[id].type = UINT32_MAX;
+
+	//TODO: delete extra data
 }
 
 //Light& LightSystem::GetLight(LightID id)
@@ -431,9 +435,9 @@ void LightSystem::AddShadow(LightID id, Vec2 shadowMapDimentions, float fov, flo
 		}
 		else if (m_lights[id].type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
 		{
-			m_lightExtraData[id] = new ExtraDataPointLight();
+			m_lightExtraData[id] = new ExtraDataCSMDirLight();
 
-			auto p = (ExtraDataPointLight*)m_lightExtraData[id];
+			auto p = (ExtraDataCSMDirLight*)m_lightExtraData[id];
 
 			for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
 			{
@@ -469,9 +473,9 @@ void LightSystem::AddShadowEx(LightID id, Vec2* shadowMapDimentions, uint32_t nu
 
 		LightShadow shadow;
 
-		m_lightExtraData[id] = new ExtraDataPointLight();
+		m_lightExtraData[id] = new ExtraDataCSMDirLight();
 
-		auto p = (ExtraDataPointLight*)m_lightExtraData[id];
+		auto p = (ExtraDataCSMDirLight*)m_lightExtraData[id];
 
 		for (size_t i = 0; i < numShadow; i++)
 		{
@@ -580,7 +584,14 @@ void LightSystem::UpdateShadow(LightID id, float fov, float near, float far, flo
 	if (m_lightExtraData[id] != nullptr)
 	{
 		Light& light = GetLight(id);
-		if (light.type == LIGHT_TYPE::POINT_LIGHT)
+		if (light.type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
+		{
+			auto p = (ExtraDataCSMDirLight*)m_lightExtraData[id];
+
+			p->Update(id, this);
+
+		}
+		else if (light.type == LIGHT_TYPE::POINT_LIGHT)
 		{
 			auto p = (ExtraDataPointLight*)m_lightExtraData[id];
 
@@ -636,6 +647,170 @@ void LightSystem::Log()
 		std::cout << e << '\t';
 	}
 	std::cout << '\n';
+}
+
+
+void __CSM__SeparateFrustum(const Mat4x4& proj, Vec3* corners, std::vector<std::vector<Vec3>>& frustums, 
+	float* thres, float* depthThres, float maxLength = -1)
+{
+	auto* farPlane = &corners[4];
+	auto* nearPlane = &corners[0];
+
+	Vec3 dir[4] = {};
+
+	for (size_t i = 0; i < 4; i++)
+	{
+		dir[i] = (farPlane[i] - nearPlane[i]).Normalize();
+	}
+
+	float totalLength = thres[0] + thres[1] + thres[2] + thres[3];
+	float expectLength = (farPlane[0] - nearPlane[0]).Length();
+	if (maxLength != -1)
+	{
+		expectLength = maxLength;
+	}
+
+	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
+	{
+		thres[i] = (thres[i] / totalLength) * expectLength;
+	}
+
+	float count = 0;
+	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
+	{
+		auto c = count + thres[i];
+
+		std::vector<Vec3> temp = {
+			//near plane
+			nearPlane[0] + dir[0] * count,
+			nearPlane[1] + dir[1] * count,
+			nearPlane[2] + dir[2] * count,
+			nearPlane[3] + dir[3] * count,
+
+			//far plane
+			nearPlane[0] + dir[0] * c,
+			nearPlane[1] + dir[1] * c,
+			nearPlane[2] + dir[2] * c,
+			nearPlane[3] + dir[3] * c
+		};
+
+		auto farPlaneCenter = (temp[4] + temp[5] + temp[6] + temp[7]) / 4.0f;
+		auto v = Vec4(farPlaneCenter, 1.0f) * proj;
+		v = v / v.w;
+
+		depthThres[i] = v.z;
+
+		frustums.push_back(temp);
+
+		count = c;
+	}
+
+}
+
+void LightSystem::ExtraDataCSMDirLight::Follow(Mat4x4* view, Mat4x4* projection)
+{
+	this->view = view;
+	this->proj = projection;
+	this->prevProj = *projection;
+
+	Frustum::GetFrustumCorners(projCorners, *proj);
+
+	float thres[ShadowMap_NUM_CASCADE] = { 50, 100, 150, 150 };
+	Separate(thres, -1);
+}
+
+//2nd method
+inline void __CSM__GetBoundingSphere(Vec3* corners, Vec3* outCenter, float* outRadius)
+{
+	BoundingSphere sph;
+	BoundingSphere::CreateFromPoints(sph, 8, corners, sizeof(XMFLOAT3));
+	*outCenter = *(Vec3*)&sph.Center;
+	*outRadius = sph.Radius;
+}
+
+void LightSystem::ExtraDataCSMDirLight::Separate(float* newThres, float maxLength)
+{
+	std::vector<std::vector<Vec3>> frustums;
+
+	float thres[ShadowMap_NUM_CASCADE] = {};
+	memcpy(thres, newThres, ShadowMap_NUM_CASCADE * sizeof(float));
+
+	__CSM__SeparateFrustum(*proj, projCorners, frustums, thres, depthThres, maxLength);
+
+	for (size_t i = 0; i < frustums.size(); i++)
+	{
+		float r = 0;
+		Vec3 center;
+
+		__CSM__GetBoundingSphere(&frustums[i][0], &center, &r);
+
+		centers[i] = center;
+		radiuses[i] = r;
+	}
+}
+
+Mat4x4 __CSM__Tie(const Vec3& dir, const Mat4x4& _view, const Vec3& center, float radius, float shadowMapResolution)
+{
+	auto centerInWolrdSpace = ConvertVector(Vec4(center, 1.0f) * _view);
+
+	const float nearOffset = 1000.f;
+
+	Mat4x4 proj;
+	proj.SetOrthographicLH(radius * 2.0f, radius * 2.0f, 0, radius * 2.0f + nearOffset);
+
+	Mat4x4 view;
+	auto pos = centerInWolrdSpace - dir.Normal() * (radius + nearOffset);
+
+	view.SetLookAtLH(pos, centerInWolrdSpace, { 0,1,0 });
+
+	auto vp = view * proj;
+
+	const float factor = shadowMapResolution / 2;
+
+	//origin must be on a line on pixel grid
+	Vec4 shadowOrigin = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	shadowOrigin = shadowOrigin * vp;
+	shadowOrigin = shadowOrigin * factor;
+
+	Vec4 roundedOrigin = Vec4(std::floor(shadowOrigin.x), std::floor(shadowOrigin.y), 0, 0);
+	Vec4 roundOffset = roundedOrigin - shadowOrigin;
+	roundOffset = roundOffset / factor;
+
+	proj.SetPosition(roundOffset.x, roundOffset.y, 0);
+
+	return view * proj;
+}
+
+void __CSM__TieProjShadow(LightID id, LightSystem* lightSys, LightSystem::ExtraDataCSMDirLight* data)
+{
+	auto& light = lightSys->GetLight(id);
+	auto shadowProj = lightSys->GetShadow(id);
+	auto& camProj = *data->proj;
+	auto& camView = *data->view;
+
+	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
+	{
+		shadowProj[i] = __CSM__Tie(light.dir, camView, data->centers[i], data->radiuses[i], data->alloc[0].dim.x);
+	}
+
+	float* p = (float*)&shadowProj[ShadowMap_NUM_CASCADE];
+	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
+	{
+		p[i] = data->depthThres[i];
+	}
+}
+
+bool LightSystem::ExtraDataCSMDirLight::Update(LightID id, LightSystem* sys)
+{
+	if (memcmp(proj, &prevProj, sizeof(Mat4x4)))
+	{
+		Follow(view, proj);
+		return true;
+	}
+
+	__CSM__TieProjShadow(id, sys, this);
+
+	return true;
 }
 
 //#ifdef DX11_RENDERER

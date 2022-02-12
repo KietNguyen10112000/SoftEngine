@@ -43,6 +43,7 @@ public:
 		{
 			Vec3 pos;
 			Vec2 texcoord;
+			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
 
@@ -54,6 +55,7 @@ public:
 		{
 			Vec3 pos;
 			Vec2 texcoord;
+			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
 
@@ -67,6 +69,7 @@ public:
 		{
 			Vec3 pos;
 			Vec2 texcoord;
+			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
 
@@ -87,7 +90,7 @@ public:
 			//WeightVertex_8* p8 = (WeightVertex_8*)vertex;
 			//WeightVertex_16* p16 = (WeightVertex_16*)vertex;
 
-			const auto skip1 = sizeof(Vec3) * 3 + sizeof(Vec2);
+			const auto skip1 = sizeof(Vec3) * 4 + sizeof(Vec2);
 			const auto skip2 = skip1 + maxWeightPerVertex * sizeof(unsigned short);
 			unsigned short* _boneID = (unsigned short*)(((uint8_t*)vertex) + skip1);
 			float* _weight = (float*)(((uint8_t*)vertex) + skip2);
@@ -116,6 +119,7 @@ public:
 		{
 			Vec3 pos;
 			Vec2 texcoord;
+			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
 		};

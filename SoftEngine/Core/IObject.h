@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Math/Math.h>
+#include <Math/Collision.h>
 #include <RenderPipeline.h>
 
 class ShaderVar;
@@ -86,6 +86,9 @@ protected:
 	Mat4x4 m_mvp;
 	Mat4x4 m_proj;
 
+	//camera frustum
+	Frustum m_frustum;
+
 	inline static size_t count = 0;
 
 public:
@@ -114,6 +117,8 @@ public:
 	inline auto& ProjectionMatrix() { return m_proj; };
 	inline auto& ViewMatrix() { return m_transform; };
 
+	inline auto* FrustumCorners() { return &m_frustum.m_corners[0]; };
+	inline auto& Frustum() { return m_frustum; };
 };
 
 

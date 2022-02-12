@@ -37,7 +37,7 @@ private:
     friend class DX11PostProcessor;
     friend class ShadowMap;
 
-protected:
+public:
     ID3D11Device* m_d3dDevice = nullptr;
     ID3D11DeviceContext* m_d3dDeviceContext = nullptr;
 

@@ -12,6 +12,8 @@
 
 #include <Component/Quad.h>
 
+#include <IObject.h>
+
 class DeferredRenderer;
 
 class DX11LightSystem : public LightSystem
@@ -19,7 +21,7 @@ class DX11LightSystem : public LightSystem
 protected:
 	friend class DeferredRenderer;
 
-private:
+public:
 	ID3D11Buffer* m_lightsBuffer = nullptr;
 	ID3D11ShaderResourceView* m_lightsBufferSrv = nullptr;
 
@@ -93,8 +95,9 @@ inline DX11LightSystem::DX11LightSystem() : LightSystem(SHADOW_MAP_SIZE)
 	InitShadowLightsBuffer();
 	InitShadowMap();
 
-	LightSystemInfo temp;
-	m_lightSysInfo = new ShaderVar(&temp, sizeof(LightSystemInfo));
+	//LightSystemInfo temp;
+	m_lightSysInfo = new ShaderVar(&m_info, sizeof(LightSystemInfo));
+	m_lightSysInfo->Update(&m_info, sizeof(LightSystemInfo));
 
 	Mat4x4 temp2;
 	m_lightVP = new ShaderVar(&temp2, sizeof(Mat4x4));
@@ -365,7 +368,7 @@ inline void DX11LightSystem::InitShadowMap()
 	RasterizerDesc.CullMode = D3D11_CULL_NONE;//D3D11_CULL_FRONT;
 	RasterizerDesc.FrontCounterClockwise = FALSE;
 	RasterizerDesc.DepthBias = 1;
-	RasterizerDesc.SlopeScaledDepthBias = 5.0f;//3.5f;//2;
+	RasterizerDesc.SlopeScaledDepthBias = 2.f;// 5.0f;//3.5f;//2;
 	RasterizerDesc.DepthBiasClamp = 0;
 	RasterizerDesc.DepthClipEnable = TRUE;
 	RasterizerDesc.ScissorEnable = FALSE;
@@ -398,13 +401,23 @@ inline void DX11LightSystem::InitShadowMap()
 
 inline void DX11LightSystem::Update()
 {
+	if (m_needUpdateInfo)
+	{
+		m_info.numLight = m_activeLights.size();
+		m_lightSysInfo->Update(&m_info, sizeof(LightSystemInfo));
+		m_needUpdateInfo = false;
+	}
+
 	if (m_updateActiveLights.size() != 0)
 	{
-		LightSystemInfo info;
-		info.environmentAmbient = { 0.2f, 0.2f, 0.2f };
-		info.numLight = m_activeLights.size();
-
-		m_lightSysInfo->Update(&info, sizeof(LightSystemInfo));
+		//LightSystemInfo info;
+		//m_lightSysInfo.environmentAmbient = { 0.2f, 0.2f, 0.2f };
+		//if (m_needUpdateInfo)
+		//{
+		m_info.numLight = m_activeLights.size();
+		m_lightSysInfo->Update(&m_info, sizeof(LightSystemInfo));
+		m_needUpdateInfo = false;
+		//}
 
 		D3D11_MAPPED_SUBRESOURCE mappedResource;
 
@@ -544,7 +557,7 @@ inline bool DX11LightSystem::BeginShadow(LightID id)
 		//context->VSSetShader(m_vs->GetNativeHandle(), 0, 0);
 		context->PSSetShader(0, 0, 0);
 
-		context->VSSetConstantBuffers(3, 1, &m_lightVP->GetNativeHandle());
+		context->VSSetConstantBuffers(1, 1, &m_lightVP->GetNativeHandle());
 
 		m_lightVP->Update(&shadow.viewProj[0], sizeof(Mat4x4));
 
@@ -606,6 +619,12 @@ inline void DX11LightSystem::EndShadow(LightID id)
 	if (m_doneBeginShadow)
 	{
 		DX11Global::renderer->RestoreRenderPipeline();
+	}
+
+	auto& light = GetLight(id);
+	if (light.type == LIGHT_TYPE::SPOT_LIGHT || light.type == LIGHT_TYPE::DIRECTIONAL_LIGHT)
+	{
+		context->VSSetConstantBuffers(1, 1, &ICamera::shaderMVP->GetNativeHandle());
 	}
 
 	m_doneBeginShadow = false;

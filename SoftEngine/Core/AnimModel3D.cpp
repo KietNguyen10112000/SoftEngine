@@ -47,6 +47,15 @@ void TBNTryInitAnimableBuffer(_TBNRenderBuffer& out, AssimpParser& parser,
 			vertex.bitangent = vector;
 		}
 
+		if (mesh->mNormals)
+		{
+			vector.x = mesh->mNormals[i].x;
+			vector.y = mesh->mNormals[i].y;
+			vector.z = mesh->mNormals[i].z;
+			vertex.normal = vector;
+		}
+
+
 		if (mesh->mTextureCoords[0])
 		{
 			Vec2 vec;
@@ -165,6 +174,14 @@ _TBNRenderBuffer TBNInitNonAnimBuffer(TBNAnimModel* init, AssimpParser& parser, 
 			vector.y = mesh->mBitangents[i].y;
 			vector.z = mesh->mBitangents[i].z;
 			vertex.bitangent = vector;
+		}
+
+		if (mesh->mNormals)
+		{
+			vector.x = mesh->mNormals[i].x;
+			vector.y = mesh->mNormals[i].y;
+			vector.z = mesh->mNormals[i].z;
+			vertex.normal = vector;
 		}
 
 		if (mesh->mTextureCoords[0])
@@ -323,7 +340,6 @@ void TBNAnimModelLoader::Load(const std::wstring& path, Mat4x4& preTransform, TB
 
 	const aiScene* scene = importer.ReadFile(WStringToString(path).c_str(), aiProcess_ConvertToLeftHanded |
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices
-		| aiProcess_GenSmoothNormals 
 		| aiProcess_RemoveComponent);
 
 
@@ -364,6 +380,7 @@ RenderPipeline* TBNAnimModelLoader::GetNonAnimMeshRpl()
 		{
 			Vec3 position; POSITION, PER_VERTEX #
 			Vec2 textCoord; TEXTCOORD, PER_VERTEX #
+			Vec3 normal; NORMAL, PER_VERTEX #
 			Vec3 tangent; TANGENT, PER_VERTEX #
 			Vec3 bitangent; BITANGENT, PER_VERTEX #
 		}
@@ -385,6 +402,7 @@ RenderPipeline* TBNAnimModelLoader::GetAnimMeshRpl(size_t maxWeightPerVertex)
 			{
 				Vec3 position; POSITION, PER_VERTEX #
 				Vec2 textCoord; TEXTCOORD, PER_VERTEX #
+				Vec3 normal; NORMAL, PER_VERTEX #
 				Vec3 tangent; TANGENT, PER_VERTEX #
 				Vec3 bitangent; BITANGENT, PER_VERTEX #
 
@@ -403,6 +421,7 @@ RenderPipeline* TBNAnimModelLoader::GetAnimMeshRpl(size_t maxWeightPerVertex)
 			{
 				Vec3 position; POSITION, PER_VERTEX #
 				Vec2 textCoord; TEXTCOORD, PER_VERTEX #
+				Vec3 normal; NORMAL, PER_VERTEX #
 				Vec3 tangent; TANGENT, PER_VERTEX #
 				Vec3 bitangent; BITANGENT, PER_VERTEX #
 

@@ -4,6 +4,7 @@ struct VS_INPUT
 {
 	float3 pos							: POSITION;
 	float2 textCoord					: TEXTCOORD;
+	float3 normal						: NORMAL;
 	float3 tangent						: TANGENT;
 	float3 bitangent					: BITANGENT;
 
@@ -64,7 +65,7 @@ VS_OUTPUT main(VS_INPUT input)
 
 	float3 t = normalize(mul(float4(input.tangent, 0.0), temp).xyz);
 	float3 b = normalize(mul(float4(input.bitangent, 0.0), temp).xyz);
-	float3 n = normalize(cross(b, t));
+	float3 n = normalize(mul(float4(input.normal, 0.0), temp).xyz);
 
 	output.TBN = float3x3(t, b, n);
 
