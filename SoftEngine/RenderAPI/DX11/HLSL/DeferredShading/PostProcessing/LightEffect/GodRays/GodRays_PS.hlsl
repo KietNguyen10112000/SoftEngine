@@ -87,16 +87,69 @@ float ShadowSpotLight(in Light light, in LightShadow shadow, float3 pixelPos)
 	return percentLight;
 }
 
-float ComputeScattering(float lightDotView)
+
+float ShadowCSMDirLight(in Light light, in LightShadow shadow, float3 pixelPos, float pixelDepthInScreen)
 {
-	float result = 1.0f - G_SCATTERING * G_SCATTERING;
-	result /= (4.0f * PI * pow(1.0f + G_SCATTERING * G_SCATTERING - (2.0f * G_SCATTERING) * lightDotView, 1.5f));
+	//=====================choose shadow cascade=============================
+	//shadow.viewProj[SHADOW_MAP_NUM_CASCADE] as memory to store depthThres
+	const float4 depthThres = shadow.viewProj[SHADOW_MAP_NUM_CASCADE][0];
+	float4 currentPixelDepth = float4(pixelDepthInScreen, pixelDepthInScreen, pixelDepthInScreen, pixelDepthInScreen);
+
+	float4 comparison = (currentPixelDepth > depthThres);
+
+	float findex = dot(comparison, float4(1, 1, 1, 1));
+	int index = min((int)findex, SHADOW_MAP_NUM_CASCADE - 1);
+	//=======================================================================
+
+
+
+	float4x4 shadowProj = shadow.viewProj[(int)index];
+	float2 uvOffset = shadow.uvOffset[(int)index];
+	float2 texelDim = shadow.texelDim;
+
+	float4 posInLightVP = mul(float4(pixelPos, 1.0f), shadowProj);
+
+	float pixelDepth = (posInLightVP.z / posInLightVP.w) - DEPTH_BIAS;
+
+	float percentLight = 0;
+
+	float x = ((posInLightVP.x / posInLightVP.w) * 0.5f + 0.5f);
+	float y = (-(posInLightVP.y / posInLightVP.w) * 0.5f + 0.5f);
+
+	if (saturate(pixelDepth) == pixelDepth && saturate(x) == x && saturate(y) == y)
+	{
+		float sw = SHADOW_MAP_TEXEL_SIZE / texelDim.x;
+		float sh = SHADOW_MAP_TEXEL_SIZE / texelDim.y;
+
+		x = x * sw + uvOffset.x;
+		y = y * sh + uvOffset.y;
+
+		percentLight = shadowDepthMap.SampleCmpLevelZero(shadowMapSampler,
+			float2(x, y), pixelDepth);
+	}
+
+	return percentLight;
+}
+
+float ComputeScattering(float lightDotView, float gscattering)
+{
+	float result = 1.0f - gscattering * gscattering;
+	result /= (4.0f * PI * pow(1.0f + gscattering * gscattering - (2.0f * gscattering) * lightDotView, 1.5f));
 	return result;
 }
 
 //all pos in world space
-float3 GodRaysPointLight(in Light light, in float3 pixelPos, in float3 viewPos, float2 uv)
+float3 GodRaysPointLight(in Light light, float3 pixelPos, in float3 viewPos, float2 uv, float pixelDepthInScreen)
 {
+	if (pixelDepthInScreen > 0.9999f)
+	{
+		float2 NDC = float2(uv.x, 1 - uv.y);
+		NDC = NDC * 2.0f - 1.0f;
+		float4 worldPos = mul(invViewProjMat, float4(NDC, 0.9999f, 1));
+
+		pixelPos = worldPos.xyz / worldPos.w;
+	}
+
 	float3 ray = pixelPos - viewPos;
 
 	float3 dir = normalize(ray);
@@ -141,8 +194,17 @@ float3 GodRaysPointLight(in Light light, in float3 pixelPos, in float3 viewPos, 
 	return accumFog * light.power * light.color;
 }
 
-float3 GodRaysSpotLight(in Light light, in float3 pixelPos, in float3 viewPos, float2 uv)
+float3 GodRaysSpotLight(in Light light, float3 pixelPos, in float3 viewPos, float2 uv, float pixelDepthInScreen)
 {
+	if (pixelDepthInScreen > 0.9999f)
+	{
+		float2 NDC = float2(uv.x, 1 - uv.y);
+		NDC = NDC * 2.0f - 1.0f;
+		float4 worldPos = mul(invViewProjMat, float4(NDC, 0.9999f, 1));
+
+		pixelPos = worldPos.xyz / worldPos.w;
+	}
+
 	float3 ray = pixelPos - viewPos;
 
 	float3 dir = normalize(ray);
@@ -194,11 +256,60 @@ float3 GodRaysSpotLight(in Light light, in float3 pixelPos, in float3 viewPos, f
 	return accumFog * light.power * light.color;
 }
 
+float3 GodRaysCSMDirLight(in Light light, float3 pixelPos, in float3 viewPos, float2 uv, float pixelDepthInScreen)
+{
+	if (pixelDepthInScreen > 0.9999f)
+	{
+		float2 NDC = float2(uv.x, 1 - uv.y);
+		NDC = NDC * 2.0f - 1.0f;
+		float4 worldPos = mul(invViewProjMat, float4(NDC, 0.9999f, 1));
+
+		pixelPos = worldPos.xyz / worldPos.w;
+	}
+
+	float3 ray = pixelPos - viewPos;
+
+	float3 dir = normalize(ray);
+	float rayLength = min(MAX_RAY_LENGTH, length(ray));
+	//rayLength = rayLength == 0 ? MAX_RAY_LENGTH : rayLength;
+
+	float dL = rayLength / (float)NUM_SAMPLES;
+
+	float3 step = dir * dL;
+
+	int x = floor(uv.x * screenWidth);
+	int y = floor(uv.y * screenHeight);
+
+	float ditherValue = ditherPattern[x % 4][y % 4];
+
+	float3 pos = viewPos + ditherValue * step;
+
+	float sFactor = ComputeScattering(dot(dir, -light.dir), light.constantAttenuation);
+
+	float accumFog = 0;
+	for (uint i = 0; i < NUM_SAMPLES; i++)
+	{
+		float percentLight = ShadowCSMDirLight(light, shadows[light.activeShadowIndex], pos, pixelDepthInScreen);
+        if (percentLight != 0)
+		{
+            accumFog += sFactor * light.linearAttenuation;
+        }
+		pos += step;
+	}
+
+	accumFog = max(0, accumFog);
+	accumFog /= (float)NUM_SAMPLES;
+
+	return accumFog * light.power * light.color;
+}
+
 float4 main(PS_INPUT input) : SV_TARGET0
 {
 	float3 pixelPos = position.Sample(defaultSampler, input.textCoord).xyz;
 
-	float3 color = GodRaysSpotLight(lights[0], pixelPos, viewPoint, input.textCoord);
+	float pixelDepth = depthMap.Sample(defaultSampler, input.textCoord);
+
+	float3 color = GodRaysCSMDirLight(lights[0], pixelPos, viewPoint, input.textCoord, pixelDepth);
 
 	return float4(color, 1.0f);
 }

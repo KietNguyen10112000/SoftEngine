@@ -10,13 +10,28 @@
 #include <Resource.h>
 #include <Buffer.h>
 
-#include <Component\Quad.h>
+#include <Components/Quad.h>
 
 #include <IObject.h>
 
 #include "LightSystem.h"
 
 #include "DX11PostProcessor.h"
+
+#ifdef SCREEN_SHADOW_BLUR
+struct ___GaussianVariable
+{
+    uint32_t type;
+    uint32_t halfWeightCount;
+
+    float w;
+    float h;
+
+    float weights[16];
+};
+
+___GaussianVariable ___gaussianVar;
+#endif
 
 #define ThrowIfFailed(hr, msg) if (FAILED(hr)) throw msg L"\nThrow from File \"" __FILEW__ L"\", Line " _STRINGIZE(__LINE__) L"."
 
@@ -155,7 +170,7 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
     ZeroMemory(&descDSV, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
     descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+    descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     descDSV.Texture2D.MipSlice = 0;
     descDSV.Flags = 0;
 
@@ -181,7 +196,7 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     D3D11_RASTERIZER_DESC RasterizerDesc;
     ZeroMemory(&RasterizerDesc, sizeof(RasterizerDesc));
     RasterizerDesc.FillMode = D3D11_FILL_SOLID;
-    RasterizerDesc.CullMode = D3D11_CULL_NONE;
+    RasterizerDesc.CullMode = D3D11_CULL_BACK;//D3D11_CULL_NONE;
     RasterizerDesc.FrontCounterClockwise = FALSE;
     RasterizerDesc.DepthBias = 0;
     RasterizerDesc.SlopeScaledDepthBias = 0.0f;
@@ -191,10 +206,10 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     RasterizerDesc.MultisampleEnable = FALSE;
     RasterizerDesc.AntialiasedLineEnable = FALSE;
 
-    CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE,
-        D3D11_DEFAULT_DEPTH_BIAS, D3D11_DEFAULT_DEPTH_BIAS_CLAMP,
-        D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, FALSE,
-        TRUE /*this is MSAA enable*/, FALSE);
+    //CD3D11_RASTERIZER_DESC rastDesc(D3D11_FILL_SOLID, D3D11_CULL_NONE, FALSE,
+    //    D3D11_DEFAULT_DEPTH_BIAS, D3D11_DEFAULT_DEPTH_BIAS_CLAMP,
+    //    D3D11_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, FALSE,
+    //    TRUE /*this is MSAA enable*/, FALSE);
 
     m_d3dDevice->CreateRasterizerState(&RasterizerDesc, &m_rasterizerState);
     m_d3dDeviceContext->RSSetState(m_rasterizerState);
@@ -275,7 +290,17 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
 
 DeferredRenderer::~DeferredRenderer()
 {
-    m_rtv[m_totalRtvUsed] = 0;
+#ifdef SCREEN_SHADOW_BLUR
+    Resource::Release(&m_shadowCombinePS);
+    delete m_gaussianBlurVar;
+    Resource::Release(&m_gaussianBlurPS);
+    m_screenShadowBlurBufSRV1->Release();
+    m_screenShadowBlurBufRTV1->Release();
+    m_screenShadowBlurBufSRV2->Release();
+    m_screenShadowBlurBufRTV2->Release();
+#endif
+
+    m_rtv[RTV_INDEX::COUNT] = 0;
 
     for (size_t i = 0; i < 8; i++)
     {
@@ -340,10 +365,15 @@ void DeferredRenderer::CreateRtvs()
         DXGI_FORMAT_R32G32B32A32_FLOAT,
         DXGI_FORMAT_R32G32B32A32_FLOAT,
         DXGI_FORMAT_R32G32B32A32_FLOAT,
+
+
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        DXGI_FORMAT_R8G8B8A8_UNORM
     };
 
-    m_totalRtvUsed = 4;
-    for (size_t i = 0; i < 4; i++)
+    //m_totalRtvUsed = RTV_INDEX::COUNT;
+    for (size_t i = 0; i < RTV_INDEX::COUNT; i++)
     {
         bufferDesc.Format = formats[i];
         renderDesc.Format = formats[i];
@@ -376,12 +406,12 @@ void DeferredRenderer::CreateRtvs()
 
     m_lightSystem = new class DX11LightSystem();
 
-    Vec4 temp;
-    m_viewPointSV = new ShaderVar(&temp, sizeof(Vec4));
+    PixelShaderCBuffer temp;
+    m_viewPointSV = new ShaderVar(&temp, sizeof(PixelShaderCBuffer));
 
     m_screenQuad = NewScreenRectangle();
 
-    bufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    /*bufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     renderDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -391,12 +421,12 @@ void DeferredRenderer::CreateRtvs()
 
     hr = m_d3dDevice->CreateShaderResourceView(buffer, &srvDesc, &m_rtvShader[m_totalRtvUsed]);
 
-    buffer->Release();
+    buffer->Release();*/
 
     ThrowIfFailed(hr, L"Failed.");
 
     //rtv[3] as visualize for last result
-    m_totalRtvUsed++;
+    //m_totalRtvUsed++;
 
     m_lastPresentRpl = RenderPipelineManager::Get(
         R"(struct VS_INPUT
@@ -432,9 +462,38 @@ void DeferredRenderer::CreateRtvs()
 #endif // _DEBUG
     
 
-    m_lastSceneSrv = m_rtvShader[m_totalRtvUsed - 1];
-    m_lastSceneRtv = m_rtv[m_totalRtvUsed - 1];
+    m_lastSceneSrv = m_rtvShader[LIGHTED_SCENE];
+    m_lastSceneRtv = m_rtv[LIGHTED_SCENE];
 
+#ifdef SCREEN_SHADOW_BLUR
+    m_shadowCombinePS = Resource::Get<PixelShader>(L"Shadow/v2/PSCombineShadowColor");
+    m_gaussianBlurPS = Resource::Get<PixelShader>(L"Shadow/v2/PSVariableGaussianBlur");
+
+    ___gaussianVar.w = m_bbDesc.Width / 2;
+    ___gaussianVar.h = m_bbDesc.Height / 2;
+    ___gaussianVar.halfWeightCount = 5;
+    const float weight[5] = {
+        0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216
+    };
+    ::memcpy(___gaussianVar.weights, weight, sizeof(float) * 5);
+    m_gaussianBlurVar = new ShaderVar(&___gaussianVar, sizeof(___gaussianVar));
+
+    bufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    bufferDesc.Width = ___gaussianVar.w;
+    bufferDesc.Height = ___gaussianVar.h;
+    renderDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    hr = m_d3dDevice->CreateTexture2D(&bufferDesc, NULL, &buffer);
+    hr = m_d3dDevice->CreateRenderTargetView(buffer, &renderDesc, &m_screenShadowBlurBufRTV1);
+    hr = m_d3dDevice->CreateShaderResourceView(buffer, &srvDesc, &m_screenShadowBlurBufSRV1);
+    buffer->Release();
+
+    hr = m_d3dDevice->CreateTexture2D(&bufferDesc, NULL, &buffer);
+    hr = m_d3dDevice->CreateRenderTargetView(buffer, &renderDesc, &m_screenShadowBlurBufRTV2);
+    hr = m_d3dDevice->CreateShaderResourceView(buffer, &srvDesc, &m_screenShadowBlurBufSRV2);
+    buffer->Release();
+#endif
 
     CreatePostProcessor();
 }
@@ -460,17 +519,25 @@ std::wstring DeferredRenderer::ShaderDirectory()
 
 void DeferredRenderer::DoLighting()
 {
-    Vec3 pos = m_targetCam->GetPosition();
-    Vec4 temp = { pos.x, pos.y, pos.z, 1 };
+    m_dataPassToPixelShader.viewPoint = m_targetCam->GetPosition();
+    m_dataPassToPixelShader.mvp = m_targetCam->MVP();
+    m_dataPassToPixelShader.invMVP = GetInverse(m_dataPassToPixelShader.mvp);
+    //Vec4 temp = { pos.x, pos.y, pos.z, 1 };
 
-    m_viewPointSV->Update(&temp, sizeof(Vec4));
+    m_viewPointSV->Update(&m_dataPassToPixelShader, sizeof(m_dataPassToPixelShader));
 
-    m_d3dDeviceContext->OMSetRenderTargets(1, &m_lastSceneRtv, 0);
+    //m_lastSceneRtv == LIGHTED_SCENE
+    //shadowColor == SHADOW_COLOR
+    m_d3dDeviceContext->OMSetRenderTargets(2, &m_rtv[RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW], 0);
+
+#ifndef SCREEN_SHADOW_BLUR
+    if (m_skybox) m_skybox->Render(this);
+#endif
 
     m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &m_viewPointSV->GetNativeHandle());
     m_d3dDeviceContext->PSSetConstantBuffers(1, 1, &m_lightSystem->m_lightSysInfo->GetNativeHandle());
 
-    if (m_skybox) m_skybox->Render(this);
+    //m_d3dDeviceContext->GenerateMips(m_lightSystem->m_shadowDepthMapSrv);
 
     //t0, 1, 2
     m_d3dDeviceContext->PSSetShaderResources(0, 1, &m_lightSystem->m_lightsBufferSrv);
@@ -479,19 +546,74 @@ void DeferredRenderer::DoLighting()
 
     //....
     m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_dsvShader);
-    m_d3dDeviceContext->PSSetShaderResources(4, m_totalRtvUsed - 1, m_rtvShader);
+    m_d3dDeviceContext->PSSetShaderResources(4, RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW - 1, m_rtvShader);
 
+#ifdef SCREEN_SHADOW_BLUR
+    //present to 1 shadow image, 1 light image
+#endif
     Render(m_presentLightRpl, m_screenQuad);
 
-    /*m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, 0);
-    m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_lastSceneSrv);
-    Render(m_lastPresentRpl, m_screenQuad);*/
+#ifdef SCREEN_SHADOW_BLUR
+    auto vs = m_presentLightRpl->GetVS();
+
+    D3D11_VIEWPORT vp = {};
+    vp.Width = ___gaussianVar.w;
+    vp.Height = ___gaussianVar.h;
+    //D3D11_VIEWPORT vps[] = { vp, vp };
+    m_d3dDeviceContext->RSSetViewports(1, &vp);
+    //==================================blur shadow image=================================================
+    ___gaussianVar.type = 0;
+    m_gaussianBlurVar->Update(&___gaussianVar, sizeof(___gaussianVar));
+    m_d3dDeviceContext->PSSetConstantBuffers(2, 1, &m_gaussianBlurVar->GetNativeHandle());
+
+    m_d3dDeviceContext->IASetInputLayout(vs->GetNativeLayoutHandle());
+    m_d3dDeviceContext->VSSetShader(vs->GetNativeHandle(), 0, 0);
+    m_d3dDeviceContext->PSSetShader(m_gaussianBlurPS->GetNativeHandle(), 0, 0);
+
+    //first pass
+    m_d3dDeviceContext->OMSetRenderTargets(1, &m_screenShadowBlurBufRTV1, 0);
+    m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_rtvShader[RTV_INDEX::SHADOW_COLOR]);
+    m_d3dDeviceContext->IASetVertexBuffers(0, 1, &m_screenQuad->GetNativeHandle(), 
+        &m_screenQuad->Stride(), &m_screenQuad->Offset());
+    m_d3dDeviceContext->Draw(m_screenQuad->Count(), 0);
+
+    //unset
+    m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_rtvShader[RTV_INDEX::COUNT]);
+
+    //second pass
+    ___gaussianVar.type = 1;
+    m_gaussianBlurVar->Update(&___gaussianVar, sizeof(___gaussianVar));
+    m_d3dDeviceContext->OMSetRenderTargets(1, &m_screenShadowBlurBufRTV2, 0);
+    m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_screenShadowBlurBufSRV1);
+    m_d3dDeviceContext->IASetVertexBuffers(0, 1, &m_screenQuad->GetNativeHandle(),
+        &m_screenQuad->Stride(), &m_screenQuad->Offset());
+    m_d3dDeviceContext->Draw(m_screenQuad->Count(), 0);
+
+    m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_rtvShader[RTV_INDEX::COUNT]);
+
+
+    m_d3dDeviceContext->RSSetViewports(1, &m_viewport);
+    //combine
+    m_d3dDeviceContext->OMSetRenderTargets(1, &m_lastSceneRtv, 0);
+    if (m_skybox) m_skybox->Render(this);
+
+    m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_rtvShader[RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW]);
+    m_d3dDeviceContext->PSSetShaderResources(5, 1, &m_screenShadowBlurBufSRV2);
+    m_d3dDeviceContext->PSSetShader(m_shadowCombinePS->GetNativeHandle(), 0, 0);
+    
+    
+    m_d3dDeviceContext->IASetInputLayout(vs->GetNativeLayoutHandle());
+    m_d3dDeviceContext->VSSetShader(vs->GetNativeHandle(), 0, 0);
+    m_d3dDeviceContext->IASetVertexBuffers(0, 1, &m_screenQuad->GetNativeHandle(), &m_screenQuad->Stride(), &m_screenQuad->Offset());
+    m_d3dDeviceContext->Draw(m_screenQuad->Count(), 0);
+#endif
 
     m_doneLighting = true;
 }
 
 void DeferredRenderer::Present()
 {
+    //m_d3dDeviceContext->OMSetRenderTargets(8, &m_rtv[RTV_INDEX::COUNT], nullptr);
     if (!m_doneLighting) DoLighting();
     
     if (!m_postProcessor || !m_postProcessor->Run())
@@ -502,9 +624,9 @@ void DeferredRenderer::Present()
     }
 
     //m_dxgiSwapChain->Present(1, 0);
-
-    m_d3dDeviceContext->PSSetShaderResources(0, m_totalRtvUsed + 4, &m_rtvShader[m_totalRtvUsed]);
-    m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
+    m_d3dDeviceContext->OMSetRenderTargets(8, &m_rtv[RTV_INDEX::COUNT], nullptr);
+    m_d3dDeviceContext->PSSetShaderResources(0, 15, &m_rtvShader[RTV_INDEX::COUNT]);
+    
 
 }
 void DeferredRenderer::SetTargetCamera(ICamera* camera)
@@ -529,7 +651,15 @@ void DeferredRenderer::ClearFrame(float color[4])
     m_d3dDeviceContext->ClearRenderTargetView(m_rtv[3], color);
     m_d3dDeviceContext->ClearRenderTargetView(m_rtv[4], color);
 
-    m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed - 1, m_rtv, m_dsv);
+#ifdef SCREEN_SHADOW_BLUR
+    m_d3dDeviceContext->ClearRenderTargetView(m_rtv[RTV_INDEX::SHADOW_COLOR], color);
+    m_d3dDeviceContext->ClearRenderTargetView(m_rtv[RTV_INDEX::LIGHTED_SCENE_WITH_SHADOW], color);
+
+    m_d3dDeviceContext->ClearRenderTargetView(m_screenShadowBlurBufRTV1, color);
+    m_d3dDeviceContext->ClearRenderTargetView(m_screenShadowBlurBufRTV2, color);
+#endif
+
+    m_d3dDeviceContext->OMSetRenderTargets(RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW, m_rtv, m_dsv);
 
     if (m_targetCam)
         ICamera::shaderMVP->Update(&m_targetCam->MVP(), sizeof(Mat4x4));
@@ -693,15 +823,15 @@ void DeferredRenderer::BeginTransparency()
     //m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, 0);
     //m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_lastSceneSrv);
     //Render(m_lastPresentRpl, m_screenQuad);
-    m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_rtvShader[m_totalRtvUsed]);
+    m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_rtvShader[RTV_INDEX::COUNT]);
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_lastSceneRtv, m_dsv);
     //m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, m_dsv);
 }
 
 void DeferredRenderer::EndTransparency()
 {
-    m_d3dDeviceContext->PSSetShaderResources(0, m_totalRtvUsed + 4, &m_rtvShader[m_totalRtvUsed]);
-    m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
+    m_d3dDeviceContext->PSSetShaderResources(0, RTV_INDEX::COUNT + 4, &m_rtvShader[RTV_INDEX::COUNT]);
+    m_d3dDeviceContext->OMSetRenderTargets(RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW, &m_rtv[RTV_INDEX::COUNT], nullptr);
 }
 
 void DeferredRenderer::VisualizePositionNormalDiffuseSpecular()
@@ -710,15 +840,15 @@ void DeferredRenderer::VisualizePositionNormalDiffuseSpecular()
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, 0);
 
     m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_dsvShader);
-    m_d3dDeviceContext->PSSetShaderResources(4, m_totalRtvUsed, m_rtvShader);
+    m_d3dDeviceContext->PSSetShaderResources(4, RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW, m_rtvShader);
     
     Render(m_visualizeRpl, m_screenQuad);
 
-    m_d3dDeviceContext->PSSetShaderResources(3, m_totalRtvUsed + 1, &m_rtvShader[m_totalRtvUsed]);
+    m_d3dDeviceContext->PSSetShaderResources(3, RTV_INDEX::COUNT + 1, &m_rtvShader[RTV_INDEX::COUNT]);
 
     //m_dxgiSwapChain->Present(0, 0);
 
-    m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
+    m_d3dDeviceContext->OMSetRenderTargets(RTV_INDEX::COUNT, &m_rtv[RTV_INDEX::COUNT], nullptr);
 #endif
 }
 
@@ -734,16 +864,16 @@ void DeferredRenderer::VisualizeShadowDepthMap()
 
     //....
     m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_dsvShader);
-    m_d3dDeviceContext->PSSetShaderResources(4, m_totalRtvUsed - 1, m_rtvShader);
+    m_d3dDeviceContext->PSSetShaderResources(4, RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW - 1, m_rtvShader);
 
     Render(m_shadowVisualizeRpl, m_screenQuad);
 
-    m_d3dDeviceContext->PSSetShaderResources(0, m_totalRtvUsed + 2, &m_rtvShader[m_totalRtvUsed]);
+    //m_d3dDeviceContext->PSSetShaderResources(0, RTV_INDEX::COUNT + 2, &m_rtvShader[RTV_INDEX::COUNT]);
 
     //m_dxgiSwapChain->Present(0, 0);
 
-    m_d3dDeviceContext->PSSetShaderResources(0, 8, &m_rtvShader[m_totalRtvUsed]);
-    m_d3dDeviceContext->OMSetRenderTargets(3, &m_rtv[m_totalRtvUsed], nullptr);
+    m_d3dDeviceContext->PSSetShaderResources(0, 8, &m_rtvShader[RTV_INDEX::COUNT]);
+    m_d3dDeviceContext->OMSetRenderTargets(3, &m_rtv[RTV_INDEX::COUNT], nullptr);
 #endif
 }
 
@@ -753,15 +883,15 @@ void DeferredRenderer::VisualizePBR()
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, 0);
 
     m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_dsvShader);
-    m_d3dDeviceContext->PSSetShaderResources(4, m_totalRtvUsed, m_rtvShader);
+    m_d3dDeviceContext->PSSetShaderResources(4, RTV_INDEX::COUNT, m_rtvShader);
 
     Render(m_visualizeBPRRpl, m_screenQuad);
 
-    m_d3dDeviceContext->PSSetShaderResources(3, m_totalRtvUsed + 1, &m_rtvShader[m_totalRtvUsed]);
+    m_d3dDeviceContext->PSSetShaderResources(3, 8 - 3, &m_rtvShader[RTV_INDEX::COUNT]);
 
     //m_dxgiSwapChain->Present(0, 0);
 
-    m_d3dDeviceContext->OMSetRenderTargets(m_totalRtvUsed, &m_rtv[m_totalRtvUsed], nullptr);
+    m_d3dDeviceContext->OMSetRenderTargets(RTV_INDEX::COUNT, &m_rtv[RTV_INDEX::COUNT], nullptr);
 #endif
 }
 

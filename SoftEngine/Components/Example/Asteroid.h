@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Component/StaticObjectInstancing.h>
+#include <Components/StaticObjectInstancing.h>
 #include <Engine/Random.h>
 
 class AsteroidBelt_v1 : public NormalMappingObjectInstancing

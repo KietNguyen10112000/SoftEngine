@@ -31,7 +31,7 @@
 #include "Engine/Engine.h"
 #include <vector>
 #include <Math/Collision.h>
-#include <Component/Frustum.h>
+//#include <Component/Frustum.h>
 
 
 //#include "../DX11/LightSystem_v2.h"

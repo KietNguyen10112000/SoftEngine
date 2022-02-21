@@ -11,6 +11,7 @@ Texture2D depthMap					: register(t3);
 
 
 Texture2D godrays					: register(t4);
+//Texture2D downScaledDepth			: register(t5);
 Texture2D scene						: register(t5);
 
 cbuffer Info : register(b2)
@@ -23,8 +24,8 @@ cbuffer Info : register(b2)
 
 float4 main(PS_INPUT input) : SV_TARGET0
 {
-	//float2 texelSize = float2(1.f / width, 1.f / height);
-	//float2 downScaleTexelSize = texelSize * 2.0f;
+	float2 texelSize = float2(1.f / width, 1.f / height);
+	//float2 downScaleTexelSize = texelSize * downScaleFactor;
 
 	//float upSampledDepth = depthMap.Sample(defaultSampler, input.textCoord);
 
@@ -47,15 +48,15 @@ float4 main(PS_INPUT input) : SV_TARGET0
 
 	//for (int i = 0; i < 4; i++)
 	//{
-	//	float2 offset = offsets[i] * texelSize;
+	//	//float2 offset = offsets[i] * texelSize;
 	//	float2 downScaleOffset = offsets[i] * downScaleTexelSize;
 
 	//	float3 downscaledColor = godrays.Sample(defaultSampler, input.textCoord + downScaleOffset).xyz;
 
-	//	float downscaledDepth = depthMap.Sample(defaultSampler, input.textCoord + downScaleOffset);
+	//	float downscaledDepth = downScaledDepth.Sample(defaultSampler, input.textCoord + downScaleOffset).r;
 
 	//	float currentWeight = 1.0f;
-	//	currentWeight *= max(0.0f, 1.0f - (0.05f) * abs(downscaledDepth - upSampledDepth));
+	//	currentWeight *= max(0.0f, 1.0f - 0.05f * abs(downscaledDepth - upSampledDepth));
 
 	//	color += downscaledColor * currentWeight;
 	//	totalWeight += currentWeight;
@@ -65,8 +66,16 @@ float4 main(PS_INPUT input) : SV_TARGET0
 	//const float epsilon = 0.0001f;
 	//float3 volumetricLight = color / (totalWeight + epsilon);
 
-	float3 rayColor = godrays.Sample(defaultSampler, input.textCoord).xyz;
+	
 	float3 pixelColor = scene.Sample(defaultSampler, input.textCoord).xyz;
+	float3 rayColor = godrays.Sample(defaultSampler, input.textCoord).xyz;
+
+	float3 lRayColor = godrays.Sample(defaultSampler, input.textCoord + float2(0, texelSize.y)).xyz;
+	float3 rRayColor = godrays.Sample(defaultSampler, input.textCoord - float2(0, texelSize.y)).xyz;
+	float3 uRayColor = godrays.Sample(defaultSampler, input.textCoord - float2(texelSize.x, 0)).xyz;
+	float3 dRayColor = godrays.Sample(defaultSampler, input.textCoord + float2(texelSize.x, 0)).xyz;
+
+	rayColor = (rayColor + lRayColor + rRayColor + uRayColor + dRayColor) / 5.0f;
 
 	//return float4(saturate(volumetricLight + pixelColor), 1.0f);
 

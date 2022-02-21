@@ -10,7 +10,7 @@
 
 #include <iostream>
 
-#include <Component/Quad.h>
+#include <Components/Quad.h>
 
 #include <IObject.h>
 
@@ -96,6 +96,8 @@ inline DX11LightSystem::DX11LightSystem() : LightSystem(SHADOW_MAP_SIZE)
 	InitShadowMap();
 
 	//LightSystemInfo temp;
+	m_info.depthBias = 0;
+	m_info.offsetPixelLightFactor.x = 2.486f;
 	m_lightSysInfo = new ShaderVar(&m_info, sizeof(LightSystemInfo));
 	m_lightSysInfo->Update(&m_info, sizeof(LightSystemInfo));
 
@@ -342,7 +344,7 @@ inline void DX11LightSystem::InitShadowMap()
 	//config sampler
 	D3D11_SAMPLER_DESC samplerDesc;
 	ZeroMemory(&samplerDesc, sizeof(samplerDesc));
-	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR;
+	samplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT;
 	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
 	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
 	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
@@ -365,15 +367,15 @@ inline void DX11LightSystem::InitShadowMap()
 	D3D11_RASTERIZER_DESC RasterizerDesc;
 	ZeroMemory(&RasterizerDesc, sizeof(RasterizerDesc));
 	RasterizerDesc.FillMode = D3D11_FILL_SOLID;
-	RasterizerDesc.CullMode = D3D11_CULL_NONE;//D3D11_CULL_FRONT;
+	RasterizerDesc.CullMode = D3D11_CULL_BACK;//D3D11_CULL_FRONT;
 	RasterizerDesc.FrontCounterClockwise = FALSE;
-	RasterizerDesc.DepthBias = 1;
-	RasterizerDesc.SlopeScaledDepthBias = 2.f;// 5.0f;//3.5f;//2;
-	RasterizerDesc.DepthBiasClamp = 0;
+	RasterizerDesc.DepthBias = 0;
+	RasterizerDesc.SlopeScaledDepthBias = 10.f;// 5.0f;//3.5f;//2;
+	RasterizerDesc.DepthBiasClamp = 0.0003f;//0.0005f;
 	RasterizerDesc.DepthClipEnable = TRUE;
 	RasterizerDesc.ScissorEnable = FALSE;
 	RasterizerDesc.MultisampleEnable = FALSE;
-	RasterizerDesc.AntialiasedLineEnable = TRUE;
+	RasterizerDesc.AntialiasedLineEnable = FALSE;
 
 	device->CreateRasterizerState(&RasterizerDesc, &m_rasterizerState);
 

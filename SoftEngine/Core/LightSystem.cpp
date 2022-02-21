@@ -534,7 +534,18 @@ void LightSystem::RemoveShadow(LightID id)
 		//uint16_t removeIndex;
 		//LightSystem::LightShadow removeShadow;
 
-		if (light.type == LIGHT_TYPE::POINT_LIGHT || light.type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
+		if (light.type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
+		{
+			auto p = (ExtraDataCSMDirLight*)m_lightExtraData[id];
+
+			for (size_t i = 0; i < 4; i++)
+			{
+				FreeSpaceAlloc(p->alloc[i], id);
+			}
+
+			delete p;
+		}
+		else if (light.type == LIGHT_TYPE::POINT_LIGHT)
 		{
 			auto p = (ExtraDataPointLight*)m_lightExtraData[id];
 

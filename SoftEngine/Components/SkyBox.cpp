@@ -57,7 +57,24 @@ SkyCube::SkyCube(const std::wstring& path, uint32_t numArg, void** args)
         16, 18, 19,
         20, 21, 22,
         20, 22, 23
+        /*0,  1,  2,
+        0,  2,  3,
+        4,  5,  6,
+        4,  6,  7,
+        8,  9, 10,
+        8, 10, 11,
+        12, 13, 14,
+        12, 14, 15,
+        16, 17, 18,
+        16, 18, 19,
+        20, 21, 22,
+        20, 22, 23*/
     };
+
+    for (size_t i = 0; i < 36; i += 3)
+    {
+        std::swap(cubeIndices[i], cubeIndices[i + 2]);
+    }
 
     m_vertexBuffer = new VertexBuffer(cubeVertices, ARRAYSIZE(cubeVertices), sizeof(Vec3));
 

@@ -20,11 +20,14 @@ cbuffer Info : register(b2)
 	//row_major float4x4 padding2;
 };
 
-const static float weight[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+//const static float weight[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+const static float weight[6] = { 
+	0.20056543,  0.17699838,  0.12164909,  0.06511406,  0.027143579,  0.00881223
+};
 //const static float weight[4] = { 0.175240144, 0.165770069, 0.140321344, 0.106288522 };
 //const static float weight[4] = { 0.00159151943, 0.001518361155, 0.00156003464, 0.49612584449 };
 //const static float weight[4] = { 0.142, 0.142, 0.142, 0.142 };
-#define TOTAL_WEIGHT 5
+#define TOTAL_WEIGHT 6
 
 float4 main(PS_INPUT input) : SV_TARGET0
 {

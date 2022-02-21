@@ -9,7 +9,7 @@
 #define UINT32_MAX						0xFFFFFFFFu
 #define INT32_MAX						0x7FFFFFFF
 
-#define SHADOW_MAP_SIZE					(float)4096
+#define SHADOW_MAP_SIZE					4096.0f
 #define SHADOW_MAP_TEXEL_SIZE			(1 / SHADOW_MAP_SIZE)
 
 #define SHADOW_MAP_NUM_CASCADE			4
@@ -19,7 +19,20 @@
 //#define DEPTH_BIAS						0.00005f
 #define DEPTH_BIAS						envDepthBias
 
+//0.000200f
+#define CSM_DEPTH_BIAS					envDepthBias
+
 #define PBR_LIT_FACTOR					10
+
+
+#define SHADOW_HARDWARE_PCF					1
+//#define SHADOW_HARDWARE_FILTERING				1
+//#define SHADOW_RAW						1
+//#define SHADOW_PCF						1
+
+#define SHADOW_PCF_BEGIN				-1.5f
+#define SHADOW_PCF_END					1.5f
+#define SHADOW_PCF_TOTAL				9
 
 
 //#define USE_PIXEL_LIGHT_OFFSET 1
@@ -52,6 +65,10 @@ struct LightShadow
 cbuffer Camera : register(b0)
 {
 	float3 viewPoint;
+	float _CameraPadding1;
+
+	float4x4 viewProjMat;
+	float4x4 invViewProjMat;
 };
 
 cbuffer LightSystemInfo : register(b1)
@@ -92,6 +109,12 @@ struct LightingResult
 {
 	float3 diffuse;
 	float3 specular;
+};
+
+struct ShadingResult
+{
+	float3 color;
+	float3 shadowColor;
 };
 
 SamplerState defaultSampler						: register(s0);
@@ -325,6 +348,53 @@ float DoPointLightShadow(in Light light, in LightShadow shadow, float3 pixelPos,
 	return percentLight;
 }
 
+inline float CalPercentLight(in float pixelDepth, in float x, in float y)
+{
+	float percentLight = 0;
+#ifdef SHADOW_HARDWARE_PCF
+	[unroll] for (float xx = SHADOW_PCF_BEGIN; xx < SHADOW_PCF_END; xx += 1.0f)
+	{
+		[unroll] for (float yy = SHADOW_PCF_BEGIN; yy < SHADOW_PCF_END; yy += 1.0f)
+		{
+			percentLight += shadowDepthMap.SampleCmpLevelZero(shadowMapSampler,
+				float2(x, y) + float2(xx, yy) * SHADOW_MAP_TEXEL_SIZE, pixelDepth);
+		}
+	}
+	percentLight = percentLight / SHADOW_PCF_TOTAL;
+#endif
+
+#ifdef SHADOW_HARDWARE_FILTERING
+	percentLight = shadowDepthMap.SampleCmpLevelZero(shadowMapSampler, float2(x, y), pixelDepth);
+#endif
+
+#ifdef SHADOW_PCF
+	[unroll] for (float xx = SHADOW_PCF_BEGIN; xx < SHADOW_PCF_END; xx += 1.0f)
+	{
+		[unroll] for (float yy = SHADOW_PCF_BEGIN; yy < SHADOW_PCF_END; yy += 1.0f)
+		{
+			float cdepth = shadowDepthMap.Load(
+				int3(floor((float2(x, y) + float2(xx, yy) * SHADOW_MAP_TEXEL_SIZE) * SHADOW_MAP_SIZE), 0)
+			);
+			if (cdepth > pixelDepth)
+			{
+				percentLight += 1;
+			}
+		}
+	}
+	percentLight = percentLight / SHADOW_PCF_TOTAL;
+#endif
+
+#ifdef SHADOW_RAW
+	float cdepth = shadowDepthMap.Load(int3(floor(float2(x, y) * SHADOW_MAP_SIZE), 0));
+	if (cdepth > pixelDepth)
+	{
+		percentLight = 1;
+	}
+#endif
+
+	return percentLight;
+}
+
 float CalCSMDirLit(float3 pixelPos, LightShadow shadow, int index)
 {
 	float4x4 shadowProj = shadow.viewProj[(int)index];
@@ -333,7 +403,7 @@ float CalCSMDirLit(float3 pixelPos, LightShadow shadow, int index)
 
 	float4 posInLightVP = mul(float4(pixelPos, 1.0f), shadowProj);
 
-	float pixelDepth = (posInLightVP.z / posInLightVP.w) - DEPTH_BIAS;
+	float pixelDepth = (posInLightVP.z / posInLightVP.w) - CSM_DEPTH_BIAS;
 
 
 	float percentLight = 0;
@@ -350,15 +420,7 @@ float CalCSMDirLit(float3 pixelPos, LightShadow shadow, int index)
 		x = x * sw + uvOffset.x;
 		y = y * sh + uvOffset.y;
 
-		[unroll] for (float xx = -1.5; xx < 2.5f; xx += 1.0f)
-		{
-			[unroll] for (float yy = -1.5; yy < 2.5f; yy += 1.0f)
-			{
-				percentLight += shadowDepthMap.SampleCmpLevelZero(shadowMapSampler,
-					float2(x, y) + float2(xx, yy) * SHADOW_MAP_TEXEL_SIZE, pixelDepth);
-			}
-		}
-		percentLight = percentLight / 16.0f;
+		percentLight = CalPercentLight(pixelDepth, x, y);
 	}
 	else
 	{
@@ -382,6 +444,10 @@ float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos
 #ifdef USE_PIXEL_LIGHT_OFFSET
 	pixelPos += OffsetPixelLight(light, pixelPos, normal);
 #endif
+	float3 toLightV = normalize(-light.dir);
+	float cosAngle = saturate(1.0f - dot(toLightV, normal));
+	float3 scaledNormalOffset = normal * (offsetPixelLightFactor.x * cosAngle);
+	pixelPos += scaledNormalOffset;
 
 	//=====================choose shadow cascade=============================
 	//shadow.viewProj[SHADOW_MAP_NUM_CASCADE] as memory to store depthThres
@@ -599,7 +665,9 @@ float4 DoNormalShading(NormalShadingPixel pixel)
 	float percentLight = 1;
 	//uint shadowCount = 0;
 
-	LightingResult lastResult = (LightingResult)0;
+	//LightingResult lastResult = (LightingResult)0;
+
+	float3 color = 0.0f.xxx;
 
 	[loop] for (unsigned int i = 0; i < numberLight; i++)
 	{
@@ -656,16 +724,17 @@ float4 DoNormalShading(NormalShadingPixel pixel)
 		break;
 		}
 
-		lastResult.diffuse += result.diffuse * lights[i].power * percentLight;
-		lastResult.specular += result.specular * lights[i].power * percentLight;
+		//lastResult.diffuse += result.diffuse * lights[i].power * percentLight;
+		//lastResult.specular += result.specular * lights[i].power * percentLight;
+
+		color += (result.diffuse + result.specular) * lights[i].power * percentLight;
 	}
 
-	float4 pixelColor = float4(saturate(environmentAmbient + lastResult.diffuse + lastResult.specular), 1.0f) * pixel.color;
+	float4 pixelColor = float4(saturate(environmentAmbient + color
+	/*lastResult.diffuse + lastResult.specular*/), 1.0f) * pixel.color;
 
 	return pixelColor;
 }
-
-
 
 float4 DoPBRShading(PBRShadingPixel pixel)
 {
@@ -733,4 +802,95 @@ float4 DoPBRShading(PBRShadingPixel pixel)
 	color = pow(color, float3(1 / 2.2, 1 / 2.2, 1 / 2.2));
 
 	return float4(color, pixel.color.w);
+}
+
+ShadingResult DoNormalShading_WithShadowColor(NormalShadingPixel pixel)
+{
+	float percentLight = 1;
+
+	//float3 shadowColor = 0.0f.xxx;
+	float3 color = 0.0f.xxx;
+	float3 originColor = 0.0f.xxx;
+
+	[loop] for (unsigned int i = 0; i < numberLight; i++)
+	{
+		LightingResult result = (LightingResult)0;
+		percentLight = 1;
+		[branch] switch (lights[i].type)
+		{
+		case LIGHT_DIR:
+		{
+			result = DoDirectionalLight(lights[i], pixel);
+
+			if (lights[i].activeShadowIndex != UINT32_MAX)
+			{
+				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex],
+					pixel.pixelPos, pixel.normal);
+			}
+		}
+		break;
+		case LIGHT_POINT:
+		{
+			result = DoPointLight(lights[i], pixel);
+
+			if (lights[i].activeShadowIndex != UINT32_MAX)
+			{
+				percentLight = DoPointLightShadow(lights[i], shadows[lights[i].activeShadowIndex],
+					pixel.pixelPos, pixel.normal);
+			}
+		}
+		break;
+		case LIGHT_SPOT:
+		{
+			result = DoSpotLight(lights[i], pixel);
+
+			if (lights[i].activeShadowIndex != UINT32_MAX)
+			{
+				percentLight = DoDirSpotLightShadow(lights[i], shadows[lights[i].activeShadowIndex],
+					pixel.pixelPos, pixel.normal);
+			}
+		}
+		break;
+		case LIGHT_CSM_DIR:
+		{
+			result = DoDirectionalLight(lights[i], pixel);
+
+			if (lights[i].activeShadowIndex != UINT32_MAX)
+			{
+				percentLight = DoCSMDirLightShadow(lights[i], shadows[lights[i].activeShadowIndex],
+					pixel.pixelPos, pixel.depth, pixel.normal);
+			}
+		}
+		break;
+		}
+
+		//shadowColor += lights[i].power * (1 - percentLight);
+		/*if (percentLight == 1)
+			originColor = (result.diffuse + result.specular) * lights[i].power;
+		else
+			originColor = (result.diffuse) * lights[i].power;*/
+		originColor += (result.diffuse + result.specular) * lights[i].power;
+		color += originColor * percentLight;
+	}
+
+	float3 lightWithShadowColor = saturate(environmentAmbient + color) * pixel.color.xyz;
+	float3 lightWithoutShadow = saturate(environmentAmbient + originColor) * pixel.color.xyz;
+
+	ShadingResult ret;
+	ret.color = lightWithoutShadow;
+	ret.shadowColor = lightWithShadowColor / lightWithoutShadow;
+
+	/*if (any(lightWithoutShadow != lightWithShadowColor))
+	{
+		ret.color = 0.0f.xxx;
+		ret.shadowColor = lightWithShadowColor;
+	}
+	else
+	{
+		ret.color = lightWithoutShadow;
+		ret.shadowColor = 0.0f.xxx;
+	}*/
+	
+
+	return ret;
 }

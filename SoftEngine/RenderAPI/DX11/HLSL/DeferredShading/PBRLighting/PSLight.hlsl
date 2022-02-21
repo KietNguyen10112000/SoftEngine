@@ -71,18 +71,107 @@ float4 PBRShading(PS_INPUT input, float4 posAndSpec)
 	return DoPBRShading(pixel);
 }
 
-float4 main(PS_INPUT input) : SV_TARGET
+
+
+ShadingResult NormalShading_WithShadowColor(PS_INPUT input, float4 posAndSpec)
+{
+	NormalShadingPixel curPixel = (NormalShadingPixel)0;
+	float4 pixelColor = color.Sample(defaultSampler, input.textCoord);
+
+	curPixel.pixelPos = posAndSpec.xyz;
+	curPixel.specular = posAndSpec.w;
+
+	float4 ns = normAndShininess.Sample(defaultSampler, input.textCoord);
+
+	if (all(ns.xyz == 0))
+	{
+		ShadingResult ret;
+		ret.color = pixelColor;
+		ret.shadowColor = 0;
+		return ret;
+	}
+
+	curPixel.normal = normalize(ns.xyz);
+	curPixel.shininess = ns.w;
+
+	curPixel.color = pixelColor;
+
+	curPixel.depth = depthMap.Sample(defaultSampler, input.textCoord);
+
+	return DoNormalShading_WithShadowColor(curPixel);
+}
+
+//ShadingResult PBRShading_WithShadowColor(PS_INPUT input, float4 posAndSpec)
+//{
+//	float4 mra = metallicRoughnessAO.Sample(defaultSampler, input.textCoord);
+//	float4 pixelColor = color.Sample(defaultSampler, input.textCoord);
+//	float4 ns = normAndShininess.Sample(defaultSampler, input.textCoord);
+//
+//	PBRShadingPixel pixel = (PBRShadingPixel)0;
+//
+//	pixel.pos = posAndSpec.xyz;
+//	pixel.normal = normalize(ns.xyz);
+//	pixel.color = float4(pow(pixelColor.xyz, float3(2.2, 2.2, 2.2)), pixelColor.w);
+//	pixel.metallic = mra.x;
+//	pixel.roughness = mra.y;
+//	pixel.ao = mra.z;
+//
+//	pixel.depth = depthMap.Sample(defaultSampler, input.textCoord);
+//
+//	return DoPBRShading_WithShadowColor(pixel);
+//}
+
+#ifdef SCREEN_SHADOW_BLUR
+
+struct PS_OUTPUT
+{
+	float4 color		:	SV_TARGET0;
+	float4 shadowColor	:	SV_TARGET1;
+};
+
+
+PS_OUTPUT main(PS_INPUT input)
 {
 	float pixelDepth = depthMap.Sample(defaultSampler, input.textCoord);
 
-	if (pixelDepth == 1) discard;
+	if (pixelDepth == 1.0f)
+	{
+		discard;
+	}
+
+	float4 posAndSpec = positionAndSpec.Sample(defaultSampler, input.textCoord);
+
+	ShadingResult ret;
+	//if (posAndSpec.w == -1)
+	//{	
+	//	ret = PBRShading_WithShadowColor(input, posAndSpec);
+	//	//return float4(1, 0, 0, 1);
+	//}
+
+	ret = NormalShading_WithShadowColor(input, posAndSpec);
+
+	PS_OUTPUT output;
+	output.color = float4(ret.color, 1.0f);
+	output.shadowColor = float4(ret.shadowColor, 1.0f);
+
+	return output;
+}
+#endif
+
+float4 main(PS_INPUT input) : SV_TARGET0
+{
+	float pixelDepth = depthMap.Sample(defaultSampler, input.textCoord);
+
+	if (pixelDepth == 1.0f)
+	{
+		discard;
+	}
 
 	float4 posAndSpec = positionAndSpec.Sample(defaultSampler, input.textCoord);
 
 	if (posAndSpec.w == -1)
 	{	
 		return PBRShading(input, posAndSpec);
-		//return float4(1, 0, 0, 1);
 	}
 
 	return NormalShading(input, posAndSpec);

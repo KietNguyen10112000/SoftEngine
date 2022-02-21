@@ -16,19 +16,19 @@
 
 #include <ILightSystem.h>
 
-#include <Component/FPPCamera.h>
-#include <Component/SpaceCoordinate.h>
-#include <Component/SkyBox.h>
+#include <Components/FPPCamera.h>
+#include <Components/SpaceCoordinate.h>
+#include <Components/SkyBox.h>
 
-#include <Component/StaticObject.h>
-#include <Component/Example/Asteroid.h>
+#include <Components/StaticObject.h>
+#include <Components/Example/Asteroid.h>
 
 //#include "./DX11/LightSystem_v2.h"
 
-#include <Component/HeightMap.h>
-#include <Component/Water.h>
+#include <Components/HeightMap.h>
+#include <Components/Water.h>
 
-#include <Component/AnimObject.h>
+#include <Components/AnimObject.h>
 
 #include <PostProcessor.h>
 
@@ -66,8 +66,11 @@ IRenderableObject* obj5 = nullptr;
 
 IRenderableObject* obj6 = nullptr;
 
+IRenderableObject* obj7 = nullptr;
+
 LightID shadowLight1;
 LightID shadowLight2;
+LightID sunLight;
 
 LightID lights[6] = {};
 
@@ -181,16 +184,26 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	cam = new FPPCamera({ 0, 50, 0 }, { 0,50,50 }, ConvertToRadians(60), 0.5, 1000, width / (float)height);
 	m_renderer->SetTargetCamera(cam);
 
+	sunLight = m_renderer->LightSystem()->NewLight(LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT, 0,
+		0.610f, 1.f, 0.02f, 0.8f, { 10,20,0 }, Vec3(-1, -1, -1).Normalize(), { 1, 1, 1 });
+
 	shadowLight1 = m_renderer->LightSystem()->NewLight(LIGHT_TYPE::POINT_LIGHT, 0,
 		0.1f, 1.69f, 0.02f, 20.f, { 10,20,0 }, { -1, -1, -1 }, { 1, 1, 1 });
 
 	shadowLight2 = m_renderer->LightSystem()->NewLight(LIGHT_TYPE::SPOT_LIGHT, ConvertToRadians(60),
 		0.1f, 0.1f, 0.04f, 40.f, { 30,30,30 }, { -1, -1, -1 }, { 1, 1, 1 });
 
-	//m_renderer->LightSystem()->AddLight(shadowLight1);
-	m_renderer->LightSystem()->AddLight(shadowLight2);
+	m_renderer->LightSystem()->AddLight(sunLight);
+	m_renderer->LightSystem()->AddShadow(sunLight, SHADOW_MAP_QUALITY::HIGH);
+	//follow cam
+	m_renderer->LightSystem()
+		->GetLightExData<LightSystem::ExtraDataCSMDirLight>(sunLight)
+		->Follow(&cam->ViewMatrix(), &cam->ProjectionMatrix());
 
-	m_renderer->LightSystem()->AddShadow(shadowLight2, SHADOW_MAP_QUALITY::HIGH);
+	//m_renderer->LightSystem()->AddLight(shadowLight1);
+	//m_renderer->LightSystem()->AddLight(shadowLight2);
+
+	//m_renderer->LightSystem()->AddShadow(shadowLight2, SHADOW_MAP_QUALITY::HIGH);
 	//m_renderer->LightSystem()->AddShadow(shadowLight1, SHADOW_MAP_QUALITY::HIGH);
 
 	m_renderer->LightSystem()->Log();
@@ -209,13 +222,15 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	);
 	obj1->Transform() *= GetScaleMatrix(1, 5, 0.5f);
 	obj1->Transform().SetPosition(0, 0, 10);
+	renderList.push_back(obj1);
 
 	obj2 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/sphere.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Blue.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj2->SetPosition(0, 0, -20);
+	obj2->SetPosition(15, 30, -20);
+	renderList.push_back(obj2);
 
 	obj3 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
@@ -225,17 +240,17 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	obj3->Transform().SetScale(1, 5, 0.5f);
 	//obj3->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
 	obj3->Transform().SetPosition(0, 0, 20);
-
+	renderList.push_back(obj3);
 
 	obj4 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj4->Transform().SetScale(1, 5, 0.5f);
+	obj4->Transform().SetScale(1, 5, 10.f);
 	//obj4->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
-	obj4->Transform().SetPosition(0, 0, 0);
-
+	obj4->Transform().SetPosition(0, 0, -30);
+	renderList.push_back(obj4);
 
 	obj5 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
@@ -245,16 +260,37 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	obj5->Transform().SetScale(1, 5, 10.f);
 	//obj5->Transform() *= GetRotationAxisMatrix({ 1, 1, 1 }, PI / 4);
 	obj5->Transform().SetPosition(0, 0, 60);
+	renderList.push_back(obj5);
 
 	obj6 = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Blue.png",
 		GetScaleMatrix(3, 3, 3)
 	);
-	obj6->Transform().SetScale(0.5f, 3, 10.0f);
+	obj6->Transform().SetScale(0.5f, 10, 32.0f);
 	//obj6->Transform() *= GetRotationAxisMatrix({ 1, 0, 0 }, PI / 2);
-	obj6->Transform().SetPosition(0, 20, 15);
+	obj6->Transform().SetPosition(0, 40, 0);
+	renderList.push_back(obj6);
 
+	obj7 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
+		L"D:/KEngine/ResourceFile/temp_img/Blue.png",
+		GetScaleMatrix(3, 3, 3)
+	);
+	obj7->Transform().SetScale(0.5f, 3, 10.0f);
+	obj7->Transform().SetPosition(0, -10, 15);
+	renderList.push_back(obj7);
+
+
+	obj7 = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
+		L"D:/KEngine/ResourceFile/temp_img/Blue.png",
+		GetScaleMatrix(3, 3, 3)
+	);
+	obj7->Transform().SetScale(0.5f, 6, 20.0f);
+	obj7->Transform() *= GetRotationAxisMatrix({ 0, 1, 0 }, PI / 2);
+	obj7->Transform().SetPosition(-45, 0, 50);
+	renderList.push_back(obj7);
 
 	//5 wall
 	float d = 100;
@@ -296,16 +332,6 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	wall5->Transform().SetRotationZ(PI / 2).SetPosition(0, d + h, 0);
 
 
-	//objs make shadow
-	renderList.push_back(obj1);
-	renderList.push_back(obj2);
-	renderList.push_back(obj3);
-
-	renderList.push_back(obj4);
-	renderList.push_back(obj5);
-	renderList.push_back(obj6);
-
-
 	float unit = 0.8f;
 	heightMap = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/Plane.obj",
@@ -331,147 +357,226 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 
 	
 
-	//=================================test post processing======================================
-	auto postproc = m_renderer->PostProcessor();
-	/*auto position = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
-	auto normal = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::NORMAL_AND_SHININESS);
-	auto color = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::COLOR);*/
-	
-	bloomSV = new ShaderVar(&bloomData, sizeof(bloomData));
+	////=================================test post processing======================================
+	//auto postproc = m_renderer->PostProcessor();
+	///*auto position = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
+	//auto normal = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::NORMAL_AND_SHININESS);
+	//auto color = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::COLOR);*/
+	//
+	//bloomSV = new ShaderVar(&bloomData, sizeof(bloomData));
 
-	constexpr static float DOWN_RES_FACTOR = 1.0f;
+	//constexpr static float DOWN_RES_FACTOR = 2.0f;
 
-	auto lastscene = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::LIGHTED_SCENE);
-	auto screenSurface = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::SCREEN_BUFFER);
+	//auto lastscene = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::LIGHTED_SCENE);
+	//auto screenSurface = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::SCREEN_BUFFER);
 
-	auto output1 = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
-	auto layer2 = postproc->MakeLayer({ output1 });
+	//auto output1 = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
+	//auto layer2 = postproc->MakeLayer({ output1 });
 
-	auto gausianBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/GaussianBlur");
-	auto combinePS = Resource::Get<PixelShader>(L"PostProcessing/Blur/PSCombine");
+	//auto gausianBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/GaussianBlur");
+	//auto combinePS = Resource::Get<PixelShader>(L"PostProcessing/Blur/PSCombine");
 
-	struct Temp
-	{
-		ShaderVar* buf;
-		float w;
-		float h;
-	};
+	//struct Temp
+	//{
+	//	ShaderVar* buf;
+	//	float w;
+	//	float h;
+	//};
 
-	static Temp _opaque = {};
-	_opaque.buf = bloomSV;
-	_opaque.w = m_width;
-	_opaque.h = m_height;
+	//static Temp _opaque = {};
+	//_opaque.buf = bloomSV;
+	//_opaque.w = m_width;
+	//_opaque.h = m_height;
 
-	//god rays post program
-	auto godRays = postproc->MakeProgram("God Rays");
-	auto godRayOutput0 = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
+	////god rays post program
+	//auto godRays = postproc->MakeProgram("God Rays");
+	//auto godRayOutput0 = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
+	//auto godRayUpScale = postproc->GetTexture2D(Vec2(m_width, m_height));
 
-	auto scenePosition = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
+	//auto scenePosition = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
+	//auto sceneNormal = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::NORMAL_AND_SHININESS);
 
-	auto godRaysInputLayer = postproc->MakeLayer({ scenePosition });
+	//auto godRaysInputLayer = postproc->MakeLayer({ scenePosition });
 
-	auto godRaysLayer1 = postproc->MakeLayer({ godRayOutput0 , lastscene });
+	//auto godRaysLayer1 = postproc->MakeLayer({ godRayOutput0, lastscene });
 
-	auto screenLayer = postproc->MakeLayer({ screenSurface });
+	//auto godRaysUpscaleLayer = postproc->MakeLayer({ godRayUpScale, lastscene });
 
-	auto godRaysPS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/GodRays_PS");
-	auto godRaysCombinePS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/Combine");
+	//auto screenLayer = postproc->MakeLayer({ screenSurface });
 
-	//auto biBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/BilateralBlur");
+	//auto godRaysPS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/GodRays_PS");
 
-	if (!godRays->IsCrafted())
-	{
-		godRays->Append(godRaysInputLayer);
+	////auto copyPS = Resource::Get<PixelShader>(L"PostProcessing/Common/Copy");
 
-		godRays->Append(godRaysPS, &_opaque,
-			[](IRenderer*, void* opaque)
-			{
-				ShaderVar* buf = _opaque.buf;
-				bloomData.gaussian.type = 0;
-				bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
-				bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
-				bloomData.gaussian.downscale = DOWN_RES_FACTOR;
-				buf->Update(&bloomData, sizeof(bloomData));
-				RenderPipeline::PSSetVar(buf, 2);
-			}
-		);
+	////auto copyPS = 
+	//
 
-		//for (size_t i = 0; i < 5; i++)
-		//{
-		godRays->Append(godRaysLayer1);
-		//=================2 pass Gaussian Blur=============================
-		godRays->Append(gausianBlurPS, &_opaque,
-			[](IRenderer*, void* opaque)
-			{
-				ShaderVar* buf = _opaque.buf;
-				bloomData.gaussian.type = 0;
-				bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
-				bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
-				buf->Update(&bloomData, sizeof(bloomData));
-			}
-		);
+	////auto downScaleDepth = postproc->MakeProgram("Downscale depth");
+	////auto downScalePS = Resource::Get<PixelShader>(L"PostProcessing/Common/DownScaleDepth");
+	//
+	////auto downScaleDepthTetxture = postproc->GetTexture2D(Vec2(m_width / DOWN_RES_FACTOR, m_height / DOWN_RES_FACTOR));
+	////auto downScaleDepthLayer1 = postproc->MakeLayer({ downScaleDepthTetxture });
 
-		godRays->Append(layer2);
 
-		godRays->Append(gausianBlurPS, &_opaque,
-			[](IRenderer* renderer, void* opaque)
-			{
-				ShaderVar* buf = _opaque.buf;
-				bloomData.gaussian.type = 1;
-				buf->Update(&bloomData, sizeof(bloomData));
-			}
-		);
-		//=================End 2 pass Gaussian Blur==========================
-		//}
+	////auto godRaysCombine = postproc->MakeProgram("GodRays combine");
+	//auto godRaysCombinePS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/Combine");
+	////just placeholder
+	////auto godRaysCombineLayer0 = postproc->MakeLayer({ sceneNormal, sceneNormal, lastscene });
 
-		godRays->Append(godRaysLayer1);
+	///*if (!downScaleDepth->IsCrafted())
+	//{
+	//	downScaleDepth->Append(godRaysInputLayer);
+	//	downScaleDepth->Append(downScalePS);
+	//	downScaleDepth->Append(downScaleDepthLayer1);
 
-		godRays->Append(godRaysCombinePS);
-		godRays->Append(screenLayer);
+	//	downScaleDepth->Craft();
+	//}
 
-		auto ret = godRays->Craft();
-		if (ret != "OK")
-		{
-			exit(2);
-		}
-	}
+	//if (!godRaysCombine->IsCrafted())
+	//{
+	//	godRaysCombine->Append(godRaysCombineLayer0);
+	//	godRaysCombine->Append(godRaysCombinePS);
+	//	godRaysCombine->Append(screenLayer);
 
-	auto postprocChain = postproc->MakeProcessChain("Bloom Effect");
+	//	godRaysCombine->Craft();
+	//}*/
 
-	if (!postprocChain->IsCrafted())
-	{	
-		postprocChain->Append(
-			{
-				// programs
-				{
-					//re-run
-					{ godRays, true }
-				},
+	////auto biBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/BilateralBlur");
 
-				{
-					{
-						{ {0, 0}, {0, 0} }
-					}
-				}
-			}
-		);
+	//if (!godRays->IsCrafted())
+	//{
+	//	godRays->Append(godRaysInputLayer);
 
-		auto ret = postprocChain->Craft();
-		/*if (ret != "OK")
-		{
-			exit(2);
-		}*/
-	}
-	
+	//	godRays->Append(godRaysPS, &_opaque,
+	//		[](IRenderer*, void* opaque)
+	//		{
+	//			ShaderVar* buf = _opaque.buf;
+	//			bloomData.gaussian.type = 0;
+	//			bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
+	//			bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
+	//			bloomData.gaussian.downscale = DOWN_RES_FACTOR;
+	//			buf->Update(&bloomData, sizeof(bloomData));
+	//			RenderPipeline::PSSetVar(buf, 2);
+	//		}
+	//	);
 
-	postproc->SetProcessChain(postprocChain);
+	//	//for (size_t i = 0; i < 5; i++)
+	//	//{
+	//	godRays->Append(godRaysLayer1);
+	//	//godRays->Append(copyPS);
+	//	//godRays->Append(godRaysUpscaleLayer);
+	//	//=================2 pass Gaussian Blur=============================
+	//	godRays->Append(gausianBlurPS, &_opaque,
+	//		[](IRenderer*, void* opaque)
+	//		{
+	//			ShaderVar* buf = _opaque.buf;
+	//			bloomData.gaussian.type = 0;
+	//			bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
+	//			bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
+	//			buf->Update(&bloomData, sizeof(bloomData));
+	//		}
+	//	);
 
-	Resource::Release(&gausianBlurPS);
-	//Resource::Release(&lumaPS);
-	Resource::Release(&combinePS);
+	//	//godRays->Append(godRaysUpscaleLayer);
+	//	godRays->Append(layer2);
 
-	Resource::Release(&godRaysPS);
-	Resource::Release(&godRaysCombinePS);
+	//	godRays->Append(gausianBlurPS, &_opaque,
+	//		[](IRenderer* renderer, void* opaque)
+	//		{
+	//			ShaderVar* buf = _opaque.buf;
+	//			bloomData.gaussian.type = 1;
+	//			buf->Update(&bloomData, sizeof(bloomData));
+	//		}
+	//	);
+	//	//=================End 2 pass Gaussian Blur==========================
+	//	//}
+
+	//	//godRays->Append(godRaysUpscaleLayer);
+	//	godRays->Append(godRaysLayer1);
+
+	//	godRays->Append(godRaysCombinePS);
+	//	godRays->Append(screenLayer);
+
+	//	auto ret = godRays->Craft();
+	//	if (ret != "OK")
+	//	{
+	//		exit(2);
+	//	}
+	//}
+
+	//auto postprocChain = postproc->MakeProcessChain("Bloom Effect");
+
+	//if (!postprocChain->IsCrafted())
+	//{	
+	//	postprocChain->Append(
+	//		{
+	//			// programs
+	//			{
+	//				//re-run
+	//				{ godRays, true }
+	//			},
+
+	//			{
+	//				{
+	//					//program, index
+	//					{ {0, 0}, {0, 0} }
+	//				}
+	//			}
+	//		}
+	//	);
+	//	
+	//	//postprocChain->Append(
+	//	//	{
+	//	//		// programs
+	//	//		{
+	//	//			//re-run
+	//	//			{ godRays, true },
+	//	//			{ downScaleDepth, true }
+	//	//		},
+
+	//	//		{
+	//	//			{
+	//	//				//program, index
+	//	//				{ {0, 0}, {0, 0} },
+	//	//				{ {0, 0}, {0, 1} }
+	//	//			}
+	//	//		}
+	//	//	}
+	//	//);
+
+	//	//postprocChain->Append(
+	//	//	{
+	//	//		// programs
+	//	//		{
+	//	//			//re-run
+	//	//			{ godRaysCombine, true }
+	//	//		},
+
+	//	//		{
+	//	//			{
+	//	//				//program, index
+	//	//				{ {0, 0}, {0, 0} }
+	//	//			}
+	//	//		}
+	//	//	}
+	//	//);
+
+	//	auto ret = postprocChain->Craft();
+	//	/*if (ret != "OK")
+	//	{
+	//		exit(2);
+	//	}*/
+	//}
+	//
+
+	//postproc->SetProcessChain(postprocChain);
+
+	//Resource::Release(&gausianBlurPS);
+	////Resource::Release(&lumaPS);
+	//Resource::Release(&combinePS);
+
+	//Resource::Release(&godRaysPS);
+	//Resource::Release(&godRaysCombinePS);
 
 	InitImgui(this);
 }
@@ -487,12 +592,12 @@ Engine::~Engine()
 	delete skyBox;
 	delete basicObject;
 	delete basicObject1;
-	delete obj1;
-	delete obj2;
-	delete obj3;
-	delete obj4;
-	delete obj5;
-	delete obj6;
+	
+	for (auto& obj : renderList)
+	{
+		delete obj;
+	}
+
 	delete wall1;
 	delete wall2;
 	delete wall3;
@@ -547,6 +652,9 @@ void ImGuiShowLight(IRenderer* renderer, LightID id)
 	case 2:
 		text = "Spot Light";
 		break;
+	case 3:
+		text = "Direction Light (with cascade shadow mapping)";
+		break;
 	default:
 		break;
 	}
@@ -556,12 +664,25 @@ void ImGuiShowLight(IRenderer* renderer, LightID id)
 	change |= ImGui::DragFloat3("Direction", &tempDir.x, lowspeed, -FLT_MAX, FLT_MAX);
 
 	change |= ImGui::DragFloat3("Color", &light.color.x, lowspeed, 0, 1);
-	change |= ImGui::DragFloat("Power", &light.power, highspeed, 1, FLT_MAX);
+	change |= ImGui::DragFloat("Power", &light.power, highspeed, -FLT_MAX, FLT_MAX);
 	change |= ImGui::DragFloat("Spot Angle", &light.spotAngle, lowspeed, 0, PI);
 	
-	change |= ImGui::DragFloat("Constant Attenuation", &light.constantAttenuation, lowspeed, 0.0001f, FLT_MAX);
-	change |= ImGui::DragFloat("Linear Attenuation", &light.linearAttenuation, lowspeed, 0.0001f, FLT_MAX);
-	change |= ImGui::DragFloat("Quadratic Attenuation", &light.quadraticAttenuation, lowspeed, 0.0001f, FLT_MAX);
+	change |= ImGui::DragFloat("Constant Attenuation", &light.constantAttenuation, lowspeed, -FLT_MAX, FLT_MAX);
+	change |= ImGui::DragFloat("Linear Attenuation", &light.linearAttenuation, lowspeed, -FLT_MAX, FLT_MAX);
+	change |= ImGui::DragFloat("Quadratic Attenuation", &light.quadraticAttenuation, lowspeed, -FLT_MAX, FLT_MAX);
+
+	if (light.type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
+	{
+		static float maxLength = 1000;
+		static float thres[ShadowMap_NUM_CASCADE] = { 50, 100, 150, 150 };
+		auto changeThres = ImGui::DragFloat4("Cascade Thres", thres, 1, 5, 10000000)
+			|| ImGui::DragFloat("Max Shadow Length", &maxLength, 1, 100, 100000000);
+		change |= changeThres;
+
+		if (changeThres)
+			renderer->LightSystem()
+			->GetLightExData<LightSystem::ExtraDataCSMDirLight>(sunLight)->Separate(thres, maxLength);
+	}
 
 	ImGui::End();
 
@@ -769,6 +890,8 @@ void Engine::Update()
 
 	//animModelObj->Update(this);
 
+	m_renderer->LightSystem()->UpdateShadow(sunLight);
+
 	//must be the last update
 	m_renderer->LightSystem()->Update();
 
@@ -798,7 +921,7 @@ void Engine::Update()
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	ImGuiShowLight(m_renderer, shadowLight2);
+	ImGuiShowLight(m_renderer, sunLight);
 	ImGuiShowLightSystemInfo(m_renderer);
 
 	DX11Global::renderer->m_d3dDeviceContext->OMSetRenderTargets(1, &DX11Global::renderer->m_mainRtv, 0);
@@ -826,11 +949,11 @@ void Engine::Render()
 
 	heightMap->Render(m_renderer);
 
-	wall1->Render(m_renderer);
+	/*wall1->Render(m_renderer);
 	wall2->Render(m_renderer);
 	wall3->Render(m_renderer);
 	wall4->Render(m_renderer);
-	wall5->Render(m_renderer);
+	wall5->Render(m_renderer);*/
 
 	spaceCoord->Render(m_renderer);
 
@@ -850,6 +973,15 @@ void Engine::Render()
 			obj->Render(m_renderer);
 		}
 		m_renderer->LightSystem()->EndShadow(shadowLight2);
+	}
+
+	if (m_renderer->LightSystem()->BeginShadow(sunLight))
+	{
+		for (auto& obj : renderList)
+		{
+			obj->Render(m_renderer);
+		}
+		m_renderer->LightSystem()->EndShadow(sunLight);
 	}
 
 }

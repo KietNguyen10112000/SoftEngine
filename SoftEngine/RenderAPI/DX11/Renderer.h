@@ -75,11 +75,20 @@ class DeferredRenderer : public DX11Renderer
 public:
     enum RTV_INDEX
     {
-        COLOR                       = 0,
-        POSITION_SPECULAR           = 1,
-        NORMAL_SHININESS            = 2,
-        METALLIC_ROUGHNESS_AO       = 3,
-        LIGHTED_SCENE               = 4,
+        COLOR                           = 0,
+        POSITION_SPECULAR               = 1,
+        NORMAL_SHININESS                = 2,
+        METALLIC_ROUGHNESS_AO           = 3,
+#ifdef SCREEN_SHADOW_BLUR
+        LIGHTED_SCENE_WITHOUT_SHADOW    = 4,
+        SHADOW_COLOR                    = 5,
+        LIGHTED_SCENE_WITH_SHADOW       = 6,
+        LIGHTED_SCENE                   = 6,
+#else
+        LIGHTED_SCENE_WITHOUT_SHADOW    = 4,
+        LIGHTED_SCENE                   = LIGHTED_SCENE_WITHOUT_SHADOW,
+#endif
+        COUNT
     };
     //for geometry pass
     /*
@@ -88,10 +97,10 @@ public:
     [2]:    normal + shininess (float4 : float3 normal + float shininess)
     [4]:    metallic + roughness + AO + not use yet
     */
-    ID3D11RenderTargetView* m_rtv[18] = {};
+    ID3D11RenderTargetView* m_rtv[32] = {};
 
     //for render pass
-    ID3D11ShaderResourceView* m_rtvShader[18] = {};
+    ID3D11ShaderResourceView* m_rtvShader[32] = {};
     ID3D11ShaderResourceView* m_dsvShader = nullptr;
 
     RenderPipeline* m_currentRpl = nullptr;
@@ -99,8 +108,16 @@ public:
 
     RenderPipeline* m_presentLightRpl = nullptr;
 
-    int m_totalRtvUsed = 0;
+    //int m_totalRtvUsed = 0;
 
+    struct PixelShaderCBuffer
+    {
+        Vec3 viewPoint;
+        float padding1;
+        Mat4x4 mvp;
+        Mat4x4 invMVP;
+    };
+    PixelShaderCBuffer m_dataPassToPixelShader;
     ShaderVar* m_viewPointSV = nullptr;
     VertexBuffer* m_screenQuad = nullptr;
     RenderPipeline* m_lastPresentRpl = nullptr;
@@ -129,6 +146,16 @@ public:
         VertexBuffer**, IndexBuffer**, uint32_t*);
 
     std::vector<std::pair<RenderPipeline*, _FunCallType>> m_rplStack;
+
+#ifdef SCREEN_SHADOW_BLUR
+    PixelShader* m_shadowCombinePS = 0;
+    ID3D11ShaderResourceView* m_screenShadowBlurBufSRV1 = 0;
+    ID3D11RenderTargetView* m_screenShadowBlurBufRTV1 = 0;
+    ID3D11ShaderResourceView* m_screenShadowBlurBufSRV2 = 0;
+    ID3D11RenderTargetView* m_screenShadowBlurBufRTV2 = 0;
+    PixelShader* m_gaussianBlurPS = 0;
+    ShaderVar* m_gaussianBlurVar = 0;
+#endif
 
 public:
     //args[0] = hwnd

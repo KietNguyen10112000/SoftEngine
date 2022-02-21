@@ -13,7 +13,7 @@ file(GLOB SOURCES1
     ${PROJECT_SOURCE_DIR}/SoftEngine/Core/*.cpp
     ${PROJECT_SOURCE_DIR}/SoftEngine/Core/ImportParser/*.cpp
     ${PROJECT_SOURCE_DIR}/SoftEngine/Engine/*.cpp
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Component/*.cpp
+    ${PROJECT_SOURCE_DIR}/SoftEngine/Components/*.cpp
 )
 
 file(GLOB_RECURSE 
