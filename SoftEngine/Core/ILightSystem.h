@@ -110,7 +110,8 @@ private:
 	//index in m_activeShadowLight, default value is non indexed
 	uint32_t activeShadowIndex = UINT32_MAX;
 
-private:
+public:
+	inline Light() {};
 	Light(
 		uint32_t type,
 		float spotAngle,
@@ -130,7 +131,7 @@ public:
 
 typedef Mat4x4* Shadow;
 
-#define MAX_LIGHT 100'00
+#define MAX_LIGHT 10'24
 #define MAX_SHADOW_LIGHT 100
 
 typedef unsigned int LightID;

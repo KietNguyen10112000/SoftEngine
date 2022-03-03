@@ -12,6 +12,8 @@ cbuffer Transform : register(b0)
 cbuffer Camera : register(b1)
 {
 	row_major float4x4 mvp;
+	row_major float4x4 view;
+	row_major float4x4 proj;
 };
 
 VS_OUTPUT main(float3 pos : POSITION)
@@ -22,7 +24,13 @@ VS_OUTPUT main(float3 pos : POSITION)
 
 	//output.pos = float4(pos, 1.0f);
 
+	/*float4x4 temp = view;
+	temp._m30 = 0;
+	temp._m31 = 0;
+	temp._m32 = 0;*/
+
 	output.pos = mul(output.pos, mvp);
+	//output.pos = mul(output.pos, proj);
 
 	output.pos.z = output.pos.w - 0.000001f;
 

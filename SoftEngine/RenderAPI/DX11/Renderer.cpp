@@ -505,7 +505,7 @@ void DeferredRenderer::CopyGlobal(IRenderer* renderer)
 
 std::wstring DeferredRenderer::ShaderDirectory()
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(LOCAL_RELEASE)
     std::wstring cur = __FILEW__;
     StandardPath(cur);
     return CombinePath(cur, L"../HLSL/DeferredShading");
@@ -662,7 +662,12 @@ void DeferredRenderer::ClearFrame(float color[4])
     m_d3dDeviceContext->OMSetRenderTargets(RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW, m_rtv, m_dsv);
 
     if (m_targetCam)
-        ICamera::shaderMVP->Update(&m_targetCam->MVP(), sizeof(Mat4x4));
+    {
+        ICamera::cameraBuf.mvp = m_targetCam->MVP();
+        ICamera::cameraBuf.proj = m_targetCam->ProjectionMatrix();
+        ICamera::cameraBuf.view = m_targetCam->ViewMatrix();
+        ICamera::shaderMVP->Update(&ICamera::cameraBuf, sizeof(ICamera::cameraBuf));
+    }
 }
 
 void DeferredRenderer::SetRenderPipeline(RenderPipeline* rpl)

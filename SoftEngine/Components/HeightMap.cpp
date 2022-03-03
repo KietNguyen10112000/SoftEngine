@@ -48,15 +48,15 @@ void HeightMap::ResizeGrid(uint32_t newX, uint32_t newY)
 	m_numX = newX;
 	m_numY = newY;
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	m_height.resize(newY);
 	for (size_t i = 0; i < newY; i++)
 	{
 		m_height[i].resize(newX, 0);
 	}
-#else
-	static_assert(0);
-#endif // _DEBUG
+//#else
+//	static_assert(0);
+//#endif // _DEBUG
 
 }
 

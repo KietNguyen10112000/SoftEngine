@@ -67,6 +67,8 @@ cbuffer Camera : register(b0)
 	float3 viewPoint;
 	float _CameraPadding1;
 
+	//row_major float4x4 viewProjMat;
+	//row_major float4x4 invViewProjMat;
 	float4x4 viewProjMat;
 	float4x4 invViewProjMat;
 };
@@ -406,7 +408,7 @@ float CalCSMDirLit(float3 pixelPos, LightShadow shadow, int index)
 	float pixelDepth = (posInLightVP.z / posInLightVP.w) - CSM_DEPTH_BIAS;
 
 
-	float percentLight = 0;
+	float percentLight = 1;
 
 	float x = ((posInLightVP.x / posInLightVP.w) * 0.5f + 0.5f);
 	float y = (-(posInLightVP.y / posInLightVP.w) * 0.5f + 0.5f);
@@ -422,10 +424,7 @@ float CalCSMDirLit(float3 pixelPos, LightShadow shadow, int index)
 
 		percentLight = CalPercentLight(pixelDepth, x, y);
 	}
-	else
-	{
-		percentLight = 1;
-	}
+	
 
 	return percentLight;
 }
@@ -444,11 +443,6 @@ float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos
 #ifdef USE_PIXEL_LIGHT_OFFSET
 	pixelPos += OffsetPixelLight(light, pixelPos, normal);
 #endif
-	float3 toLightV = normalize(-light.dir);
-	float cosAngle = saturate(1.0f - dot(toLightV, normal));
-	float3 scaledNormalOffset = normal * (offsetPixelLightFactor.x * cosAngle);
-	pixelPos += scaledNormalOffset;
-
 	//=====================choose shadow cascade=============================
 	//shadow.viewProj[SHADOW_MAP_NUM_CASCADE] as memory to store depthThres
 	const float4 depthThres = shadow.viewProj[SHADOW_MAP_NUM_CASCADE][0];
@@ -461,6 +455,12 @@ float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos
 	//=======================================================================
 
 	//return index / 4.0f;
+
+	float3 toLightV = normalize(-light.dir);
+	float cosAngle = saturate(1.0f - dot(toLightV, normal));
+	float f = index == SHADOW_MAP_NUM_CASCADE - 1 ? 2 : 1;
+	float3 scaledNormalOffset = normal * (offsetPixelLightFactor.x * f * cosAngle);
+	pixelPos += scaledNormalOffset;
 
 	float percentLight = CalCSMDirLit(pixelPos, shadow, index);
 

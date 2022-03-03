@@ -675,7 +675,7 @@ void __CSM__SeparateFrustum(const Mat4x4& proj, Vec3* corners, std::vector<std::
 	}
 
 	float totalLength = thres[0] + thres[1] + thres[2] + thres[3];
-	float expectLength = (farPlane[0] - nearPlane[0]).Length();
+	float expectLength = ((farPlane[0] + farPlane[2]) / 2.0f - (nearPlane[0] + nearPlane[2]) / 2.0f).Length();
 	if (maxLength != -1)
 	{
 		expectLength = maxLength;

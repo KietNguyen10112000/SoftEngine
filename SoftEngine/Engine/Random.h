@@ -33,9 +33,7 @@ public:
             PROV_RSA_FULL,             // provider type
             0))                        // flag values
         {
-            printf("A cryptographic context with the %s key container \n",
-                UserName);
-            printf("has been acquired.\n\n");
+            
         }
         else
         {
@@ -74,11 +72,11 @@ public:
     {
         if (CryptReleaseContext(hCryptProv, 0))
         {
-            printf("The handle has been released.\n");
+            //printf("The handle has been released.\n");
         }
         else
         {
-            printf("The handle could not be released.\n");
+            //printf("The handle could not be released.\n");
         }
     }
 

@@ -94,13 +94,19 @@ protected:
 public:
 	inline static ShaderVar* shaderMVP = nullptr;
 
+	inline static struct ShaderCameraBuffer{
+		Mat4x4 mvp;
+		Mat4x4 view;
+		Mat4x4 proj;
+	} cameraBuf = {};
+
 public:
 	inline ICamera()
 	{
 		count++;
 		if (shaderMVP == nullptr)
 		{
-			shaderMVP = new ShaderVar(&m_transform, sizeof(Mat4x4));
+			shaderMVP = new ShaderVar(&cameraBuf, sizeof(ShaderCameraBuffer));
 		}
 	};
 	inline virtual ~ICamera() 
@@ -119,6 +125,8 @@ public:
 
 	inline auto* FrustumCorners() { return &m_frustum.m_corners[0]; };
 	inline auto& Frustum() { return m_frustum; };
+
+	inline virtual void Update(Engine* engine) {};
 };
 
 

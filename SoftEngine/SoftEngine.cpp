@@ -75,7 +75,7 @@
 
 int main()
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(LOCAL_RELEASE)
 	Engine* engine = new Engine(L"SoftEngine", 1280, 960);
 #else
 	Engine* engine = new Engine(L"SoftEngine", 0, 0);

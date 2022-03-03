@@ -40,11 +40,11 @@ protected:
 	Info m_info;
 
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	std::vector<std::vector<float>> m_height;
-#else
-	float** m_height = nullptr;
-#endif // _DEBUG
+//#else
+//	float** m_height = nullptr;
+//#endif // _DEBUG
 
 public:
 	HeightMap(uint32_t dimX, uint32_t dimY);

@@ -9,17 +9,28 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 # Add source to this project's executable.
 
 file(GLOB SOURCES1
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Core/*.h
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Core/*.cpp
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Core/ImportParser/*.cpp
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Engine/*.cpp
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Components/*.cpp
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Core/*.h"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Core/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Core/ImportParser/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Core/MultiThreading/*.cpp"
+
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Components/*.cpp"
+
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Rendering/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Rendering/*.h"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Logic/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Logic/*.h"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scene/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scene/*.h"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Controllers/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Controllers/*.h"
 )
 
 file(GLOB_RECURSE 
     LIBS_SRC
     LIST_DIRECTORIES true
-    ${PROJECT_SOURCE_DIR}/SoftEngine/Libs/*/include/
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/*/include/"
 )
 
 file(GLOB_RECURSE 
@@ -36,6 +47,7 @@ add_executable (SoftEngine "SoftEngine.cpp" "SoftEngine.h"
     #"Engine/Engine.cpp"
     ${SOURCES1}
     ${IMGUI_SRC}
+    
 )
 
 option(DX11_RENDERER "Use directX 11 as render api" ON)
@@ -48,6 +60,11 @@ option(WIN32_WINDOW "Use Win32 window and windows input system" ON)
 
 if(WIN32_WINDOW)
     add_compile_definitions(WIN32_WINDOW)
+endif()
+
+option(LOCAL_RELEASE "Local relase build" ON)
+if(LOCAL_RELEASE)
+    add_compile_definitions(LOCAL_RELEASE)
 endif()
 
 add_compile_definitions(UNICODE)
