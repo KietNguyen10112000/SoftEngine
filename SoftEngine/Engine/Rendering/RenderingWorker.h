@@ -49,14 +49,18 @@ public:
     friend class SceneQueryContext;
     friend class SceneQueriedNode;
     friend class IRenderableObject;
+    friend class AABBRenderer;
 
     using LightID = uint32_t;
 
     SceneQueryContext* m_queryContext = 0;
 
-    std::vector<SceneQueriedNode*> m_dataNodes;
+    using NodeId = size_t;
+    std::vector<NodeId> m_dataNodes;
     std::vector<IRenderableObject*> m_renderableObjects;
     std::vector<LightID> m_lightObjects;
+
+    AABBRenderer* m_aabbRenderer = 0;
 
 public:
     RenderingWorker(Engine* engine);

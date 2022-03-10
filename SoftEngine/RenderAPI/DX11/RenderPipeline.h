@@ -45,6 +45,12 @@ protected:
 	VertexShader* m_vertexShader = nullptr;
 	PixelShader* m_pixelShader = nullptr;
 
+	//not use yet
+	HullShader* m_hs = nullptr;
+	DomainShader* m_ds = nullptr;
+
+	GeometryShader* m_gs = nullptr;
+
 public:
 	RenderPipeline();
 	virtual ~RenderPipeline();
@@ -53,19 +59,19 @@ public:
 	inline VertexShader* GetVS() const { return m_vertexShader; };
 	inline PixelShader* GetPS() const { return m_pixelShader; };
 
-	inline virtual GeometryShader* GetGS() const { return 0; };
-	inline virtual HullShader* GetHS() const { return 0; };
+	inline GeometryShader* GetGS() const { return m_gs; };
+	inline HullShader* GetHS() const { return m_hs; };
 
 public:
 	//surely what you want to do
 	//not recommend use
-	inline virtual void SetVS(VertexShader* vs) { m_vertexShader = vs; };
+	inline void SetVS(VertexShader* vs) { m_vertexShader = vs; };
 	//not recommend use
-	inline virtual void SetPS(PixelShader* ps) { m_pixelShader = ps; };
+	inline void SetPS(PixelShader* ps) { m_pixelShader = ps; };
 	//not recommend use
-	inline virtual void SetGS(GeometryShader* gs) {};
+	inline void SetGS(GeometryShader* gs) { m_gs = gs; };
 	//not recommend use
-	inline virtual void SetHS(HullShader* hs) {};
+	inline void SetHS(HullShader* hs) { m_hs = hs; };
 
 public:
 
@@ -82,6 +88,10 @@ public:
 	}
 
 	inline static void PSSetVar(ShaderVar* var, int location);
+	inline static void PSSetVars(void** nativeHandles, int count, int start);
+
+	inline static void GSSetVar(ShaderVar* var, int location);
+	inline static void GSSetVars(void** nativeHandles, int count, int start);
 
 	inline static void PSSetResource(Texture2D* texture2d, int location);
 
@@ -89,7 +99,7 @@ public:
 
 	inline static void PSSetResource(TextureCube* textureCube, int location);
 
-	inline virtual void Use();
+	inline void Use();
 
 public:
 	inline virtual _RenderPipelineKey GetKey();
@@ -97,37 +107,37 @@ public:
 
 };
 
-class RenderPipeline1 : public RenderPipeline
-{
-private:
-	friend class RenderPipelineManager;
+//class RenderPipeline1 : public RenderPipeline
+//{
+//private:
+//	friend class RenderPipelineManager;
+//
+//protected:
+//	GeometryShader* m_gs = 0;
+//
+//public:
+//	inline virtual void SetGS(GeometryShader* gs) override { m_gs = gs; };
+//
+//	inline virtual _RenderPipelineKey GetKey() override;
+//	inline virtual void Config(_RenderPipelineKey* key) override;
+//
+//};
 
-protected:
-	GeometryShader* m_gs = 0;
-
-public:
-	inline virtual void SetGS(GeometryShader* gs) override { m_gs = gs; };
-
-	inline virtual _RenderPipelineKey GetKey() override;
-	inline virtual void Config(_RenderPipelineKey* key) override;
-
-};
-
-
-class RenderPipeline2 : public RenderPipeline1
-{
-private:
-	friend class RenderPipelineManager;
-
-protected:
-	HullShader* m_hs = 0;
-	DomainShader* m_ds = 0;
-
-public:
-	inline virtual _RenderPipelineKey GetKey() override;
-	inline virtual void Config(_RenderPipelineKey* key) override;
-
-};
+//
+//class RenderPipeline2 : public RenderPipeline1
+//{
+//private:
+//	friend class RenderPipelineManager;
+//
+//protected:
+//	HullShader* m_hs = 0;
+//	DomainShader* m_ds = 0;
+//
+//public:
+//	inline virtual _RenderPipelineKey GetKey() override;
+//	inline virtual void Config(_RenderPipelineKey* key) override;
+//
+//};
 
 //inline void RenderPipeline::VSSetVar(ShaderVar* var, int location)
 //{
@@ -137,6 +147,21 @@ public:
 inline void RenderPipeline::PSSetVar(ShaderVar* var, int location)
 {
 	DX11Global::renderer->m_d3dDeviceContext->PSSetConstantBuffers(location, 1, &var->m_buffer);
+}
+
+inline void RenderPipeline::PSSetVars(void** nativeHandles, int count, int start)
+{
+	DX11Global::renderer->m_d3dDeviceContext->PSSetConstantBuffers(start, count, (ID3D11Buffer**)nativeHandles);
+}
+
+inline void RenderPipeline::GSSetVar(ShaderVar* var, int location)
+{
+	DX11Global::renderer->m_d3dDeviceContext->GSSetConstantBuffers(location, 1, &var->m_buffer);
+}
+
+inline void RenderPipeline::GSSetVars(void** nativeHandles, int count, int start)
+{
+	DX11Global::renderer->m_d3dDeviceContext->GSSetConstantBuffers(start, count, (ID3D11Buffer**)nativeHandles);
 }
 
 inline void RenderPipeline::PSSetResource(Texture2D* texture2d, int location)
@@ -160,36 +185,30 @@ inline void RenderPipeline::Use()
 	context->IASetInputLayout(m_vertexShader->GetNativeLayoutHandle());
 	context->VSSetShader(m_vertexShader->GetNativeHandle(), 0, 0);
 	context->PSSetShader(m_pixelShader->GetNativeHandle(), 0, 0);
+
+	if (m_gs)
+	{
+		context->GSSetShader(m_gs->GetNativeHandle(), 0, 0);
+	}
+	else
+	{
+		context->GSSetShader(0, 0, 0);
+	}
+
+	if (m_hs)
+	{
+		//context->DSSetShader(m_hs->GetNativeHandle(), 0, 0);
+		assert(0);
+	}
+
+	if (m_ds)
+	{
+		//context->DSSetShader(m_gs->GetNativeHandle(), 0, 0);
+		assert(0);
+	}
 }
 
 inline _RenderPipelineKey RenderPipeline::GetKey()
-{
-	_RenderPipelineKey re = {};
-
-	re.vs = m_vertexShader;
-	re.ps = m_pixelShader;
-
-	return re;
-}
-
-inline void RenderPipeline::Config(_RenderPipelineKey* key)
-{
-	m_vertexShader = key->vs;
-	m_pixelShader = key->ps;
-}
-
-inline _RenderPipelineKey RenderPipeline1::GetKey()
-{
-	_RenderPipelineKey re = {};
-
-	re.vs = m_vertexShader;
-	re.ps = m_pixelShader;
-	re.gs = m_gs;
-
-	return re;
-}
-
-inline _RenderPipelineKey RenderPipeline2::GetKey()
 {
 	_RenderPipelineKey re = {};
 
@@ -202,14 +221,7 @@ inline _RenderPipelineKey RenderPipeline2::GetKey()
 	return re;
 }
 
-inline void RenderPipeline1::Config(_RenderPipelineKey* key)
-{
-	m_vertexShader = key->vs;
-	m_pixelShader = key->ps;
-	m_gs = key->gs;
-}
-
-inline void RenderPipeline2::Config(_RenderPipelineKey* key)
+inline void RenderPipeline::Config(_RenderPipelineKey* key)
 {
 	m_vertexShader = key->vs;
 	m_pixelShader = key->ps;
@@ -217,3 +229,43 @@ inline void RenderPipeline2::Config(_RenderPipelineKey* key)
 	m_hs = key->hs;
 	m_ds = key->ds;
 }
+
+//inline _RenderPipelineKey RenderPipeline1::GetKey()
+//{
+//	_RenderPipelineKey re = {};
+//
+//	re.vs = m_vertexShader;
+//	re.ps = m_pixelShader;
+//	re.gs = m_gs;
+//
+//	return re;
+//}
+//
+//inline _RenderPipelineKey RenderPipeline2::GetKey()
+//{
+//	_RenderPipelineKey re = {};
+//
+//	re.vs = m_vertexShader;
+//	re.ps = m_pixelShader;
+//	re.gs = m_gs;
+//	re.hs = m_hs;
+//	re.ds = m_ds;
+//
+//	return re;
+//}
+//
+//inline void RenderPipeline1::Config(_RenderPipelineKey* key)
+//{
+//	m_vertexShader = key->vs;
+//	m_pixelShader = key->ps;
+//	m_gs = key->gs;
+//}
+//
+//inline void RenderPipeline2::Config(_RenderPipelineKey* key)
+//{
+//	m_vertexShader = key->vs;
+//	m_pixelShader = key->ps;
+//	m_gs = key->gs;
+//	m_hs = key->hs;
+//	m_ds = key->ds;
+//}

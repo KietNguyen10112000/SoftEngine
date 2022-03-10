@@ -56,6 +56,11 @@ float4 PBRShading(PS_INPUT input, float4 posAndSpec)
 	float4 pixelColor = color.Sample(defaultSampler, input.textCoord);
 	float4 ns = normAndShininess.Sample(defaultSampler, input.textCoord);
 
+	if (all(ns.xyz == 0))
+	{
+		return pixelColor;
+	}
+
 	PBRShadingPixel pixel = (PBRShadingPixel)0;
 
 	pixel.pos = posAndSpec.xyz;

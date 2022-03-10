@@ -65,7 +65,7 @@ public:
 
 	ShadowInfo m_currentPointLightShadow;
 
-	RenderPipeline1 m_rpl = {};
+	RenderPipeline m_rpl = {};
 	bool m_doneBeginShadow = 0;
 
 public:

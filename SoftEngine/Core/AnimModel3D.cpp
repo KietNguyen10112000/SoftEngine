@@ -105,6 +105,12 @@ void TBNTryInitAnimableBuffer(_TBNRenderBuffer& out, AssimpParser& parser,
 
 	out.vb = new VertexBuffer(&vertices[0], vertices.size(), sizeof(_Vertex));
 	out.ib = new IndexBuffer(&indices[0], indices.size(), sizeof(uint32_t));
+
+	using _TBNVertexBuffer = _TBNAnimModelVertexBuffer<_Vertex>;
+	out.buffer = new _TBNVertexBuffer();
+	auto buf = (_TBNVertexBuffer*)out.buffer;
+	buf->vertices.swap(vertices);
+	buf->indices.swap(indices);
 }
 
 _TBNRenderBuffer TBNInitAnimableBuffer(TBNAnimModel* init, AssimpParser& parser, const aiMesh* mesh)
@@ -207,6 +213,27 @@ _TBNRenderBuffer TBNInitNonAnimBuffer(TBNAnimModel* init, AssimpParser& parser, 
 
 	ret.vb = new VertexBuffer(&vertices[0], vertices.size(), sizeof(_Vertex));
 	ret.ib = new IndexBuffer(&indices[0], indices.size(), sizeof(uint32_t));
+
+	using _TBNVertexBuffer = _TBNAnimModelVertexBuffer<decltype(vertices)::value_type>;
+	ret.buffer = new _TBNVertexBuffer();
+	auto buf = (_TBNVertexBuffer*)ret.buffer;
+	buf->vertices.swap(vertices);
+	buf->indices.swap(indices);
+
+
+	void* arg[] = { (void*)&vertices, (void*)&indices };
+	using VContainerType = std::remove_reference<decltype(vertices)>::type;
+	using IContainerType = std::remove_reference<decltype(indices)>::type;
+	auto lambda = [](size_t i, void** arg) -> Vec3&
+	{
+		VContainerType& vertices = *(VContainerType*)arg[0];
+		IContainerType& indices = *(IContainerType*)arg[1];
+
+		return vertices[indices[i]].pos;
+	};
+	buf->nonAnimMeshAABB = AABB::From<lambda>(indices.size(), arg);
+
+
 	ret.rplIndex = 0;
 	if (!(init->m_rpls[0])) init->m_rpls[0] = TBNAnimModelLoader::GetNonAnimMeshRpl();
 
@@ -338,9 +365,8 @@ void TBNAnimModelLoader::Load(const std::wstring& path, Mat4x4& preTransform, TB
 
 	//importer.SetPropertyBool(AI_CONFIG_IMPORT_FBX_PRESERVE_PIVOTS, false);
 
-	const aiScene* scene = importer.ReadFile(WStringToString(path).c_str(), aiProcess_ConvertToLeftHanded |
-		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices
-		| aiProcess_RemoveComponent);
+	const aiScene* scene = importer.ReadFile(WStringToString(path).c_str(), aiProcess_ConvertToLeftHanded
+		| aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace | aiProcess_RemoveComponent);
 
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -370,6 +396,40 @@ void TBNAnimModelLoader::Load(const std::wstring& path, Mat4x4& preTransform, TB
 	importer.FreeScene();
 #endif
 
+}
+
+void TBNAnimModelLoader::FreeTempBuffer(_TBNRenderBuffer* buffer)
+{
+	if (!(buffer->buffer)) return;
+
+	using W0 = TBNAnimModelLoader::NonAnimMesh::Vertex;
+	using W4 = TBNAnimModelLoader::AnimMesh::WeightVertex_4;
+	using W8 = TBNAnimModelLoader::AnimMesh::WeightVertex_8;
+	switch (buffer->rplIndex)
+	{
+	case 0:
+		Free((_TBNAnimModelVertexBuffer<W0>**) & buffer->buffer);
+		break;
+	case 1:
+		Free((_TBNAnimModelVertexBuffer<W4>**) & buffer->buffer);
+		break;
+	case 2:
+		Free((_TBNAnimModelVertexBuffer<W8>**) & buffer->buffer);
+		break;
+	case 3:
+		assert(0);
+		break;
+	default:
+		break;
+	}
+}
+
+void TBNAnimModelLoader::Free(_TBNRenderBuffer* buffer)
+{
+	delete buffer->vb;
+	delete buffer->ib;
+
+	FreeTempBuffer(buffer);
 }
 
 RenderPipeline* TBNAnimModelLoader::GetNonAnimMeshRpl()
@@ -442,4 +502,102 @@ RenderPipeline* TBNAnimModelLoader::GetAnimMeshRpl(size_t maxWeightPerVertex)
 		break;
 	}
 	return nullptr;
+}
+
+
+template <typename T, size_t WEIGHT_COUNT>
+AABB TBNAnimMesh_CalculateAABB(_TBNAnimModelVertexBuffer<T>* buffer,
+	std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones)
+{
+	//do as gpu transform =)))
+	auto& indices = buffer->indices;
+	auto& vertices = buffer->vertices;
+
+	Mat4x4 boneTransform;
+	Mat4x4 temp;
+
+	Vec4 pos;
+
+	std::vector<Vec3> positions;
+	positions.reserve(indices.size());
+
+	for (auto& id : indices)
+	{
+		auto& currentVertex = vertices[id];
+
+		pos = Vec4(currentVertex.pos, 1.0f);
+
+		if constexpr (WEIGHT_COUNT >= 4)
+		{
+			boneTransform  = bones[currentVertex.boneID1[0]] * currentVertex.weight1[0];
+			boneTransform += bones[currentVertex.boneID1[1]] * currentVertex.weight1[1];
+			boneTransform += bones[currentVertex.boneID1[2]] * currentVertex.weight1[2];
+			boneTransform += bones[currentVertex.boneID1[3]] * currentVertex.weight1[3];
+		}
+		if constexpr (WEIGHT_COUNT >= 8)
+		{
+			boneTransform += bones[currentVertex.boneID2[0]] * currentVertex.weight2[0];
+			boneTransform += bones[currentVertex.boneID2[1]] * currentVertex.weight2[1];
+			boneTransform += bones[currentVertex.boneID2[2]] * currentVertex.weight2[2];
+			boneTransform += bones[currentVertex.boneID2[3]] * currentVertex.weight2[3];
+		}
+
+		pos = pos * temp;
+
+		positions.push_back(ConvertVector(pos));
+	}
+
+	AABB ret;
+	ret.FromPoints(positions.data(), positions.size());
+
+	return ret;
+}
+
+//template <typename T, size_t WEIGHT_COUNT>
+//AABB TBNNonAnimMesh_CalculateAABB(_TBNAnimModelVertexBuffer<T>* buffer,
+//	std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones)
+//{
+//	AABB ret;
+//	//ret.FromPoints(positions.data(), positions.size());
+//
+//	return ret;
+//}
+
+void AnimModelAABBCalculator::TBNAnimModel_CalculateAABB(TBNAnimModel* model, Animation* animation, 
+	size_t id, float t, std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones)
+{
+	using W0 = TBNAnimModelLoader::NonAnimMesh::Vertex;
+	using W4 = TBNAnimModelLoader::AnimMesh::WeightVertex_4;
+	using W8 = TBNAnimModelLoader::AnimMesh::WeightVertex_8;
+
+	auto& meshAABBs = animation->meshAABBs;
+
+	const auto numMesh = model->m_renderBuf.size();
+	for (size_t i = 0; i < numMesh; i++)
+	{
+		auto& rdb = model->m_renderBuf[i];
+
+		AABB ret;
+		
+		switch (rdb.rplIndex)
+		{
+		case 0:
+			ret = ((_TBNAnimModelVertexBuffer<W0>*)rdb.buffer)->nonAnimMeshAABB;
+			break;
+		case 1:
+			ret = TBNAnimMesh_CalculateAABB<W4, 4>((_TBNAnimModelVertexBuffer<W4>*)rdb.buffer, meshLocalTransform, bones);
+			break;
+		case 2:
+			ret = TBNAnimMesh_CalculateAABB<W8, 8>((_TBNAnimModelVertexBuffer<W8>*)rdb.buffer, meshLocalTransform, bones);
+			break;
+		case 3:
+			assert(0);
+			break;
+		default:
+			break;
+		}
+
+		ret.Transform(*(meshLocalTransform[i]));
+		meshAABBs[i].aabb.push_back({ ret, t });
+	}
 }

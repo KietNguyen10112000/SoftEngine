@@ -3,6 +3,9 @@
 #include <IResource.h>
 
 #include <Math/Math.h>
+
+#include "Math/AABB.h"
+
 #include <Buffer.h>
 
 #include <vector>
@@ -21,11 +24,22 @@ struct _TBNRenderBuffer
 
 	//refer to m_rpls
 	int rplIndex = 0;
+
+	//need to calculate aabb on cpu side
+	void* buffer = 0;
 };
 
 template<typename T> class AnimModel;
 typedef AnimModel<_TBNRenderBuffer> TBNAnimModel;
 //class TBNAnimModel;
+
+template <typename T>
+struct _TBNAnimModelVertexBuffer
+{
+	std::vector<T> vertices;
+	std::vector<uint32_t> indices;
+	AABB nonAnimMeshAABB;
+};
 
 class TBNAnimModelLoader
 {
@@ -128,11 +142,24 @@ public:
 public:
 	static void Load(const std::wstring& path, Mat4x4& preTransform, TBNAnimModel* init);
 
+	static void FreeTempBuffer(_TBNRenderBuffer* buffer);
+	static void Free(_TBNRenderBuffer* buffer);
+
+	template <typename T>
+	static void Free(_TBNAnimModelVertexBuffer<T>** buffer)
+	{
+		delete* buffer;
+		*buffer = 0;
+	};
+
+	
+
 public:
 	static RenderPipeline* GetNonAnimMeshRpl();
 	static RenderPipeline* GetAnimMeshRpl(size_t maxWeightPerVertex);
 
 };
+
 
 template<class T>
 struct KeyFrame
@@ -144,6 +171,8 @@ struct KeyFrame
 typedef KeyFrame<Vec3> ScalingKeyFrame;
 typedef KeyFrame<Vec4> RotaionKeyFrame;
 typedef KeyFrame<Vec3> TranslationKeyFrame;
+
+typedef KeyFrame<AABB> AABBKeyFrame;
 
 struct KeyFrames
 {
@@ -158,6 +187,12 @@ struct KeyFrames
 	std::vector<TranslationKeyFrame> translation;
 };
 
+struct MeshAABBKeyFrame
+{
+	//mesh aabb
+	std::vector<AABBKeyFrame> aabb;
+};
+
 struct Animation
 {
 	int id = -1;
@@ -167,6 +202,9 @@ struct Animation
 	float ticksPerSecond = 0;
 
 	std::vector<KeyFrames> channels;
+
+	//same size with renderbuffer (or mesh of this model)
+	std::vector<MeshAABBKeyFrame> meshAABBs;
 };
 
 struct _AnimModelNode
@@ -234,6 +272,11 @@ public:
 	void Render(IRenderer* renderer, std::vector<Mat4x4>& meshLocalTransform, std::vector<Mat4x4>& bones);
 
 	void Render(IRenderer* renderer, std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones);
+
+	bool IsAABBCalculated(Animation* animation) { return animation->meshAABBs.size() == m_renderBuf.size(); };
+
+	void CalculateAABB(Animation* animation, size_t id, float t, 
+		std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones);
 };
 
 template<typename _RenderBuffer>
@@ -270,8 +313,7 @@ inline AnimModel<_RenderBuffer>::~AnimModel()
 {
 	for (auto& buf : m_renderBuf)
 	{
-		delete buf.ib;
-		delete buf.vb;
+		TBNAnimModelLoader::Free(&buf);
 	}
 	m_nodes.clear();
 
@@ -328,5 +370,30 @@ inline void AnimModel<_RenderBuffer>::Render(IRenderer* renderer,
 		if(meshLocalTransform[i]) localSV->Update(meshLocalTransform[i], sizeof(Mat4x4));
 		renderer->Render(m_rpls[buf.rplIndex], buf.vb, buf.ib);
 		i++;
+	}
+}
+
+class AnimModelAABBCalculator
+{
+public:
+	static void TBNAnimModel_CalculateAABB(TBNAnimModel* model, Animation* animation, size_t id, float t,
+		std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones);
+
+};
+
+template<typename _RenderBuffer>
+inline void AnimModel<_RenderBuffer>::CalculateAABB(Animation* animation, size_t id, float t,
+	std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones)
+{
+	auto& meshAABBs = animation->meshAABBs;
+	if (meshAABBs.size() != m_renderBuf.size()) meshAABBs.resize(m_renderBuf.size());
+
+	if (std::is_same_v<_RenderBuffer, _TBNRenderBuffer>)
+	{
+		AnimModelAABBCalculator::TBNModel_CalculateAABB(this, animation, id, t, meshLocalTransform, bones);
+	}
+	else
+	{
+		assert(0);
 	}
 }

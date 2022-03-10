@@ -6,6 +6,8 @@
 
 #include "Engine/Controllers/CameraController.h"
 
+#include "Components/AnimObject.h"
+
 SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 {
 	BeginUpdate(0);
@@ -58,7 +60,7 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 	//============================================================================================
 	auto node = NewRenderableObjectNode();
 	node->Deleter() = deleter;
-	auto obj = new BasicObject(
+	IRenderableObject* obj = new BasicObject(
 		L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
 		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
 		GetScaleMatrix(3, 3, 3)
@@ -189,6 +191,39 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 	m_nodes.push_back(node);
 
 
+	//============================================================================================
+	node = NewRenderableObjectNode();
+	node->Deleter() = deleter;
+
+	std::vector<PBRMaterialPath> paths = {
+			{ L"D:/KEngine/ResourceFile/model/character/Character Texture 256x256.png", L"", L"", L"", L"" }
+	};
+	auto animObject = new PBRMultiMeshAnimObject(
+		L"D:/KEngine/ResourceFile/model/character/Character1.fbx",
+		paths,
+		GetScaleMatrix(0.02f, 0.02f, 0.02f)
+	);
+	//animObject->Animator().SetAnimation(0);
+
+	obj = animObject;
+	/*obj = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/character/Character Running.fbx",
+		L"D:/KEngine/ResourceFile/model/character/Character Texture 256x256.png",
+		GetScaleMatrix(0.02f, 0.02f, 0.02f)
+	);*/
+	obj->Transform() *= GetRotationYMatrix(PI / 2.0f);
+	obj->Transform().SetPosition(50, 0, 30);
+	node->RenderingObject().renderableObject = obj;
+	node->Transform() = obj->Transform();
+	m_nodes.push_back(node);
+
+
+	for (auto& node : m_nodes)
+	{
+		if (node->Type() == SceneNode::RENDERABLE_NODE)
+			node->m_aabb = node->RenderingObject().renderableObject->GetAABB();
+	}
+
 	EndUpdate(0);
 }
 
@@ -204,51 +239,43 @@ SimpleScene::~SimpleScene()
 	EndUpdate(0);
 }
 
-void SimpleScene::Query2D(SceneQueryContext* context, Rect2D* area, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query2D(SceneQueryContext* context, Rect2D* area, std::vector<NodeId>& output)
 {
 }
 
-void SimpleScene::Query2D(SceneQueryContext* context, AARect2D* area, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query2D(SceneQueryContext* context, AARect2D* area, std::vector<NodeId>& output)
 {
 }
 
-void SimpleScene::Query2D(SceneQueryContext* context, Trapezoid* area, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query2D(SceneQueryContext* context, Trapezoid* area, std::vector<NodeId>& output)
 {
 }
 
-void SimpleScene::Query2D(SceneQueryContext* context, Circle* area, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query2D(SceneQueryContext* context, Circle* area, std::vector<NodeId>& output)
 {
 }
 
-void SimpleScene::Query3D(SceneQueryContext* context, Box* bounding, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query3D(SceneQueryContext* context, Box* bounding, std::vector<NodeId>& output)
 {
 }
 
-void SimpleScene::Query3D(SceneQueryContext* context, AABB* bounding, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query3D(SceneQueryContext* context, AABB* bounding, std::vector<NodeId>& output)
 {
 }
 
-void SimpleScene::Query3D(SceneQueryContext* context, Frustum* bounding, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query3D(SceneQueryContext* context, Frustum* bounding, std::vector<NodeId>& output)
 {
 	BeginQuery(context);
 
-	std::vector<NodeId> queryNodeIds;
-
 	for (auto& node : m_nodes)
 	{
-		queryNodeIds.push_back(context->NewFromSceneNode(*node));
+		output.push_back(context->NewFromSceneNode(*node));
 	}
-
-	for (auto& nodeId : queryNodeIds)
-	{
-		output.push_back(&context->Node(nodeId));
-	}
-
 
 	EndQuery(context);
 }
 
-void SimpleScene::Query3D(SceneQueryContext* context, Sphere* bounding, std::vector<SceneQueriedNode*>& output)
+void SimpleScene::Query3D(SceneQueryContext* context, Sphere* bounding, std::vector<NodeId>& output)
 {
 }
 
@@ -256,34 +283,34 @@ void SimpleScene::LoadFromFile(const std::string& path)
 {
 }
 
-void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::Box* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::Box* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::AABB* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::AABB* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::Frustum* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::Frustum* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::Sphere* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DImmutableNodes(SceneQueryContext* context, Math::Sphere* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::Box* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::Box* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::AABB* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::AABB* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::Frustum* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::Frustum* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }
 
-void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::Sphere* bounding, std::vector<SceneQueriedNode*, std::allocator<SceneQueriedNode*>>& output)
+void SimpleScene::Query3DMutableNodes(SceneQueryContext* context, Math::Sphere* bounding, std::vector<size_t, std::allocator<size_t>>& output)
 {
 }

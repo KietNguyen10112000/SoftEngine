@@ -70,9 +70,9 @@ RenderPipeline* RenderPipelineManager::_Get(const char* inputLayoutSource, const
 
 	key.vs = Resource::Get<VertexShader>(vs);
 	key.ps = Resource::Get<PixelShader>(ps);
-	key.gs = Resource::Get<GeometryShader>(ps);
+	key.gs = Resource::Get<GeometryShader>(gs);
 
-	___RPL_GET_IMP_(RenderPipeline1);
+	___RPL_GET_IMP_(RenderPipeline);
 }
 
 RenderPipeline* RenderPipelineManager::Get(const char* inputLayoutSource, const std::wstring& vs, 

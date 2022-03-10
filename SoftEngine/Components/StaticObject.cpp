@@ -52,7 +52,6 @@ void BasicObject::RenderShadow(IRenderer* renderer)
 	}
 }
 
-
 NormalMappingObject::NormalMappingObject(const std::wstring& modelPath, 
 	const std::wstring& diffuseMapPath, const std::wstring& normalMapPath,
 	const Mat4x4& preTransform)
@@ -225,3 +224,35 @@ void PBRObject::Render(IRenderer* renderer)
 	m_rpl->PSSetResources(m_resourceHandles, 5, 0);
 	m_model->Render(renderer, m_rpl);
 }
+
+#define _STATIC_OBJECT_IMPL_GET_AABB(className)		\
+AABB className::GetAABB()					\
+{											\
+	auto ret = GetLocalAABB();				\
+	ret.Transform(m_transform);				\
+	return ret;								\
+}											\
+AABB className::GetLocalAABB()				\
+{											\
+	AABB ret = {};							\
+	Vec3 points[16];						\
+	for (auto& mesh : m_model->Meshs())		\
+	{										\
+		if (ret.IsValid())					\
+		{									\
+			ret.GetPoints(points);			\
+			mesh.aabb.GetPoints(&points[8]);\
+			ret.FromPoints(points, 16);		\
+		}									\
+		else								\
+		{									\
+			ret = mesh.aabb;				\
+		}									\
+	}										\
+	return ret;								\
+}
+
+_STATIC_OBJECT_IMPL_GET_AABB(BasicObject);
+_STATIC_OBJECT_IMPL_GET_AABB(NormalMappingObject);
+_STATIC_OBJECT_IMPL_GET_AABB(NormalSpecularMappingObject);
+_STATIC_OBJECT_IMPL_GET_AABB(PBRObject);

@@ -3,12 +3,16 @@
 #include <mutex>
 
 #include "Core/Templates/ReusableVector.h"
+#include "Core/Templates/Ref.h"
 
 #include "Math/Math.h"
+#include "Math/AABB.h"
+
 #include "Core/ILightSystem.h"
 
 class IRenderableObject;
 class ICamera;
+class IObject;
 
 namespace Math
 {
@@ -117,12 +121,13 @@ void className::TransformTraverse(_Func1 prevCall, _Func2 postCall, _Args&&... a
 };
 
 
-class SceneNode
+class SceneNode : public RefCounted
 {
 public:
 	struct Rendering
 	{
 		void* opaque = 0;
+		IObject* object;
 		ICamera* camera;
 		IRenderableObject* renderableObject;
 		size_t lightID;
@@ -176,6 +181,7 @@ public:
 	std::vector<SceneNode*> m_childs;
 
 	Mat4x4 m_transform;
+	AABB m_aabb;
 
 public:
 	inline ~SceneNode()
@@ -280,7 +286,7 @@ public:
 	NodeId m_id = NodeId_Invalid;
 	SceneQueryContext* m_owner = 0;
 
-	SceneNode* m_sharedNode;
+	SceneNode* m_sharedNode = 0;
 
 	//for multithreading
 	//when do query, copy m_sharedNode->m_blob to this->m_blob
@@ -314,7 +320,7 @@ public:
 		}
 	};
 
-	inline auto GetSceneNode() 
+	inline auto& GetSceneNode() 
 	{ 
 		return m_sharedNode; 
 	};
@@ -524,41 +530,41 @@ public:
 
 public:
 	//in 3D, Query2D work by projection object to Oxz
-	virtual void Query2D(SceneQueryContext* context, Rect2D* area, std::vector<SceneQueriedNode*>& output) = 0;
+	virtual void Query2D(SceneQueryContext* context, Rect2D* area, std::vector<NodeId>& output) = 0;
 	//aligned axis rect
-	virtual void Query2D(SceneQueryContext* context, AARect2D* area, std::vector<SceneQueriedNode*>& output) = 0;
-	virtual void Query2D(SceneQueryContext* context, Trapezoid* area, std::vector<SceneQueriedNode*>& output) = 0;
-	virtual void Query2D(SceneQueryContext* context, Circle* area, std::vector<SceneQueriedNode*>& output) = 0;
+	virtual void Query2D(SceneQueryContext* context, AARect2D* area, std::vector<NodeId>& output) = 0;
+	virtual void Query2D(SceneQueryContext* context, Trapezoid* area, std::vector<NodeId>& output) = 0;
+	virtual void Query2D(SceneQueryContext* context, Circle* area, std::vector<NodeId>& output) = 0;
 
 
-	virtual void Query3D(SceneQueryContext* context, Box* bounding, std::vector<SceneQueriedNode*>& output) = 0;
-	virtual void Query3D(SceneQueryContext* context, AABB* bounding, std::vector<SceneQueriedNode*>& output) = 0;
-	virtual void Query3D(SceneQueryContext* context, Frustum* bounding, std::vector<SceneQueriedNode*>& output) = 0;
-	virtual void Query3D(SceneQueryContext* context, Sphere* bounding, std::vector<SceneQueriedNode*>& output) = 0;
+	virtual void Query3D(SceneQueryContext* context, Box* bounding, std::vector<NodeId>& output) = 0;
+	virtual void Query3D(SceneQueryContext* context, AABB* bounding, std::vector<NodeId>& output) = 0;
+	virtual void Query3D(SceneQueryContext* context, Frustum* bounding, std::vector<NodeId>& output) = 0;
+	virtual void Query3D(SceneQueryContext* context, Sphere* bounding, std::vector<NodeId>& output) = 0;
 
 
 	//immutable node live on memory until scene deleted
 	//immutable node contains static object, kinematic object, light, ... (objects that don't change their position)
 	virtual void Query3DImmutableNodes(SceneQueryContext* context, Box* bounding, 
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 	virtual void Query3DImmutableNodes(SceneQueryContext* context, AABB* bounding, 
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 	virtual void Query3DImmutableNodes(SceneQueryContext* context, Frustum* bounding, 
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 	virtual void Query3DImmutableNodes(SceneQueryContext* context, Sphere* bounding, 
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 
 	//scene can remove or add mutable node dynamically
 	//mutable node count should be small (around 1000 - 2000)
 	//mutable node contains dynamic object, partical object, ...
 	virtual void Query3DMutableNodes(SceneQueryContext* context, Box* bounding,
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 	virtual void Query3DMutableNodes(SceneQueryContext* context, AABB* bounding,
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 	virtual void Query3DMutableNodes(SceneQueryContext* context, Frustum* bounding,
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 	virtual void Query3DMutableNodes(SceneQueryContext* context, Sphere* bounding,
-		std::vector<SceneQueriedNode*>& output) = 0;
+		std::vector<NodeId>& output) = 0;
 
 
 	virtual void LoadFromFile(const std::string& path) = 0;
@@ -644,7 +650,7 @@ inline void SceneQueryContext::EndFrame()
 
 	for (auto& node : m_needUpdateNodes)
 	{
-		auto sceneNode = Node(node).GetSceneNode();
+		auto& sceneNode = Node(node).GetSceneNode();
 
 		sceneNode->Transform() = Node(node).Transform();
 

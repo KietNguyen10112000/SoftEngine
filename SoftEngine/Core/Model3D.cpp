@@ -163,7 +163,7 @@ inline void ModelLoaderHelperFunc::BasicModel_ProcessNode(aiNode* node, const ai
 	BasicModel* init, Mat4x4* preTransform, Mat4x4 currentLocalTransform, 
 	std::vector<BasicModel::Vertex>& vertices, std::vector<unsigned int>& indices)
 {
-	auto ProcessMesh = [&](aiMesh* mesh, const aiScene* scene) -> BasicModel::Mesh
+	auto ProcessMesh = [&](aiMesh* mesh, const aiScene* scene, Mat4x4* localTransform) -> BasicModel::Mesh
 	{
 		BasicModel::Mesh ret;
 
@@ -255,6 +255,23 @@ inline void ModelLoaderHelperFunc::BasicModel_ProcessNode(aiNode* node, const ai
 
 		ret.vb = new VertexBuffer(&vertices[0], vertices.size(), sizeof(BasicModel::Vertex));
 		ret.ib = new IndexBuffer(&indices[0], indices.size(), sizeof(unsigned int));
+
+		void* arg[] = { (void*)&vertices, (void*)&indices };
+
+		using VContainerType = std::remove_reference<decltype(vertices)>::type;
+		using IContainerType = std::remove_reference<decltype(indices)>::type;
+		auto lambda = [](size_t i, void** arg) -> Vec3&
+		{
+			VContainerType& vertices = *(VContainerType*)arg[0];
+			IContainerType& indices = *(IContainerType*)arg[1];
+
+			return vertices[indices[i]].position;
+		};
+
+		ret.aabb = AABB::From<lambda>(indices.size(), arg);
+		if (localTransform)
+			ret.aabb.Transform(*localTransform);
+
 #ifndef BASIC_MODEL_UNIQUE_SHADER_VAR
 		ret.materialSvar = new ShaderVar(&meshMaterial, sizeof(BasicModel::MeshMaterial));
 #else
@@ -277,9 +294,9 @@ inline void ModelLoaderHelperFunc::BasicModel_ProcessNode(aiNode* node, const ai
 		vertices.clear();
 		indices.clear();
 
-		BasicModel::Mesh temp = ProcessMesh(mesh, scene);
-
 		if (preTransform) localTransform = currentLocalTransform * (*preTransform);
+
+		BasicModel::Mesh temp = ProcessMesh(mesh, scene, &localTransform);
 
 #ifndef BASIC_MODEL_UNIQUE_SHADER_VAR
 		temp.svar = new ShaderVar(&localTransform, sizeof(Mat4x4));
@@ -514,6 +531,20 @@ inline void ModelLoaderHelperFunc::TBNModel_ProcessNode(aiNode* node, const aiSc
 		ret.vb = new VertexBuffer(&vertices[0], vertices.size(), sizeof(TBNModel::Vertex));
 		ret.ib = new IndexBuffer(&indices[0], indices.size(), sizeof(unsigned int));
 
+		void* arg[] = { (void*)&vertices, (void*)&indices };
+		using VContainerType = std::remove_reference<decltype(vertices)>::type;
+		using IContainerType = std::remove_reference<decltype(indices)>::type;
+		auto lambda = [](size_t i, void** arg) -> Vec3&
+		{
+			VContainerType& vertices = *(VContainerType*)arg[0];
+			IContainerType& indices = *(IContainerType*)arg[1];
+
+			return vertices[indices[i]].position;
+		};
+		ret.aabb = AABB::From<lambda>(indices.size(), arg);
+		if (localTransform)
+			ret.aabb.Transform(*localTransform);
+
 #ifndef TBN_MODEL_UNIQUE_SHADER_VAR
 		ret.svar = new ShaderVar(localTransform, sizeof(Mat4x4));
 		ret.materialSvar = new ShaderVar(&meshMaterial, sizeof(TBNModel::MeshMaterial));
@@ -637,6 +668,22 @@ inline void ModelLoaderHelperFunc::RawTBNModel_ProcessNode(aiNode* node, const a
 
 		ret.vb = new VertexBuffer(&vertices[0], vertices.size(), sizeof(TBNModel::Vertex));
 		ret.ib = new IndexBuffer(&indices[0], indices.size(), sizeof(unsigned int));
+
+		void* arg[] = { (void*)&vertices, (void*)&indices };
+		using VContainerType = std::remove_reference<decltype(vertices)>::type;
+		using IContainerType = std::remove_reference<decltype(indices)>::type;
+		auto lambda = [](size_t i, void** arg) -> Vec3&
+		{
+			VContainerType& vertices = *(VContainerType*)arg[0];
+			IContainerType& indices = *(IContainerType*)arg[1];
+
+			return vertices[indices[i]].position;
+		};
+		ret.aabb = AABB::From<lambda>(indices.size(), arg);
+
+		if (localTransform)
+			ret.aabb.Transform(*localTransform);
+
 		ret.svar = new ShaderVar(localTransform, sizeof(Mat4x4));
 
 		init->m_meshs.push_back(ret);

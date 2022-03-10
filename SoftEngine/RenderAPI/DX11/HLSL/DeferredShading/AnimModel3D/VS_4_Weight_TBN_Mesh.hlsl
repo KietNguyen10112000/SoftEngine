@@ -46,7 +46,7 @@ VS_OUTPUT main(VS_INPUT input)
 {
 	VS_OUTPUT output = (VS_OUTPUT)0;
 
-	output.pos = float4(input.pos, 1.0f);
+	output.position = float4(input.pos, 1.0f);
 
 	float4x4 boneTransform = bones[input.boneId1.x] * input.weight1.x;
 	boneTransform += bones[input.boneId1.y] * input.weight1.y;
@@ -55,11 +55,11 @@ VS_OUTPUT main(VS_INPUT input)
 
 
 	float4x4 temp = mul(boneTransform, world);
-	output.pos = mul(output.pos, temp);
+	output.position = mul(output.position, temp);
 
-	output.position = output.pos;
+	output.position /= output.position.w;
 
-	output.pos = mul(output.pos, mvp);
+	output.pos = mul(output.position, mvp);
 	output.textCoord = input.textCoord;
 
 

@@ -440,9 +440,9 @@ const static float SHADOW_MAP_CASCADE_BAND_WIDTH[] = {
 
 float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos, float pixelDepthInScreen, in float3 normal)
 {
-#ifdef USE_PIXEL_LIGHT_OFFSET
-	pixelPos += OffsetPixelLight(light, pixelPos, normal);
-#endif
+//#ifdef USE_PIXEL_LIGHT_OFFSET
+//	pixelPos += OffsetPixelLight(light, pixelPos, normal);
+//#endif
 	//=====================choose shadow cascade=============================
 	//shadow.viewProj[SHADOW_MAP_NUM_CASCADE] as memory to store depthThres
 	const float4 depthThres = shadow.viewProj[SHADOW_MAP_NUM_CASCADE][0];
@@ -637,9 +637,9 @@ float3 PBRDirLight(Light light, PBRShadingPixel pixel)
 
 	float3 H = normalize(V + L);
 
-	float attenuation = DoAttenuation(light, distance);
+	//float attenuation = DoAttenuation(light, distance);
 
-	float3 radiance = light.color * light.power * PBR_LIT_FACTOR * attenuation;
+	float3 radiance = light.color * light.power * PBR_LIT_FACTOR;
 
 	// Cook-Torrance BRDF
 	float NDF = DistributionGGX(N, H, pixel.roughness);

@@ -31,6 +31,10 @@ public:
 	virtual void Render(IRenderer* renderer) override;
 
 	virtual void RenderShadow(IRenderer* renderer) override;
+
+	virtual AABB GetAABB() override;
+
+	virtual AABB GetLocalAABB() override;
 };
 
 class NormalMappingObject : public IStaticObject
@@ -51,6 +55,10 @@ public:
 
 public:
 	virtual void Render(IRenderer* renderer) override;
+
+	virtual AABB GetAABB() override;
+
+	virtual AABB GetLocalAABB() override;
 
 };
 
@@ -76,6 +84,10 @@ public:
 
 public:
 	virtual void Render(IRenderer* renderer) override;
+
+	virtual AABB GetAABB() override;
+
+	virtual AABB GetLocalAABB() override;
 
 };
 
@@ -105,5 +117,9 @@ public:
 
 public:
 	virtual void Render(IRenderer* renderer) override;
+
+	virtual AABB GetAABB() override;
+
+	virtual AABB GetLocalAABB() override;
 
 };

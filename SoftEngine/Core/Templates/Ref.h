@@ -21,13 +21,26 @@ public:
 
 	inline Ref(T* left)
 	{
+		if (m_data)
+			m_data->m_refCount--;
+
 		m_data = left;
+		m_data->m_refCount++;
+	};
+
+	inline Ref(const Ref<T>& left)
+	{
+		if (m_data)
+			m_data->m_refCount--;
+
+		m_data = left.m_data;
 		m_data->m_refCount++;
 	};
 
 	inline ~Ref()
 	{
-		m_data->m_refCount--;
+		if (m_data)
+			m_data->m_refCount--;
 
 		if constexpr (AUTO_DELETE)
 		{
@@ -37,9 +50,12 @@ public:
 	};
 
 public:
-	inline void operator=(T* left) const noexcept
+	inline void operator=(Ref<T>& left) noexcept
 	{
-		m_data = left;
+		if (m_data)
+			m_data->m_refCount--;
+
+		m_data = left.m_data;
 		m_data->m_refCount++;
 	};
 
@@ -57,5 +73,21 @@ public:
 	{ 
 		return m_data; 
 	};
+
+	inline Ref<T>& operator=(Ref<T>&& left) noexcept
+	{
+		if (m_data)
+			m_data->m_refCount--;
+
+		m_data = left;
+		m_data->m_refCount++;
+
+		return *this;
+	};
+//private:
+//	inline void operator=(Ref<T> left) const noexcept
+//	{
+//		
+//	};
 
 };

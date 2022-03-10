@@ -85,20 +85,34 @@ namespace Math
 			return vec.x == x && vec.y == y && vec.z == z;
 		}
 
+		inline void operator+=(const Vec3& vec)
+		{
+			x += vec.x;
+			y += vec.y;
+			z += vec.z;
+		}
+
+		inline void operator-=(const Vec3& vec)
+		{
+			x -= vec.x;
+			y -= vec.y;
+			z -= vec.z;
+		}
+
 		inline Vec3& Normalize()
 		{
 			XMStoreFloat3(this, XMVector3Normalize(XMLoadFloat3(this)));
 			return *this;
 		}
 
-		inline Vec3 Normal() const noexcept
+		inline Vec3 Normal() const
 		{
 			Vec3 ret;
 			XMStoreFloat3(&ret, XMVector3Normalize(XMLoadFloat3(this)));
 			return ret;
 		}
 
-		inline float Length()
+		inline float Length() const
 		{
 			return sqrt(x * x + y * y + z * z);
 		}
@@ -112,7 +126,6 @@ namespace Math
 
 			return ret;
 		};
-
 	};
 
 	template<typename T>
@@ -207,6 +220,22 @@ namespace Math
 		inline bool operator==(const Vec4& vec)
 		{
 			return vec.x == x && vec.y == y && vec.z == z && vec.w == w;
+		}
+
+		inline void operator+=(const Vec4& vec)
+		{
+			x += vec.x;
+			y += vec.y;
+			z += vec.z;
+			w += vec.w;
+		}
+
+		inline void operator-=(const Vec4& vec)
+		{
+			x -= vec.x;
+			y -= vec.y;
+			z -= vec.z;
+			w -= vec.w;
 		}
 
 		inline Vec4& Normalize()
@@ -351,6 +380,17 @@ namespace Math
 				XMMatrixMultiply(XMLoadFloat4x4(this), XMLoadFloat4x4(&mat))
 				//XMMatrixMultiply(XMLoadFloat4x4(&mat), XMLoadFloat4x4(this))
 			);
+		}
+
+		inline void operator+=(const Mat4x4& mat)
+		{
+			float* mem = &m[0][0];
+			const float* mem1 = &mat.m[0][0];
+
+			for (size_t i = 0; i < 16; i++)
+			{
+				mem[i] += mem1[i];
+			}
 		}
 
 		inline Mat4x4& Inverse()
@@ -599,6 +639,36 @@ namespace Math
 
 	};
 
+	template<typename T>
+	inline Mat4x4 operator*(const Mat4x4& mat, T left)
+	{
+		Mat4x4 re;
+		float* mem = &re.m[0][0];
+		const float* mem1 = &mat.m[0][0];
+
+		for (size_t i = 0; i < 16; i++)
+		{
+			mem[i] = mem1[i] * left;
+		}
+
+		return re;
+	}
+
+	template<typename T>
+	inline Mat4x4 operator/(const Mat4x4& mat, T left)
+	{
+		Mat4x4 re;
+		float* mem = &re.m[0][0];
+		const float* mem1 = &mat.m[0][0];
+
+		for (size_t i = 0; i < 16; i++)
+		{
+			mem[i] = mem1[i] / left;
+		}
+
+		return re;
+	}
+
 	inline Mat4x4 operator*(Mat4x4& mat1, Mat4x4& mat2)
 	{
 		Mat4x4 re;
@@ -626,6 +696,38 @@ namespace Math
 			&re,
 			XMVector4Transform(XMLoadFloat4(&vec), XMLoadFloat4x4(&mat))
 		);
+		return re;
+	}
+
+	inline Mat4x4 operator+(const Mat4x4& mat1, const Mat4x4& mat2)
+	{
+		Mat4x4 re;
+
+		float* mem = &re.m[0][0];
+		const float* mem1 = &mat1.m[0][0];
+		const float* mem2 = &mat2.m[0][0];
+
+		for (size_t i = 0; i < 16; i++)
+		{
+			mem[i] = mem1[i] + mem2[i];
+		}
+		
+		return re;
+	}
+
+	inline Mat4x4 operator-(const Mat4x4& mat1, const Mat4x4& mat2)
+	{
+		Mat4x4 re;
+
+		float* mem = &re.m[0][0];
+		const float* mem1 = &mat1.m[0][0];
+		const float* mem2 = &mat2.m[0][0];
+
+		for (size_t i = 0; i < 16; i++)
+		{
+			mem[i] = mem1[i] - mem2[i];
+		}
+
 		return re;
 	}
 

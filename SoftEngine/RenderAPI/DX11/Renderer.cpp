@@ -546,7 +546,7 @@ void DeferredRenderer::DoLighting()
 
     //....
     m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_dsvShader);
-    m_d3dDeviceContext->PSSetShaderResources(4, RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW - 1, m_rtvShader);
+    m_d3dDeviceContext->PSSetShaderResources(4, 4/*RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW*/, m_rtvShader);
 
 #ifdef SCREEN_SHADOW_BLUR
     //present to 1 shadow image, 1 light image

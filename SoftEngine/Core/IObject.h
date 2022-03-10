@@ -1,6 +1,9 @@
 #pragma once
 
 #include <Math/Collision.h>
+
+#include "Math/AABB.h"
+
 #include <RenderPipeline.h>
 
 class ShaderVar;
@@ -77,6 +80,10 @@ public:
 
 	inline virtual void FlushTransform() { shaderTransform->Update(&m_transform, sizeof(Mat4x4)); };
 
+	//return AABB in world space
+	inline virtual AABB GetAABB() { return {}; };
+	//return AABB in local space
+	inline virtual AABB GetLocalAABB() { return {}; };
 };
 
 //m_transform is view matrix

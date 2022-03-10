@@ -33,8 +33,9 @@ void LogicWorker::Update()
 
 	scene->Query3D(m_queryContext, (Frustum*)0, m_dataNodes);
 
-	for (auto& node : m_dataNodes)
+	for (auto& nodeid : m_dataNodes)
 	{
+		auto node = &m_queryContext->Node(nodeid);
 		node->TransformTraverse(
 			[&](SceneQueriedNode* curNode, const Mat4x4& globalTransform)
 			{
@@ -50,8 +51,4 @@ void LogicWorker::Update()
 	}
 
 	m_queryContext->EndFrame();
-
-	//auto dt = max(14 - (int)(GetTime() - currentTime), 0);
-	//Sleep(14);
-	//Sleep(12);
 }

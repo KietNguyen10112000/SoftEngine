@@ -2,7 +2,9 @@
 
 #include <IResource.h>
 
-#include <Math/Math.h>
+//#include <Math/Math.h>
+
+#include "Math/AABB.h"
 
 #include <Buffer.h>
 
@@ -62,6 +64,7 @@ public:
 
 	struct Mesh
 	{
+		AABB aabb;
 		VertexBuffer* vb = nullptr;
 		IndexBuffer* ib = nullptr;
 
@@ -99,7 +102,7 @@ public:
 	};
 
 
-private:
+public:
 	std::vector<Mesh> m_meshs;
 
 public:
@@ -150,6 +153,7 @@ public:
 
 	struct Mesh
 	{
+		AABB aabb;
 		VertexBuffer* vb = nullptr;
 		IndexBuffer* ib = nullptr;
 
@@ -222,6 +226,7 @@ public:
 
 	struct Mesh
 	{
+		AABB aabb;
 		VertexBuffer* vb = nullptr;
 		IndexBuffer* ib = nullptr;
 

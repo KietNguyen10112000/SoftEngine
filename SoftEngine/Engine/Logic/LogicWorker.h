@@ -42,7 +42,9 @@ public:
 
     SceneQueryContext* m_queryContext = 0;
 
-    std::vector<SceneQueriedNode*> m_dataNodes;
+    using NodeId = size_t;
+
+    std::vector<NodeId> m_dataNodes;
     std::vector<LightID> m_lightObjects;
 
 public:

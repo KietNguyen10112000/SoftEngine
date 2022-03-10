@@ -6,6 +6,8 @@
 
 #include "Engine/Scene/Scene.h"
 
+#include "Components/AABBRenderer.h"
+
 #ifdef DX11_RENDERER
 #include "RenderAPI/DX11/DX11Global.h"
 #endif
@@ -16,10 +18,13 @@ RenderingWorker::RenderingWorker(Engine* engine) :
 	m_renderer = engine->Renderer();
 
 	m_queryContext = engine->CurrentScene()->NewQueryContext();
+
+	m_aabbRenderer = new AABBRenderer();
 }
 
 RenderingWorker::~RenderingWorker()
 {
+	delete m_aabbRenderer;
 }
 
 void RenderingWorker::Update()
@@ -36,12 +41,15 @@ void RenderingWorker::Update()
 
 	scene->Query3D(m_queryContext, (Frustum*)0, m_dataNodes);
 
-	for (auto& node : m_dataNodes)
+	for (auto& nodeid : m_dataNodes)
 	{
+		auto node = &m_queryContext->Node(nodeid);
 		node->TransformTraverse(
 			[&](SceneQueriedNode* curNode, const Mat4x4& globalTransform)
 			{
-				auto sceneNode = curNode->GetSceneNode();
+				auto& sceneNode = curNode->GetSceneNode();
+
+				//auto a = curNode->GetSceneNode();
 
 				//if (!sceneNode->IsStateChange()) return false;
 
@@ -50,7 +58,9 @@ void RenderingWorker::Update()
 				case SceneNode::RENDERABLE_NODE:
 				{
 					auto obj = sceneNode->RenderingObject().renderableObject;
+
 					m_renderableObjects.push_back(obj);
+					m_aabbRenderer->Add(sceneNode->m_aabb);
 
 					if (sceneNode->IsStateChange())
 					{
@@ -116,9 +126,11 @@ void RenderingWorker::Update()
 	m_renderer->ClearFrame(clsCol);
 
 	m_engine->m_spaceCoord->Render(m_renderer);
+	m_aabbRenderer->Present(m_renderer);
 
 	for (auto& obj : m_renderableObjects)
 	{
+		obj->Update(m_engine);
 		obj->Render(m_renderer);
 	}
 
@@ -134,10 +146,25 @@ void RenderingWorker::Update()
 		}
 	}
 
-	m_renderer->Present();
+	//m_renderer->Present();
 
-	
 	//m_renderer->VisualizeBackgroundRenderPipeline(1);
+
+	static int visualizeArg = 3;
+
+	if (m_engine->Input()->GetPressKey(UP_ARROW))
+	{
+		visualizeArg = (visualizeArg + 1) % 3;
+	}
+
+	if (visualizeArg < 2)
+	{
+		m_renderer->VisualizeBackgroundRenderPipeline(visualizeArg);
+	}
+	else
+	{
+		m_renderer->Present();
+	}
 
 #ifdef DX11_RENDERER
 	DX11Global::renderer->m_dxgiSwapChain->Present(1, 0);

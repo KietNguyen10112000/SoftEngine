@@ -10,18 +10,26 @@ private:
 	unsigned int m_offset = 0;
 
 public:
-	VertexBuffer(const void* data, int numDataElm, int dataElmSize);
+	enum FLAG
+	{
+		STATIC	= 1,
+		DYNAMIC = 2
+	};
+
+public:
+	VertexBuffer(const void* data, int numDataElm, int dataElmSize, size_t flag = 1);
 	~VertexBuffer();
 
 public:
-	void Update(const void* data);
+	//size in byte
+	void Update(const void* data, size_t size);
 
 public:
 	//recommend not use this section in engine
 	inline auto& GetNativeHandle() const { return m_buffer; };
 	inline auto& Stride() const { return m_stride; };
 	inline auto& Offset() const { return m_offset; };
-	inline auto& Count() const { return m_vertexCount; };
+	inline auto& Count() { return m_vertexCount; };
 
 };
 
@@ -37,7 +45,7 @@ public:
 	~IndexBuffer();
 
 public:
-	void Update(const void* data);
+	void Update(const void* data, size_t size);
 
 public:
 	//recommend not use this section in engine
