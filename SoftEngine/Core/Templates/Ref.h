@@ -1,11 +1,57 @@
 #pragma once
 
 #include <iostream>
+#include <cassert>
 
 class RefCounted
 {
 public:
 	int m_refCount = 0;
+
+public:
+	inline void DecreRef()
+	{
+		m_refCount--;
+		assert(m_refCount >= 0);
+	};
+
+	inline void IncreRef()
+	{
+		m_refCount++;
+	};
+
+	inline bool CanDelete()
+	{
+		return m_refCount == 0;
+	};
+
+public:
+	template <typename T>
+	static T* Get(T* refObj)
+	{
+		static_assert(std::is_base_of_v<RefCounted, T> == true, "Invalid");
+
+		refObj->IncreRef();
+		return refObj;
+	};
+
+	// return true if refobj is deleted
+	template <typename T>
+	static bool Release(T** refObjPtr)
+	{
+		static_assert(std::is_base_of_v<RefCounted, T> == true, "Invalid");
+
+		(*refObjPtr)->DecreRef();
+		auto ret = (*refObjPtr)->CanDelete();
+		if (ret)
+		{
+			delete (*refObjPtr);
+		}
+
+		(*refObjPtr) = 0;
+
+		return ret;
+	};
 
 };
 

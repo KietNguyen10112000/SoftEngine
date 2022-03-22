@@ -25,3 +25,22 @@ public:
 	virtual void Render(IRenderer* renderer) override;
 
 };
+
+
+
+class SkyMieRayleigh : public IRenderableObject
+{
+public:
+	VertexBuffer* m_vertexBuffer = nullptr;
+
+public:
+	SkyMieRayleigh();
+	~SkyMieRayleigh();
+
+public:
+	// Inherited via IRenderableObject
+	virtual void Update(Engine* engine) override;
+
+	virtual void Render(IRenderer* renderer) override;
+
+};

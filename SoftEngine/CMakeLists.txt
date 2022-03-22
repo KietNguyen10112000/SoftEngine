@@ -25,12 +25,23 @@ file(GLOB SOURCES1
     "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scene/*.h"
     "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Controllers/*.cpp"
     "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Controllers/*.h"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/UI/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/UI/*.h"
+
+    #JavaScript lang
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scripting/Modules/JavaScript/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scripting/Modules/JavaScript/*.h"
+    # v8 engine wrapper
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scripting/Modules/JavaScript/v8/*.cpp"
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Engine/Scripting/Modules/JavaScript/v8/*.h"
 )
 
 file(GLOB_RECURSE 
     LIBS_SRC
     LIST_DIRECTORIES true
     "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/*/include/"
+
+    "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8_monolith_dll/include/"
 )
 
 file(GLOB_RECURSE 
@@ -68,6 +79,7 @@ if(LOCAL_RELEASE)
 endif()
 
 add_compile_definitions(UNICODE)
+add_compile_definitions(IMGUI)
 
 target_include_directories(SoftEngine PUBLIC
                           "${PROJECT_BINARY_DIR}"
@@ -110,5 +122,16 @@ else()
     )
 endif()
 
+
+#v8 engine
+if(${CMAKE_BUILD_TYPE} MATCHES Debug)
+    target_link_libraries(SoftEngine PUBLIC
+        "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8_monolith_dll/bin/x64/Debug/v8_monolith.lib"
+    )
+else()
+    target_link_libraries(SoftEngine PUBLIC
+        "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8_monolith_dll/bin/x64/Release/v8_monolith.lib"
+    )
+endif()
 
 # TODO: Add tests and install targets if needed.

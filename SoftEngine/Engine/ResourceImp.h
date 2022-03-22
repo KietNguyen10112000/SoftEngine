@@ -13,6 +13,7 @@
 class Resource
 {
 private:
+	std::set<std::wstring> m_postFixType;
 	std::map<std::wstring, IResource*> m_map;
 	std::mutex m_lock;
 
@@ -33,6 +34,10 @@ private:
 	template <typename T>
 	bool _Release(T** resource);
 
+	IResource* _Find(const std::wstring& path);
+
+	void _FindMany(const std::wstring& path, std::vector<IResource*>& output);
+
 public:
 	template <typename T>
 	static T* Get(const std::wstring& path, uint32_t numArg = 0, void** args = 0);
@@ -46,6 +51,9 @@ public:
 	inline static auto& CurrentDirectory() { return Global::resourceManager->m_currentDir; };
 	inline static auto& ShaderDirectory() { return Global::resourceManager->m_shaderDir; };
 
+	// incre ref count, explicit release
+	static IResource* Find(const std::wstring& path);
+	static void FindMany(const std::wstring& path, std::vector<IResource*>& output);
 };
 
 inline Resource::Resource()
@@ -63,9 +71,61 @@ inline Resource::~Resource()
 {
 }
 
+inline IResource* Resource::_Find(const std::wstring& path)
+{
+	IResource* ret = 0;
 
-#define __GET_KEY(path) \
-std::wstring key = path + L'\0' + StringToWString(typeid(T).name());
+	m_lock.lock();
+
+	for (auto& typeName : m_postFixType)
+	{
+		auto key = path + L'\0' + typeName;
+		auto it = m_map.find(key);
+		if (it != m_map.end())
+		{
+			ret = it->second;
+			break;
+		}
+	}
+	ret->m_refCount++;
+	m_lock.unlock();
+
+	return ret;
+}
+
+inline void Resource::_FindMany(const std::wstring& path, std::vector<IResource*>& output)
+{
+	m_lock.lock();
+
+	for (auto& typeName : m_postFixType)
+	{
+		auto key = path + L'\0' + typeName;
+		auto it = m_map.find(key);
+		if (it != m_map.end())
+		{
+			it->second->m_refCount++;
+			output.push_back(it->second);
+		}
+	}
+
+	m_lock.unlock();
+}
+
+inline IResource* Resource::Find(const std::wstring& path)
+{
+	return Global::resourceManager->_Find(path);
+}
+
+inline void Resource::FindMany(const std::wstring& path, std::vector<IResource*>& output)
+{
+	return Global::resourceManager->FindMany(path, output);
+}
+
+
+#define __GET_KEY(path)									\
+auto __typeName = StringToWString(typeid(T).name());	\
+m_postFixType.insert(__typeName);						\
+std::wstring key = path + L'\0' + __typeName;
 
 template<typename T>
 inline T* Resource::_Get(const std::wstring& path, uint32_t numArg, void** args)

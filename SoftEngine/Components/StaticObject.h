@@ -2,6 +2,8 @@
 
 #include <IObject.h>
 
+#include "PBRMaterial.h"
+
 class IStaticObject : public IRenderableObject
 {
 public:
@@ -117,6 +119,30 @@ public:
 
 public:
 	virtual void Render(IRenderer* renderer) override;
+
+	virtual AABB GetAABB() override;
+
+	virtual AABB GetLocalAABB() override;
+
+};
+
+class PBRMultiMeshStaticObject : public IStaticObject
+{
+public:
+	std::vector<PBRMaterialHandle> m_meshsMaterial;
+	RawTBNModel* m_model = nullptr;
+
+public:
+	PBRMultiMeshStaticObject(const std::wstring& modelPath, std::vector<PBRMaterialPath>& paths,
+		const Mat4x4& preTransform = Mat4x4());
+
+	PBRMultiMeshStaticObject(const std::wstring& modelPath,
+		const Mat4x4& preTransform = Mat4x4());
+
+	~PBRMultiMeshStaticObject();
+
+public:
+	void Render(IRenderer* renderer) override;
 
 	virtual AABB GetAABB() override;
 

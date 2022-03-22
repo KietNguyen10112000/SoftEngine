@@ -240,8 +240,35 @@ _TBNRenderBuffer TBNInitNonAnimBuffer(TBNAnimModel* init, AssimpParser& parser, 
 	return ret;
 }
 
+void TBNProcessMaterials(const aiScene* scene, aiMesh* mesh, void** argv, int argc)
+{
+	if (scene->HasMaterials() && argc >= 1)
+	{
+		std::vector<std::wstring>* list = (std::vector<std::wstring>*)argv[0];
 
-void TBNProcessMeshs(AssimpParser& parser, TBNAnimModel* init, const aiScene* scene)
+		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+		//get pbr material
+		aiString file;
+		material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), file);
+		list->push_back(StringToWString(file.C_Str()));
+		file.Clear();
+		material->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), file);
+		list->push_back(StringToWString(file.C_Str()));
+		file.Clear();
+		material->Get(AI_MATKEY_TEXTURE(aiTextureType_METALNESS, 0), file);
+		list->push_back(StringToWString(file.C_Str()));
+		file.Clear();
+		material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE_ROUGHNESS, 0), file);
+		list->push_back(StringToWString(file.C_Str()));
+		file.Clear();
+		material->Get(AI_MATKEY_TEXTURE(aiTextureType_AMBIENT_OCCLUSION, 0), file);
+		list->push_back(StringToWString(file.C_Str()));
+		file.Clear();
+	}
+}
+
+void TBNProcessMeshs(AssimpParser& parser, TBNAnimModel* init, const aiScene* scene, void** argv = 0, int argc = 0)
 {
 	init->m_renderBuf.resize(scene->mNumMeshes);
 	for (size_t i = 0; i < parser.m_nodes.size(); i++)
@@ -264,6 +291,8 @@ void TBNProcessMeshs(AssimpParser& parser, TBNAnimModel* init, const aiScene* sc
 				cur = TBNInitNonAnimBuffer(init, parser, mesh);
 			}
 			cur.localTransform = node.localTransform;
+
+			if (argc > 0) TBNProcessMaterials(scene, mesh, argv, argc);
 		}
 	}
 }
@@ -343,7 +372,7 @@ void ProcessNodes(AssimpParser& parser, AnimModel<_RenderBuffer>* init, const ai
 	}
 }
 
-void TBNAnimModelLoader::Load(const std::wstring& path, Mat4x4& preTransform, TBNAnimModel* init)
+void TBNAnimModelLoader::Load(const std::wstring& path, Mat4x4& preTransform, TBNAnimModel* init, void** argv, int argc)
 {
 #ifdef FXB_SDK_IMPORTER
     FbxManager* lSdkManager = NULL;
@@ -387,7 +416,8 @@ void TBNAnimModelLoader::Load(const std::wstring& path, Mat4x4& preTransform, TB
 	init->m_bonesOffset = parser.m_boneOffsets;
 	//init->m_bonesParentId = parser.m_parentBoneId;
 
-	TBNProcessMeshs(parser, init, scene);
+	if(argc >= 2) argv[0] = argv[1];
+	TBNProcessMeshs(parser, init, scene, argv, argc - 1);
 
 	ProcessNodes(parser, init, scene);
 
@@ -514,7 +544,7 @@ AABB TBNAnimMesh_CalculateAABB(_TBNAnimModelVertexBuffer<T>* buffer,
 	auto& vertices = buffer->vertices;
 
 	Mat4x4 boneTransform;
-	Mat4x4 temp;
+	//Mat4x4 temp;
 
 	Vec4 pos;
 
@@ -541,8 +571,21 @@ AABB TBNAnimMesh_CalculateAABB(_TBNAnimModelVertexBuffer<T>* buffer,
 			boneTransform += bones[currentVertex.boneID2[2]] * currentVertex.weight2[2];
 			boneTransform += bones[currentVertex.boneID2[3]] * currentVertex.weight2[3];
 		}
+		if constexpr (WEIGHT_COUNT >= 16)
+		{
+			boneTransform += bones[currentVertex.boneID3[0]] * currentVertex.weight3[0];
+			boneTransform += bones[currentVertex.boneID3[1]] * currentVertex.weight3[1];
+			boneTransform += bones[currentVertex.boneID3[2]] * currentVertex.weight3[2];
+			boneTransform += bones[currentVertex.boneID3[3]] * currentVertex.weight3[3];
 
-		pos = pos * temp;
+			boneTransform += bones[currentVertex.boneID4[0]] * currentVertex.weight4[0];
+			boneTransform += bones[currentVertex.boneID4[1]] * currentVertex.weight4[1];
+			boneTransform += bones[currentVertex.boneID4[2]] * currentVertex.weight4[2];
+			boneTransform += bones[currentVertex.boneID4[3]] * currentVertex.weight4[3];
+		}
+
+		pos = pos * boneTransform;
+		pos = pos / pos.w;
 
 		positions.push_back(ConvertVector(pos));
 	}
@@ -597,7 +640,8 @@ void AnimModelAABBCalculator::TBNAnimModel_CalculateAABB(TBNAnimModel* model, An
 			break;
 		}
 
-		ret.Transform(*(meshLocalTransform[i]));
+		if (meshLocalTransform[i]) ret.Transform(*(meshLocalTransform[i]));
+
 		meshAABBs[i].aabb.push_back({ ret, t });
 	}
 }

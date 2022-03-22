@@ -6,6 +6,8 @@
 
 #include <Buffer.h>
 
+#include "Quad.h"
+
 SkyCube::SkyCube(const std::wstring& path, uint32_t numArg, void** args)
 {
     m_cubeTexture = Resource::Get<TextureCube>(path, numArg, args);
@@ -108,4 +110,36 @@ void SkyCube::Render(IRenderer* renderer)
     FlushTransform();
     m_rpl->PSSetResource(m_cubeTexture, 5);
     renderer->Render(m_rpl, m_vertexBuffer, m_indexBuffer);
+}
+
+
+SkyMieRayleigh::SkyMieRayleigh()
+{
+    m_vertexBuffer = GetScreenVertexBuffer();
+
+    m_rpl = RenderPipelineManager::Get(
+        R"(
+            struct
+            {
+                Vec3 pos; POSITION, PER_VERTEX #
+                Vec2 textCoord; TEXTCOORD, PER_VERTEX #
+            };
+        )",
+        L"SkyBox/Quad_VS",
+        L"SkyBox/Mie_Rayleigh"
+    );
+}
+
+SkyMieRayleigh::~SkyMieRayleigh()
+{
+    ReleaseScreenVertexBuffer();
+}
+
+void SkyMieRayleigh::Update(Engine* engine)
+{
+}
+
+void SkyMieRayleigh::Render(IRenderer* renderer)
+{
+    renderer->Render(m_rpl, m_vertexBuffer);
 }

@@ -140,7 +140,7 @@ public:
 	};
 
 public:
-	static void Load(const std::wstring& path, Mat4x4& preTransform, TBNAnimModel* init);
+	static void Load(const std::wstring& path, Mat4x4& preTransform, TBNAnimModel* init, void** argv = 0, int argc = 0);
 
 	static void FreeTempBuffer(_TBNRenderBuffer* buffer);
 	static void Free(_TBNRenderBuffer* buffer);
@@ -277,6 +277,14 @@ public:
 
 	void CalculateAABB(Animation* animation, size_t id, float t, 
 		std::vector<Mat4x4*>& meshLocalTransform, std::vector<Mat4x4>& bones);
+
+	void FreeMeshsBuffer()
+	{
+		for (auto& buf : m_renderBuf)
+		{
+			TBNAnimModelLoader::FreeTempBuffer(&buf);
+		}
+	}
 };
 
 template<typename _RenderBuffer>
@@ -293,9 +301,10 @@ inline AnimModel<_RenderBuffer>::AnimModel(const std::wstring& path, uint32_t nu
 		boneSV = new DynamicShaderVar(&temp[0], sizeof(Mat4x4) * temp.size());
 	}
 
+	
 	if (std::is_same_v<_RenderBuffer, _TBNRenderBuffer>)
 	{
-		TBNAnimModelLoader::Load(path, *preTransform, this);
+		TBNAnimModelLoader::Load(path, *preTransform, this, args, numArg);
 	}
 	else
 	{
@@ -390,7 +399,7 @@ inline void AnimModel<_RenderBuffer>::CalculateAABB(Animation* animation, size_t
 
 	if (std::is_same_v<_RenderBuffer, _TBNRenderBuffer>)
 	{
-		AnimModelAABBCalculator::TBNModel_CalculateAABB(this, animation, id, t, meshLocalTransform, bones);
+		AnimModelAABBCalculator::TBNAnimModel_CalculateAABB(this, animation, id, t, meshLocalTransform, bones);
 	}
 	else
 	{

@@ -284,7 +284,7 @@ float3 GodRaysCSMDirLight(in Light light, float3 pixelPos, in float3 viewPos, fl
 
 	float3 pos = viewPos + ditherValue * step;
 
-	float sFactor = ComputeScattering(dot(dir, -light.dir), light.constantAttenuation);
+	float sFactor = min(ComputeScattering(dot(dir, -light.dir), light.constantAttenuation) + light.linearAttenuation, 1.0f);
 
 	float accumFog = 0;
 	for (uint i = 0; i < NUM_SAMPLES; i++)
@@ -292,7 +292,7 @@ float3 GodRaysCSMDirLight(in Light light, float3 pixelPos, in float3 viewPos, fl
 		float percentLight = ShadowCSMDirLight(light, shadows[light.activeShadowIndex], pos, pixelDepthInScreen);
         if (percentLight != 0)
 		{
-            accumFog += sFactor * light.linearAttenuation;
+            accumFog += sFactor;
         }
 		pos += step;
 	}

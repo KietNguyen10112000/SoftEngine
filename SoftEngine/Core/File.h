@@ -4,6 +4,8 @@
 #include <shlwapi.h>
 #include <fstream>
 
+#ifdef _WIN32
+
 #pragma comment(lib, "Shlwapi.lib")
 
 inline void StandardPath(std::wstring& path)
@@ -99,6 +101,13 @@ inline bool FileExist(const std::wstring path)
 {
 	std::ifstream f(path.c_str(), std::ios::binary);
 	return f.good();
+}
+
+inline std::wstring PopPath(const std::wstring& path)
+{
+	auto where_ = path.rfind(L'/');
+	if (where_ == std::wstring::npos) return path;
+	return path.substr(0, where_);
 }
 
 
@@ -214,3 +223,5 @@ inline FileTime GetFileTime(std::wstring path)
 
 	return re;
 }
+
+#endif

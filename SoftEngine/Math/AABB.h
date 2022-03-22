@@ -9,8 +9,8 @@ namespace Math
 class AABB
 {
 public:
-	Vec3 m_position = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-	Vec3 m_dimensions = { FLT_MAX, FLT_MAX , FLT_MAX };
+	Vec3 m_position = { 0, 0, 0 };
+	Vec3 m_dimensions = { 0, 0, 0 };
 
 public:
 	inline AABB() {};
@@ -65,6 +65,31 @@ public:
 		output[7] = m_position + Vec3(m_dimensions.x, m_dimensions.y, m_dimensions.z);
 	};
 
+	inline void Joint(const AABB& right)
+	{
+		Vec3 points[16];
+		right.GetPoints(points);
+		GetPoints(&points[8]);
+		FromPoints(points, 16);
+	};
+
+	inline void Joint(const AABB& right, Vec3* buffer)
+	{
+		right.GetPoints(buffer);
+		GetPoints(&buffer[8]);
+		FromPoints(buffer, 16);
+	};
+
+	inline void Joint(const AABB* aabbs, size_t count, Vec3* buffer)
+	{
+		Vec3 points[16];
+
+		for (size_t i = 0; i < count; i++)
+		{
+			Joint(aabbs[i], points);
+		}
+	};
+
 public:
 	inline void Transform(const Mat4x4& mat)
 	{
@@ -91,7 +116,7 @@ public:
 
 	inline bool IsValid() const
 	{
-		return m_position.x != -FLT_MAX || m_position.y != -FLT_MAX || m_position.z != -FLT_MAX;
+		return m_dimensions != Vec3(0, 0, 0);
 	};
 
 public:

@@ -504,7 +504,13 @@ public:
 		BULLET
 	};
 
-	PHYSICS_ENGINE m_physicsEngine = PHYSICS_ENGINE::BULLET;
+	PHYSICS_ENGINE m_physicsEngineId = PHYSICS_ENGINE::BULLET;
+
+	friend class PhysicsEngine;
+	friend class ScriptEngine;
+	PhysicsEngine* m_physicsEngine = 0;
+	ScriptEngine* m_scriptEngine = 0;
+
 	std::vector<SceneQueryContext*> m_contexts;
 	//std::mutex m_mutex;
 	//copy memory from SceneQueriedNode -> SceneDataNode
@@ -527,6 +533,10 @@ public:
 			delete ctx;
 		}
 	};
+
+public:
+	inline ScriptEngine* GetScriptEngine() { return m_scriptEngine; };
+	inline PhysicsEngine* GetPhysicsEngine() { return m_physicsEngine; };
 
 public:
 	//in 3D, Query2D work by projection object to Oxz
@@ -566,6 +576,8 @@ public:
 	virtual void Query3DMutableNodes(SceneQueryContext* context, Sphere* bounding,
 		std::vector<NodeId>& output) = 0;
 
+	virtual void AddNodes(SceneNode** nodes, size_t count) = 0;
+	virtual void RemoveNodes(SceneNode** nodes, size_t count) = 0;
 
 	virtual void LoadFromFile(const std::string& path) = 0;
 

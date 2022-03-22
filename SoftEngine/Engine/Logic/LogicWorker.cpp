@@ -7,6 +7,10 @@
 
 #include "Engine/Controllers/Controller.h"
 
+#include "Engine/UI/ImGuiCommon.h"
+
+ImGuiCommon::Console g_imGuiConsole;
+
 LogicWorker::LogicWorker(Engine* engine) :
 	m_engine(engine)
 {
@@ -20,10 +24,18 @@ LogicWorker::~LogicWorker()
 
 void LogicWorker::Update()
 {
-	//int64_t currentTime = GetTime();
-
 	auto scene = m_engine->CurrentScene();
 
+#if defined(IMGUI) && defined(DX11_RENDERER)
+	ImGui_ImplDX11_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	g_imGuiConsole.Update(scene);
+
+	//ImGui::EndFrame();
+#endif
+	//int64_t currentTime = GetTime();
 
 	//==========================Query from scene ===============================================
 	m_dataNodes.clear();

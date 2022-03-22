@@ -45,8 +45,13 @@ public:
 	void GetRotationMatrix(Mat4x4& out, float time, std::vector<RotaionKeyFrame>& keyframe, int& index);
 	void GetTranslationMatrix(Mat4x4& out, float time, std::vector<TranslationKeyFrame>& keyframe, int& index);
 
+	//slow
+	template <typename T, typename Ret, Ret(*LerpFunc)(const Ret&, const Ret&, float)>
+	Ret GetKey(float time, std::vector<T>& keyframe);
+
 public:
 	Mat4x4& Play(Engine* engine, bool* end = 0);
+	Mat4x4& Play(Animation* animation, float t, bool* end = 0);
 	inline void Render(IRenderer* renderer) { m_model->Render(renderer, m_meshsLocalTransform, m_bones); };
 
 public:
@@ -59,6 +64,10 @@ public:
 
 	//reset the current animation (duration)
 	void Reset(bool resetTimer = false);
+
+	bool IsAABBCalculated();
+	void ClearAABBPerAnimation();
+	void CalculateAABBPerAnimation();
 
 public:
 	inline size_t AnimationCount() { return m_model->m_animations.size(); };
@@ -221,6 +230,35 @@ inline void Animator<_RenderBuffer>::GetTranslationMatrix(Mat4x4& out, float tim
 	);
 }
 
+template<typename _RenderBuffer>
+template<typename T, typename Ret, Ret(*LerpFunc)(const Ret&, const Ret&, float)>
+inline Ret Animator<_RenderBuffer>::GetKey(float time, std::vector<T>& keyframe)
+{
+	size_t i = 0;
+	for (auto& key : keyframe)
+	{
+		if (key.time > time)
+		{
+			break;
+		}
+		i++;
+	}
+
+	if (i == 0) return keyframe[0].value;
+
+	if (i == keyframe.size()) return keyframe.back().value;
+
+	auto l0 = time - keyframe[i - 1].time;
+	auto l1 = keyframe[i].time - keyframe[i - 1].time;
+
+	return LerpFunc(
+		keyframe[i - 1].value,
+		keyframe[i].value,
+		l0 / l1
+	);
+}
+
+
 #define __ResetAnimation for (size_t i = 0; i < m_indices.size(); i++)\
 {\
 	m_indices[i].s = 1;\
@@ -298,6 +336,55 @@ inline Mat4x4& Animator<_RenderBuffer>::Play(Engine* engine, bool* end)
 }
 
 template<typename _RenderBuffer>
+inline Mat4x4& Animator<_RenderBuffer>::Play(Animation* animation, float t, bool* end)
+{
+	auto time = t;
+
+	Mat4x4 scaling, rotation, translation;
+	for (long long i = 0; i < animation->channels.size(); i++)
+	{
+		auto& channel = animation->channels[i];
+
+		Vec3 sKey = GetKey<ScalingKeyFrame, Vec3, Lerp>(time, channel.scaling);
+		scaling.SetScale(sKey);
+		Vec4 rKey = GetKey<RotaionKeyFrame, Vec4, SLerp>(time, channel.rotation);
+		rotation.SetRotation(rKey);
+		Vec3 tKey = GetKey<TranslationKeyFrame, Vec3, Lerp>(time, channel.translation);
+		translation.SetTranslation(tKey);
+
+		assert(channel.nodeId != -1);
+		//effects to node
+		auto& curNode = m_model->m_nodes[channel.nodeId];
+		assert(curNode.parentIndex < channel.nodeId);
+
+		m_nodeLocalTransform[channel.nodeId] = (scaling * rotation) * translation;
+	}
+
+	for (long long i = 0; i < m_nodeLocalTransform.size(); i++)
+	{
+		auto& curNode = m_model->m_nodes[i];
+		assert(curNode.parentIndex < i);
+		if (curNode.parentIndex != -1)
+		{
+			m_tempNodeLocalTransform[i] = m_nodeLocalTransform[i] * m_tempNodeLocalTransform[curNode.parentIndex];
+		}
+		else
+		{
+			m_tempNodeLocalTransform[i] = m_nodeLocalTransform[i];
+		}
+
+		if (curNode.boneIndex != -1)
+		{
+			//bone
+			m_bones[curNode.boneIndex] =
+				m_model->m_bonesOffset[curNode.boneIndex] * m_tempNodeLocalTransform[i];
+		}
+	}
+
+	return m_model->m_nodes[0].localTransform;
+}
+
+template<typename _RenderBuffer>
 inline bool Animator<_RenderBuffer>::SetAnimation(const std::string& name)
 {
 	int i = 0;
@@ -338,5 +425,81 @@ inline void Animator<_RenderBuffer>::Reset(bool resetTimer)
 	m_durationTime = m_curAnimation->tickDuration / m_curAnimation->ticksPerSecond;
 	m_durationRatio = 1;
 
-	if (resetTimer) m_time = 0;
+	if (resetTimer)
+	{
+		m_time = 0;
+		for (size_t i = 0; i < m_indices.size(); i++)
+		{
+			m_indices[i].s = 1;
+			m_indices[i].r = 1;
+			m_indices[i].t = 1;
+		}
+	}
+}
+
+template<typename _RenderBuffer>
+inline bool Animator<_RenderBuffer>::IsAABBCalculated()
+{
+	for (auto& animation : m_model->m_animations)
+	{
+		if (animation.meshAABBs.size() != m_model->m_renderBuf.size()) return false;
+	}
+	return true;
+}
+
+template<typename _RenderBuffer>
+inline void Animator<_RenderBuffer>::ClearAABBPerAnimation()
+{
+	for (auto& animation : m_model->m_animations)
+	{
+		animation.meshAABBs.resize(0);
+	}
+}
+
+template<typename _RenderBuffer>
+inline void Animator<_RenderBuffer>::CalculateAABBPerAnimation()
+{
+	auto GetAABBKeyFrameTimes = [](Animation* animation) -> std::set<float>
+	{
+		std::set<float> times;
+
+		for (auto& keyframe : animation->channels)
+		{
+			for (auto& key : keyframe.scaling)
+			{
+				times.insert(key.time);
+			}
+
+			for (auto& key : keyframe.rotation)
+			{
+				times.insert(key.time);
+			}
+
+			for (auto& key : keyframe.translation)
+			{
+				times.insert(key.time);
+			}
+		}
+
+		return times;
+	};
+
+	size_t i = 0;
+	for (auto& animation : m_model->m_animations)
+	{
+		auto times = GetAABBKeyFrameTimes(&animation);
+
+		SetAnimation(i);
+
+		for (auto& t : times)
+		{
+			Play(&animation, t);
+			m_model->CalculateAABB(&animation, i, t, m_meshsLocalTransform, m_bones);
+		}
+		
+		i++;
+	}
+
+	SetAnimation(0);
+	Reset(true);
 }

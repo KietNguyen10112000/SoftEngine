@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Resource.h>
 
 #ifdef _DEBUG
@@ -21,11 +23,11 @@
 //diffuse, normal, metallic, roughness, ao
 struct PBRMaterialPath
 {
-	std::wstring diffuseMap = nullptr;
-	std::wstring normalMap = nullptr;
-	std::wstring metallicMap = nullptr;
-	std::wstring roughnessMap = nullptr;
-	std::wstring aoMap = nullptr;
+	std::wstring diffuseMap;
+	std::wstring normalMap;
+	std::wstring metallicMap;
+	std::wstring roughnessMap;
+	std::wstring aoMap;
 
 	inline void FillEmpty()
 	{

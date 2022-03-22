@@ -55,4 +55,10 @@ public:
 
 	virtual void Query3DMutableNodes(SceneQueryContext* context, Math::Sphere* bounding, std::vector<size_t, std::allocator<size_t>>& output);
 
+
+	// Inherited via Scene
+	virtual void AddNodes(SceneNode** nodes, size_t count) override;
+
+	virtual void RemoveNodes(SceneNode** nodes, size_t count) override;
+
 };

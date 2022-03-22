@@ -237,7 +237,7 @@ public:
 #endif // KEEP_MESH_NAME
 	};
 
-private:
+public:
 	std::vector<RawTBNModel::Mesh> m_meshs;
 
 public:

@@ -31,6 +31,44 @@
 #include "Core/MultiThreading/ThreadBarrier.h"
 
 
+
+#ifdef IMGUI
+
+#include "imgui.h"
+
+#ifdef DX11_RENDERER
+#include "imgui_impl_dx11.h"
+#include "imgui_impl_win32.h"
+#endif
+
+#include "UI/ImGuiCommon.h"
+
+#endif
+
+void ___PresentCall(void* arg)
+{
+	auto engine = Global::engine;
+	engine->Renderer()->Present();
+
+
+#if defined(IMGUI) && defined(DX11_RENDERER)
+
+	/*static bool isFirstFrame = true;
+
+	if (isFirstFrame)
+	{
+		isFirstFrame = false;
+		return;
+	}*/
+
+	DX11Global::renderer->m_d3dDeviceContext->OMSetRenderTargets(1, &DX11Global::renderer->m_mainRtv, 0);
+	ImGui::Render();
+	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+
+	DX11Global::renderer->m_dxgiSwapChain->Present(1, 0);
+#endif
+}
+
 Engine::Engine(const wchar_t* title, int width, int height) : Window(title, width, height)
 {
 	//SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -56,6 +94,8 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 
 	Global::renderer = Renderer();
 
+	InitImgui(GetNativeHandle());
+
 
 	//for raw view
 	m_cam = new ICamera();
@@ -64,7 +104,7 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	m_spaceCoord = new SpaceCoordinate();
 	m_spaceCoord->DisplayGrid() = false;
 
-	m_skyBox = new SkyCube(L"D:/KEngine/ResourceFile/temp_img/skybox-blue-night-sky.png");
+	m_skyBox = new SkyMieRayleigh();//SkyCube(L"D:/KEngine/ResourceFile/temp_img/skybox-blue-night-sky.png");
 	m_renderer->AttachSkyBox(m_skyBox);
 
 
@@ -84,6 +124,7 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 			{
 				((ThreadBarrier*)m_threadBarrier)->Synch(0, 0);
 				m_renderingWorker->Update();
+				((ThreadBarrier*)m_threadBarrier)->Synch(0, 0, ___PresentCall, 0);
 			}
 		}
 	);
@@ -92,6 +133,8 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 
 Engine::~Engine()
 {
+	DestroyImgui();
+
 	m_renderingWorker->IsRunning() = false;
 
 	m_logicWorker->IsRunning() = false;
@@ -131,6 +174,8 @@ void Engine::Update()
 	{
 		m_logicWorker->Update();
 	}
+
+	((ThreadBarrier*)m_threadBarrier)->Synch([](void*) {}, 0, ___PresentCall, 0);
 }
 
 void Engine::Timing()

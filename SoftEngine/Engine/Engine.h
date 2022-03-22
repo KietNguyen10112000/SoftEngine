@@ -73,6 +73,9 @@ public:
 	inline auto ResourceManager() { return m_resourceManager; };
 	inline auto RenderPipelineManager() { return m_rplManager; };
 
+	inline auto GetRenderingWorker() { return m_renderingWorker; };
+	inline auto GetLogicWorker() { return m_logicWorker; };
+
 	//in milisec
 	inline auto& DeltaTime() { return m_deltaTime; };
 

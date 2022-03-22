@@ -31,7 +31,7 @@ public:
 
 	inline static void RawTBNModel_ProcessNode(aiNode* node, const aiScene* scene,
 		RawTBNModel* init, Mat4x4* preTransform, Mat4x4 currentLocalTransform,
-		std::vector<RawTBNModel::Vertex>& vertices, std::vector<unsigned int>& indices);
+		std::vector<RawTBNModel::Vertex>& vertices, std::vector<unsigned int>& indices, void** argv = 0, int argc = 0);
 
 
 };
@@ -604,7 +604,7 @@ inline void ModelLoaderHelperFunc::ProcessNode(aiNode* node, const aiScene* scen
 
 inline void ModelLoaderHelperFunc::RawTBNModel_ProcessNode(aiNode* node, const aiScene* scene,
 	RawTBNModel* init, Mat4x4* preTransform, Mat4x4 currentLocalTransform,
-	std::vector<RawTBNModel::Vertex>& vertices, std::vector<unsigned int>& indices)
+	std::vector<RawTBNModel::Vertex>& vertices, std::vector<unsigned int>& indices, void** argv, int argc)
 {
 	auto ProcessMesh = [&](
 		RawTBNModel* init, Mat4x4* localTransform,
@@ -612,6 +612,32 @@ inline void ModelLoaderHelperFunc::RawTBNModel_ProcessNode(aiNode* node, const a
 		std::vector<RawTBNModel::Vertex>& vertices, std::vector<unsigned int>& indices) -> void
 	{
 		RawTBNModel::Mesh ret;
+
+		if (scene->HasMaterials() && argc >= 1)
+		{
+			std::vector<std::wstring>* list = (std::vector<std::wstring>*)argv[0];
+
+			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+
+			//get pbr material
+			aiString file;
+			material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), file);
+			list->push_back(StringToWString(file.C_Str()));
+			file.Clear();
+			material->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), file);
+			list->push_back(StringToWString(file.C_Str()));
+			file.Clear();
+			material->Get(AI_MATKEY_TEXTURE(aiTextureType_METALNESS, 0), file);
+			list->push_back(StringToWString(file.C_Str()));
+			file.Clear();
+			material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE_ROUGHNESS, 0), file);
+			list->push_back(StringToWString(file.C_Str()));
+			file.Clear();
+			material->Get(AI_MATKEY_TEXTURE(aiTextureType_AMBIENT_OCCLUSION, 0), file);
+			list->push_back(StringToWString(file.C_Str()));
+			file.Clear();
+		}
+		
 
 		vertices.resize(mesh->mNumVertices);
 
@@ -726,8 +752,16 @@ RawTBNModel::RawTBNModel(const std::wstring& path, uint32_t numArg, void** args)
 	std::vector<unsigned int> indices;
 	Mat4x4 currentLocalTransform;
 
+	void* argv[2] = { 0,0 };
+	int argc = 0;
+	if (numArg >= 2)
+	{
+		argv[0] = args[1];
+		argc = 1;
+	}
+
 	ModelLoaderHelperFunc::RawTBNModel_ProcessNode(scene->mRootNode, scene, this,
-		flag ? &preTransform : nullptr, currentLocalTransform, vertices, indices);
+		flag ? &preTransform : nullptr, currentLocalTransform, vertices, indices, argv, argc);
 
 	importer.FreeScene();
 }

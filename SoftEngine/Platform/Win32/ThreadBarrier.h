@@ -78,4 +78,28 @@ public:
 			SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY);*/
 	};
 
+	inline void Synch(void (*func)(void*), void* args, void (*lastlyCall)(void*), void* args1)
+	{
+		if (EnterSynchronizationBarrier(
+			&m_barrier1,
+			SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY))
+		{
+			if (lastlyCall) lastlyCall(args1);
+		}
+
+		InterlockedIncrement((uint32_t*)&m_currentThreadCount);
+
+		if (func)
+		{
+			while (m_currentThreadCount != m_threadCount) {}
+			func(args);
+			m_currentThreadCount = 0;
+		}
+		else
+		{
+			while (m_currentThreadCount != 0) { Sleep(4); }
+		}
+
+	};
+
 };

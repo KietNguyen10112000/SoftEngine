@@ -119,6 +119,7 @@ void RenderingWorker::Update()
 	}
 	m_queryContext->EndFrame(); //call 1 time per frame
 	//==========================End query======================================================
+	RunSynch(RENDERING_TASK_HINT::RUN_AT_BEGIN_FRAME);
 
 	m_renderer->LightSystem()->Update();
 
@@ -146,10 +147,15 @@ void RenderingWorker::Update()
 		}
 	}
 
+	RunSynch(RENDERING_TASK_HINT::RUN_BEFORE_PRESENT_TO_SCREEN);
+	RunSynch(RENDERING_TASK_HINT::RUN_AUDIO);
+	RunSynch(RENDERING_TASK_HINT::RUN_AT_END_FRAME);
 	//m_renderer->Present();
 
 	//m_renderer->VisualizeBackgroundRenderPipeline(1);
 
+
+#ifndef IMGUI
 	static int visualizeArg = 3;
 
 	if (m_engine->Input()->GetPressKey(UP_ARROW))
@@ -169,4 +175,6 @@ void RenderingWorker::Update()
 #ifdef DX11_RENDERER
 	DX11Global::renderer->m_dxgiSwapChain->Present(1, 0);
 #endif
+#endif // !IMGUI
+	
 }

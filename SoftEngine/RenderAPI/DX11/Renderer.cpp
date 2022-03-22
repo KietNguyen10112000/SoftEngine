@@ -530,9 +530,9 @@ void DeferredRenderer::DoLighting()
     //shadowColor == SHADOW_COLOR
     m_d3dDeviceContext->OMSetRenderTargets(2, &m_rtv[RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW], 0);
 
-#ifndef SCREEN_SHADOW_BLUR
-    if (m_skybox) m_skybox->Render(this);
-#endif
+//#ifndef SCREEN_SHADOW_BLUR
+//    if (m_skybox) m_skybox->Render(this);
+//#endif
 
     m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &m_viewPointSV->GetNativeHandle());
     m_d3dDeviceContext->PSSetConstantBuffers(1, 1, &m_lightSystem->m_lightSysInfo->GetNativeHandle());
@@ -547,6 +547,10 @@ void DeferredRenderer::DoLighting()
     //....
     m_d3dDeviceContext->PSSetShaderResources(3, 1, &m_dsvShader);
     m_d3dDeviceContext->PSSetShaderResources(4, 4/*RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW*/, m_rtvShader);
+
+#ifndef SCREEN_SHADOW_BLUR
+    if (m_skybox) m_skybox->Render(this);
+#endif
 
 #ifdef SCREEN_SHADOW_BLUR
     //present to 1 shadow image, 1 light image
@@ -664,6 +668,7 @@ void DeferredRenderer::ClearFrame(float color[4])
     if (m_targetCam)
     {
         ICamera::cameraBuf.mvp = m_targetCam->MVP();
+        ICamera::cameraBuf.invMVP = GetInverse(ICamera::cameraBuf.mvp);
         ICamera::cameraBuf.proj = m_targetCam->ProjectionMatrix();
         ICamera::cameraBuf.view = m_targetCam->ViewMatrix();
         ICamera::shaderMVP->Update(&ICamera::cameraBuf, sizeof(ICamera::cameraBuf));

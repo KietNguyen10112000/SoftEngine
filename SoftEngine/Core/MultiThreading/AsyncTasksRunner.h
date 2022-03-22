@@ -36,6 +36,9 @@ public:
     LambdaTaskList m_lambdaTasks[TASK_HINT_COUNT];
     DefaultTaskList m_defaultTasks[TASK_HINT_COUNT];
 
+    LambdaTaskList m_copylambdaTasks[TASK_HINT_COUNT];
+    DefaultTaskList m_copydefaultTasks[TASK_HINT_COUNT];
+
 public:
     inline void RunAsync(LambdaTaskCallback callback, HintEnum hint)
     {
@@ -68,20 +71,45 @@ public:
         _ASSERT(hint < TASK_HINT_COUNT);
 #endif // _DEBUG
 
-        m_mutex.lock();
         auto& ltasks = m_lambdaTasks[hint];
+        auto cltasks = m_copylambdaTasks[hint];
+
+        auto& dtasks = m_defaultTasks[hint];
+        auto cdtasks = m_copydefaultTasks[hint];
+
+
+        // do copy
+        m_mutex.lock();
+        
         for (auto& task : ltasks)
         {
-            task.callback();
+            //task.callback();
+            cltasks.push_back(task);
         }
         ltasks.clear();
 
-        auto& dtasks = m_defaultTasks[hint];
         for (auto& task : dtasks)
+        {
+            //task.callback(task.opaque);
+            cdtasks.push_back(task);
+        }
+        dtasks.clear();
+
+        m_mutex.unlock();
+
+
+        // run
+        for (auto& task : cltasks)
+        {
+            task.callback();
+        }
+        cltasks.clear();
+
+        for (auto& task : cdtasks)
         {
             task.callback(task.opaque);
         }
-        dtasks.clear();
-        m_mutex.unlock();
+        cdtasks.clear();
+
     };
 };

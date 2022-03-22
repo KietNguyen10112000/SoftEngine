@@ -6,6 +6,8 @@
 
 #include <Math\Math.h>
 
+typedef ID3D11ShaderResourceView NativeResourceHandle;
+
 //args[0] is Texture2D::FLAG
 class Texture2D : public IResource
 {

@@ -81,7 +81,12 @@ public:
 	inline virtual void FlushTransform() { shaderTransform->Update(&m_transform, sizeof(Mat4x4)); };
 
 	//return AABB in world space
-	inline virtual AABB GetAABB() { return {}; };
+	inline virtual AABB GetAABB() 
+	{
+		AABB ret = GetLocalAABB();
+		ret.Transform(m_transform);
+		return ret;
+	};
 	//return AABB in local space
 	inline virtual AABB GetLocalAABB() { return {}; };
 };
@@ -103,6 +108,7 @@ public:
 
 	inline static struct ShaderCameraBuffer{
 		Mat4x4 mvp;
+		Mat4x4 invMVP;
 		Mat4x4 view;
 		Mat4x4 proj;
 	} cameraBuf = {};

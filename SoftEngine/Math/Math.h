@@ -80,10 +80,10 @@ namespace Math
 			XMStoreFloat3(this, XMLoadFloat3(&vec));
 		}*/
 
-		inline bool operator==(const Vec3& vec)
+		/*inline bool operator==(const Vec3& vec)
 		{
 			return vec.x == x && vec.y == y && vec.z == z;
-		}
+		}*/
 
 		inline void operator+=(const Vec3& vec)
 		{
@@ -127,6 +127,16 @@ namespace Math
 			return ret;
 		};
 	};
+
+	inline bool operator==(const Vec3& vec1, const Vec3& vec2)
+	{
+		return vec1.x == vec2.x && vec1.y == vec2.y && vec1.z == vec2.z;
+	}
+
+	inline bool operator!=(const Vec3& vec1, const Vec3& vec2)
+	{
+		return vec1.x != vec2.x || vec1.y != vec2.y || vec1.z != vec2.z;
+	}
 
 	template<typename T>
 	inline Vec3 operator*(const Vec3& vec, T i)
@@ -805,21 +815,21 @@ namespace Math
 		return re.Inverse();
 	}
 
-	inline Vec4 SLerp(Vec4& vec1, Vec4& vec2, float delta)
+	inline Vec4 SLerp(const Vec4& vec1, const Vec4& vec2, float delta)
 	{
 		Vec4 re;
 		XMStoreFloat4(&re, XMQuaternionSlerp(XMLoadFloat4(&vec1), XMLoadFloat4(&vec2), delta));
 		return re;
 	}
 
-	inline Vec4 Lerp(Vec4& vec1, Vec4& vec2, float delta)
+	inline Vec4 Lerp(const Vec4& vec1, const Vec4& vec2, float delta)
 	{
 		Vec4 re;
 		XMStoreFloat4(&re, XMVectorLerp(XMLoadFloat4(&vec1), XMLoadFloat4(&vec2), delta));
 		return re;
 	}
 
-	inline Vec3 Lerp(Vec3& vec1, Vec3& vec2, float delta)
+	inline Vec3 Lerp(const Vec3& vec1, const Vec3& vec2, float delta)
 	{
 		Vec3 re;
 		XMStoreFloat3(&re, XMVectorLerp(XMLoadFloat3(&vec1), XMLoadFloat3(&vec2), delta));
