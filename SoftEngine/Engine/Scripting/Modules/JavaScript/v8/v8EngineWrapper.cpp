@@ -4,6 +4,8 @@
 
 #include "SoftWrapToV8.h"
 
+#include "Engine/Engine.h"
+
 //#include "Engine/Global.h"
 //#include "Engine/Scene/Scene.h"
 
@@ -14,7 +16,7 @@ v8::Context::Scope context_scope(m_context.Get(m_isolate));
 
 v8EngineWrapper::v8EngineWrapper()
 {
-	m_jsLang = new JavaScriptLanguage();
+	m_jsLang = JavaScriptLanguage::GetInstance();
 
     using namespace v8wrapper;
 
@@ -56,7 +58,7 @@ v8EngineWrapper::v8EngineWrapper()
 
 v8EngineWrapper::~v8EngineWrapper()
 {
-	delete m_jsLang;
+    m_loopFuncs.clear();
 
     m_context.Reset();
     m_globalTempl.Reset();
@@ -118,7 +120,7 @@ Controller* v8EngineWrapper::Parse(const char* sourceCode)
 
 ScriptLanguage* v8EngineWrapper::GetLanguage()
 {
-	return m_jsLang;
+    return m_jsLang.get();
 }
 
 void v8EngineWrapper::SetLanguageVersion(const char* desc)
@@ -127,4 +129,41 @@ void v8EngineWrapper::SetLanguageVersion(const char* desc)
 
 void v8EngineWrapper::Update(Engine* engine, Scene* scene)
 {
+    global.deltaTime = engine->FDeltaTime();
+
+    V8_ENTER_SCOPE();
+
+    auto context = m_context.Get(m_isolate);
+
+    v8::Local<v8::Value> args[1] = { v8::Number::New(m_isolate, engine->FDeltaTime()) };
+    for (auto& _func : m_loopFuncs)
+    {
+        auto func = _func.second.Get(m_isolate);
+        func->Call(context, v8::Null(m_isolate), 1, args);
+    }
+}
+
+void v8EngineWrapper::RunLoop(v8::Local<v8::Function> func)
+{
+    auto name = func->GetName();
+    auto cName = v8wrapper::ToStdString(name, m_isolate);
+    m_loopFuncs.insert({ cName, v8::Global<v8::Function>(m_isolate, func) });
+}
+
+void v8EngineWrapper::ClearLoop(v8::Local<v8::Function> func)
+{
+    auto name = func->GetName();
+    auto cName = v8wrapper::ToStdString(name, m_isolate);
+
+    auto it = m_loopFuncs.find(cName);
+
+    if (it != m_loopFuncs.end())
+    {
+        m_loopFuncs.erase(it);
+    }
+}
+
+void v8EngineWrapper::ClearAllLoops()
+{
+    m_loopFuncs.clear();
 }

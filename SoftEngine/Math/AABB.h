@@ -107,10 +107,27 @@ public:
 
 		//FromPoints(points, 8);
 
-		m_position = ConvertVector(Vec4(m_position, 1.0f) * mat);
-		m_dimensions = ConvertVector(Vec4(m_dimensions, 0.0f) * mat);
+		Vec3 pos = m_position;
+		Vec3 v1 = Vec3(m_dimensions.x, 0, 0);
+		Vec3 v2 = Vec3(0, m_dimensions.y, 0);
+		Vec3 v3 = Vec3(0, 0, m_dimensions.z);
+
+		pos = ConvertVector(Vec4(pos, 1.0f) * mat);
+		v1 = ConvertVector(Vec4(v1, 0.0f) * mat);
+		v2 = ConvertVector(Vec4(v2, 0.0f) * mat);
+		v3 = ConvertVector(Vec4(v3, 0.0f) * mat);
+
 		Vec3 points[8];
-		GetPoints(points);
+		points[0] = pos;
+		points[1] = pos + v1;
+		points[2] = pos + v2;
+		points[3] = pos + v3;
+
+		points[4] = pos + v1 + v2;
+		points[5] = pos + v1 + v3;
+		points[6] = pos + v2 + v3;
+		points[7] = pos + v1 + v2 + v3;
+
 		FromPoints(points, 8);
 	};
 

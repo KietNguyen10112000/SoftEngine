@@ -3,6 +3,8 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
+#set (CMAKE_SYSTEM_VERSION 10.0.22000.0)
+
 project ("SoftEngine")
 
 # Include sub-projects.

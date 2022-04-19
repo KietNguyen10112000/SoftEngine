@@ -66,11 +66,30 @@ void CameraController::CallMethod(SceneQueryContext* context, SceneQueriedNode* 
 bool CameraController::UpdateControl(Engine* engine)
 {
 	static bool lockEngineCamera = true;
-	if (engine->Input()->GetPressKey(TAB))
+	/*if (engine->Input()->GetPressKey(ESC))
 	{
 		lockEngineCamera = !lockEngineCamera;
 		engine->Input()->SetLockMouse(!lockEngineCamera, 500, 200);
 		engine->Input()->SetHideCursor(!lockEngineCamera);
+	}*/
+
+	if (engine->Input()->GetMouseButton(MOUSE_BUTTON::RIGHT))
+	{
+		if (lockEngineCamera)
+		{
+			engine->Input()->SetLockMouse(true, 500, 200);
+			engine->Input()->SetHideCursor(true);
+			lockEngineCamera = false;
+		}
+	}
+	else
+	{
+		if (!lockEngineCamera)
+		{
+			engine->Input()->SetLockMouse(false, 500, 200);
+			engine->Input()->SetHideCursor(false);
+			lockEngineCamera = true;
+		}
 	}
 
 	if (lockEngineCamera) return false;

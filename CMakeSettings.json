@@ -20,14 +20,15 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "-v",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
-      "variables": [
-        {
-          "name": "CMAKE_BUILD_TYPE",
-          "type": "STRING",
-          "value": "Release"
-        }
-      ]
+      "inheritEnvironments": [ "msvc_x64_x64" ]
+
+    }
+  ],
+
+  "environments" :
+  [
+    {
+      "WindowsSDKVersion": "10.0.22000.0"
     }
   ]
 }

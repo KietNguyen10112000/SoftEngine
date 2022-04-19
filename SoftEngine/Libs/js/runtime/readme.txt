@@ -1,0 +1,1 @@
+gen is NodeJS project to pack threejs-math into single js file then generate a v8 snapshot

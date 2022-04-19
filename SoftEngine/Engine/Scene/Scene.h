@@ -121,6 +121,7 @@ void className::TransformTraverse(_Func1 prevCall, _Func2 postCall, _Args&&... a
 };
 
 
+
 class SceneNode : public RefCounted
 {
 public:
@@ -220,6 +221,11 @@ public:
 
 public:
 	SCENE_NODE_DEFINE_TRAVERSE;
+
+public:
+	//global operator, must check if scene is being updated by this thread, 
+	//ow unexpected behaviour
+	inline void ChangeState() { m_stateChange++; };
 
 public:
 	inline auto& RenderingObject() 
@@ -520,6 +526,10 @@ public:
 	ReusableVector<SceneNodeBlob::CameraBuffer> m_camerasBuf;
 	ReusableVector<Light> m_lightsBuf;
 
+
+	std::vector<RefCounted*> m_needGet;
+	std::vector<RefCounted*> m_needRelease;
+
 public:
 	inline Scene(Engine* engine)
 	{
@@ -532,6 +542,7 @@ public:
 		{
 			delete ctx;
 		}
+		UpdateRefCounted();
 	};
 
 public:
@@ -579,7 +590,51 @@ public:
 	virtual void AddNodes(SceneNode** nodes, size_t count) = 0;
 	virtual void RemoveNodes(SceneNode** nodes, size_t count) = 0;
 
+	using FilterFunction = bool (*)(SceneNode*);
+
+	//unsafe
+	//must assign SceneNode by RefCounted::Get()
+	//when no longer use output remember Scene::FreeNodes()
+	virtual void Filter(std::vector<SceneNode*>& output, FilterFunction func = 0) = 0;
+
 	virtual void LoadFromFile(const std::string& path) = 0;
+
+
+	inline void FreeNodes(std::vector<SceneNode*>& list)
+	{
+		for (auto& node : list)
+		{
+			RefCounted::Release(&node);
+		}
+		list.clear();
+	};
+
+	template <typename T>
+	inline T* RefCountedGet(T* ref)
+	{
+		m_needGet.push_back((RefCounted*)ref);
+		return ref;
+	};
+
+	inline void RefCountedRelease(RefCounted* ref)
+	{
+		m_needRelease.push_back(ref);
+	}
+
+	inline void UpdateRefCounted()
+	{
+		for (auto& ref : m_needGet)
+		{
+			RefCounted::Get(ref);
+		}
+		m_needGet.clear();
+
+		for (auto& ref : m_needRelease)
+		{
+			RefCounted::Release(&ref);
+		}
+		m_needRelease.clear();
+	}
 
 
 	inline SceneQueryContext* NewQueryContext()
@@ -615,6 +670,21 @@ public:
 		{
 			ctx->m_mutex.unlock();
 		}
+	};
+
+	//check if this scene is being updated by this thread
+	inline bool IsUpdating()
+	{
+		for (auto& ctx : m_contexts)
+		{
+			std::unique_lock<std::mutex> lock(ctx->m_mutex, std::try_to_lock);
+			if (!lock.owns_lock())
+			{
+				return false;
+			}
+		}
+
+		return true;
 	};
 
 public:

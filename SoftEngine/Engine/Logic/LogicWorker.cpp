@@ -4,12 +4,14 @@
 #include "Components/FPPCamera.h"
 
 #include "Engine/Scene/Scene.h"
-
 #include "Engine/Controllers/Controller.h"
+#include "Engine/Scripting/ScriptEngine.h"
 
 #include "Engine/UI/ImGuiCommon.h"
 
+#if defined(IMGUI)
 ImGuiCommon::Console g_imGuiConsole;
+#endif
 
 LogicWorker::LogicWorker(Engine* engine) :
 	m_engine(engine)
@@ -20,18 +22,22 @@ LogicWorker::LogicWorker(Engine* engine) :
 
 LogicWorker::~LogicWorker()
 {
+	//auto scene = m_engine->CurrentScene();
+	//scene->UpdateRefCounted();
 }
 
 void LogicWorker::Update()
 {
+#if defined(IMGUI)
+	g_imGuiConsole.RedirectStdOutput();
+#endif
+
 	auto scene = m_engine->CurrentScene();
 
 #if defined(IMGUI) && defined(DX11_RENDERER)
 	ImGui_ImplDX11_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
-
-	g_imGuiConsole.Update(scene);
 
 	//ImGui::EndFrame();
 #endif
@@ -63,4 +69,26 @@ void LogicWorker::Update()
 	}
 
 	m_queryContext->EndFrame();
+
+	LastUpdate();
+
+#if defined(IMGUI)
+	g_imGuiConsole.RestoreStdOutput();
+#endif
 }
+
+void LogicWorker::LastUpdate()
+{
+	auto scene = m_engine->CurrentScene();
+	//allow ScriptEngine direct update to scene
+	scene->BeginUpdate(m_queryContext);
+
+	g_imGuiConsole.Update(scene);
+
+	scene->GetScriptEngine()->Update(m_engine, scene);
+
+	scene->UpdateRefCounted();
+
+	scene->EndUpdate(m_queryContext);
+}
+

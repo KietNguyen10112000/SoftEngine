@@ -36,6 +36,8 @@ PS_OUTPUT main(PS_INPUT input)
 
 	output.color = diffuseMap.Sample(defaultSampler, input.textCoord);
 
+	if (output.color.a == 0) discard;
+
 	output.color.xyz = output.color.xyz * diffuse;
 
 	output.color.xyz += ambient.xyz * output.color.xyz;

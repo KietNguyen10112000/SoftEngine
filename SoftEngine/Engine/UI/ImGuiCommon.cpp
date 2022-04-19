@@ -1,10 +1,14 @@
 #include "ImGuiCommon.h"
 
+#include "Core/Common.h"
+
 #include "Engine/Scripting/ScriptEngine.h"
 #include "Engine/Scripting/ScriptLanguage.h"
 #include "Engine/Scene/Scene.h"
 
-#include "Core/Common.h"
+#include "Engine/Global.h"
+#include "Engine/Engine.h"
+#include "Engine/Rendering/RenderingWorker.h"
 
 void InitImgui(HWND hwnd)
 {
@@ -31,15 +35,25 @@ void InitImgui(HWND hwnd)
 
 	constexpr int GWL_WNDPROC_ = -4;
 	g_oldHWNDHandle = (WNDPROC)SetWindowLongPtr(hwnd, GWL_WNDPROC_, (LONG_PTR)WndHandle2);
+
+	//Global::engine->GetRenderingWorker()->RenderingMode() = RENDERING_MODE::MANUALLY_REFRESH;
 }
 
 void ImGuiCommon::Console::Update(Scene* scene)
 {
+#if defined _DEBUG || defined LOCAL_RELEASE
+	const ImVec2 wSize = { 461, 453 };
+	const ImVec2 pos = { 1069,407 };
+	ImGui::SetNextWindowPos(pos);
+	ImGui::SetNextWindowSize(wSize);
+#endif // DEBUG
+
 	static std::string prevBuffer;
 	static std::string buffer(128, '\0');
 	static std::vector<std::string> list;
 	static std::vector<const char*> listView;
 	static const char* currentItem = 0;
+
 
 	ImGui::Begin("Console");
 
@@ -71,6 +85,8 @@ void ImGuiCommon::Console::Update(Scene* scene)
 			}
 
 			prevBuffer = buffer;
+
+			currentItem = listView[0];
 		}
 
 		if (ImGui::BeginCombo("Version", currentItem))
@@ -88,11 +104,11 @@ void ImGuiCommon::Console::Update(Scene* scene)
 
 	}
 
-	if (ImGui::Button("Run"))
+	if (ImGui::Button("Run Script"))
 	{
 		m_resizedInput = &m_input[0];
 
-		RedirectStdOutput();
+		//RedirectStdOutput();
 
 		if (scriptEngine)
 		{
@@ -103,8 +119,16 @@ void ImGuiCommon::Console::Update(Scene* scene)
 			std::cerr << "Cannot get script engine to run script\n";
 		}
 
-		RestoreStdOutput();
+		//RestoreStdOutput();
+		//RedirectStdOutput();
 
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Refresh Scene"))
+	{
+		Global::engine->GetRenderingWorker()->Refresh();
 	}
 
 	ImGui::SameLine();
@@ -114,10 +138,46 @@ void ImGuiCommon::Console::Update(Scene* scene)
 		ClearOutput();
 	}
 
+	ImGui::SameLine();
+
+	static bool realTime = false;
+	static int prevState = -1;
+	ImGui::Checkbox("Realtime Mode", &realTime);
+
+	if (Global::engine->Input()->GetMouseButton(MOUSE_BUTTON::RIGHT))
+	{
+		if (prevState == -1)
+		{
+			prevState = realTime;
+			realTime = true;
+		}		
+	}
+	else
+	{
+		if (prevState != -1)
+		{
+			realTime = prevState;
+			prevState = -1;
+		}	
+	}
+
+	if (!realTime)
+	{
+		Global::engine->GetRenderingWorker()->RenderingMode() = RENDERING_MODE::MANUALLY_REFRESH;
+	}
+	else
+	{
+		Global::engine->GetRenderingWorker()->RenderingMode() = RENDERING_MODE::REALTIME;
+		Global::engine->GetRenderingWorker()->Refresh();
+	}
+
 	ImGui::Separator();
 
 	const float height = ImGui::GetWindowHeight() / 2.0f;
 	ImGui::BeginChild("ScrollingRegion", ImVec2(0, height), false, ImGuiWindowFlags_HorizontalScrollbar);
+
+	RestoreStdOutput();
+	RedirectStdOutput();
 
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
 	for (auto& log : m_logHistoryView)

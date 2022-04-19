@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <shlwapi.h>
 #include <fstream>
+#include <filesystem>
 
 #ifdef _WIN32
 
@@ -81,6 +82,14 @@ inline std::wstring GetExtension(std::wstring path)
 	return ext;
 }
 
+inline std::string GetExtension(std::string path)
+{
+	auto a = [](unsigned char c) { return std::tolower(c); };
+	std::string ext = path.substr(path.find_last_of(L'.') + 1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), a);
+	return ext;
+}
+
 inline std::wstring GetFileName(std::wstring path)
 {
 	std::replace(path.begin(), path.end(), '\\', '/');
@@ -97,10 +106,18 @@ inline std::string GetFileNameA(std::string path)
 	return fileName;
 }
 
-inline bool FileExist(const std::wstring path)
+inline bool FileExist(const std::wstring& path)
 {
 	std::ifstream f(path.c_str(), std::ios::binary);
 	return f.good();
+	//return std::filesystem::exists(path);
+}
+
+inline bool FileExist(const std::string& path)
+{
+	std::ifstream f(path.c_str(), std::ios::binary);
+	return f.good();
+	//return std::filesystem::exists(path);
 }
 
 inline std::wstring PopPath(const std::wstring& path)

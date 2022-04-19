@@ -1,0 +1,7 @@
+//release gen
+"..\..\..\..\..\v8\v8-lib\bin\release\mksnapshot.exe" --startup-blob=soft_runtime_release.bin main.js 
+
+//debug gen
+"..\..\..\..\..\v8\v8-lib\bin\debug\mksnapshot.exe" --startup-blob=soft_runtime_debug.bin main.js
+
+//copy 'soft_runtime.bin' to the same directory with executable file and change name to 'snapshot_blob.bin'

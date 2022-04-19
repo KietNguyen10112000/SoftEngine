@@ -48,7 +48,7 @@
 void ___PresentCall(void* arg)
 {
 	auto engine = Global::engine;
-	engine->Renderer()->Present();
+	//engine->Renderer()->Present();
 
 
 #if defined(IMGUI) && defined(DX11_RENDERER)
@@ -69,6 +69,7 @@ void ___PresentCall(void* arg)
 #endif
 }
 
+//#pragma optimize("", off )
 Engine::Engine(const wchar_t* title, int width, int height) : Window(title, width, height)
 {
 	//SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -115,6 +116,8 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	m_logicWorker = new LogicWorker(this);
 	m_renderingWorker = new RenderingWorker(this);
 
+	GetRenderingWorker()->RenderingMode() = RENDERING_MODE::MANUALLY_REFRESH;
+
 	Timing();
 
 	//spawn thread
@@ -122,6 +125,7 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 		{
 			while (m_renderingWorker->IsRunning())
 			{
+				//Sleep(1);
 				((ThreadBarrier*)m_threadBarrier)->Synch(0, 0);
 				m_renderingWorker->Update();
 				((ThreadBarrier*)m_threadBarrier)->Synch(0, 0, ___PresentCall, 0);
@@ -143,8 +147,8 @@ Engine::~Engine()
 
 	delete m_renderingWorker;
 	delete m_renderingThread;
-	delete m_logicWorker;
 
+	delete m_logicWorker;
 	delete m_currentScene;
 
 	delete m_cam;
@@ -177,6 +181,7 @@ void Engine::Update()
 
 	((ThreadBarrier*)m_threadBarrier)->Synch([](void*) {}, 0, ___PresentCall, 0);
 }
+//#pragma optimize("", on )
 
 void Engine::Timing()
 {

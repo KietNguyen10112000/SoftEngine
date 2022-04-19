@@ -62,8 +62,9 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 
 
 	//============================================================================================
+	//Vec3(0, -5, -3.4)
 	auto sunLight = engine->Renderer()->LightSystem()->NewLight(LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT, 0,
-		0.50f, 0.3f, 0.02f, 0.8f, { 10,20,0 }, Vec3(0, -5, -3.4).Normalize(), Vec3(1, 1, 1));
+		0.01f, 0.3f, 0.02f, 0.8f, { 10,20,0 }, Vec3(-6, -5, 0).Normalize(), Vec3(1, 1, 1));
 
 	engine->Renderer()->LightSystem()->AddLight(sunLight);
 	engine->Renderer()->LightSystem()->AddShadow(sunLight, SHADOW_MAP_QUALITY::HIGH);
@@ -81,7 +82,7 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 		virtual bool Update(SceneQueryContext* context,
 			SceneQueriedNode* node, const Mat4x4& globalTransform, Engine* engine) override
 		{
-			node->Blob().AsLight().dir = Vec3(0.0, sin(engine->FTime() * 0.2), cos(engine->FTime() * 0.2)).Normalize();
+			node->Blob().AsLight().dir = Vec3(cos(engine->FTime() * 0.2), sin(engine->FTime() * 0.2), 0.0f).Normalize();
 			context->FlushBackData(node);
 
 			return true;
@@ -119,19 +120,20 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 	IRenderableObject* obj = 0;
 	SceneNode* node = 0;
 
-	////============================================================================================
-	//auto node = NewRenderableObjectNode();
-	//node->Deleter() = deleter;
-	//IRenderableObject* obj = new BasicObject(
-	//	L"D:/KEngine/ResourceFile/model/simple_model/cube1.obj",
-	//	L"D:/KEngine/ResourceFile/temp_img/Copper.png",
-	//	GetScaleMatrix(3, 3, 3)
-	//);
+	//============================================================================================
+	node = NewRenderableObjectNode();
+	node->Deleter() = deleter;
+	obj = new BasicObject(
+		L"D:/KEngine/ResourceFile/model/simple_model/sphere.obj",
+		L"D:/KEngine/ResourceFile/temp_img/Copper.png",
+		GetScaleMatrix(3, 3, 3)
+	);
 	//obj->Transform() *= GetScaleMatrix(1, 5, 0.5f);
-	//obj->Transform().SetPosition(0, 0, 10);
-	//node->RenderingObject().renderableObject = obj;
-	//node->Transform() = obj->Transform();
-	//m_nodes.push_back(node);
+	obj->Transform().SetPosition(50, 10, 0);
+	//obj->Transform().SetRotationX(PI / 3.0f);
+	node->RenderingObject().renderableObject = obj;
+	node->Transform() = obj->Transform();
+	m_nodes.push_back(node);
 
 
 	////============================================================================================
@@ -265,7 +267,7 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 	////};
 	//obj = new PBRMultiMeshStaticObject(
 	//	L"D:/KEngine/ResourceFile/model/McGuire/Sponza/sponza.obj",
-	//	GetScaleMatrix(0.2, 0.2, 0.2)
+	//	GetScaleMatrix(0.3, 0.3, 0.3)
 	//);
 	//node->RenderingObject().renderableObject = obj;
 	//node->Transform() = obj->Transform();
@@ -309,154 +311,154 @@ SimpleScene::SimpleScene(Engine* engine) : Scene(engine)
 
 	EndUpdate(0);
 
-	////=================================test post processing======================================
-	//auto postproc = engine->Renderer()->PostProcessor();
-	//
-	//bloomSV = new ShaderVar(&bloomData, sizeof(bloomData));
+	//=================================test post processing======================================
+	auto postproc = engine->Renderer()->PostProcessor();
+	
+	bloomSV = new ShaderVar(&bloomData, sizeof(bloomData));
 
-	//constexpr static float DOWN_RES_FACTOR = 2.0f;
+	constexpr static float DOWN_RES_FACTOR = 2.0f;
 
-	//auto lastscene = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::LIGHTED_SCENE);
-	//auto screenSurface = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::SCREEN_BUFFER);
+	auto lastscene = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::LIGHTED_SCENE);
+	auto screenSurface = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::SCREEN_BUFFER);
 
-	//auto w = engine->Renderer()->GetRenderWidth();
-	//auto h = engine->Renderer()->GetRenderHeight();
+	auto w = engine->Renderer()->GetRenderWidth();
+	auto h = engine->Renderer()->GetRenderHeight();
 
-	//auto output1 = postproc->GetTexture2D(Vec2(w / DOWN_RES_FACTOR, h / DOWN_RES_FACTOR));
-	//auto layer2 = postproc->MakeLayer({ output1 });
+	auto output1 = postproc->GetTexture2D(Vec2(w / DOWN_RES_FACTOR, h / DOWN_RES_FACTOR));
+	auto layer2 = postproc->MakeLayer({ output1 });
 
-	//auto gausianBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/GaussianBlur");
-	//auto combinePS = Resource::Get<PixelShader>(L"PostProcessing/Blur/PSCombine");
+	auto gausianBlurPS = Resource::Get<PixelShader>(L"PostProcessing/Blur/GaussianBlur");
+	auto combinePS = Resource::Get<PixelShader>(L"PostProcessing/Blur/PSCombine");
 
-	//struct Temp
-	//{
-	//	ShaderVar* buf;
-	//	float w;
-	//	float h;
-	//};
+	struct Temp
+	{
+		ShaderVar* buf;
+		float w;
+		float h;
+	};
 
-	//static Temp _opaque = {};
-	//_opaque.buf = bloomSV;
-	//_opaque.w = w;
-	//_opaque.h = h;
+	static Temp _opaque = {};
+	_opaque.buf = bloomSV;
+	_opaque.w = w;
+	_opaque.h = h;
 
-	////god rays post program
-	//auto godRays = postproc->MakeProgram("God Rays");
-	//auto godRayOutput0 = postproc->GetTexture2D(Vec2(w / DOWN_RES_FACTOR, h / DOWN_RES_FACTOR));
-	//auto godRayUpScale = postproc->GetTexture2D(Vec2(w, h));
+	//god rays post program
+	auto godRays = postproc->MakeProgram("God Rays");
+	auto godRayOutput0 = postproc->GetTexture2D(Vec2(w / DOWN_RES_FACTOR, h / DOWN_RES_FACTOR));
+	auto godRayUpScale = postproc->GetTexture2D(Vec2(w, h));
 
-	//auto scenePosition = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
-	//auto sceneNormal = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::NORMAL_AND_SHININESS);
+	auto scenePosition = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::POSITION_AND_SPECULAR);
+	auto sceneNormal = postproc->GetTexture2D(PostProcessor::AvaiableTexture2D::NORMAL_AND_SHININESS);
 
-	//auto godRaysInputLayer = postproc->MakeLayer({ scenePosition });
+	auto godRaysInputLayer = postproc->MakeLayer({ scenePosition });
 
-	//auto godRaysLayer1 = postproc->MakeLayer({ godRayOutput0, lastscene });
+	auto godRaysLayer1 = postproc->MakeLayer({ godRayOutput0, lastscene });
 
-	//auto godRaysUpscaleLayer = postproc->MakeLayer({ godRayUpScale, lastscene });
+	auto godRaysUpscaleLayer = postproc->MakeLayer({ godRayUpScale, lastscene });
 
-	//auto screenLayer = postproc->MakeLayer({ screenSurface });
+	auto screenLayer = postproc->MakeLayer({ screenSurface });
 
-	//auto godRaysPS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/GodRays_PS");
+	auto godRaysPS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/GodRays_PS");
 
-	//auto godRaysCombinePS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/Combine");
+	auto godRaysCombinePS = Resource::Get<PixelShader>(L"PostProcessing/LightEffect/GodRays/Combine");
 
-	//if (!godRays->IsCrafted())
-	//{
-	//	godRays->Append(godRaysInputLayer);
+	if (!godRays->IsCrafted())
+	{
+		godRays->Append(godRaysInputLayer);
 
-	//	godRays->Append(godRaysPS, &_opaque,
-	//		[](IRenderer*, void* opaque)
-	//		{
-	//			ShaderVar* buf = _opaque.buf;
-	//			bloomData.gaussian.type = 0;
-	//			bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
-	//			bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
-	//			bloomData.gaussian.downscale = DOWN_RES_FACTOR;
-	//			buf->Update(&bloomData, sizeof(bloomData));
-	//			RenderPipeline::PSSetVar(buf, 2);
-	//		}
-	//	);
+		godRays->Append(godRaysPS, &_opaque,
+			[](IRenderer*, void* opaque)
+			{
+				ShaderVar* buf = _opaque.buf;
+				bloomData.gaussian.type = 0;
+				bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
+				bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
+				bloomData.gaussian.downscale = DOWN_RES_FACTOR;
+				buf->Update(&bloomData, sizeof(bloomData));
+				RenderPipeline::PSSetVar(buf, 2);
+			}
+		);
 
-	//	//for (size_t i = 0; i < 5; i++)
-	//	//{
-	//	godRays->Append(godRaysLayer1);
-	//	//godRays->Append(copyPS);
-	//	//godRays->Append(godRaysUpscaleLayer);
-	//	//=================2 pass Gaussian Blur=============================
-	//	godRays->Append(gausianBlurPS, &_opaque,
-	//		[](IRenderer*, void* opaque)
-	//		{
-	//			ShaderVar* buf = _opaque.buf;
-	//			bloomData.gaussian.type = 0;
-	//			bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
-	//			bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
-	//			buf->Update(&bloomData, sizeof(bloomData));
-	//		}
-	//	);
+		//for (size_t i = 0; i < 5; i++)
+		//{
+		godRays->Append(godRaysLayer1);
+		//godRays->Append(copyPS);
+		//godRays->Append(godRaysUpscaleLayer);
+		//=================2 pass Gaussian Blur=============================
+		godRays->Append(gausianBlurPS, &_opaque,
+			[](IRenderer*, void* opaque)
+			{
+				ShaderVar* buf = _opaque.buf;
+				bloomData.gaussian.type = 0;
+				bloomData.gaussian.width = _opaque.w / DOWN_RES_FACTOR;
+				bloomData.gaussian.height = _opaque.h / DOWN_RES_FACTOR;
+				buf->Update(&bloomData, sizeof(bloomData));
+			}
+		);
 
-	//	//godRays->Append(godRaysUpscaleLayer);
-	//	godRays->Append(layer2);
+		//godRays->Append(godRaysUpscaleLayer);
+		godRays->Append(layer2);
 
-	//	godRays->Append(gausianBlurPS, &_opaque,
-	//		[](IRenderer* renderer, void* opaque)
-	//		{
-	//			ShaderVar* buf = _opaque.buf;
-	//			bloomData.gaussian.type = 1;
-	//			buf->Update(&bloomData, sizeof(bloomData));
-	//		}
-	//	);
-	//	//=================End 2 pass Gaussian Blur==========================
-	//	//}
+		godRays->Append(gausianBlurPS, &_opaque,
+			[](IRenderer* renderer, void* opaque)
+			{
+				ShaderVar* buf = _opaque.buf;
+				bloomData.gaussian.type = 1;
+				buf->Update(&bloomData, sizeof(bloomData));
+			}
+		);
+		//=================End 2 pass Gaussian Blur==========================
+		//}
 
-	//	//godRays->Append(godRaysUpscaleLayer);
-	//	godRays->Append(godRaysLayer1);
+		//godRays->Append(godRaysUpscaleLayer);
+		godRays->Append(godRaysLayer1);
 
-	//	godRays->Append(godRaysCombinePS);
-	//	godRays->Append(screenLayer);
+		godRays->Append(godRaysCombinePS);
+		godRays->Append(screenLayer);
 
-	//	auto ret = godRays->Craft();
-	//	if (ret != "OK")
-	//	{
-	//		exit(2);
-	//	}
-	//}
+		auto ret = godRays->Craft();
+		if (ret != "OK")
+		{
+			exit(2);
+		}
+	}
 
-	//auto postprocChain = postproc->MakeProcessChain("Bloom Effect");
+	auto postprocChain = postproc->MakeProcessChain("Bloom Effect");
 
-	//if (!postprocChain->IsCrafted())
-	//{	
-	//	postprocChain->Append(
-	//		{
-	//			// programs
-	//			{
-	//				//re-run
-	//				{ godRays, true }
-	//			},
+	if (!postprocChain->IsCrafted())
+	{	
+		postprocChain->Append(
+			{
+				// programs
+				{
+					//re-run
+					{ godRays, true }
+				},
 
-	//			{
-	//				{
-	//					//program, index
-	//					{ {0, 0}, {0, 0} }
-	//				}
-	//			}
-	//		}
-	//	);
-	//	
-	//	auto ret = postprocChain->Craft();
-	//	/*if (ret != "OK")
-	//	{
-	//		exit(2);
-	//	}*/
-	//}
-	//
+				{
+					{
+						//program, index
+						{ {0, 0}, {0, 0} }
+					}
+				}
+			}
+		);
+		
+		auto ret = postprocChain->Craft();
+		/*if (ret != "OK")
+		{
+			exit(2);
+		}*/
+	}
+	
 
-	//postproc->SetProcessChain(postprocChain);
+	postproc->SetProcessChain(postprocChain);
 
-	//Resource::Release(&gausianBlurPS);
-	//Resource::Release(&combinePS);
+	Resource::Release(&gausianBlurPS);
+	Resource::Release(&combinePS);
 
-	//Resource::Release(&godRaysPS);
-	//Resource::Release(&godRaysCombinePS);
+	Resource::Release(&godRaysPS);
+	Resource::Release(&godRaysCombinePS);
 }
 
 SimpleScene::~SimpleScene()
@@ -471,6 +473,8 @@ SimpleScene::~SimpleScene()
 	}
 
 	EndUpdate(0);
+
+	delete bloomSV;
 }
 
 void SimpleScene::Query2D(SceneQueryContext* context, Rect2D* area, std::vector<NodeId>& output)
@@ -568,3 +572,15 @@ void SimpleScene::RemoveNodes(SceneNode** nodes, size_t count)
 		m_nodes.erase(it);
 	}
 }
+
+void SimpleScene::Filter(std::vector<SceneNode*, std::allocator<SceneNode*>>& output, Scene::FilterFunction func)
+{
+	for (auto& node : m_nodes)
+	{
+		if ((!func) || func(node))
+		{
+			output.push_back(RefCounted::Get(node));
+		}
+	}
+}
+

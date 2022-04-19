@@ -2,6 +2,11 @@
 
 #include <Windows.h>
 
+//disable compiler reordering
+#ifndef _DEBUG
+#pragma optimize("", off)
+#endif
+
 //#include <mutex>
 
 class ThreadBarrier
@@ -44,6 +49,7 @@ public:
 		DeleteSynchronizationBarrier(&m_barrier2);*/
 	};
 
+
 	inline void Synch(void (*func)(void*), void* args)
 	{
 		EnterSynchronizationBarrier(
@@ -63,18 +69,19 @@ public:
 			while (m_currentThreadCount != m_threadCount) {}
 
 			func(args);
-
+			//std::cout << m_currentThreadCount << ", " << m_threadCount << "\n";
 			//m_mutex.lock();
 			m_currentThreadCount = 0;
 			//m_mutex.unlock();
 		}
 		else
 		{
-			while (m_currentThreadCount != 0) {}
+			//Sleep(1);
+			while (m_currentThreadCount != 0) { }
 		}
 
 		/*EnterSynchronizationBarrier(
-			&m_barrier2,
+			&m_barrier1,
 			SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY);*/
 	};
 
@@ -93,7 +100,11 @@ public:
 		{
 			while (m_currentThreadCount != m_threadCount) {}
 			func(args);
+
+			//std::cout << m_currentThreadCount << ", " << m_threadCount << "\n";
+
 			m_currentThreadCount = 0;
+			
 		}
 		else
 		{
@@ -102,4 +113,9 @@ public:
 
 	};
 
+
 };
+
+#ifndef _DEBUG
+#pragma optimize("", on)
+#endif

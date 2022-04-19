@@ -3,6 +3,7 @@
 #include "Core/MultiThreading/AsyncTasksRunner.h"
 //#include "Core/MultiThreading/SynchronizableObject.h"
 
+class RefCounted;
 
 //proces input, physics, user script, ...
 //everything relate to logic
@@ -53,8 +54,11 @@ public:
 
 public:
     void Update();
+    void LastUpdate();
+    //void UpdateRefCounted();
 
     inline auto& FDeltaTime() { return m_fdeltaTime; };
     inline auto& IsRunning() { return m_isRunning; };
 
+    inline auto GetSceneQueryContext() { return m_queryContext; };
 };

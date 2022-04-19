@@ -16,6 +16,10 @@
 #include <iostream>
 #include <algorithm>
 
+#include "Core/File.h"
+
+extern void ___ConsoleClear(const v8::FunctionCallbackInfo<v8::Value>& args);
+
 namespace v8wrapper
 {
 
@@ -83,6 +87,12 @@ inline void RegisterCppJsClass(v8::Isolate* isolate, v8::Local<v8::FunctionTempl
     instance->SetInternalFieldCount(INTERNAL_FIELD_COUNT);
 
     g_cppToJsType.insert({ (void*)typeid(T).name(), v8::Global<v8::ObjectTemplate>(isolate, instance) });
+}
+
+template <typename T>
+inline void RegisterCppJsClass(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate>& templ)
+{
+    g_cppToJsType.insert({ (void*)typeid(T).name(), v8::Global<v8::ObjectTemplate>(isolate, templ) });
 }
 
 template <typename T>
@@ -163,6 +173,14 @@ __forceinline VarType GetValueAs(v8::Local<v8::Value> value, v8::Local<v8::Conte
     else if constexpr (std::is_same_v<VarType, double>)
     {
         return DoubleValueOf(value, context);
+    }
+    else if constexpr (
+           std::is_same_v<VarType, const std::string&>
+        || std::is_same_v<VarType, const std::string>
+        || std::is_same_v<VarType, std::string>
+        )
+    {
+        return ToStdString(value, context->GetIsolate());
     }
     else if constexpr (std::is_pointer_v<VarType>)
     {
@@ -347,6 +365,8 @@ void NewCppObjFromPointer(v8::Isolate* isolate, v8::Local<v8::Object>& toTarget,
     toTarget->SetAlignedPointerInInternalField(InternalField + 1, (void*)typeid(T).name());
 }
 
+//if target is a pointer, v8 will handle for you
+//if target is not a pointer, the memories that target pointed to must exist until program exits
 template<typename Target, int InternalField = 0, bool deleteWithJsObj = false>
 v8::Local<v8::Value> NewCppJsObject(v8::Isolate* isolate, Target target)
 {
@@ -356,10 +376,10 @@ v8::Local<v8::Value> NewCppJsObject(v8::Isolate* isolate, Target target)
 
     using BaseTarget = typename std::remove_const<typename std::remove_pointer<base_type<Target>>::type>::type;
 
+    const char* id = typeid(BaseTarget).name();
+
     if (templObj == 0)
     {
-        const char* id = typeid(BaseTarget).name();
-
         auto it = g_cppToJsType.find((void*)id);
 
         if (it == g_cppToJsType.end())
@@ -372,7 +392,7 @@ v8::Local<v8::Value> NewCppJsObject(v8::Isolate* isolate, Target target)
 
         auto& _templ = it->second;
 
-        templObj = *_templ;
+        templObj = *(_templ.Get(isolate));
         g_cppToJsTypeCache.insert(&templObj);
         //v8::Local<v8::ObjectTemplate> templ = _templ.Get(isolate);
     }
@@ -447,6 +467,9 @@ void GetterClassGlobal(v8::Local<v8::Name> property,
 
     auto& value = *member;
 
+    //auto v1 = &g_currentDir;
+    //auto v2 = &value;
+
     using MemberVarType = typename std::remove_const<typename std::remove_pointer<base_type<decltype(value)>>::type>::type;
 
     if constexpr (std::is_fundamental<MemberVarType>::value)
@@ -455,7 +478,7 @@ void GetterClassGlobal(v8::Local<v8::Name> property,
     }
     else
     {
-        info.GetReturnValue().Set(NewCppJsObject(isolate, value));
+        info.GetReturnValue().Set(NewCppJsObject(isolate, &value));
     }
 }
 
@@ -504,7 +527,7 @@ auto GetTuple(const v8::FunctionCallbackInfo<v8::Value>& v8args, v8::Local<v8::C
 }
 
 template<int InternalField = 0, typename ClassType, bool deleteWithJsObj, typename ...Args>
-void Contructor(const v8::FunctionCallbackInfo<v8::Value>& v8args)
+void Constructor(const v8::FunctionCallbackInfo<v8::Value>& v8args)
 {
     auto isolate = v8args.GetIsolate();
 
@@ -540,9 +563,9 @@ void Contructor(const v8::FunctionCallbackInfo<v8::Value>& v8args)
 }
 
 template<typename ClassType, bool deleteWithJsObj, typename ...Args>
-void Contructor(const v8::FunctionCallbackInfo<v8::Value>& v8args)
+void Constructor(const v8::FunctionCallbackInfo<v8::Value>& v8args)
 {
-    return Contructor<0, ClassType, deleteWithJsObj, Args...>(v8args);
+    return Constructor<0, ClassType, deleteWithJsObj, Args...>(v8args);
 }
 
 template<typename Class, int InternalField = 0>
@@ -1395,10 +1418,31 @@ inline bool IsFileModified(const std::string& path, FileTime* in, FileTime* out)
 v8::MaybeLocal<v8::Module> Resolve(v8::Local<v8::Context>, v8::Local<v8::String>, v8::Local<v8::Module>);
 
 
-inline v8::MaybeLocal<v8::Module> ImportModuleFromFile(const std::string& path, v8::Isolate* isolate)
+inline v8::MaybeLocal<v8::Module> ImportModuleFromFile(std::string path, v8::Isolate* isolate)
 {
+    if (GetExtension(path) != "js")
+    {
+        auto newPath = path + "/index.js";
+
+        if (FileExist(newPath))
+        {
+            path = newPath;
+        }
+        else
+        {
+            V8Throw(isolate, ("File \'" + path + "'\ doesn't exist").c_str());
+            return v8::MaybeLocal<v8::Module>();
+        }
+    }
+    else if (!FileExist(path))
+    {
+        //args.GetReturnValue().Set(v8::Undefined(isolate));
+        V8Throw(isolate, ("File \'" + path + "'\ doesn't exist").c_str());
+        return v8::MaybeLocal<v8::Module>();
+    }
+
     auto it = g_modules.find(path);
-    FileTime fileTime;
+    FileTime fileTime = {};
 
     if (it != g_modules.end())
     {
@@ -1485,7 +1529,8 @@ inline v8::MaybeLocal<v8::Module> Resolve(v8::Local<v8::Context> context, v8::Lo
 
     if (temp.IsEmpty())
     {
-        isolate->ThrowException(JsString("Import \'" + fullPath + "\' error.", isolate));
+        //isolate->ThrowException(JsString("Import \'" + fullPath + "\' error.", isolate));
+        std::cerr << "Import \'" << fullPath << "\' error.\n";
     }
 
     return temp;
@@ -1525,6 +1570,27 @@ inline void Import(const v8::FunctionCallbackInfo<v8::Value>& args)
     auto path = ToStdString(args[0], isolate);
     path = CombinePath(g_currentDir, path);
 
+    if (GetExtension(path) != "js")
+    {
+        auto newPath = path + "/index.js";
+
+        if (FileExist(newPath))
+        {
+            path = newPath;
+        }
+        else
+        {
+            V8Throw(isolate, ("File \'" + path + "'\ doesn't exist").c_str());
+            return;
+        }
+    }
+    else if (!FileExist(path))
+    {
+        //args.GetReturnValue().Set(v8::Undefined(isolate));
+        V8Throw(isolate, ("File \'" + path + "'\ doesn't exist").c_str());
+        return;
+    }
+
     auto it = g_modules.find(path);
     FileTime fileTime = {};
 
@@ -1560,13 +1626,17 @@ inline void Import(const v8::FunctionCallbackInfo<v8::Value>& args)
     v8::Local<v8::Module> module;
     if (!v8::ScriptCompiler::CompileModule(isolate, &source).ToLocal(&module))
     {
-        V8TryCatch(trycatch, isolate);
+        //V8TryCatch(trycatch, isolate);
+        //args.GetReturnValue().Set(v8::Undefined(isolate));
+        V8Throw(isolate, "Compile module failed");
         return;
     }
 
     if (!ImportModule(module, isolate))
     {
-        V8TryCatch(trycatch, isolate);
+        //V8TryCatch(trycatch, isolate);
+        //args.GetReturnValue().Set(v8::Undefined(isolate));
+        V8Throw(isolate, "Import module failed");
         return;
     }
 
@@ -1593,6 +1663,11 @@ inline void Import(const v8::FunctionCallbackInfo<v8::Value>& args)
 
     auto target = module->GetModuleNamespace();
     args.GetReturnValue().Set(target);
+}
+
+inline void ClearModulesCache(const v8::FunctionCallbackInfo<v8::Value>& args)
+{
+    g_modules.clear();
 }
 
 inline void GC(const v8::FunctionCallbackInfo<v8::Value>& args)
@@ -1661,14 +1736,14 @@ inline void PrintStdOut(const v8::FunctionCallbackInfo<v8::Value>& args)
 inline void CppToJsString(const v8::FunctionCallbackInfo<v8::Value>& args)
 {
     //std::cout << "CppToJsString() called\n";
-    auto& re = *GetFromV8<std::string*>(args.This());
-    args.GetReturnValue().Set(JsString(re.c_str(), args.GetIsolate()));
+    auto re = GetFromV8<std::string*>(args.This());
+    args.GetReturnValue().Set(JsString(re->c_str(), args.GetIsolate()));
 }
 
 template <typename Obj>
 void WrapCppStdString(v8::Isolate* isolate, v8::Local<Obj> global)
 {
-    v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(isolate, Contructor<std::string, true, const char*>);
+    v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(isolate, Constructor<std::string, true, const char*>);
     RegisterCppJsClass<std::string>(isolate, templ);
 
     auto instance = templ->InstanceTemplate();
@@ -1687,8 +1762,8 @@ void WrapCppStdString(v8::Isolate* isolate, v8::Local<Obj> global)
     
 }
 
-template <typename Obj>
-void WrapClass(v8::Isolate* isolate, v8::Local<Obj> global, v8::Local<v8::FunctionTemplate> templ, const char* name)
+template <typename Obj, typename TT>
+void WrapClass(v8::Isolate* isolate, v8::Local<Obj> global, v8::Local<TT> templ, const char* name)
 {
     if constexpr (std::is_same_v<Obj, v8::ObjectTemplate> || std::is_same_v<Obj, v8::FunctionTemplate>)
     {
@@ -1704,9 +1779,11 @@ void WrapClass(v8::Isolate* isolate, v8::Local<Obj> global, v8::Local<v8::Functi
 
 inline auto CompileAndExec(v8::Local<v8::String> source, v8::Isolate* isolate)
 {
-    v8::TryCatch trycatch(isolate);
-
     auto context = isolate->GetCurrentContext();
+
+    //v8::Context::Scope context_scope(context);
+    //v8::HandleScope handle_scope(context->GetIsolate());
+    v8::TryCatch trycatch(isolate);
 
     auto maybecomplete = v8::Script::Compile(context, source);
 
@@ -1766,14 +1843,18 @@ inline void Initialize(v8::Isolate* isolate, v8::Local<v8::ObjectTemplate> templ
     SetConsoleOutputCP(CP_UTF8);
 
     AddFunction<&Import>(isolate, templ, "Import");
+    AddFunction<&ClearModulesCache>(isolate, templ, "ClearModulesCache");
     AddFunction<&GC>(isolate, templ, "GC");
     AddFunction<&PrintStdOut>(isolate, templ, "print");
 
-    v8::Local<v8::FunctionTemplate> globalConsole = v8::FunctionTemplate::New(isolate);
+    v8::Local<v8::ObjectTemplate> globalConsole = v8::ObjectTemplate::New(isolate);
 
     AddFunction<&PrintStdOut>(isolate, globalConsole, "log");
     AddFunction<&PrintStdErr>(isolate, globalConsole, "warn");
     AddFunction<&PrintStdErr>(isolate, globalConsole, "error");
+
+    
+    AddFunction<&___ConsoleClear>(isolate, globalConsole, "clear");
 
     templ->Set(isolate, "___console", globalConsole);
 
@@ -1829,7 +1910,7 @@ inline void Finalize(v8::Isolate* isolate)
 inline void NewRunTime(v8::Isolate* isolate)
 {
     g_hardCodedJsString.clear();
-    g_cppToJsType.clear();
+    //g_cppToJsType.clear();
     g_modules.clear();
     for (auto& ptr : g_cppToJsTypeCache)
     {
@@ -1839,6 +1920,19 @@ inline void NewRunTime(v8::Isolate* isolate)
 
 }
 
+//for cache
+#define V8WRAPPER_TRY_GET_REGISTED_CPP_JS_CLASS_RAW_PTR(className, output)  \
+if(!output) {const char* _id = typeid(className).name();                    \
+auto _it = v8wrapper::g_cppToJsType.find((void*)_id);                       \
+if (_it == v8wrapper::g_cppToJsType.end())                                  \
+{                                                                           \
+    assert(0);                                                              \
+}                                                                           \
+auto& _templ = _it->second;                                                 \
+auto _templObj = *(_templ.Get(isolate));                                    \
+v8wrapper::g_cppToJsTypeCache.insert(&_templObj); output = _templObj;}
+
+
 #ifndef V8_LIB_DIR
 #define V8_LIB_DIR ""
 #endif 
@@ -1847,7 +1941,7 @@ inline void NewRunTime(v8::Isolate* isolate)
 #pragma comment(lib, V8_LIB_DIR "v8.dll.lib")
 #pragma comment(lib, V8_LIB_DIR "v8_libbase.dll.lib")
 #pragma comment(lib, V8_LIB_DIR "v8_libplatform.dll.lib")
-#pragma comment(lib, V8_LIB_DIR "zlib.dll.lib")
+//#pragma comment(lib, V8_LIB_DIR "zlib.dll.lib")
 #endif
 
 

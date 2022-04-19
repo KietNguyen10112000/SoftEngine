@@ -2,13 +2,16 @@
 
 #include "Engine/Scripting/ScriptEngine.h"
 
-#define V8_MONOLITH_DLL
+#define V8_DLL
 #include "v8Wrapper.h"
+
 
 class v8EngineWrapper : public ScriptEngine
 {
 public:
-	ScriptLanguage* m_jsLang = 0;
+	friend class JavaScriptLanguage;
+
+	std::shared_ptr<JavaScriptLanguage> m_jsLang;
 
 	std::unique_ptr<v8::Platform> m_platform;
 
@@ -17,6 +20,17 @@ public:
 
 	v8::Global<v8::Context> m_context;
 	v8::Global<v8::ObjectTemplate> m_globalTempl;
+
+	std::map<std::string, v8::Global<v8::Function>> m_loopFuncs;
+
+	struct Global
+	{
+		//in sec
+		float deltaTime;
+		float time;
+	};
+
+	inline static Global global = {};
 
 public:
 	v8EngineWrapper();
@@ -35,5 +49,10 @@ public:
 	virtual void SetLanguageVersion(const char* desc) override;
 
 	virtual void Update(Engine* engine, Scene* scene) override;
+
+public:
+	void RunLoop(v8::Local<v8::Function> func);
+	void ClearLoop(v8::Local<v8::Function> func);
+	void ClearAllLoops();
 
 };

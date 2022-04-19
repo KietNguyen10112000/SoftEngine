@@ -61,6 +61,16 @@ add_executable (SoftEngine "SoftEngine.cpp" "SoftEngine.h"
     
 )
 
+#if(WIN32)
+#    if(${CMAKE_BUILD_TYPE} MATCHES Debug)
+#        set_property(TARGET SoftEngine PROPERTY
+#            MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL")
+#    else()
+#        set_property(TARGET SoftEngine PROPERTY
+#            MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+#    endif()
+#endif()
+
 option(DX11_RENDERER "Use directX 11 as render api" ON)
 
 if(DX11_RENDERER)
@@ -125,12 +135,12 @@ endif()
 
 #v8 engine
 if(${CMAKE_BUILD_TYPE} MATCHES Debug)
-    target_link_libraries(SoftEngine PUBLIC
-        "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8_monolith_dll/bin/x64/Debug/v8_monolith.lib"
+    target_link_directories(SoftEngine PUBLIC
+        "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8-lib/bin/debug"
     )
 else()
-    target_link_libraries(SoftEngine PUBLIC
-        "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8_monolith_dll/bin/x64/Release/v8_monolith.lib"
+    target_link_directories(SoftEngine PUBLIC
+        "${PROJECT_SOURCE_DIR}/SoftEngine/Libs/v8/v8-lib/bin/release"
     )
 endif()
 

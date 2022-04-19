@@ -28,7 +28,16 @@ RenderingWorker::~RenderingWorker()
 }
 
 void RenderingWorker::Update()
-{	
+{
+	RunSynch(RENDERING_TASK_HINT::RUN_AT_BEGIN_FRAME);
+
+	if (!m_needReRender)
+	{
+		m_renderer->Present();
+		Sleep(15);
+		return;
+	}
+
 	auto* scene = m_engine->CurrentScene();
 
 	//==========================Query from scene ===============================================
@@ -59,15 +68,16 @@ void RenderingWorker::Update()
 				{
 					auto obj = sceneNode->RenderingObject().renderableObject;
 
-					m_renderableObjects.push_back(obj);
-					m_aabbRenderer->Add(sceneNode->m_aabb);
-
 					if (sceneNode->IsStateChange())
 					{
 						obj->Transform() = globalTransform;
 						m_queryContext->DecrementState(curNode);
+						sceneNode->m_aabb = obj->GetAABB();
 						//sceneNode->StateChange()--;
 					}
+
+					m_renderableObjects.push_back(obj);
+					m_aabbRenderer->Add(sceneNode->m_aabb);
 				}
 				break;
 				case SceneNode::CAMERA_NODE:
@@ -119,7 +129,6 @@ void RenderingWorker::Update()
 	}
 	m_queryContext->EndFrame(); //call 1 time per frame
 	//==========================End query======================================================
-	RunSynch(RENDERING_TASK_HINT::RUN_AT_BEGIN_FRAME);
 
 	m_renderer->LightSystem()->Update();
 
@@ -149,12 +158,22 @@ void RenderingWorker::Update()
 
 	RunSynch(RENDERING_TASK_HINT::RUN_BEFORE_PRESENT_TO_SCREEN);
 	RunSynch(RENDERING_TASK_HINT::RUN_AUDIO);
-	RunSynch(RENDERING_TASK_HINT::RUN_AT_END_FRAME);
-	//m_renderer->Present();
+	m_renderer->Present();
 
+	switch (m_renderingMode)
+	{
+	case RENDERING_MODE::REALTIME:
+		m_needReRender = true;
+		break;
+	case RENDERING_MODE::MANUALLY_REFRESH:
+		m_needReRender = false;
+		break;
+	default:
+		break;
+	}
 	//m_renderer->VisualizeBackgroundRenderPipeline(1);
 
-
+	RunSynch(RENDERING_TASK_HINT::RUN_AT_END_FRAME);
 #ifndef IMGUI
 	static int visualizeArg = 3;
 
@@ -177,4 +196,14 @@ void RenderingWorker::Update()
 #endif
 #endif // !IMGUI
 	
+}
+
+void RenderingWorker::Refresh()
+{
+	static bool once = false;
+
+	if (once) return;
+	once = true;
+
+	RunAsync([&]() { once = false;  m_needReRender = true; }, RENDERING_TASK_HINT::RUN_AT_BEGIN_FRAME);
 }

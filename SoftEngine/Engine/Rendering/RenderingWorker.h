@@ -28,6 +28,16 @@ public:
     };
 };
 
+class RENDERING_MODE
+{
+public:
+    enum MODE
+    {
+        REALTIME,
+        MANUALLY_REFRESH
+    };
+};
+
 class RenderingWorker :
     public AsyncTasksRunner<RENDERING_TASK_HINT::COUNT, RENDERING_TASK_HINT::ENUM>
 {
@@ -62,6 +72,9 @@ public:
 
     AABBRenderer* m_aabbRenderer = 0;
 
+    RENDERING_MODE::MODE m_renderingMode = RENDERING_MODE::REALTIME;
+    bool m_needReRender = true;
+
 public:
     RenderingWorker(Engine* engine);
     ~RenderingWorker();
@@ -72,4 +85,8 @@ public:
     inline auto& FDeltaTime() { return m_fdeltaTime; };
     inline auto& IsRunning() { return m_isRunning; };
 
+
+    inline auto& RenderingMode() { return m_renderingMode; };
+
+    void Refresh();
 };

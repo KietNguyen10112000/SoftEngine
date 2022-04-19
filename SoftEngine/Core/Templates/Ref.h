@@ -9,6 +9,8 @@ public:
 	int m_refCount = 0;
 
 public:
+	inline virtual ~RefCounted() {};
+
 	inline void DecreRef()
 	{
 		m_refCount--;

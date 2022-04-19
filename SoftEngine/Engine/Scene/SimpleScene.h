@@ -61,4 +61,8 @@ public:
 
 	virtual void RemoveNodes(SceneNode** nodes, size_t count) override;
 
+
+	// Inherited via Scene
+	virtual void Filter(std::vector<SceneNode*, std::allocator<SceneNode*>>& output, Scene::FilterFunction func = (Scene::FilterFunction)0);
+
 };

@@ -109,11 +109,19 @@ public:
 		std::cout.rdbuf(m_coutbuf);
 		std::cerr.rdbuf(m_cerrbuf);
 
-		m_logHistoryView.push_back({ m_outHistory.size(), 0 });
-		m_logHistoryView.push_back({ m_errHistory.size(), 1 });
-
-		m_outHistory.push_back(m_outBuf.str());
-		m_errHistory.push_back(m_errBuf.str());
+		auto outstr = m_outBuf.str();
+		if (!outstr.empty())
+		{
+			m_logHistoryView.push_back({ m_outHistory.size(), 0 });
+			m_outHistory.push_back(outstr);
+		}
+		
+		auto errstr = m_errBuf.str();
+		if (!errstr.empty())
+		{
+			m_logHistoryView.push_back({ m_errHistory.size(), 1 });
+			m_errHistory.push_back(errstr);
+		}
 
 		m_outBuf.str("");
 		m_errBuf.str("");
