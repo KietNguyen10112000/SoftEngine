@@ -1,5 +1,5 @@
 #pragma once
-#include <d3d11.h>
+#include <d3d11_1.h>
 
 #include <IRenderer.h>
 
@@ -40,11 +40,14 @@ private:
 public:
     ID3D11Device* m_d3dDevice = nullptr;
     ID3D11DeviceContext* m_d3dDeviceContext = nullptr;
+    //ID3D11Device1* m_d3dDevice1 = nullptr;
+    //ID3D11DeviceContext1* m_d3dDeviceContext1 = nullptr;
 
-    IDXGISwapChain* m_dxgiSwapChain = nullptr;
-    IDXGIDevice* m_dxgiDevice = nullptr;
-    IDXGIAdapter* m_dxgiAdapter = nullptr;
-    IDXGIFactory* m_dxgiFactory = nullptr;
+    IDXGISwapChain1* m_dxgiSwapChain = nullptr;
+    //IDXGISwapChain1* m_dxgiSwapChain1 = nullptr;
+    IDXGIDevice1* m_dxgiDevice = nullptr;
+    IDXGIAdapter1* m_dxgiAdapter = nullptr;
+    IDXGIFactory2* m_dxgiFactory = nullptr;
 
 
     ID3D11RasterizerState* m_rasterizerState = nullptr;
@@ -56,8 +59,12 @@ public:
     D3D11_VIEWPORT m_viewport = {};
 
     ID3D11RenderTargetView* m_mainRtv = nullptr;
+    ID3D11Resource* m_mainBuffer = nullptr;
     ID3D11ShaderResourceView* m_mainRtvShader = nullptr;
     ID3D11DepthStencilView* m_dsv = nullptr;
+
+    ID3D11RenderTargetView* m_screenRtv = nullptr;
+    ID3D11Resource* m_screenBuffer = nullptr;
 
     class DX11LightSystem* m_lightSystem = nullptr;
     class DX11PostProcessor* m_postProcessor = nullptr;
@@ -225,6 +232,11 @@ public:
 public:
     virtual void BeginTransparency() override;
     virtual void EndTransparency() override;
+
+    virtual void BeginUI(int arg) override;
+    virtual void EndUI() override;
+
+    virtual void PresentLastFrame() override;
 
 public:
     virtual void VisualizeBackgroundRenderPipeline(int arg) override;

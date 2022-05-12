@@ -107,7 +107,7 @@ inline void FPPCamera::UpdateControl(Engine* engine)
 		m_rotateY += delta[0] * engine->FDeltaTime() * m_rotationSensi;
 		m_rotateX -= delta[1] * engine->FDeltaTime() * m_rotationSensi;
 
-		m_rotateX = max(min(m_rotateX, PI / 2.0f), -PI / 2.0f);
+		m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 	}
 }
 

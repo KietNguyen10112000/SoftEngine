@@ -31,7 +31,6 @@
 #include "Core/MultiThreading/ThreadBarrier.h"
 
 
-
 #ifdef IMGUI
 
 #include "imgui.h"
@@ -39,11 +38,13 @@
 #ifdef DX11_RENDERER
 #include "imgui_impl_dx11.h"
 #include "imgui_impl_win32.h"
+#include <d3d11_1.h>
 #endif
 
 #include "UI/ImGuiCommon.h"
 
 #endif
+
 
 void ___PresentCall(void* arg)
 {
@@ -53,19 +54,34 @@ void ___PresentCall(void* arg)
 
 #if defined(IMGUI) && defined(DX11_RENDERER)
 
-	/*static bool isFirstFrame = true;
+	static size_t count = 0;
+	static float time = 0;
+	static int fps = 0;
+	static std::wstring buffer(128, L'\0');
 
-	if (isFirstFrame)
+	count++;
+	time += engine->FDeltaTime();
+
+	if (time > 1)
 	{
-		isFirstFrame = false;
-		return;
-	}*/
+		float temp = time;
+		time = temp - (int)temp;
+		temp -= time;
+		fps = count / temp;
+		count = 0;
 
-	DX11Global::renderer->m_d3dDeviceContext->OMSetRenderTargets(1, &DX11Global::renderer->m_mainRtv, 0);
+		wsprintf(buffer.data(), L"SoftEngine - %i fps", fps);
+
+		SetWindowText(engine->GetNativeHandle(), buffer.c_str());
+	}
+
+	DX11Global::renderer->m_d3dDeviceContext->OMSetRenderTargets(1, &DX11Global::renderer->m_screenRtv, 0);
 	ImGui::Render();
 	ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-	DX11Global::renderer->m_dxgiSwapChain->Present(1, 0);
+	auto swapChain = DX11Global::renderer->m_dxgiSwapChain;
+	//DXGI_PRESENT_PARAMETERS parameters = { 0 };
+	swapChain->Present(1, 0);
 #endif
 }
 
@@ -117,6 +133,7 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 	m_renderingWorker = new RenderingWorker(this);
 
 	GetRenderingWorker()->RenderingMode() = RENDERING_MODE::MANUALLY_REFRESH;
+	GetLogicWorker()->IsRunning() = false;
 
 	Timing();
 
@@ -126,24 +143,29 @@ Engine::Engine(const wchar_t* title, int width, int height) : Window(title, widt
 			while (m_renderingWorker->IsRunning())
 			{
 				//Sleep(1);
-				((ThreadBarrier*)m_threadBarrier)->Synch(0, 0);
+				m_threadBarrier->FastSynch();
 				m_renderingWorker->Update();
-				((ThreadBarrier*)m_threadBarrier)->Synch(0, 0, ___PresentCall, 0);
+				m_threadBarrier->SlowSynch();
 			}
+
+			m_threadBarrier->Desynch();
 		}
 	);
-	m_renderingThread->detach();
+
 }
 
 Engine::~Engine()
 {
-	DestroyImgui();
-
 	m_renderingWorker->IsRunning() = false;
-
 	m_logicWorker->IsRunning() = false;
 
-	if (m_renderingThread->joinable()) m_renderingThread->join();
+	// last update to synch with rendering thread
+	Update();
+	m_threadBarrier->Desynch();
+
+	DestroyImgui();
+
+	m_renderingThread->join();
 
 	delete m_renderingWorker;
 	delete m_renderingThread;
@@ -151,7 +173,9 @@ Engine::~Engine()
 	delete m_logicWorker;
 	delete m_currentScene;
 
-	delete m_cam;
+	delete m_threadBarrier;
+
+	//delete m_cam;
 	delete m_spaceCoord;
 	delete m_skyBox;
 
@@ -166,33 +190,43 @@ Engine::~Engine()
 
 void Engine::Update()
 {
-	((ThreadBarrier*)m_threadBarrier)->Synch(
-		[](void* arg)
-		{
-			((Engine*)(arg))->Timing();
-		},
-		this
-	);
+	Timing();
+
+	m_threadBarrier->FastSynch();
 
 	if (m_logicWorker->IsRunning())
 	{
 		m_logicWorker->Update();
 	}
+	else
+	{
+		m_logicWorker->Idling();
+	}
 
-	((ThreadBarrier*)m_threadBarrier)->Synch([](void*) {}, 0, ___PresentCall, 0);
+	m_threadBarrier->SlowSynch();
+
+	___PresentCall(0);
 }
 //#pragma optimize("", on )
 
 void Engine::Timing()
 {
-	auto cur = GetTime();
+	constexpr float TIME_FACTOR = 1'000'000'000.0f;
+	auto cur = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+
+	//auto cur = GetTime();
 	m_deltaTime = cur - m_currentTime;
 	m_currentTime = cur;
 
-	m_fCurrentTime = m_currentTime / _TIME_FACTOR;
-	m_fDeltaTime = m_deltaTime / _TIME_FACTOR;
+	m_fCurrentTime = m_currentTime / TIME_FACTOR;
+	m_fDeltaTime = m_deltaTime / TIME_FACTOR;
 
 	m_time += m_fDeltaTime;
 
 	//std::cout << Global::engine->FDeltaTime() << "\n";
+
+	/*if (m_fDeltaTime == 0)
+	{
+		int x = 3;
+	}*/
 }

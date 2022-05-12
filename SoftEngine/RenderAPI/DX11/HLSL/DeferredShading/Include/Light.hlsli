@@ -431,8 +431,15 @@ float CalCSMDirLit(float3 pixelPos, LightShadow shadow, int index)
 
 //#define SHADOW_MAP_CASCADE_BAND_WIDTH 0.0001f
 
+//const static float SHADOW_MAP_CASCADE_BAND_WIDTH[] = {
+//	0.001f,
+//	0.0001f,
+//	0.00001f,
+//	0.000001f
+//};
+
 const static float SHADOW_MAP_CASCADE_BAND_WIDTH[] = {
-	0.001f,
+	0.0005f,
 	0.0001f,
 	0.00001f,
 	0.000001f
@@ -446,6 +453,10 @@ float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos
 	//=====================choose shadow cascade=============================
 	//shadow.viewProj[SHADOW_MAP_NUM_CASCADE] as memory to store depthThres
 	const float4 depthThres = shadow.viewProj[SHADOW_MAP_NUM_CASCADE][0];
+
+	if (pixelDepthInScreen > depthThres.w + 0.0001f) return 1.0f;
+
+
 	float4 currentPixelDepth = float4(pixelDepthInScreen, pixelDepthInScreen, pixelDepthInScreen, pixelDepthInScreen);
 
 	float4 comparison = (currentPixelDepth > depthThres);
@@ -459,24 +470,14 @@ float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos
 	float3 toLightV = normalize(-light.dir);
 	float cosAngle = saturate(1.0f - dot(toLightV, normal));
 	float f = index == SHADOW_MAP_NUM_CASCADE - 1 ? 2 : 1;
-	float3 scaledNormalOffset = normal * (offsetPixelLightFactor.x * f * cosAngle);
+
+	float magic = 0.0001f / (1 - pixelDepthInScreen);
+	float3 scaledNormalOffset = normal * ((offsetPixelLightFactor.x + magic) * f * cosAngle);
 	pixelPos += scaledNormalOffset;
 
 	float percentLight = CalCSMDirLit(pixelPos, shadow, index);
 
-	if (percentLight == 1) return 1;
-
-	/*float dDepth = depthThres[index] - pixelDepthInScreen;
-	if (dDepth < SHADOW_MAP_CASCADE_BAND_WIDTH[index])
-	{
-		int id = index + 1;
-		if (id < SHADOW_MAP_NUM_CASCADE)
-		{
-			float percentLight2 = CalCSMDirLit(pixelPos, shadow, id);
-			float s = dDepth / SHADOW_MAP_CASCADE_BAND_WIDTH[index];
-			percentLight = lerp(percentLight2, percentLight, s);
-		}
-	}*/
+	if (percentLight == 1) return percentLight;
 
 	//cascades blending
 	if (index != 0)
@@ -488,6 +489,7 @@ float DoCSMDirLightShadow(in Light light, in LightShadow shadow, float3 pixelPos
 			float percentLight2 = CalCSMDirLit(pixelPos, shadow, id);
 			float s = dDepth / SHADOW_MAP_CASCADE_BAND_WIDTH[id];
 			percentLight = lerp(percentLight2, percentLight, s);
+			//return 1.0f;
 		}
 	}
 

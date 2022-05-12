@@ -207,16 +207,10 @@ Window::~Window()
 
 void Window::Loop()
 {
-    bool bGotMsg;
-    MSG  msg;
-    msg.message = WM_NULL;
-    PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
-
+    MSG  msg = {0};
     while (WM_QUIT != msg.message)
     {
-        bGotMsg = (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0);
-
-        if (bGotMsg)
+        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);

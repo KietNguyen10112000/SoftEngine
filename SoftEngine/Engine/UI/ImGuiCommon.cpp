@@ -9,6 +9,7 @@
 #include "Engine/Global.h"
 #include "Engine/Engine.h"
 #include "Engine/Rendering/RenderingWorker.h"
+#include "Engine/Logic/LogicWorker.h"
 
 void InitImgui(HWND hwnd)
 {
@@ -141,8 +142,23 @@ void ImGuiCommon::Console::Update(Scene* scene)
 	ImGui::SameLine();
 
 	static bool realTime = false;
+	static bool idling = true;
 	static int prevState = -1;
 	ImGui::Checkbox("Realtime Mode", &realTime);
+
+	
+	if (ImGui::Checkbox("Update Idling", &idling))
+	{
+		if (idling)
+		{
+			Global::engine->GetLogicWorker()->IsRunning() = false;
+		}
+		else
+		{
+			Global::engine->GetLogicWorker()->IsRunning() = true;
+		}
+	}
+
 
 	if (Global::engine->Input()->GetMouseButton(MOUSE_BUTTON::RIGHT))
 	{

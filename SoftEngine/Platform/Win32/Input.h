@@ -29,11 +29,15 @@ class Input
 private:
 	friend LRESULT WndHandle(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
+public:
+	inline static constexpr size_t KEY_COUNT = 256;
+	inline static constexpr size_t MOUSE_COUNT = 10;
+
 private:
-	inline static bool key[256] = {};
+	inline static bool key[KEY_COUNT] = {};
 	//static int lastKeyDown;
 	inline static int lastKeyUp = 0;
-	inline static bool mouse[10] = {};
+	inline static bool mouse[MOUSE_COUNT] = {};
 	inline static MOUSE_BUTTON doubleClick = NONE;
 	inline static MOUSE_BUTTON click = NONE;
 	inline static short deltaMouseWheel = 0;
@@ -53,6 +57,9 @@ private:
 
 	bool m_hideCursor = false;
 
+	bool m_preKey[256] = {};
+	bool m_preMouse[10] = {};
+
 public:
 	inline Input() {};
 	inline ~Input() {};
@@ -61,9 +68,9 @@ public:
 	inline static float deltaClickTime = 0;
 
 public:
-	inline bool GetPressKey(unsigned char keyCode);
-	inline bool GetMouseDBClick(MOUSE_BUTTON button);
-	inline bool GetMouseClick(MOUSE_BUTTON button);
+	inline bool GetKeyPressed(unsigned char keyCode);
+	inline bool GetMouseDBClicked(MOUSE_BUTTON button);
+	inline bool GetMouseClicked(MOUSE_BUTTON button);
 	inline void UpdateMousePos();
 	inline void LastUpdate();
 	inline void SetHideCursor(bool hide);
@@ -81,9 +88,14 @@ public:
 	inline bool IsMouseMove() { return (m_deltaMPos[0] != 0 || m_deltaMPos[1] != 0); };
 	inline short GetDeltaMouseHWheel() { return deltaMouseWheel; };
 
+	inline bool GetKeyDown(unsigned char keyCode) { return m_preKey[keyCode] == false && key[keyCode] == true; };
+	inline bool GetKeyUp(unsigned char keyCode) { return m_preKey[keyCode] == true && key[keyCode] == false; };
+	inline bool GetMouseDown(MOUSE_BUTTON button) { return m_preMouse[button] == false && mouse[button] == true; };
+	inline bool GetMouseUp(MOUSE_BUTTON button) { return m_preMouse[button] == true && mouse[button] == false; };
+
 };
 
-inline bool Input::GetPressKey(unsigned char keyCode)
+inline bool Input::GetKeyPressed(unsigned char keyCode)
 {
 	/*if (lastKeyDown != keyCode)
 	{
@@ -110,13 +122,13 @@ inline bool Input::GetPressKey(unsigned char keyCode)
 	return false;
 }
 
-inline bool Input::GetMouseDBClick(MOUSE_BUTTON button)
+inline bool Input::GetMouseDBClicked(MOUSE_BUTTON button)
 {
 	if (button == doubleClick) return true;
 	return false;
 }
 
-inline bool Input::GetMouseClick(MOUSE_BUTTON button)
+inline bool Input::GetMouseClicked(MOUSE_BUTTON button)
 {
 	if (button == click && !mouse[button])
 	{
@@ -150,6 +162,9 @@ inline void Input::LastUpdate()
 
 	lastKeyUp = -1;
 	deltaMouseWheel = 0;
+
+	memcpy(m_preKey, key, KEY_COUNT * sizeof(bool));
+	memcpy(m_preMouse, mouse, MOUSE_COUNT * sizeof(bool));
 }
 
 inline void Input::SetHideCursor(bool hide)

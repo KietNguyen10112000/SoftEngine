@@ -65,10 +65,9 @@ public:
 
     SceneQueryContext* m_queryContext = 0;
 
-    using NodeId = size_t;
-    std::vector<NodeId> m_dataNodes;
-    std::vector<IRenderableObject*> m_renderableObjects;
-    std::vector<LightID> m_lightObjects;
+    struct Data;
+
+    Data* m_data = 0;
 
     AABBRenderer* m_aabbRenderer = 0;
 

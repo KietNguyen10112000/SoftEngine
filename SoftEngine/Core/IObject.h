@@ -1,10 +1,10 @@
 #pragma once
 
-#include <Math/Collision.h>
-
+#include "Math/Collision.h"
 #include "Math/AABB.h"
 
-#include <RenderPipeline.h>
+#include "Core/RenderPipeline.h"
+#include "Core/Variant/Memory.h"
 
 class ShaderVar;
 class Engine;
@@ -24,6 +24,10 @@ protected:
 
 public:
 	virtual void Update(Engine* engine) = 0;
+
+	// any thing expect m_transform is external data
+	virtual void WriteExternalDataTo(Memory& memory) = 0;
+	virtual void ReadExternalDataFrom(Memory& memory) = 0;
 
 public:
 	inline virtual Mat4x4& Transform() { return m_transform; };
@@ -57,7 +61,7 @@ public:
 			RenderPipeline::VSSetVar(shaderTransform, OBJECT_TRANSFROM_SHADER_LOCATION);
 		}
 	};
-	inline virtual ~IRenderableObject() 
+	inline ~IRenderableObject() 
 	{ 
 		count--;
 		RenderPipelineManager::Release(&m_rpl); 
@@ -89,6 +93,11 @@ public:
 	};
 	//return AABB in local space
 	inline virtual AABB GetLocalAABB() { return {}; };
+
+public:
+	virtual void WriteExternalDataTo(Memory& memory) override {};
+	virtual void ReadExternalDataFrom(Memory& memory) override {};
+
 };
 
 //m_transform is view matrix
@@ -122,7 +131,7 @@ public:
 			shaderMVP = new ShaderVar(&cameraBuf, sizeof(ShaderCameraBuffer));
 		}
 	};
-	inline virtual ~ICamera() 
+	inline ~ICamera() 
 	{
 		count--;
 		if (count == 0)
@@ -140,6 +149,11 @@ public:
 	inline auto& Frustum() { return m_frustum; };
 
 	inline virtual void Update(Engine* engine) {};
+
+public:
+	virtual void WriteExternalDataTo(Memory& memory) override {};
+	virtual void ReadExternalDataFrom(Memory& memory) override {};
+
 };
 
 

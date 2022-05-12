@@ -123,6 +123,12 @@ public:
 	virtual void BeginTransparency() = 0;
 	virtual void EndTransparency() = 0;
 
+	// arg == 1 => use depthh buffer
+	virtual void BeginUI(int arg = 0) = 0;
+	virtual void EndUI() = 0;
+
+	virtual void PresentLastFrame() = 0;
+
 public:
 	//optional
 	inline virtual void VisualizeBackgroundRenderPipeline(int arg = 0) {};

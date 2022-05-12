@@ -43,10 +43,9 @@ public:
 
     SceneQueryContext* m_queryContext = 0;
 
-    using NodeId = size_t;
+    struct Data;
 
-    std::vector<NodeId> m_dataNodes;
-    std::vector<LightID> m_lightObjects;
+    Data* m_data = 0;
 
 public:
     LogicWorker(Engine* engine);
@@ -56,6 +55,8 @@ public:
     void Update();
     void LastUpdate();
     //void UpdateRefCounted();
+
+    void Idling();
 
     inline auto& FDeltaTime() { return m_fdeltaTime; };
     inline auto& IsRunning() { return m_isRunning; };

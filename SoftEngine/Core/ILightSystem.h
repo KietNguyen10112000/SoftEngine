@@ -191,13 +191,29 @@ public:
 		float radiuses[ShadowMap_NUM_CASCADE];
 		float depthThres[ShadowMap_NUM_CASCADE];
 
-		void Follow(Mat4x4* view, Mat4x4* projection);
+		float separateThres[ShadowMap_NUM_CASCADE] = { -1.0f };
+		float maxLength = FLT_MAX;
+		//bool isReSeparated = false;
+
+		ExtraDataCSMDirLight* Follow(Mat4x4* view, Mat4x4* projection);
 
 		//separet proj frustum
 		//newThres count must == ShadowMap_NUM_CASCADE, or something unexpected will happen
-		void Separate(float* newThres, float maxLength = -1);
+		ExtraDataCSMDirLight* Separate(float* newThres, float maxLength = FLT_MAX);
 
 		bool Update(LightID id, LightSystem* sys);
+
+		inline auto* SetMaxLength(float _maxLength) 
+		{ 
+			maxLength = _maxLength;
+			return this;
+		};
+
+		inline auto* SetSeparateThread(float* thres) 
+		{
+			memcpy(separateThres, thres, sizeof(float) * ShadowMap_NUM_CASCADE);
+			return this;
+		};
 	};
 
 	struct ExtraDataPointLight

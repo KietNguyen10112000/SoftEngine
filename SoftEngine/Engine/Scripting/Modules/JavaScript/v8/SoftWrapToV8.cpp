@@ -164,176 +164,176 @@ public:
 
 };
 
-// you are working on LogicWorker
-template <class T>
-class v8RefHandle
-{
-public:
-	static_assert(std::is_base_of_v<RefCounted, T>);
-	//inline static v8::Global<v8::ObjectTemplate> ctorFunc;
-	inline static v8::ObjectTemplate* ctorFunc;
-
-	T* m_ref = 0;
-
-public:
-	v8RefHandle()
-	{
-		m_ref = Global::engine->CurrentScene()->RefCountedGet(new T());
-	};
-
-	v8RefHandle(T* ref)
-	{
-		m_ref = Global::engine->CurrentScene()->RefCountedGet(ref);
-	};
-
-	~v8RefHandle()
-	{
-		Global::engine->CurrentScene()->RefCountedRelease(m_ref);
-	};
-
-	template <auto method, typename ...Args>
-	auto Method(Args&&... args)
-	{
-		return method(std::forward<Args>(args)...);
-	};
-
-	inline auto Ptr()
-	{
-		return m_ref;
-	};
-
+//// you are working on LogicWorker
+//template <class T>
+//class v8RefHandle
+//{
 //public:
-//	static void Config(const v8::FunctionCallbackInfo<v8::Value>& args)
+//	static_assert(std::is_base_of_v<RefCounted, T>);
+//	//inline static v8::Global<v8::ObjectTemplate> ctorFunc;
+//	inline static v8::ObjectTemplate* ctorFunc;
+//
+//	T* m_ref = 0;
+//
+//public:
+//	v8RefHandle()
 //	{
-//		V8_CHECK_ARGS_LENGTH(2, "Soft.ClearAllLoops");
+//		m_ref = Global::engine->CurrentScene()->RefCountedGet(new T());
 //	};
-
-};
-
-using v8SceneNode = v8RefHandle<SceneNode>;
-
-class _v8SceneNode
-{
-public:
-	static void ToString(const v8::FunctionCallbackInfo<v8::Value>& args)
-	{
-		auto isolate = args.GetIsolate();
-		auto context = isolate->GetCurrentContext();
-		auto _this = args.This();
-
-		auto current = GetValueAs<v8SceneNode*>(_this, context);
-
-		std::string ret;
-
-		ret += SceneNode::NODE_TYPE_DESC[current->Ptr()->Type()];
-
-		args.GetReturnValue().Set(JsString(ret.c_str(), isolate));
-	};
-
-	static void GetterTransform(v8::Local<v8::String> property,
-		const v8::PropertyCallbackInfo<v8::Value>& info)
-	{
-		auto isolate = info.GetIsolate();
-		auto context = isolate->GetCurrentContext();
-		auto _this = info.This();
-
-		auto scene = Global::engine->CurrentScene();
-		V8_CHECK_GLOBAL_SCENE_OPERATOR(scene);
-
-		auto handle = GetValueAs<v8SceneNode*>(_this, context);
-		auto sceneNode = handle->Ptr();
-		Mat4x4& mat = sceneNode->Transform();
-		float* ptr = &mat.m[0][0];
-
-		auto jsArr = v8::Array::New(isolate, 16);
-
-		for (size_t i = 0; i < 16; i++)
-		{
-			jsArr->Set(context, i, v8::Number::New(isolate, ptr[i]));
-		}
-
-		info.GetReturnValue().Set(jsArr);
-	};
-
-	static void SetterTransform(v8::Local<v8::String> property, v8::Local<v8::Value> value,
-		const v8::PropertyCallbackInfo<void>& info)
-	{
-		auto isolate = info.GetIsolate();
-		auto context = isolate->GetCurrentContext();
-		auto _this = info.This();
-
-		auto scene = Global::engine->CurrentScene();
-		V8_CHECK_GLOBAL_SCENE_OPERATOR(scene);
-
-		//"set SceneNode.transform = [Array number]"
-		V8_CHECK_VALUE(value, IsArray, "SceneNode.transform");
-		
-		auto handle = GetValueAs<v8SceneNode*>(_this, context);
-		auto sceneNode = handle->Ptr();
-		Mat4x4& mat = sceneNode->Transform();
-		float* ptr = &mat.m[0][0];
-
-		auto jsArr = v8::Local<v8::Array>::Cast(value);
-
-		for (size_t i = 0; i < 16; i++)
-		{
-			ptr[i] = GetValueAs<float>(jsArr->Get(context, i).ToLocalChecked(), context);
-		}
-
-		sceneNode->ChangeState();
-		Global::engine->GetRenderingWorker()->Refresh();
-	};
-
-};
-
-
-
-class v8Scene
-{
-public:
-	static void NewSceneNode(const v8::FunctionCallbackInfo<v8::Value>& args)
-	{
-		auto isolate = args.GetIsolate();
-		auto context = isolate->GetCurrentContext();
-		V8WRAPPER_TRY_GET_REGISTED_CPP_JS_CLASS_RAW_PTR(v8wrapper::v8SceneNode, v8wrapper::v8SceneNode::ctorFunc);
-
-		auto jsSceneNode = v8SceneNode::ctorFunc->NewInstance(context).ToLocalChecked();
-		auto ref = v8wrapper::NewCppObj<v8SceneNode>(isolate, jsSceneNode, true);
-
-		args.GetReturnValue().Set(jsSceneNode);
-	};
-
-	static void EnumerateNodes(const v8::FunctionCallbackInfo<v8::Value>& args)
-	{
-		auto isolate = args.GetIsolate();
-		auto context = isolate->GetCurrentContext();
-		V8WRAPPER_TRY_GET_REGISTED_CPP_JS_CLASS_RAW_PTR(v8wrapper::v8SceneNode, v8wrapper::v8SceneNode::ctorFunc);
-
-
-		auto scene = Global::engine->CurrentScene();
-		V8_CHECK_GLOBAL_SCENE_OPERATOR(scene);
-
-		std::vector<SceneNode*> nodes;
-
-		scene->Filter(nodes);
-
-		auto arr = v8::Array::New(isolate, nodes.size());
-
-		uint32_t i = 0;
-		for (auto& node : nodes)
-		{
-			auto jsSceneNode = v8SceneNode::ctorFunc->NewInstance(context).ToLocalChecked();
-			auto ref = v8wrapper::NewCppObj<v8SceneNode>(isolate, jsSceneNode, true, node);
-			arr->Set(context, i, jsSceneNode);
-			i++;
-		}
-
-		scene->FreeNodes(nodes);
-
-		args.GetReturnValue().Set(arr);
-	};
-
-};
+//
+//	v8RefHandle(T* ref)
+//	{
+//		m_ref = Global::engine->CurrentScene()->RefCountedGet(ref);
+//	};
+//
+//	~v8RefHandle()
+//	{
+//		Global::engine->CurrentScene()->RefCountedRelease(m_ref);
+//	};
+//
+//	template <auto method, typename ...Args>
+//	auto Method(Args&&... args)
+//	{
+//		return method(std::forward<Args>(args)...);
+//	};
+//
+//	inline auto Ptr()
+//	{
+//		return m_ref;
+//	};
+//
+////public:
+////	static void Config(const v8::FunctionCallbackInfo<v8::Value>& args)
+////	{
+////		V8_CHECK_ARGS_LENGTH(2, "Soft.ClearAllLoops");
+////	};
+//
+//};
+//
+//using v8SceneNode = v8RefHandle<SceneNode>;
+//
+//class _v8SceneNode
+//{
+//public:
+//	static void ToString(const v8::FunctionCallbackInfo<v8::Value>& args)
+//	{
+//		auto isolate = args.GetIsolate();
+//		auto context = isolate->GetCurrentContext();
+//		auto _this = args.This();
+//
+//		auto current = GetValueAs<v8SceneNode*>(_this, context);
+//
+//		std::string ret;
+//
+//		ret += SceneNode::NODE_TYPE_DESC[current->Ptr()->Type()];
+//
+//		args.GetReturnValue().Set(JsString(ret.c_str(), isolate));
+//	};
+//
+//	static void GetterTransform(v8::Local<v8::String> property,
+//		const v8::PropertyCallbackInfo<v8::Value>& info)
+//	{
+//		auto isolate = info.GetIsolate();
+//		auto context = isolate->GetCurrentContext();
+//		auto _this = info.This();
+//
+//		auto scene = Global::engine->CurrentScene();
+//		V8_CHECK_GLOBAL_SCENE_OPERATOR(scene);
+//
+//		auto handle = GetValueAs<v8SceneNode*>(_this, context);
+//		auto sceneNode = handle->Ptr();
+//		Mat4x4& mat = sceneNode->Transform();
+//		float* ptr = &mat.m[0][0];
+//
+//		auto jsArr = v8::Array::New(isolate, 16);
+//
+//		for (size_t i = 0; i < 16; i++)
+//		{
+//			jsArr->Set(context, i, v8::Number::New(isolate, ptr[i]));
+//		}
+//
+//		info.GetReturnValue().Set(jsArr);
+//	};
+//
+//	static void SetterTransform(v8::Local<v8::String> property, v8::Local<v8::Value> value,
+//		const v8::PropertyCallbackInfo<void>& info)
+//	{
+//		auto isolate = info.GetIsolate();
+//		auto context = isolate->GetCurrentContext();
+//		auto _this = info.This();
+//
+//		auto scene = Global::engine->CurrentScene();
+//		V8_CHECK_GLOBAL_SCENE_OPERATOR(scene);
+//
+//		//"set SceneNode.transform = [Array number]"
+//		V8_CHECK_VALUE(value, IsArray, "SceneNode.transform");
+//		
+//		auto handle = GetValueAs<v8SceneNode*>(_this, context);
+//		auto sceneNode = handle->Ptr();
+//		Mat4x4& mat = sceneNode->Transform();
+//		float* ptr = &mat.m[0][0];
+//
+//		auto jsArr = v8::Local<v8::Array>::Cast(value);
+//
+//		for (size_t i = 0; i < 16; i++)
+//		{
+//			ptr[i] = GetValueAs<float>(jsArr->Get(context, i).ToLocalChecked(), context);
+//		}
+//
+//		sceneNode->ChangeState();
+//		Global::engine->GetRenderingWorker()->Refresh();
+//	};
+//
+//};
+//
+//
+//
+//class v8Scene
+//{
+//public:
+//	static void NewSceneNode(const v8::FunctionCallbackInfo<v8::Value>& args)
+//	{
+//		auto isolate = args.GetIsolate();
+//		auto context = isolate->GetCurrentContext();
+//		V8WRAPPER_TRY_GET_REGISTED_CPP_JS_CLASS_RAW_PTR(v8wrapper::v8SceneNode, v8wrapper::v8SceneNode::ctorFunc);
+//
+//		auto jsSceneNode = v8SceneNode::ctorFunc->NewInstance(context).ToLocalChecked();
+//		auto ref = v8wrapper::NewCppObj<v8SceneNode>(isolate, jsSceneNode, true);
+//
+//		args.GetReturnValue().Set(jsSceneNode);
+//	};
+//
+//	static void EnumerateNodes(const v8::FunctionCallbackInfo<v8::Value>& args)
+//	{
+//		auto isolate = args.GetIsolate();
+//		auto context = isolate->GetCurrentContext();
+//		V8WRAPPER_TRY_GET_REGISTED_CPP_JS_CLASS_RAW_PTR(v8wrapper::v8SceneNode, v8wrapper::v8SceneNode::ctorFunc);
+//
+//
+//		auto scene = Global::engine->CurrentScene();
+//		V8_CHECK_GLOBAL_SCENE_OPERATOR(scene);
+//
+//		std::vector<SceneNode*> nodes;
+//
+//		scene->Filter(nodes);
+//
+//		auto arr = v8::Array::New(isolate, nodes.size());
+//
+//		uint32_t i = 0;
+//		for (auto& node : nodes)
+//		{
+//			auto jsSceneNode = v8SceneNode::ctorFunc->NewInstance(context).ToLocalChecked();
+//			auto ref = v8wrapper::NewCppObj<v8SceneNode>(isolate, jsSceneNode, true, node);
+//			arr->Set(context, i, jsSceneNode);
+//			i++;
+//		}
+//
+//		scene->FreeNodes(nodes);
+//
+//		args.GetReturnValue().Set(arr);
+//	};
+//
+//};
 
 template <typename T>
 class _StdVector
@@ -551,37 +551,37 @@ void SoftWrapToV8(v8EngineWrapper* v8engine, Engine* softEngine, Scene* softScen
 		globalTemple->Set(isolate, "Soft", soft);
 	}
 
-	{
-		//object Scene
-		v8::Local<v8::ObjectTemplate> scene = v8::ObjectTemplate::New(isolate);
+	//{
+	//	//object Scene
+	//	v8::Local<v8::ObjectTemplate> scene = v8::ObjectTemplate::New(isolate);
 
-		v8wrapper::AddFunction<&v8wrapper::v8Scene::EnumerateNodes>(isolate, scene, "EnumerateNodes");
+	//	v8wrapper::AddFunction<&v8wrapper::v8Scene::EnumerateNodes>(isolate, scene, "EnumerateNodes");
 
-		globalTemple->Set(isolate, "Scene", scene);
+	//	globalTemple->Set(isolate, "Scene", scene);
 
 
-		//object SceneNode
-		//constructor function
-		//like in js side:
-		//
-		// //this function still call as contructor
-		// function Scene
-		// {
-		//		this.some = 1
-		// }
-		//
-		v8::Local<v8::FunctionTemplate> sceneNodeFunc = v8::FunctionTemplate::New(isolate);
-		v8wrapper::RegisterCppJsClass<v8wrapper::v8SceneNode>(isolate, sceneNodeFunc);
-		auto sceneNodeClazz = sceneNodeFunc->InstanceTemplate();
+	//	//object SceneNode
+	//	//constructor function
+	//	//like in js side:
+	//	//
+	//	// //this function still call as contructor
+	//	// function Scene
+	//	// {
+	//	//		this.some = 1
+	//	// }
+	//	//
+	//	v8::Local<v8::FunctionTemplate> sceneNodeFunc = v8::FunctionTemplate::New(isolate);
+	//	v8wrapper::RegisterCppJsClass<v8wrapper::v8SceneNode>(isolate, sceneNodeFunc);
+	//	auto sceneNodeClazz = sceneNodeFunc->InstanceTemplate();
 
-		v8wrapper::AddFunction<v8wrapper::_v8SceneNode::ToString>(isolate, sceneNodeClazz, "toString");
+	//	v8wrapper::AddFunction<v8wrapper::_v8SceneNode::ToString>(isolate, sceneNodeClazz, "toString");
 
-		// sceneNode.transform = blah ... (array-like object)
-		sceneNodeClazz->SetAccessor(v8::String::NewFromUtf8(isolate, "transform").ToLocalChecked(),
-			v8wrapper::_v8SceneNode::GetterTransform, v8wrapper::_v8SceneNode::SetterTransform);
-		v8wrapper::JsAddAPI("SceneNode.transform", "[get, set] SceneNode.transform: number[]");
+	//	// sceneNode.transform = blah ... (array-like object)
+	//	sceneNodeClazz->SetAccessor(v8::String::NewFromUtf8(isolate, "transform").ToLocalChecked(),
+	//		v8wrapper::_v8SceneNode::GetterTransform, v8wrapper::_v8SceneNode::SetterTransform);
+	//	v8wrapper::JsAddAPI("SceneNode.transform", "[get, set] SceneNode.transform: number[]");
 
-		v8wrapper::WrapClass(isolate, globalTemple, sceneNodeClazz, "SceneNode");
-	}
+	//	v8wrapper::WrapClass(isolate, globalTemple, sceneNodeClazz, "SceneNode");
+	//}
 
 }

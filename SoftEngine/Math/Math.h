@@ -254,7 +254,14 @@ namespace Math
 			return *this;
 		}
 
-		inline float Length()
+		inline Vec4& Normal() const
+		{
+			Vec4 ret;
+			XMStoreFloat4(&ret, XMVector4Normalize(XMLoadFloat4(this)));
+			return ret;
+		}
+
+		inline float Length() const
 		{
 			return sqrt(x * x + y * y + z * z + w * w);
 		}
@@ -412,13 +419,23 @@ namespace Math
 			return *this;
 		}
 
-		inline Vec3 GetPosition()
+		inline Mat4x4 GetInverse() const
+		{
+			Mat4x4 ret;
+			XMStoreFloat4x4(
+				&ret,
+				XMMatrixInverse(NULL, XMLoadFloat4x4(this))
+			);
+			return ret;
+		}
+
+		inline Vec3 GetPosition() const
 		{
 			return Vec3(_41, _42, _43);
 		}
 
 		//only some case
-		inline Vec3 GetScale()
+		inline Vec3 GetScale() const
 		{
 			Vec3 re;
 			re.x = Vec3(_11, _21, _31).Length();
@@ -427,14 +444,14 @@ namespace Math
 			return re;
 		}
 
-		inline Vec4 GetRotationQuaternion()
+		inline Vec4 GetRotationQuaternion() const
 		{
 			Vec4 re;
 			XMStoreFloat4(&re, XMQuaternionRotationMatrix(XMLoadFloat4x4(this)));
 			return re;
 		}
 
-		inline Vec3 GetRotationAngle()
+		inline Vec3 GetRotationAngle() const
 		{
 			float rx = std::atan2(_23, _33);
 			float ry = std::atan2(-_13, std::sqrt(_23 * _23 + _33 * _33)); //std::asin(-_13);
@@ -442,29 +459,29 @@ namespace Math
 			return Vec3(rx, ry, rz);
 		}
 
-		inline Vec3 GetForwardDir()
+		inline Vec3 GetForwardDir() const
 		{
 			//return Vec3(_13, _23, _33);
 			return Vec3(_31, _32, _33);
 		}
 
-		inline Vec3 GetRightwardDir()
+		inline Vec3 GetRightwardDir() const
 		{
 			//return Vec3(_11, _21, _31);
 			return Vec3(_11, _12, _13);
 		}
 
-		inline Vec3 GetBackwardDir()
+		inline Vec3 GetBackwardDir() const
 		{
 			return Vec3(-_31, -_32, -_33);
 		}
 
-		inline Vec3 GetLeftwardDir()
+		inline Vec3 GetLeftwardDir() const
 		{
 			return Vec3(-_11, -_12, -_13);
 		}
 
-		inline Vec3 GetUpwardDir()
+		inline Vec3 GetUpwardDir() const
 		{
 			return Vec3(_21, _22, _23);
 		}
@@ -539,6 +556,40 @@ namespace Math
 			return *this;
 		}
 
+		// mul scale component with value
+		inline Mat4x4& MulScaleComponent(const Vec3& vec)
+		{
+			_11 *= vec.x;
+			_22 *= vec.y;
+			_33 *= vec.z;
+			return *this;
+		}
+
+		// mul scale component with value
+		inline Mat4x4& MulScaleComponent(float scaleX, float scaleY, float scaleZ)
+		{
+			_11 *= scaleX;
+			_22 *= scaleY;
+			_33 *= scaleZ;
+			return *this;
+		}
+
+		inline Mat4x4& DivScaleComponent(const Vec3& vec)
+		{
+			_11 /= vec.x;
+			_22 /= vec.y;
+			_33 /= vec.z;
+			return *this;
+		}
+
+		inline Mat4x4& DivScaleComponent(float scaleX, float scaleY, float scaleZ)
+		{
+			_11 /= scaleX;
+			_22 /= scaleY;
+			_33 /= scaleZ;
+			return *this;
+		}
+
 		inline Mat4x4& SetScale(float scaleX, float scaleY, float scaleZ)
 		{
 			XMStoreFloat4x4(this, XMMatrixScaling(scaleX, scaleY, scaleZ));
@@ -561,6 +612,13 @@ namespace Math
 		{
 			XMStoreFloat4x4(this, XMMatrixTranspose(XMLoadFloat4x4(this)));
 			return *this;
+		}
+
+		inline Mat4x4 GetTranspose()
+		{
+			Mat4x4 ret;
+			XMStoreFloat4x4(&ret, XMMatrixTranspose(XMLoadFloat4x4(this)));
+			return ret;
 		}
 
 		inline Mat4x4& SetLookAtRH(const Vec3& position, const Vec3& focusPos, const Vec3& up)
@@ -618,7 +676,7 @@ namespace Math
 			return *this;
 		}
 
-		inline void Decompose(Vec3* outScale, Vec4* outRotationQua, Vec3* outTranslation)
+		inline void Decompose(Vec3* outScale, Vec4* outRotationQua, Vec3* outTranslation) const
 		{
 			XMVECTOR p, s, r;
 			XMMatrixDecompose(&s, &r, &p, XMLoadFloat4x4(this));

@@ -3,7 +3,7 @@
 
 #include <mutex>
 
-#define _TIME_FACTOR 1000.0f
+#define _TIME_FACTOR 1'000'000'000.0f
 
 class IRenderer;
 class Resource;
@@ -11,6 +11,7 @@ class RenderPipelineManager;
 
 class LogicWorker;
 class RenderingWorker;
+class ThreadBarrier;
 
 class ICamera;
 class SpaceCoordinate;
@@ -34,13 +35,9 @@ private:
 	RenderPipelineManager* m_rplManager = 0;
 
 
-	void* m_threadBarrier = 0;
+	ThreadBarrier* m_threadBarrier = 0;
 
 	//multi-threading
-	/*size_t m_synchFlag1 = 0;
-	size_t m_synchFlag2 = 0;
-	std::mutex m_sharedMutex1;
-	std::mutex m_sharedMutex2;*/
 	LogicWorker* m_logicWorker = 0;
 	RenderingWorker* m_renderingWorker = 0;
 	//main thread used for m_logicWorker
@@ -76,13 +73,13 @@ public:
 	inline auto GetRenderingWorker() { return m_renderingWorker; };
 	inline auto GetLogicWorker() { return m_logicWorker; };
 
-	//in milisec
+	//in nanosec
 	inline auto& DeltaTime() { return m_deltaTime; };
 
 	//in sec
 	inline auto& FDeltaTime() { return m_fDeltaTime; };
 
-	//in milisec, from 1/1/1970
+	//in nanosec, from 1/1/1970
 	inline auto& CurrentTime() { return m_currentTime; };
 
 	//in sec, from 1/1/1970

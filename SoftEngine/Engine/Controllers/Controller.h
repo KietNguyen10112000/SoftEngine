@@ -2,8 +2,8 @@
 
 #include "Math/Math.h"
 
-class SceneQueriedNode;
-class SceneQueryContext;
+class SceneObject;
+class SceneSharedObject;
 class Engine;
 
 class Controller
@@ -11,10 +11,8 @@ class Controller
 public:
 	inline virtual ~Controller() {};
 
-	virtual bool Update(SceneQueryContext* context, 
-		SceneQueriedNode* node, const Mat4x4& globalTransform, Engine* engine) = 0;
-
-	virtual void CallMethod(SceneQueryContext* context, SceneQueriedNode* node, const Mat4x4& globalTransform,
-		int methodId, void* args, int argc, Engine* engine) = 0;
+	virtual void Update(Engine* engine) = 0;
+	virtual void WriteTo(SceneObject* object) = 0;
+	virtual void WriteToShared(SceneSharedObject* object) = 0;
 
 };

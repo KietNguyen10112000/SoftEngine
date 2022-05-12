@@ -1,39 +1,58 @@
 #include "RenderingWorker.h"
 
 #include "Core/Renderer.h"
+
 #include "Engine/Engine.h"
-#include "Components/SpaceCoordinate.h"
-
 #include "Engine/Scene/Scene.h"
+#include "Engine/WorkerConfig.h"
 
+#include "Components/SpaceCoordinate.h"
 #include "Components/AABBRenderer.h"
 
 #ifdef DX11_RENDERER
 #include "RenderAPI/DX11/DX11Global.h"
 #endif
 
+struct RenderingWorker::Data
+{
+	std::vector<SceneObject*> objects;
+	std::vector<SharedPtr<SceneSharedObject>> sharedObjects;
+	std::vector<IRenderableObject*> renderableObjects;
+	std::vector<LightID> lights;
+};
+
+
 RenderingWorker::RenderingWorker(Engine* engine) :
 	m_engine(engine)
 {
 	m_renderer = engine->Renderer();
 
-	m_queryContext = engine->CurrentScene()->NewQueryContext();
+	m_queryContext = engine->CurrentScene()->NewQueryContext(RENDERING_WORKER_ID);
 
 	m_aabbRenderer = new AABBRenderer();
+
+	m_data = new RenderingWorker::Data();
 }
 
 RenderingWorker::~RenderingWorker()
 {
 	delete m_aabbRenderer;
+	delete m_data;
 }
 
 void RenderingWorker::Update()
 {
+	auto& objects = m_data->objects;
+	auto& sharedObjects = m_data->sharedObjects;
+	auto& renderableObjects = m_data->renderableObjects;
+	auto& lightObjects = m_data->lights;
+
 	RunSynch(RENDERING_TASK_HINT::RUN_AT_BEGIN_FRAME);
 
 	if (!m_needReRender)
 	{
-		m_renderer->Present();
+		m_renderer->PresentLastFrame();
+		//m_renderer->VisualizeBackgroundRenderPipeline(0);
 		Sleep(15);
 		return;
 	}
@@ -42,80 +61,82 @@ void RenderingWorker::Update()
 
 	//==========================Query from scene ===============================================
 
-	m_dataNodes.clear();
-	m_renderableObjects.clear();
-	m_lightObjects.clear();
+	objects.clear();
+	sharedObjects.clear();
+	renderableObjects.clear();
+	lightObjects.clear();
 
-	m_queryContext->BeginFrame(); //call 1 time per frame
+	m_queryContext->BeginQuery(); //call 1 time per frame
 
-	scene->Query3D(m_queryContext, (Frustum*)0, m_dataNodes);
+	scene->Query3DObjects(m_queryContext, (Frustum*)0, objects);
 
-	for (auto& nodeid : m_dataNodes)
+	for (auto& obj : objects)
 	{
-		auto node = &m_queryContext->Node(nodeid);
-		node->TransformTraverse(
-			[&](SceneQueriedNode* curNode, const Mat4x4& globalTransform)
+		obj->TransformTraverse(
+			[&](SceneObject* curObj, const Mat4x4& globalTransform)
 			{
-				auto& sceneNode = curNode->GetSceneNode();
-
-				//auto a = curNode->GetSceneNode();
-
-				//if (!sceneNode->IsStateChange()) return false;
-
-				switch (sceneNode->Type())
+				switch (curObj->Type())
 				{
-				case SceneNode::RENDERABLE_NODE:
+				case SceneObject::RENDERABLE_OBJECT:
 				{
-					auto obj = sceneNode->RenderingObject().renderableObject;
+					auto rdObj = curObj->RenderingObject().renderableObject;
 
-					if (sceneNode->IsStateChange())
+					if (curObj->DataChanged())
 					{
-						obj->Transform() = globalTransform;
-						m_queryContext->DecrementState(curNode);
-						sceneNode->m_aabb = obj->GetAABB();
-						//sceneNode->StateChange()--;
+						rdObj->Transform() = globalTransform;
+						curObj->m_aabb = rdObj->GetAABB();
+						curObj->DataChanged() = false;
 					}
 
-					m_renderableObjects.push_back(obj);
-					m_aabbRenderer->Add(sceneNode->m_aabb);
+					// large external data case
+					if (curObj->ExternalDataChanged())
+					{
+						rdObj->ReadExternalDataFrom(curObj->ExternalData());
+						curObj->ExternalDataChanged() = false;
+					}
+
+					renderableObjects.push_back(rdObj);
+					m_aabbRenderer->Add(curObj->m_aabb);
 				}
 				break;
-				case SceneNode::CAMERA_NODE:
+				case SceneObject::CAMERA_OBJECT:
 				{
-					auto camera = sceneNode->RenderingObject().camera;
-					auto& blob = curNode->Blob();
+					auto camera = curObj->RenderingObject().camera;
 
-					if (sceneNode->IsStateChange())
+					auto& externalData = curObj->ExternalData();
+
+					if (curObj->DataChanged())
 					{
-						camera->ProjectionMatrix() = blob.AsCamera().proj;
+						camera->ProjectionMatrix() = externalData.As<Mat4x4>();
 						camera->Transform() = globalTransform;
 						camera->MVP() = GetInverse(camera->Transform()) * camera->ProjectionMatrix();
-						m_queryContext->DecrementState(curNode);
-						//sceneNode->StateChange()--;
 
-						//std::cout << sceneNode->StateChange() << "\n";
+						curObj->DataChanged() = false;
+
+						// known what extract is camera external data
+						curObj->ExternalDataChanged() = false;
 					}
 					
 				}
 				break;
-				case SceneNode::LIGHT_NODE:
+				case SceneObject::LIGHT_OBJECT:
 				{
-					auto lightId = sceneNode->RenderingObject().lightID;
-					auto& blob = curNode->Blob();
+					auto lightId = curObj->RenderingObject().lightID;
+
+					auto& externalData = curObj->ExternalData();
 
 					auto& light = m_renderer->LightSystem()->GetLight(lightId);
 
-					if (sceneNode->IsStateChange() || light.type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
+					if (curObj->DataChanged() || light.type == LIGHT_TYPE::CSM_DIRECTIONAL_LIGHT)
 					{
-						light = blob.AsLight();
+						light = externalData.As<Light>();
 						m_renderer->LightSystem()->UpdateLight(lightId);
 						m_renderer->LightSystem()->UpdateShadow(lightId);
 						
-						if (sceneNode->IsStateChange()) m_queryContext->DecrementState(curNode);
-						//sceneNode->StateChange()--;
+						curObj->DataChanged() = false;
 					}
 
-					m_lightObjects.push_back(lightId);
+					lightObjects.push_back(lightId);
 				}
 				break;
 				default:
@@ -127,7 +148,10 @@ void RenderingWorker::Update()
 			nullptr
 		);
 	}
-	m_queryContext->EndFrame(); //call 1 time per frame
+
+	m_queryContext->EndQuery(); //call 1 time per frame
+	scene->QueryContextReleaseReadingObjects(m_queryContext, objects);
+	scene->QueryContextReleaseReadingObjects(m_queryContext, sharedObjects);
 	//==========================End query======================================================
 
 	m_renderer->LightSystem()->Update();
@@ -135,20 +159,19 @@ void RenderingWorker::Update()
 	static float clsCol[] = { 0,0,0,0 };
 	m_renderer->ClearFrame(clsCol);
 
-	m_engine->m_spaceCoord->Render(m_renderer);
-	m_aabbRenderer->Present(m_renderer);
+	//Sleep(12);
 
-	for (auto& obj : m_renderableObjects)
+	for (auto& obj : renderableObjects)
 	{
 		obj->Update(m_engine);
 		obj->Render(m_renderer);
 	}
 
-	for (auto& light : m_lightObjects)
+	for (auto& light : lightObjects)
 	{
 		if (m_renderer->LightSystem()->BeginShadow(light))
 		{
-			for (auto& obj : m_renderableObjects)
+			for (auto& obj : renderableObjects)
 			{
 				obj->Render(m_renderer);
 			}
@@ -158,7 +181,13 @@ void RenderingWorker::Update()
 
 	RunSynch(RENDERING_TASK_HINT::RUN_BEFORE_PRESENT_TO_SCREEN);
 	RunSynch(RENDERING_TASK_HINT::RUN_AUDIO);
+
 	m_renderer->Present();
+
+	m_renderer->BeginUI(1);
+	m_engine->m_spaceCoord->Render(m_renderer);
+	m_aabbRenderer->Present(m_renderer);
+	m_renderer->EndUI();
 
 	switch (m_renderingMode)
 	{
@@ -195,7 +224,6 @@ void RenderingWorker::Update()
 	DX11Global::renderer->m_dxgiSwapChain->Present(1, 0);
 #endif
 #endif // !IMGUI
-	
 }
 
 void RenderingWorker::Refresh()

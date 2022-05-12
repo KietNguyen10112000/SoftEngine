@@ -369,9 +369,9 @@ inline void DX11LightSystem::InitShadowMap()
 	RasterizerDesc.FillMode = D3D11_FILL_SOLID;
 	RasterizerDesc.CullMode = D3D11_CULL_BACK;//D3D11_CULL_FRONT;
 	RasterizerDesc.FrontCounterClockwise = FALSE;
-	RasterizerDesc.DepthBias = 0;
-	RasterizerDesc.SlopeScaledDepthBias = 10.f;// 5.0f;//3.5f;//2;
-	RasterizerDesc.DepthBiasClamp = 0.0003f;//0.0005f;
+	RasterizerDesc.DepthBias = 0.3f; //0
+	RasterizerDesc.SlopeScaledDepthBias = 3.5f;//10.f;// 5.0f;//3.5f;//2;
+	RasterizerDesc.DepthBiasClamp = 0.00015f;//0.0003f;//0.0005f;
 	RasterizerDesc.DepthClipEnable = TRUE;
 	RasterizerDesc.ScissorEnable = FALSE;
 	RasterizerDesc.MultisampleEnable = FALSE;

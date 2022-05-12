@@ -662,7 +662,7 @@ void LightSystem::Log()
 
 
 void __CSM__SeparateFrustum(const Mat4x4& proj, Vec3* corners, std::vector<std::vector<Vec3>>& frustums, 
-	float* thres, float* depthThres, float maxLength = -1)
+	float* thres, float* depthThres, float maxLength)
 {
 	auto* farPlane = &corners[4];
 	auto* nearPlane = &corners[0];
@@ -675,15 +675,19 @@ void __CSM__SeparateFrustum(const Mat4x4& proj, Vec3* corners, std::vector<std::
 	}
 
 	float totalLength = thres[0] + thres[1] + thres[2] + thres[3];
-	float expectLength = ((farPlane[0] + farPlane[2]) / 2.0f - (nearPlane[0] + nearPlane[2]) / 2.0f).Length();
-	if (maxLength != -1)
-	{
-		expectLength = maxLength;
-	}
+	float expectLength = (
+			(farPlane[0] + farPlane[1] + farPlane[2] + farPlane[3]) / 4.0f 
+		-	(nearPlane[0] + nearPlane[1] + nearPlane[2] + nearPlane[3]) / 4.0f
+		).Length();
+
+	float dot = DotProduct(dir[0], { 0, 0, 1 });
+
+	expectLength = std::min(maxLength, expectLength);
 
 	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
 	{
 		thres[i] = (thres[i] / totalLength) * expectLength;
+		thres[i] /= dot;
 	}
 
 	float count = 0;
@@ -718,7 +722,7 @@ void __CSM__SeparateFrustum(const Mat4x4& proj, Vec3* corners, std::vector<std::
 
 }
 
-void LightSystem::ExtraDataCSMDirLight::Follow(Mat4x4* view, Mat4x4* projection)
+LightSystem::ExtraDataCSMDirLight* LightSystem::ExtraDataCSMDirLight::Follow(Mat4x4* view, Mat4x4* projection)
 {
 	this->view = view;
 	this->proj = projection;
@@ -727,7 +731,9 @@ void LightSystem::ExtraDataCSMDirLight::Follow(Mat4x4* view, Mat4x4* projection)
 	Frustum::GetFrustumCorners(projCorners, *proj);
 
 	float thres[ShadowMap_NUM_CASCADE] = { 50, 100, 150, 150 };
-	Separate(thres, -1);
+	Separate(thres);
+
+	return this;
 }
 
 //2nd method
@@ -739,14 +745,25 @@ inline void __CSM__GetBoundingSphere(Vec3* corners, Vec3* outCenter, float* outR
 	*outRadius = sph.Radius;
 }
 
-void LightSystem::ExtraDataCSMDirLight::Separate(float* newThres, float maxLength)
+LightSystem::ExtraDataCSMDirLight* LightSystem::ExtraDataCSMDirLight::Separate(float* newThres, float _maxLength)
 {
-	std::vector<std::vector<Vec3>> frustums;
+	static std::vector<std::vector<Vec3>> frustums;
 
-	float thres[ShadowMap_NUM_CASCADE] = {};
-	memcpy(thres, newThres, ShadowMap_NUM_CASCADE * sizeof(float));
+	static float thres[ShadowMap_NUM_CASCADE] = {};
 
-	__CSM__SeparateFrustum(*proj, projCorners, frustums, thres, depthThres, maxLength);
+	_maxLength = std::min(_maxLength, maxLength);
+
+	if (separateThres[0] != -1)
+	{
+		memcpy(thres, separateThres, ShadowMap_NUM_CASCADE * sizeof(float));
+	}
+	else
+	{
+		memcpy(thres, newThres, ShadowMap_NUM_CASCADE * sizeof(float));
+	}
+
+	frustums.clear();
+	__CSM__SeparateFrustum(*proj, projCorners, frustums, thres, depthThres, _maxLength);
 
 	for (size_t i = 0; i < frustums.size(); i++)
 	{
@@ -758,6 +775,10 @@ void LightSystem::ExtraDataCSMDirLight::Separate(float* newThres, float maxLengt
 		centers[i] = center;
 		radiuses[i] = r;
 	}
+
+	//isReSeparated = true;
+
+	return this;
 }
 
 Mat4x4 __CSM__Tie(const Vec3& dir, const Mat4x4& _view, const Vec3& center, float radius, float shadowMapResolution)
@@ -804,11 +825,15 @@ void __CSM__TieProjShadow(LightID id, LightSystem* lightSys, LightSystem::ExtraD
 		shadowProj[i] = __CSM__Tie(light.dir, camView, data->centers[i], data->radiuses[i], data->alloc[0].dim.x);
 	}
 
+	//if (data->isReSeparated)
+	//{
 	float* p = (float*)&shadowProj[ShadowMap_NUM_CASCADE];
 	for (size_t i = 0; i < ShadowMap_NUM_CASCADE; i++)
 	{
 		p[i] = data->depthThres[i];
 	}
+		//data->isReSeparated = 0;
+	//}
 }
 
 bool LightSystem::ExtraDataCSMDirLight::Update(LightID id, LightSystem* sys)

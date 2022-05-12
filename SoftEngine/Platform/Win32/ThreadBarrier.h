@@ -2,23 +2,46 @@
 
 #include <Windows.h>
 
+#include <mutex>
+
 //disable compiler reordering
 #ifndef _DEBUG
 #pragma optimize("", off)
 #endif
 
-//#include <mutex>
+//#define USING_STL_THREAD_BARRIER_IMPL
+//#define USING_OS_THREAD_BARRIER_IMPL
+
+// wait cpu cycles
+#define USING_SINGLE_CRITICAL_SECTION_THREAD_BARRIER_IMPL
+#define USING_INTERLOCKED_INCRE
 
 class ThreadBarrier
 {
 public:
 	SYNCHRONIZATION_BARRIER m_barrier1;
-	//SYNCHRONIZATION_BARRIER m_barrier2;
 
+#ifdef USING_OS_THREAD_BARRIER_IMPL
+	SYNCHRONIZATION_BARRIER m_barrier;
+#endif
+
+#ifdef USING_STL_THREAD_BARRIER_IMPL
 	int m_threadCount = 0;
 	int m_currentThreadCount = 0;
 
-	//std::mutex m_mutex;
+	std::mutex m_mutex;
+	std::condition_variable m_cv;
+#endif
+
+#ifdef USING_SINGLE_CRITICAL_SECTION_THREAD_BARRIER_IMPL
+#ifndef USING_INTERLOCKED_INCRE
+	CRITICAL_SECTION m_criticalSection;
+#endif // !USING_INTERLOCKED_INCRE
+	int m_threadCount = 0;
+	int m_incomingThreadCount = 0;
+	int m_outcomingThreadCount = 0;
+#endif
+
 
 	inline ThreadBarrier(int threadCount)
 	{
@@ -27,12 +50,34 @@ public:
 			threadCount,
 			-1);
 
-		/*InitializeSynchronizationBarrier(
-			&m_barrier2,
-			threadCount,
-			100);*/
+#ifdef USING_OS_THREAD_BARRIER_IMPL
 
+		InitializeSynchronizationBarrier(
+			&m_barrier,
+			threadCount,
+			-1);
+#endif
+
+#ifdef USING_STL_THREAD_BARRIER_IMPL
 		m_threadCount = threadCount;
+#endif
+
+#ifdef USING_SINGLE_CRITICAL_SECTION_THREAD_BARRIER_IMPL
+#ifndef USING_INTERLOCKED_INCRE
+		(void) InitializeCriticalSectionAndSpinCount(&m_criticalSection, 0x80000400);
+#endif
+		m_threadCount = threadCount;
+#endif
+
+	};
+
+	inline ~ThreadBarrier()
+	{
+#ifdef USING_SINGLE_CRITICAL_SECTION_THREAD_BARRIER_IMPL
+#ifndef USING_INTERLOCKED_INCRE
+		DeleteCriticalSection(&m_criticalSection);
+#endif
+#endif
 	};
 
 public:
@@ -42,77 +87,90 @@ public:
 			&m_barrier1,
 			SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY);
 		DeleteSynchronizationBarrier(&m_barrier1);
-
-		/*EnterSynchronizationBarrier(
-			&m_barrier2,
-			SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY);
-		DeleteSynchronizationBarrier(&m_barrier2);*/
 	};
 
 
-	inline void Synch(void (*func)(void*), void* args)
+	inline void FastSynch()
+	{
+#ifdef USING_STL_THREAD_BARRIER_IMPL
+
+		bool wait = false;
+
+		m_mutex.lock();
+
+		m_currentThreadCount = (m_currentThreadCount + 1) % m_threadCount;
+
+		wait = (m_currentThreadCount != 0);
+
+		m_mutex.unlock();
+
+		if (wait)
+		{
+			std::unique_lock<std::mutex> lk(m_mutex);
+			m_cv.wait(lk);
+		}
+		else
+		{
+			m_cv.notify_all();
+		}
+#endif // USING_STL_THREAD_BARRIER_IMPL
+
+#ifdef USING_OS_THREAD_BARRIER_IMPL
+		EnterSynchronizationBarrier(
+			&m_barrier,
+			SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY);
+#endif // USING_STL_THREAD_BARRIER_IMPL
+
+
+
+#ifdef USING_SINGLE_CRITICAL_SECTION_THREAD_BARRIER_IMPL
+
+		bool wait = false;
+
+#ifndef USING_INTERLOCKED_INCRE
+		EnterCriticalSection(&m_criticalSection);
+
+		m_incomingThreadCount = (m_incomingThreadCount + 1) % m_threadCount;
+
+		wait = (m_incomingThreadCount != 0);
+
+		LeaveCriticalSection(&m_criticalSection);
+#else
+		auto count = InterlockedIncrement(reinterpret_cast<uint32_t*>(& m_incomingThreadCount));
+		wait = (count != m_threadCount);
+#endif
+
+		if (wait)
+		{
+			while (m_incomingThreadCount != 0) { /*std::this_thread::yield();*/ };
+
+#ifndef USING_INTERLOCKED_INCRE
+			EnterCriticalSection(&m_criticalSection);	
+			m_outcomingThreadCount++;
+			LeaveCriticalSection(&m_criticalSection);
+#else
+			InterlockedIncrement(reinterpret_cast<uint32_t*>(&m_outcomingThreadCount));
+#endif
+		}
+		else
+		{
+#ifdef USING_INTERLOCKED_INCRE
+			m_incomingThreadCount = 0;
+#endif
+			while (m_outcomingThreadCount != m_threadCount - 1) { };
+			m_outcomingThreadCount = 0;
+		}
+
+#endif
+
+	};
+
+	inline void SlowSynch()
 	{
 		EnterSynchronizationBarrier(
 			&m_barrier1,
 			SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY);
-
-		////int threadPos = 0;
-		//m_mutex.lock();
-		////threadPos = m_currentThreadCount;
-		//m_currentThreadCount++;
-		//m_mutex.unlock();
-
-		InterlockedIncrement((uint32_t*)&m_currentThreadCount);
-
-		if (func)
-		{
-			while (m_currentThreadCount != m_threadCount) {}
-
-			func(args);
-			//std::cout << m_currentThreadCount << ", " << m_threadCount << "\n";
-			//m_mutex.lock();
-			m_currentThreadCount = 0;
-			//m_mutex.unlock();
-		}
-		else
-		{
-			//Sleep(1);
-			while (m_currentThreadCount != 0) { }
-		}
-
-		/*EnterSynchronizationBarrier(
-			&m_barrier1,
-			SYNCHRONIZATION_BARRIER_FLAGS_SPIN_ONLY);*/
 	};
-
-	inline void Synch(void (*func)(void*), void* args, void (*lastlyCall)(void*), void* args1)
-	{
-		if (EnterSynchronizationBarrier(
-			&m_barrier1,
-			SYNCHRONIZATION_BARRIER_FLAGS_BLOCK_ONLY))
-		{
-			if (lastlyCall) lastlyCall(args1);
-		}
-
-		InterlockedIncrement((uint32_t*)&m_currentThreadCount);
-
-		if (func)
-		{
-			while (m_currentThreadCount != m_threadCount) {}
-			func(args);
-
-			//std::cout << m_currentThreadCount << ", " << m_threadCount << "\n";
-
-			m_currentThreadCount = 0;
-			
-		}
-		else
-		{
-			while (m_currentThreadCount != 0) { Sleep(4); }
-		}
-
-	};
-
 
 };
 

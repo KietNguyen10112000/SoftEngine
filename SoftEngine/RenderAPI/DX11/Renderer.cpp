@@ -46,7 +46,14 @@ DX11Renderer::~DX11Renderer()
 
     m_rasterizerState->Release();
     m_dsv->Release();
+
+    m_screenRtv->Release();
     m_mainRtv->Release();
+
+    if (m_mainBuffer) m_mainBuffer->Release();
+    if (m_screenBuffer) m_screenBuffer->Release();
+
+
     m_blendState->Release();
     m_samplerState->Release();
     m_d3dDeviceContext->Release();
@@ -82,9 +89,9 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     //    m_pd3dDevice->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_debug);
     //#endif
 
-    m_d3dDevice->QueryInterface(__uuidof(IDXGIDevice), (void**)&m_dxgiDevice);
-    m_dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&m_dxgiAdapter);
-    m_dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&m_dxgiFactory);
+    m_d3dDevice->QueryInterface(__uuidof(IDXGIDevice1), (void**)&m_dxgiDevice);
+    m_dxgiDevice->GetParent(__uuidof(IDXGIAdapter1), (void**)&m_dxgiAdapter);
+    m_dxgiAdapter->GetParent(__uuidof(IDXGIFactory1), (void**)&m_dxgiFactory);
 
     UINT MSAACount = 1;
     UINT MSAAQuality = 0;
@@ -97,30 +104,49 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
 
     ThrowIfFailed(hr, L"CheckMultisampleQualityLevels() failed. Prefer setting down MSAA level.");
 
-    DXGI_SWAP_CHAIN_DESC desc;
-    ZeroMemory(&desc, sizeof(DXGI_SWAP_CHAIN_DESC));
 
+    //IDXGIFactory2* dxgiFactory2 = nullptr;
+    //hr = m_dxgiFactory->QueryInterface(__uuidof(IDXGIFactory2), reinterpret_cast<void**>(&dxgiFactory2));
+    //m_d3dDevice->QueryInterface(__uuidof(ID3D11Device1), reinterpret_cast<void**>(&m_d3dDevice1));
+    //m_d3dDeviceContext->QueryInterface(__uuidof(ID3D11DeviceContext1), reinterpret_cast<void**>(&m_d3dDeviceContext1));
+
+    DXGI_SWAP_CHAIN_DESC1 desc = {};
     desc.BufferCount = numBuffer;
-    desc.BufferDesc.Width = width;
-    desc.BufferDesc.Height = height;
-    desc.BufferDesc.Format = format; //hdr will be DXGI_FORMAT_R10G10B10A2_UNORM and depth wiil be DXGI_FORMAT_D32_FLOAT
-    desc.BufferDesc.RefreshRate.Numerator = 60;
-    desc.BufferDesc.RefreshRate.Denominator = 1;
+    desc.Width = width;
+    desc.Height = height;
+    desc.Format = format;    //desc.BufferDesc.Width = width;
+    //desc.BufferDesc.Height = height;
+    //desc.BufferDesc.Format = format; //hdr will be DXGI_FORMAT_R10G10B10A2_UNORM and depth wiil be DXGI_FORMAT_D32_FLOAT
+    //desc.BufferDesc.RefreshRate.Numerator = 120;
+    //desc.BufferDesc.RefreshRate.Denominator = 1;
     desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    desc.OutputWindow = (HWND)args[0];
+    //desc.OutputWindow = (HWND)args[0];
     desc.SampleDesc.Count = MSAACount;
     desc.SampleDesc.Quality = MSAAQuality - 1;
-    desc.Windowed = TRUE;
-    desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+    desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    //desc.Windowed = TRUE;
+    //desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
-    if(MSAACount != 1)
-        desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; 
-    else
-        desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    //if(MSAACount != 1)
+        //desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD; 
+    //else
+        //desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
-    hr = m_dxgiFactory->CreateSwapChain(m_d3dDevice, &desc, &m_dxgiSwapChain);
+    //DXGI_SWAP_CHAIN_FULLSCREEN_DESC fsSwapChainDesc = {};
+    //fsSwapChainDesc.Windowed = FALSE;
+    //fsSwapChainDesc.RefreshRate.Numerator = 120;
+    //fsSwapChainDesc.RefreshRate.Denominator = 1;
+
+    hr = m_dxgiFactory->CreateSwapChainForHwnd(
+        m_d3dDevice, (HWND)args[0], &desc, 0, 0, &m_dxgiSwapChain
+    );
 
     ThrowIfFailed(hr, L"CreateSwapChain() failed.");
+
+    //m_dxgiSwapChain1->QueryInterface(__uuidof(IDXGISwapChain), reinterpret_cast<void**>(&m_dxgiSwapChain));
+    //dxgiFactory2->Release();
+
 
     ID3D11Texture2D* buffer = NULL;
 
@@ -132,7 +158,40 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     renderDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
     renderDesc.Texture2D.MipSlice = 0;
 
-    hr = m_d3dDevice->CreateRenderTargetView(buffer, &renderDesc, &m_mainRtv);
+    //hr = m_d3dDevice->CreateRenderTargetView(buffer, &renderDesc, &m_mainRtv);
+
+    hr = m_d3dDevice->CreateRenderTargetView(buffer, &renderDesc, &m_screenRtv);
+
+
+    //====================create main rtv===========================================
+    ID3D11Texture2D* mainbuffer = NULL;
+    D3D11_TEXTURE2D_DESC mainbufferDesc = {};
+
+    mainbufferDesc.Width = m_bbDesc.Width;
+    mainbufferDesc.Height = m_bbDesc.Height;
+    mainbufferDesc.MipLevels = 1;
+    mainbufferDesc.ArraySize = 1;
+    mainbufferDesc.Format = m_bbDesc.Format;
+    mainbufferDesc.SampleDesc.Count = MSAACount;
+    mainbufferDesc.SampleDesc.Quality = MSAAQuality - 1;
+    mainbufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    mainbufferDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    mainbufferDesc.CPUAccessFlags = 0;
+    mainbufferDesc.MiscFlags = 0;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC mainsrvDesc = {};
+    mainsrvDesc.Format = format;
+    mainsrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    mainsrvDesc.Texture2D.MostDetailedMip = 0;
+    mainsrvDesc.Texture2D.MipLevels = 1;
+
+    m_d3dDevice->CreateTexture2D(&mainbufferDesc, 0, &mainbuffer);
+    m_d3dDevice->CreateRenderTargetView(mainbuffer, &renderDesc, &m_mainRtv);
+    m_d3dDevice->CreateShaderResourceView(mainbuffer, &mainsrvDesc, &m_mainRtvShader);
+
+    m_mainBuffer = mainbuffer;
+    //mainbuffer->Release();
+    //====================create main rtv===========================================
 
 
     /*D3D11_SHADER_RESOURCE_VIEW_DESC rtvsrvDesc = {};
@@ -142,8 +201,8 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     rtvsrvDesc.Texture2D.MipLevels = 1;
     hr = m_d3dDevice->CreateShaderResourceView(buffer, &rtvsrvDesc, &m_mainRtvShader);*/
 
-
-    buffer->Release();
+    m_screenBuffer = buffer;
+    //buffer->Release();
 
     ThrowIfFailed(hr, L"CreateRenderTargetView() failed.");
 
@@ -155,7 +214,7 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
     depthStencilDesc.Height = m_bbDesc.Height;
     depthStencilDesc.MipLevels = 1;
     depthStencilDesc.ArraySize = 1;
-    depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+    depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
     depthStencilDesc.SampleDesc.Count = MSAACount;
     depthStencilDesc.SampleDesc.Quality = MSAAQuality - 1;
     depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -169,7 +228,7 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
 
     D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
     ZeroMemory(&descDSV, sizeof(D3D11_DEPTH_STENCIL_VIEW_DESC));
-    descDSV.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    descDSV.Format = DXGI_FORMAT_D32_FLOAT;
     descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
     descDSV.Texture2D.MipSlice = 0;
     descDSV.Flags = 0;
@@ -180,7 +239,7 @@ DeferredRenderer::DeferredRenderer(int numBuffer, int width, int height, int num
         &m_dsv);
 
     D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
     srvDesc.ViewDimension = MSAACount == 1 ? D3D11_SRV_DIMENSION_TEXTURE2D : D3D11_SRV_DIMENSION_TEXTURE2DMS;
     srvDesc.Texture2D.MostDetailedMip = 0;
     srvDesc.Texture2D.MipLevels = 1;
@@ -619,12 +678,25 @@ void DeferredRenderer::Present()
 {
     //m_d3dDeviceContext->OMSetRenderTargets(8, &m_rtv[RTV_INDEX::COUNT], nullptr);
     if (!m_doneLighting) DoLighting();
+
+    if (m_currentRpl)
+    {
+        m_lastPresentRpl->Use();
+        m_currentRpl = 0;
+    }
     
-    if (!m_postProcessor || !m_postProcessor->Run())
+    if (m_postProcessor && m_postProcessor->Run())
+    {
+        m_d3dDeviceContext->OMSetRenderTargets(1, &m_screenRtv, 0);
+        m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_mainRtvShader);
+        Render(m_lastPresentRpl, m_screenQuad);
+    }
+    else
     {
         m_d3dDeviceContext->OMSetRenderTargets(1, &m_mainRtv, 0);
         m_d3dDeviceContext->PSSetShaderResources(4, 1, &m_lastSceneSrv);
         Render(m_lastPresentRpl, m_screenQuad);
+        PresentLastFrame();
     }
 
     //m_dxgiSwapChain->Present(1, 0);
@@ -842,6 +914,21 @@ void DeferredRenderer::EndTransparency()
 {
     m_d3dDeviceContext->PSSetShaderResources(0, RTV_INDEX::COUNT + 4, &m_rtvShader[RTV_INDEX::COUNT]);
     m_d3dDeviceContext->OMSetRenderTargets(RTV_INDEX::LIGHTED_SCENE_WITHOUT_SHADOW, &m_rtv[RTV_INDEX::COUNT], nullptr);
+}
+
+
+void DeferredRenderer::BeginUI(int arg)
+{
+    m_d3dDeviceContext->OMSetRenderTargets(1, arg > 1 ? &m_screenRtv : &m_mainRtv, arg > 0 ? m_dsv : 0);
+}
+
+void DeferredRenderer::EndUI()
+{
+}
+
+void DeferredRenderer::PresentLastFrame()
+{
+    m_d3dDeviceContext->CopyResource(m_screenBuffer, m_mainBuffer);
 }
 
 void DeferredRenderer::VisualizePositionNormalDiffuseSpecular()

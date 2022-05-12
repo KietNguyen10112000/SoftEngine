@@ -104,9 +104,18 @@ float3 ComputeSkyColor(Light light, float3 position)
 	//	return 0.5f.xxx;
 	//}
 
+	float falloff = 0.5f * (1 - V.y) * (1 - V.y);
+	//const float falloff2 = 0.5f / falloff
+
+	//const float o = 0.01f;
+	//const float invSqrt2ofPI = 0.3989422804f;
+	////normal distribution
+	//float falloff2 = (1 / (o * invSqrt2ofPI)) * exp(-(V.y * V.y) / (2 * o * o));
+
 	if (RaySphereIntersect(float3(0, 0, 0), EarthR * EarthR, rayOriEarthPos, V, t))
 	{
-		return 0.0f.xxx;
+		return 0.0f.xxx + 0.5f * (1 + V.y) * (1 + V.y);
+		//falloff = 0.5f * (1 + V.y) * (1 + V.y);
 	}
 
 	//if (position.y < 0) return 0.0f.xxx;
@@ -123,7 +132,7 @@ float3 ComputeSkyColor(Light light, float3 position)
 	const float3 betaR = { 0.038, 0.135, 0.331 };
 	const float betaM = 0.021;
 
-	float3 skyColor = saturate(((mie - 1.5f) * betaM * 5 + rayleigh * betaR * 23) * light.color * light.power);
+	float3 skyColor = saturate(((mie - 1.5f) * betaM * 5 + rayleigh * betaR * 23 + falloff.xxx) * light.color * light.power);
 
 	return skyColor;
 }

@@ -1937,6 +1937,9 @@ v8wrapper::g_cppToJsTypeCache.insert(&_templObj); output = _templObj;}
 #define V8_LIB_DIR ""
 #endif 
 
+
+#ifdef _WIN32
+
 #ifdef V8_DLL
 #pragma comment(lib, V8_LIB_DIR "v8.dll.lib")
 #pragma comment(lib, V8_LIB_DIR "v8_libbase.dll.lib")
@@ -1975,3 +1978,5 @@ v8wrapper::g_cppToJsTypeCache.insert(&_templObj); output = _templObj;}
 #ifdef V8_MONOLITH_DLL
 #pragma comment(lib, "v8_monolith.lib")
 #endif
+
+#endif // _WIN32

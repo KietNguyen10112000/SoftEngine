@@ -68,6 +68,12 @@ Matrix4.prototype.ToArray = function () {
 	return [...this.elements]
 }
 
+Matrix4.prototype.Mul = function (m) {
+	return this.multiplyMatrices(m, this);
+}
+
+Matrix4.prototype.Multiply = Matrix4.prototype.Mul
+
 Quaternion.prototype.toString = function () {
 	return `Vector4(${this._x}, ${this._y}, ${this._z}, ${this._w})`
 }
