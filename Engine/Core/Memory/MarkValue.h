@@ -1,0 +1,13 @@
+#pragma once
+
+#include "TypeDef.h"
+
+NAMESPACE_MEMORY_BEGIN
+
+enum MARK_VALUE
+{
+	HANDLE_TO_LOCAL = 1,
+
+};
+
+NAMESPACE_MEMORY_END

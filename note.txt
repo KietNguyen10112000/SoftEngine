@@ -1,0 +1,9 @@
+Quản lý light
++ Chỉ 3 loại
+
+Quản lý shadow
++ Dùng mega texture
++ Area quadtree
+
+Bugs virtual stack
++ Xung đột tại top stack khi thực hiện Mark phase (xung đột giữa luồng sử dụng stack - luồng 1 và luồng thực hiện mark - luồng 2), khi luồng 1 pop 1 object ra khỏi stack và dùng phân vùng bộ nhớ trên stack thật để lưu các tính toán khác thì luồng 2 có thể đọc được các thông tin không phải 1 ref đến 1 object trên heap
