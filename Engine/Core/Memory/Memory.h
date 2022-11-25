@@ -164,7 +164,10 @@ namespace rheap
 	template <typename T>
 	void Delete(T* p)
 	{
-		assert(dynamic_cast<void*>(p) == (void*)p);
+		if constexpr (std::is_polymorphic<T>::value)
+		{
+			assert(dynamic_cast<void*>(p) == (void*)p);
+		}
 
 		ManagedHandle* handle = (ManagedHandle*)p - 1;
 

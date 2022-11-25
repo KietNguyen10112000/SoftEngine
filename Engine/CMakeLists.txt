@@ -3,7 +3,10 @@ cmake_minimum_required (VERSION 3.8)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
-add_compile_definitions(EXPORTS)
+add_compile_definitions(EXPORTS UNICODE)
+
+set(BINARY Engine)
+set(LIB_ENGINE LibEngine)
 
 file(
     GLOB
@@ -31,13 +34,30 @@ file(
 )
 
 add_executable (
-    Engine 
+    ${BINARY} 
     "main.cpp"
     ${SRC}
 )
 
-target_include_directories(
-     Engine PUBLIC
+add_library (
+    ${LIB_ENGINE} SHARED 
+    "main.cpp"
+    ${SRC}
+)
+
+include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}"
      "${CMAKE_SOURCE_DIR}"
 )
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(GT "")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(GT "")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    set(GT "")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    set(GT "/GT")
+endif()
+
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GT}")

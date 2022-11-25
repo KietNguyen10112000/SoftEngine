@@ -16,6 +16,8 @@ struct TaskWaitingHandle
 {
 	std::atomic<size_t> counter = { 0 };
 	Fiber* waitingFiber = 0;
+
+	TaskWaitingHandle(size_t v, Fiber* f) : counter(v), waitingFiber(f) {}
 };
 
 class Task

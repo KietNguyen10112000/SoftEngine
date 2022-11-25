@@ -8,7 +8,7 @@
 
 NAMESPACE_BEGIN
 
-class FiberPool
+class API FiberPool
 {
 protected:
 	using Pool = ConcurrentBag<Fiber*, FiberInfo::FIBERS_COUNT>;

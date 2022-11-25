@@ -17,6 +17,9 @@ protected:
 	Spinlock m_lock;
 	FiberNativeHandle* m_nativeHandle = 0;
 
+	// which fiber called to switch to me
+	Fiber* m_nativeHandleFrom = 0;
+
 public:
 	inline bool IsPrimary() const
 	{

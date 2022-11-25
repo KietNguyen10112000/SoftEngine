@@ -12,6 +12,12 @@
 #    define API __declspec(dllimport)
 #endif
 
+#ifdef EXPORTS
+#    define API_VAR __declspec(dllexport)
+#else
+#    define API_VAR extern __declspec(dllimport)
+#endif
+
 #ifdef STATIC_BUILD
 #ifdef API
 #undef API

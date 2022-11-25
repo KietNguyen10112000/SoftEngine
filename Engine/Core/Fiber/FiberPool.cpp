@@ -1,5 +1,8 @@
 #include "FiberPool.h"
 
+#include <iostream>
+
+#include "Core/Thread/Thread.h"
 #include "Platform/Platform.h"
 
 NAMESPACE_BEGIN
@@ -27,9 +30,13 @@ void FiberPool::Finalize()
 {
 	for (size_t i = ThreadLimit::MAX_THREADS; i < ThreadLimit::MAX_THREADS + FiberInfo::FIBERS_COUNT; i++)
 	{
-		if (s_fibers[i].m_lock.try_lock() == false)
-		{
-			Throw("Fiber pool finalize error");
+		//std::cout << "========================== FiberPool::Finalize --- " << i << "====================\n";
+
+		if (Thread::GetCurrentFiberID() != i) {
+			if (s_fibers[i].m_lock.try_lock() == false)
+			{
+				Throw("Fiber pool finalize error");
+			}
 		}
 
 		platform::DeleteFiber(s_fibers[i].m_nativeHandle);

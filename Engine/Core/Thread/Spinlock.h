@@ -74,6 +74,13 @@ public:
         );
         lock_.store(false, std::memory_order_release);
     }
+
+    inline void unlock_no_check_own_thread() noexcept {
+        DEBUG_CODE(
+            threadId = -1;
+        );
+        lock_.store(false, std::memory_order_release);
+    }
 };
 
 using Spinlock = spinlock;

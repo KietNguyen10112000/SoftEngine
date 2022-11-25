@@ -4,6 +4,7 @@
 #include "Core/Structures/Concurrent/ConcurrentQueue.h"
 #include "Core/Thread/Spinlock.h"
 #include "Core/Thread/ThreadLimit.h"
+#include "Core/Memory/Memory.h"
 
 #include "Task.h"
 
@@ -13,7 +14,7 @@ NAMESPACE_BEGIN
 
 class Fiber;
 
-class TaskSystem
+class API TaskSystem
 {
 protected:
 	friend class Task;
@@ -31,19 +32,19 @@ protected:
 		~SynchContext();
 	};
 
-	API static std::condition_variable s_cv;
-	API static std::mutex s_mutex;
-	API static std::atomic<size_t> s_workingWorkersCount;
-	API static size_t s_workersCount;
-	API static SynchContext s_sychCtxs[SubSystemInfo::SUBSYSTEMS_COUNT];
-	API static ConcurrentQueue<Fiber*> s_resumeFibers;
-	API static ConcurrentQueue<Task> s_queues[Task::PRIORITY::COUNT];
+	static std::condition_variable s_cv;
+	static std::mutex s_mutex;
+	static std::atomic<size_t> s_workingWorkersCount;
+	static size_t s_workersCount;
+	static SynchContext s_sychCtxs[SubSystemInfo::SUBSYSTEMS_COUNT];
+	static ConcurrentQueue<Fiber*> s_resumeFibers;
+	static ConcurrentQueue<Task> s_queues[Task::PRIORITY::COUNT];
 
 	// task that must run in specified thread
-	API static ConcurrentQueue<Task> s_threadQueues[ThreadLimit::MAX_THREADS];
+	static ConcurrentQueue<Task> s_threadQueues[ThreadLimit::MAX_THREADS];
 
 public:
-	API static void Initialize();
+	static void Initialize();
 
 protected:
 	inline static void WorkerWait()
@@ -122,7 +123,10 @@ protected:
 		if constexpr (WAIT)
 		{
 			TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			task.m_handle = &handle;
+			task.m_handle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
+
+			//TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
+			//task.m_handle = &handle;
 		}
 
 		s_queues[priority].enqueue(task);
@@ -142,7 +146,10 @@ protected:
 		if constexpr (WAIT)
 		{
 			TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			pHandle = &handle;
+			pHandle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
+
+			//TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
+			//pHandle = &handle;
 		}
 
 		auto& queue = s_queues[priority];
@@ -181,7 +188,10 @@ protected:
 		if constexpr (WAIT)
 		{
 			TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			task.m_handle = &handle;
+			task.m_handle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
+
+			//TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
+			//task.m_handle = &handle;
 		}
 
 		s_sychCtxs[sychContextId].tasks.enqueue(task);
@@ -203,7 +213,10 @@ protected:
 		if constexpr (WAIT)
 		{
 			TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			pHandle = &handle;
+			pHandle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
+
+			//TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
+			//pHandle = &handle;
 		}
 
 		auto& queue = s_sychCtxs[sychContextId].tasks;
@@ -239,7 +252,10 @@ protected:
 		if constexpr (WAIT)
 		{
 			TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			task.m_handle = &handle;
+			task.m_handle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
+
+			//TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
+			//task.m_handle = &handle;
 		}
 
 		s_threadQueues[threadID].enqueue(task);
@@ -258,6 +274,9 @@ protected:
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)
 		{
+			//TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
+			//pHandle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
+
 			TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
 			pHandle = &handle;
 		}

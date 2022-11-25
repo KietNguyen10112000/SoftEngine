@@ -33,12 +33,39 @@ void Thread::FinalizeForThisThread()
 		// at the end of thread, fiber id must equal thread id
 		Throw("Finalize error");
 	}
-	GetCurrentFiber()->m_lock.unlock();
+
+	/*if (currentFiber->m_id != 0)
+	{
+		// never delete starting thread's fiber
+		platform::DeleteFiber(currentFiber->m_nativeHandle);
+	}*/
+
+	GetCurrentFiber()->m_lock.unlock_no_check_own_thread();
+
+	ThreadID::FinalizeForThisThread();
 }
 
 void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
 {
 	if (Thread::GetCurrentFiber() == fiber) return;
+
+	auto fiberId = fiber->m_id;
+
+	auto currentFiber = FiberPool::Get(s_threadLocalStorage[ThreadID::Get()].currentFiberID);
+	s_threadLocalStorage[ThreadID::Get()].currentFiberID = fiberId;
+	ManagedLocalScope::s_managedLocalScopeThreads[ThreadID::Get()] = &ManagedLocalScope::s_managedLocalScopeFibers[fiberId];
+
+	if (returnCurrentFiberToFiberPool && !currentFiber->IsPrimary())
+	{
+		//FiberPool::Return(currentFiber);
+		fiber->m_nativeHandleFrom = currentFiber;
+	}
+	else 
+	{
+		fiber->m_nativeHandleFrom = 0;
+	}
+
+	currentFiber->m_lock.unlock();
 
 #ifdef _DEBUG
 	if (fiber->m_lock.try_lock() == false)
@@ -50,16 +77,19 @@ void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
 	fiber->m_lock.lock();
 #endif // _DEBUG
 
-	auto fiberId = fiber->m_id;
-
-	auto currentFiber = FiberPool::Get(s_threadLocalStorage[ThreadID::Get()].currentFiberID);
-	s_threadLocalStorage[ThreadID::Get()].currentFiberID = fiberId;
-	ManagedLocalScope::s_managedLocalScopeThreads[ThreadID::Get()] = &ManagedLocalScope::s_managedLocalScopeFibers[fiberId];
-
-	if (returnCurrentFiberToFiberPool) FiberPool::Return(currentFiber);
-	currentFiber->m_lock.unlock();
+	std::cout << "Switch from " << currentFiber->m_id << " to " << fiber->m_id << "\n";
 
 	platform::SwitchToFiber(fiber->m_nativeHandle);
+
+	// starting of fiber
+	fiber = Thread::GetCurrentFiber();
+
+	if (fiber->m_nativeHandleFrom != 0)
+	{
+		fiber->m_nativeHandleFrom->m_nativeHandleFrom = 0;
+		FiberPool::Return(fiber->m_nativeHandleFrom);
+		fiber->m_nativeHandleFrom = 0;
+	}
 }
 
 void Thread::SwitchToPrimaryFiberOfThisThread()
@@ -69,14 +99,14 @@ void Thread::SwitchToPrimaryFiberOfThisThread()
 
 	if (currentFiber == thisThreadPrimaryFiber) return;
 
-	thisThreadPrimaryFiber->m_lock.lock();
+	//thisThreadPrimaryFiber->m_lock.lock();
 
 	auto fiberId = thisThreadPrimaryFiber->m_id;
 	s_threadLocalStorage[ThreadID::Get()].currentFiberID = fiberId;
 	ManagedLocalScope::s_managedLocalScopeThreads[ThreadID::Get()] = &ManagedLocalScope::s_managedLocalScopeFibers[fiberId];
 
 	if (currentFiber->IsPrimary() == false) FiberPool::Return(currentFiber);
-	currentFiber->m_lock.unlock();
+	//currentFiber->m_lock.unlock();
 
 	platform::SwitchToFiber(thisThreadPrimaryFiber->m_nativeHandle);
 }

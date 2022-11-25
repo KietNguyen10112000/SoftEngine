@@ -2,6 +2,7 @@
 
 #include "Core/TypeDef.h"
 #include "Core/Fiber/FiberInfo.h"
+#include "Core/Memory/Memory.h"
 
 #include <condition_variable>
 
@@ -9,10 +10,10 @@
 
 NAMESPACE_BEGIN
 
-class TaskWorker
+class API TaskWorker
 {
 protected:
-	API static TaskWorker s_workers[FiberInfo::TOTAL_FIBERS];
+	static TaskWorker s_workers[FiberInfo::TOTAL_FIBERS];
 
 protected:
 	bool m_isRunning = true;
@@ -26,6 +27,8 @@ protected:
 
 		if (m_currentTask.m_handle && m_currentTask.m_handle->waitingFiber && (--(m_currentTask.m_handle->counter)) == 0)
 		{
+			rheap::Delete(m_currentTask.m_handle);
+
 			if (m_currentSynchCtx)
 			{
 				TaskSystem::Resume(m_currentTask.m_handle->waitingFiber);
@@ -71,8 +74,8 @@ public:
 	}
 
 public:
-	API static void Initalize();
-	API static void Finalize();
+	static void Initalize();
+	static void Finalize();
 
 	// get the current task worker of current fiber
 	inline static TaskWorker* Get()

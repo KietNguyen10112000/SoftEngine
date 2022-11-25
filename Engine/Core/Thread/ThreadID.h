@@ -1,8 +1,10 @@
 #pragma once
 
 #include <atomic>
+//#include <unordered_map>
 
 #include "Core/TypeDef.h"
+
 
 NAMESPACE_BEGIN
 
@@ -12,21 +14,19 @@ private:
 	API static size_t _Get();
 	API static void Finalize();
 
-	struct Finalizer
-	{
-		inline ~Finalizer()
-		{
-			Finalize();
-		}
-	};
-
 	inline static thread_local size_t s_id = -1;// _Get();
-	inline static thread_local Finalizer s_finalizer;
+
+	//API static std::unordered_map<size_t, size_t> s_idMap;
 
 public:
 	inline static void InitializeForThisThread()
 	{
 		if (s_id == -1) s_id = _Get();
+	}
+
+	inline static void FinalizeForThisThread()
+	{
+		Finalize();
 	}
 
 public:
