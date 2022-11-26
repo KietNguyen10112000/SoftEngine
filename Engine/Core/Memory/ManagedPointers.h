@@ -107,6 +107,7 @@ protected:
 	{
 		//Transaction(&m_block);
 		ManagedLocalScope::Pop(&m_block);
+		Reset();
 	}
 
 public:

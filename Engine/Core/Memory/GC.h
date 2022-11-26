@@ -11,17 +11,17 @@ namespace gc
 {
 namespace internal
 {
-void InitializeNewSweepCycle();
-void RegisterLocalScope(void* local);
-void UnregisterLocalScope(void* local);
-void DeferFree(void* p);
+API void InitializeNewSweepCycle();
+API void RegisterLocalScope(void* local);
+API void UnregisterLocalScope(void* local);
+API void DeferFree(void* p);
 }
 
-void Initialize();
-void RegisterPages(ManagedPage** pages, size_t count);
-void RegisterPools(ManagedPool** pools, size_t count);
-void RegisterRoots(byte*** begin, size_t count);
-void Finalize();
+API void Initialize();
+API void RegisterPages(ManagedPage** pages, size_t count);
+API void RegisterPools(ManagedPool** pools, size_t count);
+API void RegisterRoots(byte*** begin, size_t count);
+API void Finalize();
 
 class GC_RESUME_FLAG
 {
@@ -55,7 +55,7 @@ public:
 	};
 };
 
-GC_RETURN Resume(size_t timeLimit, size_t flag);
+API GC_RETURN Resume(size_t timeLimit, size_t flag);
 
 inline GC_RETURN Run(size_t timeLimit, size_t flag = GC_RESUME_FLAG::RETURN_ON_EMPTY_TASK | GC_RESUME_FLAG::ALLOW_START_NEW_GC)
 {

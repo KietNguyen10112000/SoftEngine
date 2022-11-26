@@ -3,6 +3,7 @@
 #include "Core/TypeDef.h"
 
 #include "Core/Fiber/FiberPool.h"
+#include "Core/Memory/ManagedLocalScope.h"
 
 #include "ThreadLimit.h"
 #include "ThreadID.h"
@@ -18,21 +19,41 @@ struct ThreadLocalStorage
 	size_t currentFiberID = - 1;
 };
 
-class Thread
+class API Thread
 {
 public:
-	API static ThreadLocalStorage s_threadLocalStorage[ThreadLimit::MAX_THREADS];
+	static ThreadLocalStorage s_threadLocalStorage[ThreadLimit::MAX_THREADS];
 
-public:
+private:
 	// must call at the beginning of thread entry point func
-	API static void InitializeForThisThread();
+	static void InitializeForThisThread();
 
 	// must call at the end of thread entry point func
-	API static void FinalizeForThisThread();
+	static void FinalizeForThisThread();
 
-	API static void SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool);
+public:
+	static void SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool);
 
-	API static void SwitchToPrimaryFiberOfThisThread();
+	static void SwitchToPrimaryFiberOfThisThread();
+
+	static void Sleep(size_t ms);
+
+	// call from PE module
+	template <typename T = void>
+	inline static void InitializeForThisThreadInThisModule()
+	{
+		ThreadID::InitializeForThisThreadInThisModule();
+		InitializeForThisThread();
+		ManagedLocalScope::InitializeForThisThread();
+	}
+
+	// call from PE module
+	template <typename T = void>
+	inline static void FinalizeForThisThreadInThisModule()
+	{
+		ThreadID::FinalizeForThisThreadInThisModule();
+		FinalizeForThisThread();
+	}
 
 public:
 	inline static size_t GetCurrentFiberID()

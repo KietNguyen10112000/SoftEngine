@@ -78,6 +78,16 @@ void mheap::internal::FreeStableObjects(byte stableValue, void* userPtr, void(*c
     g_stableHeap->FreeStableObjects(stableValue, userPtr, callback);
 }
 
+void mheap::internal::Reset()
+{
+    g_gcHeap->~ManagedHeap();
+    new (g_gcHeap) ManagedHeap();
+
+    g_stableHeap->~ManagedHeap();
+    new (g_stableHeap) ManagedHeap(false);
+}
+
+
 //=========================================================================================
 ManagedHandle* rheap::internal::Allocate(size_t nBytes)
 {
@@ -96,6 +106,12 @@ void rheap::internal::Deallocate(ManagedHandle* handle)
 ManagedHeap* rheap::internal::Get()
 {
     return g_rawHeap;
+}
+
+void rheap::internal::Reset()
+{
+    g_rawHeap->~ManagedHeap();
+    new (g_rawHeap) ManagedHeap(false);
 }
 
 NAMESPACE_MEMORY_END

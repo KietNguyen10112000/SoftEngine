@@ -12,6 +12,12 @@ public:
 		{
 			return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 		}
+
+		// return nanoseconds since epoch
+		inline static size_t Now()
+		{
+			return now();
+		}
 	};
 	
 };

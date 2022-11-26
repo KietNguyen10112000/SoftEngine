@@ -102,7 +102,7 @@ int main()
 	soft::MemoryInitialize();
 	soft::FiberPool::Initialize();
 	soft::TaskWorker::Initalize();
-	soft::Thread::InitializeForThisThread();
+	soft::Thread::InitializeForThisThreadInThisModule();
 
 	std::cout << String::Format("InitializeForThisThread => Thread::GetID() = {} --- NativeThreadHandle = {}\n", Thread::GetID(), std::this_thread::get_id());
 
@@ -113,7 +113,7 @@ int main()
 		std::thread thread2 = std::thread([]()
 			{
 				// context of thread 2
-				soft::Thread::InitializeForThisThread();
+				soft::Thread::InitializeForThisThreadInThisModule();
 
 				std::cout << String::Format("InitializeForThisThread => Thread::GetID() = {} --- NativeThreadHandle = {}\n", Thread::GetID(), std::this_thread::get_id());
 
@@ -195,7 +195,7 @@ int main()
 
 				std::cout << String::Format("End Thread[{}] --- Fiber[{}]\n", Thread::GetID(), Thread::GetCurrentFiberID());
 
-				soft::Thread::FinalizeForThisThread();
+				soft::Thread::FinalizeForThisThreadInThisModule();
 			}
 		);
 
@@ -212,7 +212,7 @@ int main()
 		//_sleep(10000);
 	}
 	
-	soft::Thread::FinalizeForThisThread();
+	soft::Thread::FinalizeForThisThreadInThisModule();
 	soft::TaskWorker::Finalize();
 	soft::FiberPool::Finalize();
 	soft::MemoryFinalize();

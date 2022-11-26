@@ -27,6 +27,8 @@ namespace mheap
 		API void SetStableValue(byte value);
 
 		API void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
+
+		API void Reset();
 	}
 
 	// without calling ctor
@@ -76,6 +78,8 @@ namespace rheap
 		API ManagedHandle* Allocate(size_t nBytes);
 		API void Deallocate(ManagedHandle* handle);
 		API ManagedHeap* Get();
+
+		API void Reset();
 	}
 
 	inline void* malloc(size_t nBytes)

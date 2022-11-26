@@ -44,3 +44,16 @@ target_link_libraries(
 )
 
 add_dependencies(${BINARY} Engine)
+
+
+if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+    set(GT "")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    set(GT "")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    set(GT "")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    set(GT "/GT")
+endif()
+
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GT}")

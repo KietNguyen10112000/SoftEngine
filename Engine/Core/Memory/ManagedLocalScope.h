@@ -86,6 +86,7 @@ public:
 		Stack stack;
 		CheckPointStack checkpoints;
 
+		bool isRegistered = false;
 		bool isRecordingTransactions = false;
 
 		// lock guard for stack pop operator
@@ -185,6 +186,8 @@ public:
 
 	inline static void Pop(byte** p)
 	{
+		if ((*s)->stack.size() == 0) return;
+
 		(*s)->popLock.lock();
 		if ((*s)->stack.back() == p) (*s)->stack.pop_back();
 		else

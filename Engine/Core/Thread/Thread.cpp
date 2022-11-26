@@ -13,7 +13,7 @@ ThreadLocalStorage Thread::s_threadLocalStorage[ThreadLimit::MAX_THREADS] = {};
 
 void Thread::InitializeForThisThread()
 {
-	ThreadID::InitializeForThisThread();
+	ThreadID::InitializeForThisThreadInThisModule();
 
 	// convert thread to fiber
 	s_threadLocalStorage[ThreadID::Get()].currentFiberID = ThreadID::Get();
@@ -42,7 +42,7 @@ void Thread::FinalizeForThisThread()
 
 	GetCurrentFiber()->m_lock.unlock_no_check_own_thread();
 
-	ThreadID::FinalizeForThisThread();
+	ThreadID::FinalizeForThisThreadInThisModule();
 }
 
 void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
@@ -109,6 +109,11 @@ void Thread::SwitchToPrimaryFiberOfThisThread()
 	//currentFiber->m_lock.unlock();
 
 	platform::SwitchToFiber(thisThreadPrimaryFiber->m_nativeHandle);
+}
+
+void Thread::Sleep(size_t ms)
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
 NAMESPACE_END

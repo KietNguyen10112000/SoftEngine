@@ -231,6 +231,11 @@ void gc::Context::MarkPhase()
 			m_localScopeAllocatedIdx++;
 		}
 
+		if (m_isPaused == false)
+		{
+			m_copiedLocals.clear();
+		}
+
 		//lock.unlock();
 	}
 }
@@ -575,8 +580,8 @@ void ContextSharedHandle::EndSweep(Context* ctx)
 		//g_system->EndGCCycle();
 		//std::cout << ThreadID::Get() << "  ======================================================\n";
 
-		CONSOLE_LOG() 
-			<< "============ End GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
+		//CONSOLE_LOG() 
+		//	<< "============ End GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
 	}
 }
 

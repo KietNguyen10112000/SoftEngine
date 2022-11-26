@@ -80,6 +80,8 @@ private:
 //		int x = 3;
 //	}
 
+#define _MANAGED_ARRAY_CHECK_BOUND(index) assert(index >= 0 && index < m_size)
+
 private:
 	void Trace(Tracer* tracer)
 	{
@@ -96,6 +98,8 @@ protected:
 
 		Local<T> oldBuf = m_buffer;
 		Local<T> newBuf = ReinterpretCast<T>(mheap::Allocate<Element>(newCapacity));
+
+		assert(newBuf.IsNull() == false);
 
 		if (Size() != 0)
 		{
@@ -115,6 +119,7 @@ protected:
 
 		Local<T> buf = m_buffer;
 
+		m_size = newSize;
 		if (newSize > currentSize)
 		{
 			for (size_t i = currentSize; i < newSize; i++)
@@ -124,12 +129,11 @@ protected:
 		}
 		else
 		{
-			for (intmax_t i = currentSize - 1; i >= newSize; i--)
+			for (intmax_t i = currentSize - 1; i >= (intmax_t)newSize; i--)
 			{
-				(buf.Get() - i)->~T();
+				(buf.Get() + i)->~T();
 			}
 		}
-		m_size = newSize;
 	}
 
 public:
@@ -160,6 +164,15 @@ public:
 		m_size = Size() + 1;
 	}
 
+	inline T Pop()
+	{
+		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
+
+		T ret = back();
+		Resize(Size() - 1);
+		return ret;
+	}
+
 	inline void Resize(size_t newSize)
 	{
 		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
@@ -187,6 +200,15 @@ public:
 	{
 		return *(m_buffer.Get() + m_size - 1);
 	}
+
+public:
+	inline T& operator[](size_t i)
+	{
+		_MANAGED_ARRAY_CHECK_BOUND(i);
+		return *(m_buffer.Get() + i);
+	}
+
+#undef _MANAGED_ARRAY_CHECK_BOUND
 
 };
 

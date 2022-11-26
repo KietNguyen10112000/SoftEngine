@@ -23,6 +23,8 @@ file(
     "Core/Fiber/*.cpp"
     "Core/Thread/*.h"
     "Core/Thread/*.cpp"
+    "Core/Random/*.h"
+    "Core/Random/*.cpp"
 
 
     "TaskSystem/*.h"

@@ -19,12 +19,14 @@ private:
 	//API static std::unordered_map<size_t, size_t> s_idMap;
 
 public:
-	inline static void InitializeForThisThread()
+	template <typename T = void>
+	inline static void InitializeForThisThreadInThisModule()
 	{
 		if (s_id == -1) s_id = _Get();
 	}
 
-	inline static void FinalizeForThisThread()
+	template <typename T = void>
+	inline static void FinalizeForThisThreadInThisModule()
 	{
 		Finalize();
 	}

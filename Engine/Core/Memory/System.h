@@ -236,8 +236,8 @@ public:
 
 		if (remark == false)
 		{
-			CONSOLE_LOG()
-				<< "============ New GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
+			//CONSOLE_LOG()
+			//	<< "============ New GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
 
 			if (!m_deferFreeList.empty())
 			{
@@ -533,7 +533,12 @@ public:
 	void RegisterLocalScope(void* s)
 	{
 		m_globalLock.lock();
-		m_localScopes[m_localScopesCount++] = (ManagedLocalScope::S*)s;
+		auto mngl = (ManagedLocalScope::S*)s;
+		if (mngl->isRegistered == false)
+		{
+			m_localScopes[m_localScopesCount++] = (ManagedLocalScope::S*)s;
+			mngl->isRegistered = true;
+		}
 		m_globalLock.unlock();
 	}
 
