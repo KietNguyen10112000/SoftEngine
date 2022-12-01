@@ -153,7 +153,11 @@ GC_RETURN gc::Resume(size_t timeLimit, size_t flag)
 	}
 }
 
+GC_PHASE::ENUM GetCurrentPhase()
+{
+	return (GC_PHASE::ENUM)g_system->m_phase;
 }
 
+}
 
 NAMESPACE_MEMORY_END

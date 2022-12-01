@@ -43,20 +43,26 @@ namespace mheap
 		return ret;
 	}
 
+	template<typename T, typename ...Args>
+	void CallConstructor(T* begin, size_t n, Args&&... args)
+	{
+		ManagedLocalScope::AddCheckpoint();
+
+		for (size_t i = 0; i < n; i++)
+		{
+			new (begin + i) T(std::forward<Args>(args)...);
+		}
+
+		ManagedLocalScope::JumpbackToCheckpoint();
+	}
+
 	template <typename T, typename ...Args>
 	Local<T> NewArray(size_t n, Args&&... args)
 	{
 		Local<T> ret = Allocate<T>(n);
 		T* objs = ret.Get();
 
-		ManagedLocalScope::AddCheckpoint();
-
-		for (size_t i = 0; i < n; i++)
-		{
-			new (objs + i) T(std::forward<Args>(args)...);
-		}
-
-		ManagedLocalScope::JumpbackToCheckpoint();
+		CallConstructor(objs, n, std::forward<Args>(args)...);
 
 		return ret;
 	}

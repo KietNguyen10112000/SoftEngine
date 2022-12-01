@@ -16,7 +16,7 @@ public:
 
 		//using ArrayType = typename Array;
 
-		byte m_mem[sizeof(T)];
+		byte m_mem[sizeof(T)] = {};
 
 		void Trace(Tracer* tracer)
 		{
@@ -97,13 +97,17 @@ protected:
 		auto newCapacity = std::max(n, 2 * m_capacity);
 
 		Local<T> oldBuf = m_buffer;
-		Local<T> newBuf = ReinterpretCast<T>(mheap::Allocate<Element>(newCapacity));
+		Local<T> newBuf = ReinterpretCast<T>(mheap::NewArray<Element>(newCapacity));
 
 		assert(newBuf.IsNull() == false);
 
 		if (Size() != 0)
 		{
 			::memcpy(newBuf.Get(), oldBuf.Get(), sizeof(T) * Size());
+			/*for (size_t i = 0; i < Size(); i++)
+			{
+				newBuf[i] = oldBuf[i];
+			}*/
 		}
 
 		m_buffer = newBuf;
@@ -113,7 +117,11 @@ protected:
 	inline void _Resize(size_t newSize)
 	{
 		auto currentSize = Size();
-		if (newSize == currentSize) return;
+		if (newSize <= currentSize)
+		{
+			m_size = newSize;
+			return;
+		}
 
 		_Reserve(newSize);
 
@@ -122,17 +130,19 @@ protected:
 		m_size = newSize;
 		if (newSize > currentSize)
 		{
-			for (size_t i = currentSize; i < newSize; i++)
-			{
-				new (buf.Get() + i) T();
-			}
+			//for (size_t i = currentSize; i < newSize; i++)
+			//{
+			//	new (buf.Get() + i) T();
+			//}
+
+			mheap::CallConstructor(buf.Get() + currentSize, newSize - currentSize);
 		}
 		else
 		{
-			for (intmax_t i = currentSize - 1; i >= (intmax_t)newSize; i--)
-			{
-				(buf.Get() + i)->~T();
-			}
+			//for (intmax_t i = currentSize - 1; i >= (intmax_t)newSize; i--)
+			//{
+			//	(buf.Get() + i)->~T();
+			//}
 		}
 	}
 
@@ -156,12 +166,14 @@ public:
 	{
 		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
 
-		_Reserve(Size() + 1);
+		auto size = Size();
 
-		auto& _back = *(m_buffer.Get() + m_size);
+		_Reserve(size + 1);
+
+		auto& _back = *(m_buffer.Get() + size);
 		_back = v;
 
-		m_size = Size() + 1;
+		m_size = size + 1;
 	}
 
 	inline T Pop()

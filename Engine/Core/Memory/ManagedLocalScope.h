@@ -12,6 +12,7 @@
 #include "ManagedHandle.h"
 #include "GC.h"
 #include "NewMalloc.h"
+#include "MARK_COLOR.h"
 
 
 NAMESPACE_MEMORY_BEGIN
@@ -92,6 +93,9 @@ public:
 		// lock guard for stack pop operator
 		Spinlock popLock;
 
+		// lock guard for transactions
+		Spinlock transactionLock;
+
 		// list of transactions during mark phase
 		List transactions;
 
@@ -164,7 +168,10 @@ public:
 		auto local = (*s);
 		auto size = local->checkpoints.back();
 		local->checkpoints.pop_back();
+
+		local->popLock.lock();
 		local->stack.resize(size);
+		local->popLock.unlock();
 	}
 
 	inline static void FlushStackForGC()
@@ -181,7 +188,12 @@ public:
 	inline static void Push(byte** p)
 	{
 		(*s)->stack.push_back(p);
-		if (*p != 0) Transaction(p, *p);
+
+		if (*p != 0)
+		{
+			assert(0);
+			Transaction(p, *p);
+		}
 	}
 
 	inline static void Pop(byte** p)
@@ -192,12 +204,12 @@ public:
 		if ((*s)->stack.back() == p) (*s)->stack.pop_back();
 		else
 		{
+			auto& back = (*s)->stack.back();
 			// return ManagedPtr case
-			if (*(&(*s)->stack.back() - 1) == p)
+			if (*(&back - 1) == p)
 			{
-				auto back = (*s)->stack.back();
-				Transaction(back, *back);
-				*(&(*s)->stack.back() - 1) = (*s)->stack.back();
+				Transaction(*(&back - 1), *back);
+				*(&back - 1) = back;
 				(*s)->stack.pop_back();
 			}
 		}
@@ -207,21 +219,31 @@ public:
 	// transaction during mark phase
 	inline static void Transaction(byte** p, byte* ptr)
 	{
-		if ((*s)->isRecordingTransactions == true)
+		auto* scope = *s;
+
+		auto handle = ((ManagedHandle*)ptr) - 1;
+		if (handle->marked != MARK_COLOR::BLACK)
 		{
-			DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
-			(*s)->transactions.push_back({ p, ptr });
+			return;
 		}
+
+		scope->transactionLock.lock();
+		if (scope->isRecordingTransactions == true)
+		{
+			//DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
+			scope->transactions.push_back({ p, ptr });
+		}	
+		scope->transactionLock.unlock();
 	}
 
-	inline static void Transaction(byte* p)
+	/*inline static void Transaction(byte* p)
 	{
 		if ((*s)->isRecordingTransactions == true)
 		{
-			DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
+			//DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
 			(*s)->transactions.push_back({ 0, p });
 		}
-	}
+	}*/
 
 	template <typename C>
 	inline static void ForEach(C callback)

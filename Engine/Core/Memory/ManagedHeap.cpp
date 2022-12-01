@@ -79,12 +79,14 @@ ManagedHeap::ManagedHeap(bool GC)
 
 	//=================================================================================================
 
+	size_t i = 0;
 	for (auto& pages : m_pages)
 	{
 		for (auto& page : pages)
 		{
 			page = m_allocatedPageIt++;
-			new (page) ManagedPage();
+			new (page) ManagedPage((byte)i);
+			i++;
 		}
 	}
 
@@ -432,17 +434,23 @@ void ManagedHeap::LargeObjectInitPage(size_t row)
 	assert(pages[id]->m_isInitialized == false);
 
 	m_totalPages++;
-	auto pageSize = LARGE_OBJECT_PAGES_START_SIZE * std::pow(size_t(2), row);
+	auto pageSize = LARGE_OBJECT_PAGES_START_SIZE * (size_t)std::pow(size_t(2), row);
 	m_totalHeapSize_ += pageSize;
 	//pages[id] = new ManagedPage(id, pageSize);
 	//pages[id] = m_allocatedPageIt++;
-	new (pages[id]) ManagedPage(id, pageSize);
-	pages[id]->SetDeallocateCallback(this, [](void* self, ManagedHandle* handle)
+
+	auto& page = pages[id];
+	page->m_lock.lock();
+
+	page->Initialize(id, pageSize);
+	page->SetDeallocateCallback(this, [](void* self, ManagedHandle* handle)
 		{
 			ManagedHeap* heap = (ManagedHeap*)self;
 			heap->m_totalAllocatedBytes_ -= handle->TotalSize();
 		}
 	);
+
+	page->m_lock.unlock();
 	//if (m_isGCActivated) gc::RegisterPage(pages[id]);
 }
 
@@ -527,6 +535,7 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 	ret->traceTable = table;
 	if (managedLocalBlock)
 	{
+		::memset(ret->GetUsableMemAddress(), 0, ret->UsableSize());
 		*managedLocalBlock = ret->GetUsableMemAddress();
 	}
 

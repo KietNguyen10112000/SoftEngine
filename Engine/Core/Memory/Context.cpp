@@ -7,9 +7,11 @@
 #include "ManagedPool.h"
 #include "GC.h"
 #include "System.h"
+#include "MARK_COLOR.h"
 
 #include "Core/Thread/ThreadID.h"
 #include "Core/Time/Clock.h"
+
 
 NAMESPACE_MEMORY_BEGIN
 
@@ -73,12 +75,12 @@ void gc::Context::Mark()
 			auto handle = (ManagedHandle*)ptr - 1;
 			auto block = (AllocatedBlock*)handle - 1;
 
-			if (handle->marked != 0)
+			if (handle->marked == MARK_COLOR::WHITE)
 			{
 				m_stack.pop_back();
 				continue;
 			}
-			handle->marked = 1;
+			handle->marked = MARK_COLOR::WHITE;
 			//count++;
 			
 			//std::cout << "Mark\n";
@@ -101,9 +103,9 @@ void gc::Context::Mark()
 				state.traceTable = traceTable;
 
 				// to support dynamic array
-				if (traceTable->GetDynamicArraySize)
+				if (traceTable->GetDynamicArraySize && m_stack.size() != 1)
 				{
-					if (m_stack.size() == 1)
+					/*if (m_stack.size() == 1)
 					{
 						state.blockEnd = 0;
 					}
@@ -111,7 +113,9 @@ void gc::Context::Mark()
 					{
 						auto size = traceTable->GetDynamicArraySize(state.ppptr);
 						state.blockEnd = handle->GetUsableMemAddress() + size * traceTable->instanceSize;
-					}
+					}*/
+					auto size = traceTable->GetDynamicArraySize(state.ppptr);
+					state.blockEnd = handle->GetUsableMemAddress() + size * traceTable->instanceSize;
 				}
 				else
 				{
@@ -209,10 +213,11 @@ void gc::Context::MarkPhase()
 
 			auto size = stack.size();
 			m_copiedLocals.resize(size);
+			auto buf = stack.data();
 
 			for (size_t i = 0; i < size; i++)
 			{
-				m_copiedLocals[i] = *stack[i];
+				m_copiedLocals[i] = *(buf[i]);
 			}
 
 			popLock.unlock();
@@ -248,11 +253,15 @@ void gc::Context::RemarkPhase()
 	{
 		// done mark phase for this local scope
 		// process transactions
-		assert(m_localScope->isRecordingTransactions == false);
-		auto& transactions = m_localScope->transactions;
-		//auto& tlock = m_localScope->tLock;
 
-		//tlock.lock();
+		m_localScope->transactionLock.lock();
+		m_localScope->isRecordingTransactions = false;
+
+		// fake batch size so that mark process will never be paused
+		auto tempBatchSize = m_batchSize;
+		m_batchSize = -1;
+
+		auto& transactions = m_localScope->transactions;
 		auto size = transactions.size();
 		auto buf = transactions.data();
 
@@ -271,26 +280,29 @@ void gc::Context::RemarkPhase()
 			//else 
 			if (/**r.pptr == */r.ptr) // valid transaction
 			{
-				ManagedHandle* handle = (ManagedHandle*)r.ptr - 1;
-				handle->marked = 0;
+				//ManagedHandle* handle = (ManagedHandle*)r.ptr - 1;
+				//handle->marked = 0;
 				m_stack.push_back({ 0, 0, 0, r.ptr, 0, 0 });
 				Mark();
 			}
 			m_localScopeAllocatedIdx++;
 		}
 
-		if (!m_isPaused)
-		{
-			/*if (m_localScope->bindedTransaction && (*m_localScope->bindedTransaction))
-			{
-				m_stack.push_back({ 0, 0, 0, *m_localScope->bindedTransaction, 0, 0 });
-				Mark();
-			}*/
+		//if (!m_isPaused)
+		//{
+		//	/*if (m_localScope->bindedTransaction && (*m_localScope->bindedTransaction))
+		//	{
+		//		m_stack.push_back({ 0, 0, 0, *m_localScope->bindedTransaction, 0, 0 });
+		//		Mark();
+		//	}*/
 
-			transactions.clear();
-		}
+		//	transactions.clear();
+		//}
+		assert(m_isPaused == false);
+		transactions.clear();
 		
-		//tlock.unlock();
+		m_batchSize = tempBatchSize;
+		m_localScope->transactionLock.unlock();
 	}
 }
 
@@ -325,6 +337,19 @@ void gc::Context::SweepPage()
 	auto& cur = m_page->m_sweepIt;
 	//auto prev = cur;
 
+	/*if (m_page->m_isFirstInitialized)
+	{
+		// unmark all newest initialized page
+		m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
+			{
+				handle->marked = 0;
+			}
+		);
+		m_page->m_isFirstInitialized = false;
+		m_page->m_sweepIt = (AllocatedBlock*)(-1);
+		goto end;
+	}*/
+
 	while (cur != end)
 	{
 		if (!cur->IsAllocated())
@@ -346,7 +371,7 @@ void gc::Context::SweepPage()
 			assert(next <= end);
 		}
 
-		if (handle->marked == 0)
+		if (handle->marked == MARK_COLOR::BLACK)
 		{
 			CallDestructor(handle);
 			/*DEBUG_CODE(
@@ -358,7 +383,7 @@ void gc::Context::SweepPage()
 		}
 		else //if (m_sharedHandle->m_sweepCycles % handle->marked == 0) // for generation gc
 		{
-			handle->marked = 0;
+			handle->marked = MARK_COLOR::BLACK;
 		}
 
 		assert(next == end || next->IsAllocated());
@@ -379,15 +404,15 @@ void gc::Context::SweepPage()
 		}
 	}
 
-	if (!m_isPaused)
-	{
-		m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
-			{
-				//handle->marked = 0;
-				assert(handle->marked == 0);
-			}
-		);
-	}
+end:
+#ifdef _DEBUG
+	m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
+		{
+			//handle->marked = 0;
+			assert(handle->marked == MARK_COLOR::BLACK);
+		}
+	);
+#endif // _DEBUG
 
 	m_page->m_lock.unlock();
 }
@@ -399,11 +424,16 @@ void gc::Context::SweepPool()
 	if (m_pool->m_sweepBackwardIt)
 	{
 		auto& backward = m_pool->m_sweepBackwardIt;
-		backward = backward->prev;
+		if (m_pool->m_sweepIt == backward) backward = backward->prev;
+		else
+		{
+			assert(m_pool->m_sweepIt == 0);
+		}
+
 		while (backward != 0)
 		{
 			ManagedHandle* handle = (ManagedHandle*)(backward + 1);
-			handle->marked = 0;
+			handle->marked = MARK_COLOR::BLACK;
 			backward = backward->prev;
 		}
 	}
@@ -416,7 +446,7 @@ void gc::Context::SweepPool()
 
 		ManagedHandle* handle = (ManagedHandle*)(it + 1);
 
-		if (handle->marked == 0)
+		if (handle->marked == MARK_COLOR::BLACK)
 		{
 			CallDestructor(handle);
 			/*DEBUG_CODE(
@@ -427,7 +457,7 @@ void gc::Context::SweepPool()
 		}
 		else //if (m_sharedHandle->m_sweepCycles % handle->marked)
 		{
-			handle->marked = 0;
+			handle->marked = MARK_COLOR::BLACK;
 		}
 
 		it = next;
@@ -444,15 +474,14 @@ void gc::Context::SweepPool()
 		}
 	}
 
-	if (!m_isPaused)
-	{
-		m_pool->ForEachAllocatedBlocks([](ManagedHandle* handle) 
-			{
-				//handle->marked = 0;
-				assert(handle->marked == 0);
-			}
-		);
-	}
+#ifdef _DEBUG
+	m_pool->ForEachAllocatedBlocks([](ManagedHandle* handle)
+		{
+			//handle->marked = 0;
+			assert(handle->marked == MARK_COLOR::BLACK);
+		}
+	);
+#endif // _DEBUG
 
 	m_pool->m_lock.unlock();
 }
@@ -582,6 +611,7 @@ void ContextSharedHandle::EndSweep(Context* ctx)
 
 		//CONSOLE_LOG() 
 		//	<< "============ End GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
+		g_system->m_phase = GC_PHASE::IDLE_PHASE;
 	}
 }
 

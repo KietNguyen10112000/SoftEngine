@@ -128,6 +128,7 @@ protected:
 	}
 
 	friend class Tracer;
+	friend class TraceTable;
 	void Trace(Tracer* tracer)
 	{
 		tracer->TraceManagedPtr(*this);

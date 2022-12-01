@@ -74,6 +74,8 @@ inline void RegisterPage(ManagedPage* page)
 	RegisterPages(&page, 1);
 }
 
+API GC_PHASE::ENUM GetCurrentPhase();
+
 }
 
 NAMESPACE_MEMORY_END

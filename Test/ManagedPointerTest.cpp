@@ -22,6 +22,14 @@ public:
 	bool m_isVisited = false;
 
 public:
+	~Node()
+	{
+		m_data[0] = 0;
+		m_data[1] = 0;
+		m_data[2] = 0;
+	}
+
+public:
 	void AddChild(const Handle<Node>& node)
 	{
 		m_childs.Push(node);
@@ -63,56 +71,56 @@ public:
 
 };
 
-TEST(ManagedPointerTest, GarbageCollector)
-{
-#ifdef _DEBUG
-	constexpr size_t num = 1'000;
-	constexpr size_t numPerLog = 1'000;
-#else
-	//constexpr size_t num = 1'000'000'0;
-	//constexpr size_t numPerLog = 1'000'00;
-	constexpr size_t num = 1'000;
-	constexpr size_t numPerLog = 1'000;
-#endif // _DEBUG
+//TEST(ManagedPointerTest, GarbageCollector)
+//{
+//#ifdef _DEBUG
+//	constexpr size_t num = 1'000;
+//	constexpr size_t numPerLog = 1'000;
+//#else
+//	//constexpr size_t num = 1'000'000'0;
+//	//constexpr size_t numPerLog = 1'000'00;
+//	constexpr size_t num = 1'000;
+//	constexpr size_t numPerLog = 1'000;
+//#endif // _DEBUG
+//
+//	constexpr size_t totalLog = num / numPerLog;
+//
+//	//MemoryLeakDetector memoryLeakDetector = { 64 };
+//	{
+//		Handle<Node> node = nullptr;
+//		for (size_t i = 0; i < num; i++)
+//		{
+//			node = mheap::New<Node>();
+//
+//			if (i % numPerLog == 0)
+//			{
+//				GTestLogger::Stream(String::Format("Testing garbage collector {} / {} ...", i / numPerLog, totalLog));
+//				Thread::Sleep(100);
+//			}
+//		}
+//	}
+//
+//	gc::Run(-1);
+//	//mheap::internal::Reset();
+//}
 
-	constexpr size_t totalLog = num / numPerLog;
-
-	//MemoryLeakDetector memoryLeakDetector = { 64 };
-	{
-		Handle<Node> node = nullptr;
-		for (size_t i = 0; i < num; i++)
-		{
-			node = mheap::New<Node>();
-
-			if (i % numPerLog == 0)
-			{
-				GTestLogger::Stream(String::Format("Testing garbage collector {} / {} ...", i / numPerLog, totalLog));
-				Thread::Sleep(100);
-			}
-		}
-	}
-
-	gc::Run(-1);
-	//mheap::internal::Reset();
-}
-
-TEST(ManagedPointerTest, MemoryValidation)
+void MemoryValidationImpl(size_t num = 1'000'0000, size_t sleep1 = 200, size_t sleep2 = 200, size_t sleep3 = 1000)
 {
 	constexpr size_t total = 100;
 
 #ifdef _DEBUG
-	constexpr size_t num = 1'000'0;
-	constexpr size_t numPerLog = num / total;
+	//size_t num = 1'000'0;
+	size_t numPerLog = num / total;
 	//constexpr size_t numPerLog2 = 1'00;
 #else
-	constexpr size_t num = 1'000'000'0;
-	constexpr size_t numPerLog = num / total;
+	//size_t num = 1'000'0;
+	size_t numPerLog = num / total;
 	//constexpr size_t numPerLog2 = 5;
 #endif // _DEBUG
 
 	//MemoryLeakDetector memoryLeakDetector = { 64 };
 	{
-		size_t ids[] = { Random::RangeInt64(1, 20), Random::RangeInt64(21, 50), Random::RangeInt64(51, 100) };
+		size_t ids[] = { Random::RangeInt64(10, 20), Random::RangeInt64(21, 50), Random::RangeInt64(51, 100) };
 		size_t changeRoot = Random::RangeInt64(1000, 10000);
 
 		Handle<Node> root = mheap::New<Node>();
@@ -148,12 +156,12 @@ TEST(ManagedPointerTest, MemoryValidation)
 			if (i % numPerLog == 0)
 			{
 				GTestLogger::Stream(String::Format("Preparing memory for validation {} % ...", (i / numPerLog)));
-				Thread::Sleep(200);
+				Thread::Sleep(sleep1);
 			}
 		}
 
 		GTestLogger::Log(String::Format("Total {} nodes", totalNode));
-		Thread::Sleep(1000);
+		Thread::Sleep(sleep3);
 
 		size_t numPerLog2 = totalNode / total;
 
@@ -170,7 +178,7 @@ TEST(ManagedPointerTest, MemoryValidation)
 
 			it->SetVisited(true);
 
-			EXPECT_TRUE(it->IsDataValid(ids));
+			EXPECT_TRUE(it->IsDataValid(ids)) << changeRoot << " --- " << count;
 
 			auto& childs = it->Childs();
 			for (size_t i = 0; i < childs.Size(); i++)
@@ -187,7 +195,7 @@ TEST(ManagedPointerTest, MemoryValidation)
 			if (count % numPerLog2 == 0)
 			{
 				GTestLogger::Stream(String::Format("Validated memory of {} / {} nodes ...", count, totalNode));
-				Thread::Sleep(200);
+				Thread::Sleep(sleep2);
 			}
 		}
 
@@ -196,4 +204,63 @@ TEST(ManagedPointerTest, MemoryValidation)
 
 	gc::Run(-1);
 	//mheap::internal::Reset();
+}
+
+//TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_SingleThread)
+//{
+//	MemoryValidationImpl();
+//}
+
+TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
+{
+	volatile bool isRunning = true;
+	std::thread thread = std::thread([&] {
+		soft::Thread::InitializeForThisThreadInThisModule();
+
+		while (isRunning)
+		{
+			gc::Run(-1);
+			Thread::Sleep(32);
+		}
+
+		soft::Thread::FinalizeForThisThreadInThisModule();
+	});
+
+	auto& vstack = (*ManagedLocalScope::s)->stack;
+
+	//{
+	//	Array<Handle<Node>> arr = {};
+	//	//Handle<Handle<Node>> arr = mheap::NewArray<Handle<Node>>(1'000'000);
+	//	for (size_t i = 0; i < 1'000'000; i++)
+	//	{
+	//		arr.Push(mheap::New<Node>());
+	//		//arr[i] = mheap::New<Node>();
+
+	//		if (i % 10000 == 0)
+	//		{
+	//			GTestLogger::Stream(String::Format("Push {} nodes ...", i));
+	//			Thread::Sleep(200);
+	//		}
+	//	}
+
+	//	for (size_t i = 0; i < 10000; i++)
+	//	{
+	//		arr.Pop();
+	//	}
+
+	//	//gc::Run(-1);
+
+	//	isRunning = false;
+	//	thread.join();
+
+	//	gc::Run(-1);
+	//	gc::Run(-1);
+	//}
+
+	MemoryValidationImpl();
+
+	isRunning = false;
+	thread.join();
+
+	gc::Run(-1);
 }

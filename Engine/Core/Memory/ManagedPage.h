@@ -8,6 +8,8 @@
 #include "Pool.h"
 #include "Trace.h"
 #include "ManagedHandle.h"
+#include "GC.h"
+#include "MARK_COLOR.h"
 
 NAMESPACE_MEMORY_BEGIN
 
@@ -24,24 +26,25 @@ protected:
 public:
 	spinlock m_lock;
 	AllocatedBlock* m_sweepIt = (AllocatedBlock*)(-1);
-	AllocatedBlock* m_sweepBackwardIt = (AllocatedBlock*)(-1);
+	//AllocatedBlock* m_sweepBackwardIt = (AllocatedBlock*)(-1);
 
 	void* m_DeallacateCallbackArg = 0;
 	void (*m_DeallacateCallback)(void*, Handle*) = 0;
 
 	bool m_isInitialized = false;
+	//bool m_isFirstInitialized = false;
 
 public:
-	ManagedPage() : Page(true)
+	ManagedPage(byte id) : Page(true), m_id(id)
 	{
 
 	}
 
-	ManagedPage(byte id, size_t size = DEFAULT_SIZE) : Page(size), m_id(id)
-	{
-		m_isInitialized = true;
-		SetupNewGCCycle();
-	}
+	//ManagedPage(byte id, size_t size = DEFAULT_SIZE) : Page(size), m_id(id)
+	//{
+	//	m_isInitialized = true;
+	//	SetupNewGCCycle();
+	//}
 
 	~ManagedPage()
 	{
@@ -66,6 +69,26 @@ public:
 	}
 
 public:
+	inline void Initialize(byte id, size_t size = DEFAULT_SIZE)
+	{
+		m_id = id;
+		Page::Initialize(size);
+		m_isInitialized = true;
+		//m_isFirstInitialized = true;
+		m_sweepIt = (AllocatedBlock*)(-1);
+
+		if (gc::GetCurrentPhase() != gc::GC_PHASE::IDLE_PHASE)
+		{
+			//m_isFirstInitialized = false;
+			SetupNewGCCycle();
+		}
+
+		//if ((byte*)m_sweepIt == End())
+		//{
+		//	SetupNewGCCycle();
+		//}
+	}
+
 	inline ManagedHandle* Allocate(size_t n)
 	{
 		assert(m_isInitialized == true);
@@ -80,17 +103,17 @@ public:
 
 		if (!handle) return 0;
 
-		handle->paddingBytes = block->TotalSize() - sizeof(AllocatedBlock*) - sizeof(Handle) - n;
+		handle->paddingBytes = block->TotalSize() - sizeof(AllocatedBlock) - sizeof(Handle) - n;
 		
 		// importance
-		if ((byte*)handle < (byte*)m_sweepIt)
-		{
-			handle->marked = 0;
-		}
-		else
-		{
-			handle->marked = 1;
-		}
+		//if ((byte*)handle < (byte*)m_sweepIt)
+		//{
+		//	handle->marked = MARK_COLOR::BLACK;
+		//}
+		//else
+		//{
+			handle->marked = MARK_COLOR::GRAY;
+		//}
 
 
 		handle->pageId = m_id;
@@ -141,6 +164,16 @@ public:
 	inline void SetupNewGCCycle()
 	{
 		m_sweepIt = (AllocatedBlock*)Page::m_buffer;
+
+		/*if (m_isFirstInitialized)
+		{
+			ManagedPage::ForEachAllocatedBlocks([](ManagedHandle* handle)
+				{
+					handle->marked = 0;
+				}
+			);
+			m_isFirstInitialized = false;
+		}*/
 	}
 
 	inline byte* Begin()

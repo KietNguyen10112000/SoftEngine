@@ -218,6 +218,11 @@ private:
 public:
 	void InitializeNewMarkCycle(bool remark = false)
 	{
+		while (m_phase == GC_PHASE::SWEEP_PHASE)
+		{
+			std::this_thread::yield();
+		}
+
 		m_globalLock.lock();
 
 		if (remark == false && m_handle.m_gcCycles != m_handle.m_markCycles)
@@ -308,10 +313,10 @@ public:
 				//m_localScopes[i]->transactions.clear();
 				//m_localScopes[i]->InterUnlock();
 			}
-			else
-			{
-				m_localScopes[i]->isRecordingTransactions = false;
-			}
+			//else
+			//{
+			//	m_localScopes[i]->isRecordingTransactions = false;
+			//}
 			//m_localScopes[i]->tLock.unlock();
 
 			m_markTasks1.Push({ 0, 0, m_localScopes[i], 0 });

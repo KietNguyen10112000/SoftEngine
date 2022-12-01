@@ -10,6 +10,7 @@
 #include "ManagedPointers.h"
 #include "ManagedHandle.h"
 #include "ManagedLocalScope.h"
+#include "MARK_COLOR.h"
 
 NAMESPACE_MEMORY_BEGIN
 
@@ -259,8 +260,8 @@ public:
 		handle->poolHint = poolId;
 		handle->paddingBytes = pool.m_blockSize - size;
 
-		// always 0
-		handle->marked = 0;
+		// always black
+		handle->marked = MARK_COLOR::GRAY;
 
 		handle->pageId = -1;
 
@@ -268,6 +269,11 @@ public:
 		if (m_allocatedHead) m_allocatedHead->prev = link;
 		link->prev = 0;
 		m_allocatedHead = link;
+
+		if (m_sweepBackwardIt == nullptr)
+		{
+			m_sweepBackwardIt = m_allocatedHead;
+		}
 
 		return handle;
 	}

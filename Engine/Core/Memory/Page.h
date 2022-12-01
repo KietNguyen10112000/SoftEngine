@@ -105,6 +105,23 @@ public:
 		m_buffer = 0;
 	}
 
+protected:
+	inline void Initialize(size_t size)
+	{
+		m_buffer = 0;
+		m_size = 0;
+		m_maxSizeFreeBlock = 0;
+		m_totalFreeBlocks = 0;
+		m_totalAllocatedBytes = 0;
+
+		m_buffer = (byte*)malloc(size);
+		m_size = size;
+
+		m_maxSizeFreeBlock = (Tree::node*)m_buffer;
+		m_totalFreeBlocks = 1;
+		Tree::Insert(InitFreeBlock(m_buffer, m_size, 0));
+	}
+
 public:
 	FreeBlock* InitFreeBlock(byte* addr, size_t totalSize, byte* prev)
 	{
