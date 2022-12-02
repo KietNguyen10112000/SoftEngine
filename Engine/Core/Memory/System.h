@@ -86,9 +86,15 @@ public:
 		intmax_t m_backIdx = 0;
 
 	public:
+		inline void Reset()
+		{
+			m_frontIdx = 0;
+			m_backIdx = 0;
+		}
+
 		inline size_t Size()
 		{
-			size_t size = m_backIdx - m_frontIdx;
+			assert(m_backIdx - m_frontIdx >= 0);
 			return m_backIdx - m_frontIdx;
 		}
 
@@ -218,9 +224,12 @@ private:
 public:
 	void InitializeNewMarkCycle(bool remark = false)
 	{
-		while (m_phase == GC_PHASE::SWEEP_PHASE)
+		if (remark == false)
 		{
-			std::this_thread::yield();
+			while (m_phase != GC_PHASE::IDLE_PHASE)
+			{
+				std::this_thread::yield();
+			}
 		}
 
 		m_globalLock.lock();
@@ -238,6 +247,8 @@ public:
 		m_handle.m_targetCounter = 0;
 
 		m_markTasks1.Lock().lock();
+
+		m_markTasks1.Reset();
 
 		if (remark == false)
 		{
@@ -440,6 +451,8 @@ public:
 		m_handle.m_targetCounter = 0;
 
 		m_sweepTasks1.Lock().lock();
+
+		m_sweepTasks1.Reset();
 
 		for (size_t i = 0; i < m_pagesCount; i++)
 		{

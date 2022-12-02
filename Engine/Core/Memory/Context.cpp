@@ -56,6 +56,7 @@ Context::~Context()
 
 void gc::Context::Mark()
 {
+	assert(g_system->m_phase == GC_PHASE::MARK_PHASE || g_system->m_phase == GC_PHASE::REMARK_PHASE);
 	//size_t count = 0;
 
 	while (!m_stack.empty())
@@ -64,11 +65,11 @@ void gc::Context::Mark()
 
 		auto ptr = state.ptr;
 
-		if (IsLeftMostBitEqual1((intmax_t)ptr))
+		/*if (IsLeftMostBitEqual1((intmax_t)ptr))
 		{
 			m_stack.pop_back();
 			continue;
-		}
+		}*/
 
 		if (state.it == 0)
 		{
@@ -189,6 +190,7 @@ void gc::Context::Mark()
 
 void gc::Context::MarkPhase()
 {
+	assert(g_system->m_phase == GC_PHASE::MARK_PHASE);
 	//std::cout << "MarkPhase [" << ThreadID::Get() << "]\n";
 
 	while (m_rootIt != m_rootEnd && m_isPaused == false)
@@ -204,12 +206,13 @@ void gc::Context::MarkPhase()
 
 	if (m_localScope)
 	{
+		auto& stack = m_localScope->stack;
+		auto& stackLock = m_localScope->stackLock;
+
 		if (m_copiedLocals.size() == 0)
 		{
-			auto& stack = m_localScope->stack;
-			auto& popLock = m_localScope->popLock;
-
-			popLock.lock();
+			stackLock.lock();
+			//m_localScope->transactionLock.lock();
 
 			auto size = stack.size();
 			m_copiedLocals.resize(size);
@@ -220,7 +223,8 @@ void gc::Context::MarkPhase()
 				m_copiedLocals[i] = *(buf[i]);
 			}
 
-			popLock.unlock();
+			//m_localScope->transactionLock.unlock();
+			stackLock.unlock();
 		}
 		
 		const auto size = m_copiedLocals.size();
@@ -240,13 +244,12 @@ void gc::Context::MarkPhase()
 		{
 			m_copiedLocals.clear();
 		}
-
-		//lock.unlock();
 	}
 }
 
 void gc::Context::RemarkPhase()
 {
+	assert(g_system->m_phase == GC_PHASE::REMARK_PHASE);
 	//std::cout << "RemarkPhase [" << ThreadID::Get() << "]\n";
 
 	if (m_localScope)
@@ -254,12 +257,27 @@ void gc::Context::RemarkPhase()
 		// done mark phase for this local scope
 		// process transactions
 
+		//auto& stack = m_localScope->stack;
+
+		//m_localScope->stackLock.lock();
 		m_localScope->transactionLock.lock();
 		m_localScope->isRecordingTransactions = false;
 
 		// fake batch size so that mark process will never be paused
 		auto tempBatchSize = m_batchSize;
 		m_batchSize = -1;
+
+		/*const auto stackSize = stack.size();
+		auto* stackBuf = stack.data();
+		for (size_t i = 0; i < stackSize; i++)
+		{
+			auto ptr = *stackBuf[i];
+			if (ptr)
+			{
+				m_stack.push_back({ 0, 0, 0, ptr, 0, 0 });
+				Mark();
+			}
+		}*/
 
 		auto& transactions = m_localScope->transactions;
 		auto size = transactions.size();
@@ -303,6 +321,7 @@ void gc::Context::RemarkPhase()
 		
 		m_batchSize = tempBatchSize;
 		m_localScope->transactionLock.unlock();
+		//m_localScope->stackLock.unlock();
 	}
 }
 
@@ -330,6 +349,8 @@ void gc::Context::CallDestructor(ManagedHandle* handle)
 
 void gc::Context::SweepPage()
 {
+	assert(g_system->m_phase == GC_PHASE::SWEEP_PHASE);
+
 	m_page->m_lock.lock();
 
 	auto end = (AllocatedBlock*)(m_sweepEnd);
@@ -419,6 +440,8 @@ end:
 
 void gc::Context::SweepPool()
 {
+	assert(g_system->m_phase == GC_PHASE::SWEEP_PHASE);
+
 	m_pool->m_lock.lock();
 
 	if (m_pool->m_sweepBackwardIt)
@@ -483,6 +506,8 @@ void gc::Context::SweepPool()
 	);
 #endif // _DEBUG
 
+	//std::cout << "Sweeped pool id : " << (int)m_pool->m_id << " PAGE_SIZE : " << m_pool->m_PAGE_SIZE << "\n";
+
 	m_pool->m_lock.unlock();
 }
 
@@ -495,7 +520,7 @@ void gc::Context::SweepPhase()
 		SweepPage();
 	}
 
-	if (!m_isPaused && m_pool && m_pool->m_sweepIt != 0)
+	if (!m_isPaused && m_pool)
 	{
 		SweepPool();
 	}

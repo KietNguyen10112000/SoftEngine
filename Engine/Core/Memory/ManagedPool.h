@@ -224,6 +224,19 @@ public:
 
 	inline void SetupNewGCCycle()
 	{
+#ifdef _DEBUG
+		ManagedPool::ForEachAllocatedBlocks([](ManagedHandle* handle)
+			{
+				if (handle->marked == MARK_COLOR::BLACK || handle->marked == MARK_COLOR::GRAY)
+				{
+					return;
+				}
+
+				assert(0 && "unreachable");
+			}
+		);
+#endif // _DEBUG
+
 		m_sweepIt = m_allocatedHead;
 		m_sweepBackwardIt = m_allocatedHead;
 	}
@@ -261,7 +274,7 @@ public:
 		handle->paddingBytes = pool.m_blockSize - size;
 
 		// always black
-		handle->marked = MARK_COLOR::GRAY;
+		handle->marked = MARK_COLOR::BLACK;
 
 		handle->pageId = -1;
 

@@ -10,6 +10,7 @@ public:
 	constexpr static byte GRAY		= 1;
 	constexpr static byte WHITE		= 2;
 
+	constexpr static byte TRANSACTION_COLOR		= 3;
 };
 
 NAMESPACE_END

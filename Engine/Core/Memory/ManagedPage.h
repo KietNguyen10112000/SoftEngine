@@ -82,6 +82,7 @@ public:
 			//m_isFirstInitialized = false;
 			SetupNewGCCycle();
 		}
+		//SetupNewGCCycle();
 
 		//if ((byte*)m_sweepIt == End())
 		//{
@@ -106,14 +107,14 @@ public:
 		handle->paddingBytes = block->TotalSize() - sizeof(AllocatedBlock) - sizeof(Handle) - n;
 		
 		// importance
-		//if ((byte*)handle < (byte*)m_sweepIt)
-		//{
-		//	handle->marked = MARK_COLOR::BLACK;
-		//}
-		//else
-		//{
+		if ((byte*)handle < (byte*)m_sweepIt)
+		{
+			handle->marked = MARK_COLOR::BLACK;
+		}
+		else
+		{
 			handle->marked = MARK_COLOR::GRAY;
-		//}
+		}
 
 
 		handle->pageId = m_id;
@@ -174,6 +175,19 @@ public:
 			);
 			m_isFirstInitialized = false;
 		}*/
+
+#ifdef _DEBUG
+		ManagedPage::ForEachAllocatedBlocks([](ManagedHandle* handle)
+			{
+				if (handle->marked == MARK_COLOR::BLACK || handle->marked == MARK_COLOR::GRAY)
+				{
+					return;
+				}
+
+				assert(0 && "unreachable");
+			}
+		);
+#endif // _DEBUG
 	}
 
 	inline byte* Begin()

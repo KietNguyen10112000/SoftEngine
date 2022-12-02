@@ -91,7 +91,7 @@ public:
 		bool isRecordingTransactions = false;
 
 		// lock guard for stack pop operator
-		Spinlock popLock;
+		Spinlock stackLock;
 
 		// lock guard for transactions
 		Spinlock transactionLock;
@@ -169,9 +169,9 @@ public:
 		auto size = local->checkpoints.back();
 		local->checkpoints.pop_back();
 
-		local->popLock.lock();
+		local->stackLock.lock();
 		local->stack.resize(size);
-		local->popLock.unlock();
+		local->stackLock.unlock();
 	}
 
 	inline static void FlushStackForGC()
@@ -187,7 +187,10 @@ public:
 
 	inline static void Push(byte** p)
 	{
-		(*s)->stack.push_back(p);
+		auto scope = *s;
+		//scope->stackLock.lock();
+		scope->stack.push_back(p);
+		//scope->stackLock.unlock();
 
 		if (*p != 0)
 		{
@@ -198,22 +201,23 @@ public:
 
 	inline static void Pop(byte** p)
 	{
-		if ((*s)->stack.size() == 0) return;
+		auto scope = *s;
+		if (scope->stack.size() == 0) return;
 
-		(*s)->popLock.lock();
-		if ((*s)->stack.back() == p) (*s)->stack.pop_back();
+		scope->stackLock.lock();
+		if (scope->stack.back() == p) scope->stack.pop_back();
 		else
 		{
-			auto& back = (*s)->stack.back();
+			auto& back = scope->stack.back();
 			// return ManagedPtr case
 			if (*(&back - 1) == p)
 			{
 				Transaction(*(&back - 1), *back);
 				*(&back - 1) = back;
-				(*s)->stack.pop_back();
+				scope->stack.pop_back();
 			}
 		}
-		(*s)->popLock.unlock();
+		scope->stackLock.unlock();
 	}
 
 	// transaction during mark phase
@@ -222,7 +226,7 @@ public:
 		auto* scope = *s;
 
 		auto handle = ((ManagedHandle*)ptr) - 1;
-		if (handle->marked != MARK_COLOR::BLACK)
+		if (handle->marked == MARK_COLOR::WHITE || handle->marked == MARK_COLOR::TRANSACTION_COLOR /*|| handle->marked == MARK_COLOR::GRAY*/)
 		{
 			return;
 		}
@@ -230,7 +234,13 @@ public:
 		scope->transactionLock.lock();
 		if (scope->isRecordingTransactions == true)
 		{
+			/*if (handle->marked == MARK_COLOR::GRAY)
+			{
+				DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
+			}*/
+
 			//DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
+			handle->marked = MARK_COLOR::TRANSACTION_COLOR;
 			scope->transactions.push_back({ p, ptr });
 		}	
 		scope->transactionLock.unlock();

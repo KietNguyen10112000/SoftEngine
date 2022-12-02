@@ -104,7 +104,7 @@ public:
 //	//mheap::internal::Reset();
 //}
 
-void MemoryValidationImpl(size_t num = 1'000'0000, size_t sleep1 = 200, size_t sleep2 = 200, size_t sleep3 = 1000)
+void MemoryValidationImpl(size_t num = 1'000'000'0, size_t sleep1 = 200, size_t sleep2 = 200, size_t sleep3 = 1000)
 {
 	constexpr size_t total = 100;
 
@@ -119,11 +119,12 @@ void MemoryValidationImpl(size_t num = 1'000'0000, size_t sleep1 = 200, size_t s
 #endif // _DEBUG
 
 	//MemoryLeakDetector memoryLeakDetector = { 64 };
+	Handle<Node> root = nullptr;
 	{
 		size_t ids[] = { Random::RangeInt64(10, 20), Random::RangeInt64(21, 50), Random::RangeInt64(51, 100) };
 		size_t changeRoot = Random::RangeInt64(1000, 10000);
 
-		Handle<Node> root = mheap::New<Node>();
+		root = mheap::New<Node>();
 		root->SetData(ids);
 
 		// root is a node
