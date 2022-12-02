@@ -24,6 +24,11 @@ bool gc::Context::Handle()
 {
 	if (m_sharedHandle->m_isSelfHandle)
 	{
+		if (m_timeLimit == -1)
+		{
+			return false;
+		}
+
 		if (Clock::ns::now() - m_t0 > m_timeLimit)
 		{
 			return true;
@@ -630,7 +635,7 @@ void ContextSharedHandle::EndSweep(Context* ctx)
 	auto ret = (++m_counter);
 	if (ret == m_targetCounter)
 	{
-		m_sweepCycles++;
+		//m_sweepCycles++;
 		//g_system->EndGCCycle();
 		//std::cout << ThreadID::Get() << "  ======================================================\n";
 

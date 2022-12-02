@@ -231,7 +231,12 @@ public:
 			return;
 		}
 
-		scope->transactionLock.lock();
+		//scope->transactionLock.lock();
+		while (!scope->transactionLock.try_lock())
+		{
+			gc::Run(16'000'000);
+		}
+
 		if (scope->isRecordingTransactions == true)
 		{
 			/*if (handle->marked == MARK_COLOR::GRAY)

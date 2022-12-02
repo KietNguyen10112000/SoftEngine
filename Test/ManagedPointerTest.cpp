@@ -212,10 +212,16 @@ void MemoryValidationImpl(size_t num = 1'000'000'0, size_t sleep1 = 200, size_t 
 //	MemoryValidationImpl();
 //}
 
+#ifdef _DEBUG
+#define NUM_TEST_NODES 1'000'000
+#else
+#define NUM_TEST_NODES 1'000'000'0
+#endif // _DEBUG
+
 TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
 {
 	volatile bool isRunning = true;
-	std::thread thread = std::thread([&] {
+	std::thread thread1 = std::thread([&] {
 		soft::Thread::InitializeForThisThreadInThisModule();
 
 		while (isRunning)
@@ -227,7 +233,19 @@ TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
 		soft::Thread::FinalizeForThisThreadInThisModule();
 	});
 
-	auto& vstack = (*ManagedLocalScope::s)->stack;
+	std::thread thread2 = std::thread([&] {
+		soft::Thread::InitializeForThisThreadInThisModule();
+
+		while (isRunning)
+		{
+			gc::Run(-1);
+			Thread::Sleep(32);
+		}
+
+		soft::Thread::FinalizeForThisThreadInThisModule();
+	});
+
+	//auto& vstack = (*ManagedLocalScope::s)->stack;
 
 	//{
 	//	Array<Handle<Node>> arr = {};
@@ -258,10 +276,34 @@ TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
 	//	gc::Run(-1);
 	//}
 
-	MemoryValidationImpl();
+	MemoryValidationImpl(NUM_TEST_NODES);
 
 	isRunning = false;
-	thread.join();
+	thread1.join();
+	thread2.join();
+
+	gc::Run(-1);
+}
+
+TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads_Cached)
+{
+	volatile bool isRunning = true;
+	std::thread thread1 = std::thread([&] {
+		soft::Thread::InitializeForThisThreadInThisModule();
+
+		while (isRunning)
+		{
+			gc::Run(-1);
+			Thread::Sleep(128);
+		}
+
+		soft::Thread::FinalizeForThisThreadInThisModule();
+	});
+
+	MemoryValidationImpl(NUM_TEST_NODES);
+
+	isRunning = false;
+	thread1.join();
 
 	gc::Run(-1);
 }

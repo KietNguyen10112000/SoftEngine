@@ -11,4 +11,5 @@ Bugs virtual stack
 Bug GC:
 [DONE] + Grow managed heap while running GC
 
-Tại sao add GRAY node vào transaction lại lỗi???
+Bug route cho nhiều thread cùng chạy GC 1 lúc:
+[OPEN] + Deadlock ???

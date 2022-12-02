@@ -11,7 +11,9 @@
 #include "ManagedLocalScope.h"
 #include "NewMalloc.h"
 
+#ifdef _DEBUG
 #define GC_STRESS_DEBUG
+#endif // _DEBUG
 
 NAMESPACE_MEMORY_BEGIN
 
@@ -27,11 +29,11 @@ public:
 	//> gc cycles section
 	
 	// when start new gc cycle m_gcCycles increased by 1
-	size_t m_gcCycles = 0;
+	//size_t m_gcCycles = 0;
 	// when mark phase done m_markCycles increased by 1
-	size_t m_markCycles = 0;
+	//size_t m_markCycles = 0;
 	// when sweep phase done m_markCycles increased by 1
-	size_t m_sweepCycles = 0;
+	//size_t m_sweepCycles = 0;
 	// when counter reach target, kick next gc tasks and modify m_gcCycles, m_markCycles, m_sweepCycles
 	size_t m_targetCounter = 0;
 	std::atomic<size_t> m_counter = { 0 };
@@ -54,8 +56,8 @@ public:
 	size_t m_sweepBatchSize = 1;
 #else
 	// repeat run full batch then run control
-	size_t m_markBatchSize = 4 * 1024;
-	size_t m_sweepBatchSize = 4 * 1024;
+	size_t m_markBatchSize = 64 * KB;
+	size_t m_sweepBatchSize = 64 * KB;
 #endif // GC_STRESS_DEBUG
 
 	// time limit per context resume call

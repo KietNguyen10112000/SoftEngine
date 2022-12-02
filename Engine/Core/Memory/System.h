@@ -169,7 +169,8 @@ public:
 		}
 		m_deferFreeList.clear();
 
-		if (!IsEndGC())
+		//if (!IsEndGC())
+		if (m_phase != GC_PHASE::IDLE_PHASE)
 		{
 			if (m_phase == GC_PHASE::MARK_PHASE)
 			{
@@ -234,7 +235,7 @@ public:
 
 		m_globalLock.lock();
 
-		if (remark == false && m_handle.m_gcCycles != m_handle.m_markCycles)
+		if (remark == false && m_phase != GC_PHASE::IDLE_PHASE/*&& m_handle.m_gcCycles != m_handle.m_markCycles*/)
 		{
 			m_globalLock.unlock();
 			return;
@@ -334,18 +335,18 @@ public:
 			m_handle.m_targetCounter++;
 		}
 
-		m_markTasks1.Lock().unlock();
-
 		if (remark == false)
 		{
 			// begin new gc cycle
-			m_handle.m_gcCycles++;
+			//m_handle.m_gcCycles++;
 			m_phase = GC_PHASE::MARK_PHASE;
 		}
 		else
 		{
 			m_phase = GC_PHASE::REMARK_PHASE;
 		}
+
+		m_markTasks1.Lock().unlock();
 		
 		m_globalLock.unlock();
 	}
@@ -423,24 +424,27 @@ public:
 public:
 	inline bool AssignTaskToContext(Context* ctx, bool allowStartNewCycle)
 	{
-		if (IsEndGC() && allowStartNewCycle)
+		if (/*IsEndGC()*/m_phase == GC_PHASE::IDLE_PHASE && allowStartNewCycle)
 		{
-			if (m_handle.m_gcCycles == m_handle.m_markCycles)
-			{
+			//if (m_handle.m_gcCycles == m_handle.m_markCycles)
+			//if (m_phase == GC_PHASE::IDLE_PHASE)
+			//{
 				InitializeNewMarkCycle();
-			}
+			//}
 		}
 
-		if (m_handle.m_markCycles == m_handle.m_sweepCycles)
+		if (m_phase == GC_PHASE::MARK_PHASE || m_phase == GC_PHASE::REMARK_PHASE/*m_handle.m_markCycles == m_handle.m_sweepCycles*/)
 		{
 			// mark phase
 			return AssignMarkTask(ctx);
 		}
-		else
+		else if (m_phase == GC_PHASE::SWEEP_PHASE)
 		{
 			// sweep phase
 			return AssignSweepTask(ctx);
 		}
+
+		return false;
 	}
 
 	void InitializeNewSweepCycle()
@@ -468,7 +472,7 @@ public:
 
 		m_sweepTasks1.Lock().unlock();
 
-		m_handle.m_markCycles++;
+		//m_handle.m_markCycles++;
 
 		m_phase = GC_PHASE::SWEEP_PHASE;
 
@@ -592,9 +596,14 @@ public:
 		return m_localScopesCount == 0;
 	}
 
+	//inline bool IsEndGC()
+	//{
+	//	//return m_handle.m_gcCycles == m_handle.m_markCycles && m_handle.m_markCycles == m_handle.m_sweepCycles;
+	//}
+
 	inline bool IsEndGC()
 	{
-		return m_handle.m_gcCycles == m_handle.m_markCycles && m_handle.m_markCycles == m_handle.m_sweepCycles;
+		return m_phase == GC_PHASE::IDLE_PHASE;
 	}
 
 	inline void DeferFree(void* p)

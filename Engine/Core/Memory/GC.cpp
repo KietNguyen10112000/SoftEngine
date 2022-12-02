@@ -113,7 +113,7 @@ GC_RETURN gc::Resume(size_t timeLimit, size_t flag)
 
 	if (ctx == 0)
 	{
-		if (g_system->IsEndGC() && allowStartNewCycle == false)
+		if (/*g_system->IsEndGC() && */allowStartNewCycle == false)
 		{
 			return GC_RETURN::END_OF_GC_CYCLE;
 		}
