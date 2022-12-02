@@ -296,7 +296,7 @@ void gc::Context::RemarkPhase()
 			//	Mark();
 			//}
 			//else 
-			if (/**r.pptr == */r.ptr) // valid transaction
+			if (*r.pptr == r.ptr) // valid transaction
 			{
 				//ManagedHandle* handle = (ManagedHandle*)r.ptr - 1;
 				//handle->marked = 0;

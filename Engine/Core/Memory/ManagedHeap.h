@@ -22,21 +22,40 @@ public:
     constexpr static size_t TINY_OBJECT_MAX_SIZE = 512;
     constexpr static size_t TINY_OBJECT_MAX_PAGES = TINY_OBJECT_MAX_SIZE / TINY_OBJECT_PAGE_SIZE;
     constexpr static size_t TINY_OBJECT_POOLS_COUNT = 4;
+
+#ifdef _DEBUG
     constexpr static size_t TINY_OBJECT_EACH_POOL_CHUNK_SIZE = 16 * KB;
     constexpr static size_t TINY_OBJECT_GC_START_SIZE = 1 * MB;
+#else
+    constexpr static size_t TINY_OBJECT_EACH_POOL_CHUNK_SIZE = 1 * MB;
+    constexpr static size_t TINY_OBJECT_GC_START_SIZE = 16 * MB;
+#endif // _DEBUG
+
 
     constexpr static size_t SMALL_OBJECT_PAGE_SIZE = 1 * KB;
     constexpr static size_t SMALL_OBJECT_MAX_SIZE = 32 * KB;
     constexpr static size_t SMALL_OBJECT_MAX_PAGES = SMALL_OBJECT_MAX_SIZE / SMALL_OBJECT_PAGE_SIZE;
     constexpr static size_t SMALL_OBJECT_POOLS_COUNT = 4;
+
+#ifdef _DEBUG
     constexpr static size_t SMALL_OBJECT_EACH_POOL_CHUNK_SIZE = 256 * KB;
     constexpr static size_t SMALL_OBJECT_GC_START_SIZE = 16 * MB;
+#else
+    constexpr static size_t SMALL_OBJECT_EACH_POOL_CHUNK_SIZE = 8 * MB;
+    constexpr static size_t SMALL_OBJECT_GC_START_SIZE = 64 * MB;
+#endif // _DEBUG
+
 
     constexpr static size_t MEDIUM_OBJECT_PAGE_SIZE = 8 * KB;
     constexpr static size_t MEDIUM_OBJECT_MAX_SIZE = 256 * KB;
     constexpr static size_t MEDIUM_OBJECT_MAX_PAGES = MEDIUM_OBJECT_MAX_SIZE / MEDIUM_OBJECT_PAGE_SIZE;
     constexpr static size_t MEDIUM_OBJECT_POOLS_COUNT = 4;
+
+#ifdef _DEBUG
     constexpr static size_t MEDIUM_OBJECT_EACH_POOL_CHUNK_SIZE = 8 * MB;
+#else
+    constexpr static size_t MEDIUM_OBJECT_EACH_POOL_CHUNK_SIZE = 128 * MB;
+#endif // _DEBUG
 
 
     constexpr static size_t TOTAL_POOLS = 
