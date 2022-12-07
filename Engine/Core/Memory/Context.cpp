@@ -432,12 +432,15 @@ void gc::Context::SweepPage()
 
 end:
 #ifdef _DEBUG
-	m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
-		{
-			//handle->marked = 0;
-			assert(handle->marked == MARK_COLOR::BLACK);
-		}
-	);
+	if (m_isPaused == false)
+	{
+		m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
+			{
+				//handle->marked = 0;
+				assert(handle->marked == MARK_COLOR::BLACK);
+			}
+		);
+	}
 #endif // _DEBUG
 
 	m_page->m_lock.unlock();
@@ -453,10 +456,10 @@ void gc::Context::SweepPool()
 	{
 		auto& backward = m_pool->m_sweepBackwardIt;
 		if (m_pool->m_sweepIt == backward) backward = backward->prev;
-		else
+		/*else
 		{
 			assert(m_pool->m_sweepIt == 0);
-		}
+		}*/
 
 		while (backward != 0)
 		{
@@ -503,12 +506,15 @@ void gc::Context::SweepPool()
 	}
 
 #ifdef _DEBUG
-	m_pool->ForEachAllocatedBlocks([](ManagedHandle* handle)
-		{
-			//handle->marked = 0;
-			assert(handle->marked == MARK_COLOR::BLACK);
-		}
-	);
+	if (m_isPaused == false)
+	{
+		m_pool->ForEachAllocatedBlocks([](ManagedHandle* handle)
+			{
+				//handle->marked = 0;
+				assert(handle->marked == MARK_COLOR::BLACK);
+			}
+		);
+	}
 #endif // _DEBUG
 
 	//std::cout << "Sweeped pool id : " << (int)m_pool->m_id << " PAGE_SIZE : " << m_pool->m_PAGE_SIZE << "\n";
