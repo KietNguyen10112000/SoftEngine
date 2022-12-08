@@ -1,0 +1,85 @@
+** KB: 1024 bytes
+
+Object size:
++ Tiny-objects:       (<= 512 bytes)
++ Small-objects:      (< 512 bytes) -> (<= 32 KB)
++ Medium-objects:     (< 32 KB)     -> (<= 256 KB)
++ Large-objects:      (< 256 KB)
+
+ManagedHeap:
++ Allows up to 128 threads access at same time 
++ 4 ManagedPool for tiny-objects
++ 4 ManagedPool for small-objects
++ 4 ManagedPool for medium-objects
++ 128 ManagedPage for large-objects
+
+Page size of ManagedPool:
++ Tiny-objects:       64 bytes
++ Small-objects:      1 KB
++ Medium-objects:     8 KB
+
+ManagedHandle:
++ 16 bytes
++
+    | TraceTable    | padding    | sub-pool |log2 pool| page id | pool id | mark    | stable  |
+	|               |  bytes     |    id    |page-size|         |         | color   | value   |
+    +-----------------------------------------------------------------------------------------+
+	|  8 bytes      | 2 bytes    | 1 byte   | 1 byte  | 1 byte  | 1 byte  | 1 byte  | 1 byte  |
+	+-----------------------------------------------------------------------------------------+
++ TraceTable: memory layout of object
++ padding bytes: how many bytes paded to allocated-block
++ sub-pool id: sub-pool id of PoolN in ManagedPool
++ log2 pool page-size: log2(page-size) with page-size is of ManagedPool
++ pool id: id of ManagedPool in ManagedHeap
++ page id: id of ManagedPage in ManagedHeap
++ mark color: gc value for concurrent incremental Mark & Sweep
++ stable value: for memory turn gc
+
+ManagedPool:
++ Page-based memory allocation
++ N - PoolN
++ Each Pool has fixed block size
++  /** 
+    * Allocated-block of ManagedPool
+    * Link -> Double linked list
+	* +---------------------------------------------------------------------
+	* | Link (16 bytes) | ManagedHandle (16 bytes) | usable mem (n bytes) 
+	* +---------------------------------------------------------------------
+	**/
++   /// 
+	/// memory map of ManagedPool
+	/// ab -> allocated-block
+	/// 
+	///                                 backward ---+  +--- forward
+	///           +----- head                       v  v                                  +--- tail
+	///           v						          <--||-->                                v
+	/// null <- [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] -> null
+	/// 
+	/// we do sweep from forward to tail and re-paint all allocated-block from backward to head with BLACK
+	/// with backward and forward we can incrementally sweep a ManagedPool
+	/// 
+
+ManagedPage:
++ AVL-tree-based free-block list memory allocation
++  /** 
+    * Allocated-block of ManagedPage
+	* ------------------------------------------------------------------------
+	* | AllocatedBlock (16 bytes) | Handle (16 bytes) | usable mem (n bytes)
+	* ------------------------------------------------------------------------
+	**/
++   ///
+	/// memory map of ManagedPage
+	/// ab -> allocated-block
+	/// fb -> free-block
+	/// 
+	///                   +--- sweepIt     
+	///                   v
+	/// +--------------------------------------------+
+	/// | ab | fb | ab | ab | ab | fb | ab | fb | ab |
+	/// +--------------------------------------------+
+	/// 
+	/// new allocated block created on the paused sweeping page has 2 cases:
+	/// + before sweepIt, mark with BLACK color
+	/// + after sweepId, mark with GRAY color
+	/// -> so we can incrementally sweep a ManagedPage
+	/// 

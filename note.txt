@@ -13,3 +13,6 @@ Bug GC:
 
 Bug route cho nhiều thread cùng chạy GC 1 lúc:
 [OPEN] + Deadlock ???
+
+Performance improvement:
+[TODO] + std::vector::size() is not atomic operator so when marking stack we must lock the stack to copy its content

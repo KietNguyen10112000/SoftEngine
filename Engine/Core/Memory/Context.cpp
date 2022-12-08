@@ -212,14 +212,21 @@ void gc::Context::MarkPhase()
 	if (m_localScope)
 	{
 		auto& stack = m_localScope->stack;
-		auto& stackLock = m_localScope->stackLock;
+		auto& stackPopLock = m_localScope->stackPopLock;
 
 		if (m_copiedLocals.size() == 0)
 		{
-			stackLock.lock();
+			stackPopLock.lock();
 			//m_localScope->transactionLock.lock();
 
+			///
+			/// std::vector::size() is not atomic operator
+			/// with MSVC std, vector::size() = vector::end() - vector::begin() => not atomic
+			/// 
+			m_localScope->stackPushLock.lock();
 			auto size = stack.size();
+			m_localScope->stackPushLock.unlock();
+
 			m_copiedLocals.resize(size);
 			auto buf = stack.data();
 
@@ -229,7 +236,7 @@ void gc::Context::MarkPhase()
 			}
 
 			//m_localScope->transactionLock.unlock();
-			stackLock.unlock();
+			stackPopLock.unlock();
 		}
 		
 		const auto size = m_copiedLocals.size();
@@ -259,30 +266,17 @@ void gc::Context::RemarkPhase()
 
 	if (m_localScope)
 	{
-		// done mark phase for this local scope
+		// we must stop-the-world to process transactions (no way here)
+		// done re-mark phase for this local scope
 		// process transactions
-
-		//auto& stack = m_localScope->stack;
-
-		//m_localScope->stackLock.lock();
 		m_localScope->transactionLock.lock();
 		m_localScope->isRecordingTransactions = false;
 
 		// fake batch size so that mark process will never be paused
 		auto tempBatchSize = m_batchSize;
+		auto tempT0 = m_t0;
 		m_batchSize = -1;
-
-		/*const auto stackSize = stack.size();
-		auto* stackBuf = stack.data();
-		for (size_t i = 0; i < stackSize; i++)
-		{
-			auto ptr = *stackBuf[i];
-			if (ptr)
-			{
-				m_stack.push_back({ 0, 0, 0, ptr, 0, 0 });
-				Mark();
-			}
-		}*/
+		m_t0 = -1;
 
 		auto& transactions = m_localScope->transactions;
 		auto size = transactions.size();
@@ -291,42 +285,21 @@ void gc::Context::RemarkPhase()
 		while (m_localScopeAllocatedIdx != size && m_isPaused == false)
 		{
 			auto& r = buf[m_localScopeAllocatedIdx];
-
-			//if (r.pptr == 0)
-			//{
-			//	// force remark
-			//	ManagedHandle* handle = (ManagedHandle*)r.ptr - 1;
-			//	handle->marked = 0;
-			//	m_stack.push_back({ 0, 0, 0, r.ptr, 0, 0 });
-			//	Mark();
-			//}
-			//else 
 			if (*r.pptr == r.ptr) // valid transaction
 			{
-				//ManagedHandle* handle = (ManagedHandle*)r.ptr - 1;
-				//handle->marked = 0;
 				m_stack.push_back({ 0, 0, 0, r.ptr, 0, 0 });
 				Mark();
 			}
 			m_localScopeAllocatedIdx++;
 		}
 
-		//if (!m_isPaused)
-		//{
-		//	/*if (m_localScope->bindedTransaction && (*m_localScope->bindedTransaction))
-		//	{
-		//		m_stack.push_back({ 0, 0, 0, *m_localScope->bindedTransaction, 0, 0 });
-		//		Mark();
-		//	}*/
 
-		//	transactions.clear();
-		//}
 		assert(m_isPaused == false);
 		transactions.clear();
 		
 		m_batchSize = tempBatchSize;
+		m_t0 = tempT0;
 		m_localScope->transactionLock.unlock();
-		//m_localScope->stackLock.unlock();
 	}
 }
 
@@ -361,20 +334,23 @@ void gc::Context::SweepPage()
 	auto end = (AllocatedBlock*)(m_sweepEnd);
 
 	auto& cur = m_page->m_sweepIt;
-	//auto prev = cur;
-
-	/*if (m_page->m_isFirstInitialized)
-	{
-		// unmark all newest initialized page
-		m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
-			{
-				handle->marked = 0;
-			}
-		);
-		m_page->m_isFirstInitialized = false;
-		m_page->m_sweepIt = (AllocatedBlock*)(-1);
-		goto end;
-	}*/
+	
+	///
+	/// memory map of ManagedPage
+	/// ab -> allocated-block
+	/// fb -> free-block
+	/// 
+	///                   +--- sweepIt     
+	///                   v
+	/// +--------------------------------------------+
+	/// | ab | fb | ab | ab | ab | fb | ab | fb | ab |
+	/// +--------------------------------------------+
+	/// 
+	/// new allocated block created on the paused sweeping page has 2 cases:
+	/// + before sweepIt, mark with BLACK color
+	/// + after sweepId, mark with GRAY color
+	/// -> so we can incrementally sweep a ManagedPage
+	/// 
 
 	while (cur != end)
 	{
@@ -405,9 +381,8 @@ void gc::Context::SweepPage()
 					CONSOLE_LOG() << "free memory of \"" << handle->traceTable->className << "\"\n";
 			)*/
 			m_page->Deallocate(handle + 1);
-			//std::cout << "Sweep\n";
 		}
-		else //if (m_sharedHandle->m_sweepCycles % handle->marked == 0) // for generation gc
+		else
 		{
 			handle->marked = MARK_COLOR::BLACK;
 		}
@@ -423,7 +398,6 @@ void gc::Context::SweepPage()
 			m_counter = 0;
 			if (Handle())
 			{
-				//std::cout << "SweepPage paused\n";
 				m_isPaused = true;
 				break;
 			}
@@ -436,7 +410,6 @@ end:
 	{
 		m_page->ForEachAllocatedBlocks([](ManagedHandle* handle)
 			{
-				//handle->marked = 0;
 				assert(handle->marked == MARK_COLOR::BLACK);
 			}
 		);
@@ -452,30 +425,28 @@ void gc::Context::SweepPool()
 
 	m_pool->m_lock.lock();
 
-	if (m_pool->m_sweepBackwardIt)
+	auto& forward = m_pool->m_sweepIt;
+	auto& backward = m_pool->m_sweepBackwardIt;
+	if (backward && forward == backward) backward = backward->prev;
+
+	/// 
+	/// memory map of ManagedPool
+	/// ab -> allocated-block
+	/// 
+	///                                 backward ---+  +--- forward
+	///           +----- head                       v  v                                  +--- tail
+	///           v						          <--||-->                                v
+	/// null <- [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] <-> [ab] -> null
+	/// 
+	/// we do sweep from forward to tail and re-paint all allocated-block from backward to head with BLACK
+	/// with backward and forward we can incrementally sweep a ManagedPool
+	/// 
+
+	while (forward)
 	{
-		auto& backward = m_pool->m_sweepBackwardIt;
-		if (m_pool->m_sweepIt == backward) backward = backward->prev;
-		/*else
-		{
-			assert(m_pool->m_sweepIt == 0);
-		}*/
+		auto next = forward->next;
 
-		while (backward != 0)
-		{
-			ManagedHandle* handle = (ManagedHandle*)(backward + 1);
-			handle->marked = MARK_COLOR::BLACK;
-			backward = backward->prev;
-		}
-	}
-
-	auto& it = m_pool->m_sweepIt;
-
-	while (it)
-	{
-		auto next = it->next;
-
-		ManagedHandle* handle = (ManagedHandle*)(it + 1);
+		ManagedHandle* handle = (ManagedHandle*)(forward + 1);
 
 		if (handle->marked == MARK_COLOR::BLACK)
 		{
@@ -486,12 +457,12 @@ void gc::Context::SweepPool()
 			)*/
 			m_pool->Deallocate(handle + 1);
 		}
-		else //if (m_sharedHandle->m_sweepCycles % handle->marked)
+		else
 		{
 			handle->marked = MARK_COLOR::BLACK;
 		}
 
-		it = next;
+		forward = next;
 
 		//====================================================
 		if (((++m_counter) % m_batchSize) == 0)
@@ -505,12 +476,22 @@ void gc::Context::SweepPool()
 		}
 	}
 
+	if (m_isPaused == false && backward)
+	{
+		while (backward != 0)
+		{
+			ManagedHandle* handle = (ManagedHandle*)(backward + 1);
+			handle->marked = MARK_COLOR::BLACK;
+			backward = backward->prev;
+		}
+	}
+
+
 #ifdef _DEBUG
 	if (m_isPaused == false)
 	{
 		m_pool->ForEachAllocatedBlocks([](ManagedHandle* handle)
 			{
-				//handle->marked = 0;
 				assert(handle->marked == MARK_COLOR::BLACK);
 			}
 		);

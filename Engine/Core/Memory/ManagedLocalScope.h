@@ -34,6 +34,8 @@ namespace gc
 class ManagedLocalScope
 {
 public:
+	constexpr static size_t GC_BREAK_TIME = 100'000; // 100ns ~ 0.1ms;
+
 	struct Transaction
 	{
 		byte** pptr;
@@ -90,8 +92,9 @@ public:
 		bool isRegistered = false;
 		bool isRecordingTransactions = false;
 
-		// lock guard for stack pop operator
-		Spinlock stackLock;
+		// lock guard for stack operators
+		Spinlock stackPopLock;
+		Spinlock stackPushLock;
 
 		// lock guard for transactions
 		Spinlock transactionLock;
@@ -169,9 +172,9 @@ public:
 		auto size = local->checkpoints.back();
 		local->checkpoints.pop_back();
 
-		local->stackLock.lock();
+		local->stackPopLock.lock();
 		local->stack.resize(size);
-		local->stackLock.unlock();
+		local->stackPopLock.unlock();
 	}
 
 	inline static void FlushStackForGC()
@@ -188,9 +191,9 @@ public:
 	inline static void Push(byte** p)
 	{
 		auto scope = *s;
-		//scope->stackLock.lock();
+		scope->stackPushLock.lock();
 		scope->stack.push_back(p);
-		//scope->stackLock.unlock();
+		scope->stackPushLock.unlock();
 
 		if (*p != 0)
 		{
@@ -204,7 +207,7 @@ public:
 		auto scope = *s;
 		if (scope->stack.size() == 0) return;
 
-		scope->stackLock.lock();
+		scope->stackPopLock.lock();
 		if (scope->stack.back() == p) scope->stack.pop_back();
 		else
 		{
@@ -217,7 +220,7 @@ public:
 				scope->stack.pop_back();
 			}
 		}
-		scope->stackLock.unlock();
+		scope->stackPopLock.unlock();
 	}
 
 	// transaction during mark phase
@@ -234,7 +237,7 @@ public:
 		//scope->transactionLock.lock();
 		while (!scope->transactionLock.try_lock())
 		{
-			gc::Run(16'000'000);
+			gc::Run(GC_BREAK_TIME, gc::GC_RESUME_FLAG::RETURN_ON_EMPTY_TASK);
 		}
 
 		if (scope->isRecordingTransactions == true)
@@ -250,15 +253,6 @@ public:
 		}	
 		scope->transactionLock.unlock();
 	}
-
-	/*inline static void Transaction(byte* p)
-	{
-		if ((*s)->isRecordingTransactions == true)
-		{
-			//DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
-			(*s)->transactions.push_back({ 0, p });
-		}
-	}*/
 
 	template <typename C>
 	inline static void ForEach(C callback)
