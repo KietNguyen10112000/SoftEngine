@@ -7,7 +7,10 @@ WINDOWS = 'Windows'
 osName = platform.system()
 
 if osName == WINDOWS:
-    os.system('python ./Libraries/build_windows.py')
+    cwd = os.getcwd()
+    os.chdir(cwd + '/Libraries')
+    os.system('python ./build_windows.py')
+    os.chdir(cwd)
 else:
     print(osName + ' is not supported currently!')
     sys.exit(-1)
