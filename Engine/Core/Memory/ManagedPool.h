@@ -291,6 +291,22 @@ public:
 		return handle;
 	}
 
+	inline size_t GetTotalReservedBytesFor(size_t nBytes)
+	{
+		return m_pools[ChoosePool(nBytes + EXTERNAL_SIZE)].GetTotalReservedBytes();
+	}
+
+	inline size_t GetTotalAllocatedBytesOf(size_t nBytes)
+	{
+		return m_pools[ChoosePool(nBytes + EXTERNAL_SIZE)].GetTotalAllocatedBytes();
+	}
+
+	inline size_t GetTotalRemainBytesFor(size_t nBytes)
+	{
+		auto id = ChoosePool(nBytes + EXTERNAL_SIZE);
+		return m_pools[id].GetTotalReservedBytes() - m_pools[id].GetTotalAllocatedBytes();
+	}
+
 //	template <typename T>
 //	[[nodiscard]] inline TempPtr<T> Allocate(size_t count)
 //	{

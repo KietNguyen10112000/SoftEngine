@@ -27,6 +27,19 @@ file(
     "Core/Random/*.cpp"
 
 
+    "Math/*.h"
+    "Math/*.natvis"
+
+    "Object/*.h"
+    "Object/*.cpp"
+
+    "Components/**/*.h"
+    "Components/**/*.cpp"
+
+    "SubSystems/Rendering/*.h"
+    "SubSystems/Rendering/*.cpp"
+
+
     "TaskSystem/*.h"
     "TaskSystem/*.cpp"
 
@@ -50,6 +63,9 @@ add_library (
 include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}"
      "${CMAKE_SOURCE_DIR}"
+
+
+     "${CMAKE_SOURCE_DIR}/Libraries/glm"
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

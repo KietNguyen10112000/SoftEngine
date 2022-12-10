@@ -8,6 +8,8 @@
 
 using namespace soft;
 
+#ifdef MEMORY_TEST
+
 TEST(MemoryTest, RawHeapAllocation)
 {
 	rheap::free(rheap::malloc(64));
@@ -106,3 +108,5 @@ TEST(MemoryTest, RawHeapLargeObjectAllocation)
 		rheap::free(mems[i]);
 	}
 }
+
+#endif // MEMORY_TEST

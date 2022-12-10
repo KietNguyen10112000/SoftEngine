@@ -3,6 +3,8 @@
 #include <vector>
 #include <thread>
 
+#include "Core/Time/Clock.h"
+
 #include "System.h"
 #include "NewMalloc.h"
 
@@ -124,8 +126,9 @@ GC_RETURN gc::Resume(size_t timeLimit, size_t flag)
 		WaitForCtx(ctx, allowStartNewCycle);
 	}
 
-	ctx->Resume(timeLimit);
+	ctx->Resume(timeLimit, flag);
 
+	auto t0 = ctx->T0();
 	while (true)
 	{
 		ctx->Run();
@@ -134,6 +137,13 @@ GC_RETURN gc::Resume(size_t timeLimit, size_t flag)
 			g_system->PauseContext(ctx);
 			return GC_RETURN::TIMELIMIT_EXCEED;
 		}
+
+		if (t0 != -1 && Clock::ns::now() - t0 >= timeLimit)
+		{
+			g_system->ReturnContext(ctx);
+			return GC_RETURN::TIMELIMIT_EXCEED;
+		}
+
 		if (g_system->IsEndGC())
 		{
 			g_system->ReturnContext(ctx);

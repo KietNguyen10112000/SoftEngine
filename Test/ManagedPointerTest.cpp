@@ -203,7 +203,7 @@ void MemoryValidationImpl(size_t num = 1'000'000'0, size_t sleep1 = 200, size_t 
 		EXPECT_EQ(count, totalNode);
 	}
 
-	gc::Run(-1);
+	//gc::Run(-1);
 	//mheap::internal::Reset();
 }
 
@@ -218,15 +218,21 @@ void MemoryValidationImpl(size_t num = 1'000'000'0, size_t sleep1 = 200, size_t 
 #define NUM_TEST_NODES 1'000'000'0
 #endif // _DEBUG
 
+#ifdef MANAGED_PTR_TESTS
 TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
 {
 	volatile bool isRunning = true;
 	std::thread thread1 = std::thread([&] {
 		soft::Thread::InitializeForThisThreadInThisModule();
 
+		auto heap = mheap::internal::Get();
 		while (isRunning)
 		{
-			gc::Run(-1);
+			if (heap->IsNeedGC())
+			{
+				gc::Run(-1);
+				heap->EndGC();
+			}
 			Thread::Sleep(32);
 		}
 
@@ -236,47 +242,23 @@ TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
 	std::thread thread2 = std::thread([&] {
 		soft::Thread::InitializeForThisThreadInThisModule();
 
+		auto heap = mheap::internal::Get();
 		while (isRunning)
 		{
-			gc::Run(-1);
+			if (heap->IsNeedGC())
+			{
+				gc::Run(-1);
+				heap->EndGC();
+			}
 			Thread::Sleep(32);
 		}
 
 		soft::Thread::FinalizeForThisThreadInThisModule();
 	});
 
-	//auto& vstack = (*ManagedLocalScope::s)->stack;
-
-	//{
-	//	Array<Handle<Node>> arr = {};
-	//	//Handle<Handle<Node>> arr = mheap::NewArray<Handle<Node>>(1'000'000);
-	//	for (size_t i = 0; i < 1'000'000; i++)
-	//	{
-	//		arr.Push(mheap::New<Node>());
-	//		//arr[i] = mheap::New<Node>();
-
-	//		if (i % 10000 == 0)
-	//		{
-	//			GTestLogger::Stream(String::Format("Push {} nodes ...", i));
-	//			Thread::Sleep(200);
-	//		}
-	//	}
-
-	//	for (size_t i = 0; i < 10000; i++)
-	//	{
-	//		arr.Pop();
-	//	}
-
-	//	//gc::Run(-1);
-
-	//	isRunning = false;
-	//	thread.join();
-
-	//	gc::Run(-1);
-	//	gc::Run(-1);
-	//}
-
+	auto start = Clock::ns::now();
 	MemoryValidationImpl(NUM_TEST_NODES);
+	GTestLogger::Log(String::Format("Taken time {} ms ...", (Clock::ns::now() - start) / 1000000));
 
 	isRunning = false;
 	thread1.join();
@@ -291,19 +273,45 @@ TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads_Cac
 	std::thread thread1 = std::thread([&] {
 		soft::Thread::InitializeForThisThreadInThisModule();
 
+		auto heap = mheap::internal::Get();
 		while (isRunning)
 		{
-			gc::Run(-1);
-			Thread::Sleep(128);
+			if (heap->IsNeedGC())
+			{
+				gc::Run(-1);
+				heap->EndGC();
+			}
+			Thread::Sleep(32);
 		}
 
 		soft::Thread::FinalizeForThisThreadInThisModule();
 	});
 
+	std::thread thread2 = std::thread([&] {
+		soft::Thread::InitializeForThisThreadInThisModule();
+
+		auto heap = mheap::internal::Get();
+		while (isRunning)
+		{
+			if (heap->IsNeedGC())
+			{
+				gc::Run(-1);
+				heap->EndGC();
+			}
+			Thread::Sleep(32);
+		}
+
+		soft::Thread::FinalizeForThisThreadInThisModule();
+	});
+
+	auto start = Clock::ns::now();
 	MemoryValidationImpl(NUM_TEST_NODES);
+	GTestLogger::Log(String::Format("Taken time {} ms ...", (Clock::ns::now() - start) / 1000000));
 
 	isRunning = false;
 	thread1.join();
+	thread2.join();
 
 	gc::Run(-1);
 }
+#endif // MANAGED_PTR_TESTS

@@ -91,6 +91,8 @@ public:
     constexpr static size_t INVALID_ID = -1;
     constexpr static size_t EXTERNAL_SIZE = sizeof(ManagedHandle) + sizeof(AllocatedBlock);
 
+    constexpr static size_t MEMORY_THRESHOLD_TO_PERFORM_GC = 0.7f;
+
 public:
     struct ThreadContext
     {
@@ -189,12 +191,31 @@ public:
 
     // when turn off GC, this heap
     bool m_isGCActivated = true;
+
+    bool m_isNeedGC = false;
     
 public:
     ManagedHeap(bool GC = true);
     ~ManagedHeap();
 
 private:
+    template <size_t N>
+    inline size_t FindPoolHasMaxAllocatedBytes(size_t nBytes, ManagedPool** pools)
+    {
+        auto maxBytes = pools[0]->GetTotalAllocatedBytesOf(nBytes);
+        size_t maxId = 0;
+        for (size_t i = 1; i < N; i++)
+        {
+            auto allocatedBytes = pools[i]->GetTotalAllocatedBytesOf(nBytes);
+            if (allocatedBytes > maxBytes)
+            {
+                maxBytes = allocatedBytes;
+                maxId = i;
+            }
+        }
+        return maxId;
+    }
+
     // return row
     inline size_t ChoosePage(size_t nBytes)
     {
@@ -223,6 +244,21 @@ public:
 
     void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
 
+public:
+    inline void EndGC()
+    {
+        m_isNeedGC = false;
+    }
+
+    inline bool IsNeedGC()
+    {
+        if (m_isGCActivated == false)
+	    {
+		    return false;
+	    }
+
+	    return m_isNeedGC;
+    }
 };
 
 

@@ -301,6 +301,16 @@ public:
 		return m_totalAllocatedBlocks;
 	}
 
+	inline size_t GetTotalReservedBytes() const
+	{
+		return m_totalChunks * m_chunkSize;
+	}
+
+	inline size_t GetTotalAllocatedBytes() const
+	{
+		return m_totalAllocatedBlocks * m_blockSize;
+	}
+
 	inline bool IsEmpty()
 	{
 		return m_freeHead == 0;

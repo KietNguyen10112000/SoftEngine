@@ -518,12 +518,13 @@ void gc::Context::SweepPhase()
 	}
 }
 
-void gc::Context::Resume(size_t timeLimit)
+void gc::Context::Resume(size_t timeLimit, size_t flags)
 {
 	m_t0 = Clock::ns::now();
 	m_timeLimit = timeLimit;
 	m_isPaused = false;
 	m_counter = 0;
+	m_resumeFlags = flags;
 }
 
 void gc::Context::Run()

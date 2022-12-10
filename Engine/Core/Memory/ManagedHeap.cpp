@@ -122,26 +122,32 @@ ManagedHeap::~ManagedHeap()
 
 void ManagedHeap::PerformGC(ThreadContext* ctx, spinlock& lock)
 {
+	//if (m_isGCActivated)
+	//{
+	//	// perform full GC and lock the lock
+	//	if (lock.try_lock())
+	//	{
+	//		gc::Resume(-1, gc::GC_RESUME_FLAG::ALLOW_START_NEW_GC);
+	//	}
+	//	else
+	//	{
+	//		while (lock.try_lock() == false)
+	//		{
+	//			gc::Resume(-1, gc::GC_RESUME_FLAG::RETURN_ON_EMPTY_TASK);
+	//			std::this_thread::yield();
+	//		}
+	//	}
+	//}
+	//else
+	//{
+	//	lock.lock();
+	//}
+
 	if (m_isGCActivated)
 	{
-		// perform full GC and lock the lock
-		if (lock.try_lock())
-		{
-			gc::Resume(-1, gc::GC_RESUME_FLAG::ALLOW_START_NEW_GC);
-		}
-		else
-		{
-			while (lock.try_lock() == false)
-			{
-				gc::Resume(-1, gc::GC_RESUME_FLAG::RETURN_ON_EMPTY_TASK);
-				std::this_thread::yield();
-			}
-		}
+		m_isNeedGC = true;
 	}
-	else
-	{
-		lock.lock();
-	}
+	lock.lock();
 }
 
 size_t ManagedHeap::ChooseAndLockTinyObjectPool(ThreadContext* ctx, size_t nBytes)
@@ -162,14 +168,19 @@ size_t ManagedHeap::ChooseAndLockTinyObjectPool(ThreadContext* ctx, size_t nByte
 		m_tinyObjectPerformGCLock.unlock();
 	}
 
+	//constexpr auto TINY_OBJECT_POOLS_COUNT_1 = TINY_OBJECT_POOLS_COUNT - 1;
+
 	auto id = ctx->tinyPoolId;
 	auto endId = ctx->tinyPoolId;
 	id = (id + 1) % TINY_OBJECT_POOLS_COUNT;
 
+	auto maxId = FindPoolHasMaxAllocatedBytes<TINY_OBJECT_POOLS_COUNT>(nBytes, m_tinyObjectPools);
+
 	// use ring buffer to balance allocated objects on pools
+	// in each allocation call, the pool has max allocated bytes of nBytes will be ignored
 	while (true)
 	{
-		if (m_tinyObjectPools[id]->m_lock.try_lock())
+		if (maxId != id && m_tinyObjectPools[id]->m_lock.try_lock())
 		{
 			break;
 		}
@@ -212,10 +223,12 @@ size_t ManagedHeap::ChooseAndLockSmallObjectPool(ThreadContext* ctx, size_t nByt
 	auto endId = ctx->smallPoolId;
 	id = (id + 1) % SMALL_OBJECT_POOLS_COUNT;
 
+	auto maxId = FindPoolHasMaxAllocatedBytes<SMALL_OBJECT_POOLS_COUNT>(nBytes, m_smallObjectPools);
+
 	// use ring buffer to balance allocated objects on pools
 	while (true)
 	{
-		if (m_smallObjectPools[id]->m_lock.try_lock())
+		if (maxId != id && m_smallObjectPools[id]->m_lock.try_lock())
 		{
 			break;
 		}
@@ -508,26 +521,57 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 	if (realSize <= TINY_OBJECT_MAX_SIZE)
 	{
 		auto id = ChooseAndLockTinyObjectPool(&m_contexts[tid], nBytes);
-		ret = m_tinyObjectPools[id]->Allocate(nBytes);
-		lock = &m_tinyObjectPools[id]->m_lock;
+		auto& pool = m_tinyObjectPools[id];
+
+		ret = pool->Allocate(nBytes);
+		lock = &pool->m_lock;
+
+		if (pool->GetTotalAllocatedBytesOf(nBytes) / (float)pool->GetTotalReservedBytesFor(nBytes) 
+			> MEMORY_THRESHOLD_TO_PERFORM_GC)
+		{
+			m_isNeedGC = true;
+		}
 	}
 	else if (realSize <= SMALL_OBJECT_MAX_SIZE)
 	{
 		auto id = ChooseAndLockSmallObjectPool(&m_contexts[tid], nBytes);
-		ret = m_smallObjectPools[id]->Allocate(nBytes);
-		lock = &m_smallObjectPools[id]->m_lock;
+		auto& pool = m_smallObjectPools[id];
+
+		ret = pool->Allocate(nBytes);
+		lock = &pool->m_lock;
+
+		if (pool->GetTotalAllocatedBytesOf(nBytes) / (float)pool->GetTotalReservedBytesFor(nBytes)
+			> MEMORY_THRESHOLD_TO_PERFORM_GC)
+		{
+			m_isNeedGC = true;
+		}
 	}
 	else if (realSize <= MEDIUM_OBJECT_MAX_SIZE)
 	{
 		auto id = ChooseAndLockMediumObjectPool(&m_contexts[tid], nBytes);
-		ret = m_mediumObjectPools[id]->Allocate(nBytes);
-		lock = &m_mediumObjectPools[id]->m_lock;
+		auto& pool = m_mediumObjectPools[id];
+
+		ret = pool->Allocate(nBytes);
+		lock = &pool->m_lock;
+
+		if (pool->GetTotalAllocatedBytesOf(nBytes) / (float)pool->GetTotalReservedBytesFor(nBytes)
+			> MEMORY_THRESHOLD_TO_PERFORM_GC)
+		{
+			m_isNeedGC = true;
+		}
 	}
 	else
 	{
 		auto id = ChooseAndLockLargeObjectPage(&m_contexts[tid], nBytes);
-		ret = (&m_pages[0][0])[id]->Allocate(nBytes);
-		lock = &(&m_pages[0][0])[id]->m_lock;
+		auto& page = (&m_pages[0][0])[id];
+
+		ret = page->Allocate(nBytes);
+		lock = &page->m_lock;
+
+		if (page->GetTotalAllocatedBytes() / (float)page->GetSize() > MEMORY_THRESHOLD_TO_PERFORM_GC)
+		{
+			m_isNeedGC = true;
+		}
 	}
 
 	m_totalAllocatedBytes_ += ret->TotalSize();
@@ -599,5 +643,19 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 		}
 	}
 }
+
+//bool ManagedHeap::IsNeedGC()
+//{
+//	if (m_isGCActivated == false)
+//	{
+//		return false;
+//	}
+//
+//	if (m_isNeedGC)
+//	{
+//		return true;
+//	}
+//	return false;
+//}
 
 NAMESPACE_MEMORY_END

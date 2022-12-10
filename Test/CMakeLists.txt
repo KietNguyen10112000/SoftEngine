@@ -21,6 +21,9 @@ include_directories(
 
     "${CMAKE_SOURCE_DIR}"
     "${CMAKE_SOURCE_DIR}/Engine"
+
+
+    "${CMAKE_SOURCE_DIR}/Libraries/glm"
 )
 
 target_link_directories(

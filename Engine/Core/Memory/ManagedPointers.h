@@ -73,7 +73,8 @@ public:
 		OnConstructor();
 	}
 
-	ManagedPointer(const ManagedPointer<T>& r)
+	template <typename Derived>
+	ManagedPointer(const ManagedPointer<Derived>& r)
 	{
 		OnConstructor();
 		*this = r;
@@ -111,7 +112,8 @@ protected:
 	}
 
 public:
-	inline void operator=(const ManagedPointer<T>& r);
+	template <typename Derived>
+	inline void operator=(const ManagedPointer<Derived>& r);
 	inline void operator=(ManagedHandle* handle);
 
 	/*using Base::operator->;
@@ -205,8 +207,11 @@ template <typename T>
 using LocalPtr = ManagedPointer<T>;
 
 template<typename T>
-inline void ManagedPointer<T>::operator=(const ManagedPointer<T>& r)
+template<typename Derived>
+inline void ManagedPointer<T>::operator=(const ManagedPointer<Derived>& r)
 {
+	static_assert(std::is_base_of_v<T, Derived> && "");
+
 	if (r.IsNull())
 	{
 		Reset();

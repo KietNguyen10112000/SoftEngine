@@ -1,3 +1,4 @@
+#pragma once
 #include <vector>
 #include <map>
 #include <string>
@@ -9,6 +10,10 @@
 namespace std
 {
 	using namespace soft;
+
+	// dynamic array
+	template <typename T>
+	using Vector = ::std::vector<T, STDAllocator<T>>;
 
 	// dynamic array
 	template <typename T>

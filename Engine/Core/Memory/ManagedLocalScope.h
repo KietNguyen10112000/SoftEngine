@@ -34,7 +34,7 @@ namespace gc
 class ManagedLocalScope
 {
 public:
-	constexpr static size_t GC_BREAK_TIME = 100'000; // 100ns ~ 0.1ms;
+	constexpr static size_t GC_BREAK_TIME = 100'000; // ns ~ 0.1ms;
 
 	struct Transaction
 	{

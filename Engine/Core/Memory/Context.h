@@ -119,7 +119,7 @@ public:
 
 	bool m_isPaused = false;
 
-	
+	size_t m_resumeFlags = 0;
 	size_t m_phase = GC_PHASE::IDLE_PHASE;
 
 	std::vector<byte*, STDAllocatorMalloc<byte*>> m_copiedLocals;
@@ -159,7 +159,7 @@ private:
 	void CallDestructor(ManagedHandle* handle);
 
 public:
-	void Resume(size_t timeLimit);
+	void Resume(size_t timeLimit, size_t flags);
 	void Run();
 
 	inline bool IsPaused() 
@@ -172,6 +172,10 @@ public:
 		return !IsInMarkPhase() && !IsInSweepPhase();
 	}
 
+	inline size_t T0()
+	{
+		return m_t0;
+	}
 };
 
 }
