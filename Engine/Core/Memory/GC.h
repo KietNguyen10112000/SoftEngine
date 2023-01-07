@@ -6,6 +6,7 @@ NAMESPACE_MEMORY_BEGIN
 
 class ManagedPage;
 class ManagedPool;
+class GCEvent;
 
 namespace gc
 {
@@ -22,6 +23,8 @@ API void RegisterPages(ManagedPage** pages, size_t count);
 API void RegisterPools(ManagedPool** pools, size_t count);
 API void RegisterRoots(byte*** begin, size_t count);
 API void Finalize();
+
+API void SetGCEvent(GCEvent* evt);
 
 class GC_RESUME_FLAG
 {

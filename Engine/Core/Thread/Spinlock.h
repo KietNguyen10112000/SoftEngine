@@ -21,7 +21,21 @@ DEBUG_CODE(
 public:
     inline void lock() noexcept {
 
-        DEBUG_CODE(if (threadId != -1) assert(threadId != ThreadID::Get()));
+        /*DEBUG_CODE(if (threadId != -1)
+        {
+            assert(threadId != ThreadID::Get());
+        });*/
+
+#ifdef _DEBUG
+        if (threadId != -1)
+        {
+            if (threadId == ThreadID::Get())
+            {
+                int x = 3;
+            }
+            assert(threadId != ThreadID::Get());
+        }
+#endif // _DEBUG 
 
         for (;;) {
             // Optimistically assume the lock is free on the first try

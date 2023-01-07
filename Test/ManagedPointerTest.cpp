@@ -9,6 +9,8 @@
 #include "GTestLogger.h"
 #include "MemoryLeakDetector.h"
 
+#define MANAGED_PTR_TESTS
+
 using namespace soft;
 
 class Node : Traceable<Node>

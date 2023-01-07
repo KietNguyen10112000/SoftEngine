@@ -12,6 +12,8 @@
 #include "ManagedPool.h"
 #include "NewMalloc.h"
 
+#include "GCEvent.h"
+
 NAMESPACE_MEMORY_BEGIN
 
 namespace gc
@@ -150,6 +152,8 @@ public:
 	spinlock m_globalLock;
 
 	std::vector<void*, STDAllocatorMalloc<void*>> m_deferFreeList;
+
+	GCEvent* m_gcEvent = nullptr;
 
 public:
 	System()
@@ -340,10 +344,20 @@ public:
 			// begin new gc cycle
 			//m_handle.m_gcCycles++;
 			m_phase = GC_PHASE::MARK_PHASE;
+
+			if (m_gcEvent)
+			{
+				m_gcEvent->OnMarkBegin();
+			}
 		}
 		else
 		{
 			m_phase = GC_PHASE::REMARK_PHASE;
+
+			if (m_gcEvent)
+			{
+				m_gcEvent->OnRemarkBegin();
+			}
 		}
 
 		m_markTasks1.Lock().unlock();
@@ -475,6 +489,11 @@ public:
 		//m_handle.m_markCycles++;
 
 		m_phase = GC_PHASE::SWEEP_PHASE;
+
+		if (m_gcEvent)
+		{
+			m_gcEvent->OnSweepBegin();
+		}
 
 		m_globalLock.unlock();
 	}

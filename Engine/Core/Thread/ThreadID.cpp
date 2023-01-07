@@ -62,7 +62,7 @@ inline size_t ThreadIdGetThreadId()
 inline void ThreadIdReleaseThreadId(size_t id)
 {
 	assert(g_threadIdTop != ThreadLimit::MAX_THREADS);
-	g_threadIdAvailableIds[g_threadIdTop++] = id;
+	g_threadIdAvailableIds[++g_threadIdTop] = id;
 }
 
 size_t ThreadID::_Get()
@@ -92,6 +92,8 @@ size_t ThreadID::_Get()
 
 	ret = it->second.id;
 
+	//std::cout << "ThreadID::_Get() --- " << ret << "\n";
+
 	g_threadIdSpinlock.unlock();
 
 	return ret;
@@ -106,12 +108,14 @@ void ThreadID::Finalize()
 
 	assert(it != g_threadHandleIdMap.end());
 
+	auto id = it->second.id;
 	if ((--(it->second.moduleCounter)) == 0)
 	{
-		auto id = it->second.id;
 		g_threadHandleIdMap.erase(it);
 		ThreadIdReleaseThreadId(id);
 	}
+
+	//std::cout << "ThreadID::Finalize() --- " << id << "\n";
 
 	g_threadIdSpinlock.unlock();
 }

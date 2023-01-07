@@ -28,7 +28,11 @@ public:
 	template <typename T = void>
 	inline static void FinalizeForThisThreadInThisModule()
 	{
-		Finalize();
+		if (s_id != -1)
+		{
+			Finalize();
+			s_id = -1;
+		}
 	}
 
 public:

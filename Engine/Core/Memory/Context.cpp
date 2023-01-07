@@ -540,6 +540,13 @@ void gc::Context::Run()
 		
 		MarkPhase();
 
+		if (!m_isPaused && m_timeLimit != -1)
+		{
+			m_isPaused = true;
+			m_localScope = nullptr;
+			return;
+		}
+
 		if (!m_isPaused)
 		{
 			m_sharedHandle->EndMark(this);
@@ -557,6 +564,14 @@ void gc::Context::Run()
 
 		RemarkPhase();
 
+		// only user-code has timeLimit != -1, doesn't allow user-code start new gc-phase
+		if (!m_isPaused && m_timeLimit != -1)
+		{
+			m_isPaused = true;
+			m_localScope = nullptr;
+			return;
+		}
+
 		if (!m_isPaused)
 		{
 			m_sharedHandle->EndRemark(this);
@@ -567,6 +582,14 @@ void gc::Context::Run()
 		m_batchSize = m_sharedHandle->m_sweepBatchSize;
 
 		SweepPhase();
+
+		if (!m_isPaused && m_timeLimit != -1)
+		{
+			m_isPaused = true;
+			m_page = nullptr;
+			m_pool = nullptr;
+			return;
+		}
 
 		if (!m_isPaused)
 		{
@@ -592,6 +615,12 @@ void ContextSharedHandle::EndMark(Context* ctx)
 	auto ret = (++m_counter);
 	if (ret == m_targetCounter)
 	{
+		auto evt = g_system->m_gcEvent;
+		if (evt)
+		{
+			evt->OnMarkEnd();
+		}
+
 		g_system->InitializeNewMarkCycle(true);
 	}
 }
@@ -601,6 +630,12 @@ void gc::ContextSharedHandle::EndRemark(Context* ctx)
 	auto ret = (++m_counter);
 	if (ret == m_targetCounter)
 	{
+		auto evt = g_system->m_gcEvent;
+		if (evt)
+		{
+			evt->OnRemarkEnd();
+		}
+
 		g_system->InitializeNewSweepCycle();
 	}
 }
@@ -630,6 +665,12 @@ void ContextSharedHandle::EndSweep(Context* ctx)
 		//CONSOLE_LOG() 
 		//	<< "============ End GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
 		g_system->m_phase = GC_PHASE::IDLE_PHASE;
+
+		auto evt = g_system->m_gcEvent;
+		if (evt)
+		{
+			evt->OnSweepEnd();
+		}
 	}
 }
 

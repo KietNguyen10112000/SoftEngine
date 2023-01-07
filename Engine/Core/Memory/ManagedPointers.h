@@ -43,6 +43,7 @@ template <															\
 > friend ManagedPointer<Derived> ReinterpretCast(const PtrType<Base>& ptr);
 
 
+// change member of ManagedPointer need to change SIZE_OF_MANAGED_PTR (Memory/TypeDef.h)
 template <typename T>
 class ManagedPointer : public Traceable<ManagedPointer<T>>
 {
@@ -64,8 +65,14 @@ protected:
 	//using Base::m_ptr;
 
 protected:
+	// ptr to first object's byte
 	byte* m_block = 0;
+
+	// ptr to object byte (polymorphism, multiple inheritance)
 	T* m_ptr = 0;
+
+	// offset from "this" to first byte of block contains "this"
+	size_t m_offsetToSelf = -1;
 
 public:
 	ManagedPointer() 

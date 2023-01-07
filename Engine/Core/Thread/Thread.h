@@ -51,8 +51,8 @@ public:
 	template <typename T = void>
 	inline static void FinalizeForThisThreadInThisModule()
 	{
-		ThreadID::FinalizeForThisThreadInThisModule();
 		FinalizeForThisThread();
+		ThreadID::FinalizeForThisThreadInThisModule();
 	}
 
 public:

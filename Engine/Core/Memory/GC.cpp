@@ -71,6 +71,11 @@ void RegisterRoots(byte*** begin, size_t count)
 	g_system->RegisterRoots(begin, count);
 }
 
+void gc::SetGCEvent(GCEvent* evt)
+{
+	g_system->m_gcEvent = evt;
+}
+
 void gc::internal::RegisterLocalScope(void* s)
 {
 	Initialize();

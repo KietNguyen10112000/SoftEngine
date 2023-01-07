@@ -37,7 +37,7 @@ NAMESPACE_BEGIN
 
 using byte = uint8_t;
 
-constexpr static size_t SIZE_OF_MANAGED_PTR = 2 * sizeof(void*);
+constexpr static size_t SIZE_OF_MANAGED_PTR = 3 * sizeof(void*);
 
 #ifdef ENV64
 
