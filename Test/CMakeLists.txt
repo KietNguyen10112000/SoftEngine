@@ -11,6 +11,7 @@ file(GLOB_RECURSE TEST_SOURCES LIST_DIRECTORIES false *.h *.cpp)
 
 #file(GLOB ENGINE_SOURCES ${CMAKE_SOURCE_DIR}/Engine/**/*.cpp)
 
+add_compile_definitions(GTEST)
 
 add_executable(${BINARY} ${TEST_SOURCES})
 

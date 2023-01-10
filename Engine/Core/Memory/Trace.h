@@ -33,7 +33,11 @@ struct TraceTableElement
 {
 	size_t offset;
 
+	// does element has sub traceTable
+	// traceable object contains traceable object
 	TraceTable* traceTable;
+
+	// number of sequence managed pointer
 	size_t count;
 	
 	inline size_t GetOffset()

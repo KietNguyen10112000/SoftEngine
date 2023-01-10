@@ -12,6 +12,7 @@ NAMESPACE_MEMORY_BEGIN
 class ManagedPage;
 class ManagedPool;
 struct ManagedHandle;
+class GCEvent;
 
 class ManagedHeap
 {
@@ -188,6 +189,7 @@ public:
         std::atomic<size_t> m_totalAllocatedBytes_;
     };
 
+    GCEvent* m_gcEvent = nullptr;
 
     // when turn off GC, this heap
     bool m_isGCActivated = true;
@@ -239,7 +241,7 @@ private:
     size_t ChooseAndLockLargeObjectPage(ThreadContext* ctx, size_t nBytes);
 
 public:
-    ManagedHandle* Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock);
+    ManagedHandle* Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock, byte stableValue);
     void Deallocate(ManagedHandle* handle);
 
     void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));

@@ -209,6 +209,16 @@ void gc::Context::MarkPhase()
 		m_rootIt++;
 	}
 
+	while (m_trackedCrossBoundariesIt != m_trackedCrossBoundariesEnd && m_isPaused == false)
+	{
+		auto ptr = *m_trackedCrossBoundariesIt;
+		auto handle = (ManagedHandle*)ptr - 1;
+		handle->marked = MARK_COLOR::BLACK;
+		m_stack.push_back({ 0, 0, 0, ptr, 0, 0 });
+		Mark();
+		m_trackedCrossBoundariesIt++;
+	}
+
 	if (m_localScope)
 	{
 		auto& stack = m_localScope->stack;

@@ -221,7 +221,103 @@ void MemoryValidationImpl(size_t num = 1'000'000'0, size_t sleep1 = 200, size_t 
 #endif // _DEBUG
 
 #ifdef MANAGED_PTR_TESTS
-TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
+//TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
+//{
+//	volatile bool isRunning = true;
+//	std::thread thread1 = std::thread([&] {
+//		soft::Thread::InitializeForThisThreadInThisModule();
+//
+//		auto heap = mheap::internal::Get();
+//		while (isRunning)
+//		{
+//			if (heap->IsNeedGC())
+//			{
+//				gc::Run(-1);
+//				heap->EndGC();
+//			}
+//			Thread::Sleep(32);
+//		}
+//
+//		soft::Thread::FinalizeForThisThreadInThisModule();
+//	});
+//
+//	std::thread thread2 = std::thread([&] {
+//		soft::Thread::InitializeForThisThreadInThisModule();
+//
+//		auto heap = mheap::internal::Get();
+//		while (isRunning)
+//		{
+//			if (heap->IsNeedGC())
+//			{
+//				gc::Run(-1);
+//				heap->EndGC();
+//			}
+//			Thread::Sleep(32);
+//		}
+//
+//		soft::Thread::FinalizeForThisThreadInThisModule();
+//	});
+//
+//	auto start = Clock::ns::now();
+//	MemoryValidationImpl(NUM_TEST_NODES);
+//	GTestLogger::Log(String::Format("Taken time {} ms ...", (Clock::ns::now() - start) / 1000000));
+//
+//	isRunning = false;
+//	thread1.join();
+//	thread2.join();
+//
+//	gc::Run(-1);
+//}
+//
+//TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads_Cached)
+//{
+//	volatile bool isRunning = true;
+//	std::thread thread1 = std::thread([&] {
+//		soft::Thread::InitializeForThisThreadInThisModule();
+//
+//		auto heap = mheap::internal::Get();
+//		while (isRunning)
+//		{
+//			if (heap->IsNeedGC())
+//			{
+//				gc::Run(-1);
+//				heap->EndGC();
+//			}
+//			Thread::Sleep(32);
+//		}
+//
+//		soft::Thread::FinalizeForThisThreadInThisModule();
+//	});
+//
+//	std::thread thread2 = std::thread([&] {
+//		soft::Thread::InitializeForThisThreadInThisModule();
+//
+//		auto heap = mheap::internal::Get();
+//		while (isRunning)
+//		{
+//			if (heap->IsNeedGC())
+//			{
+//				gc::Run(-1);
+//				heap->EndGC();
+//			}
+//			Thread::Sleep(32);
+//		}
+//
+//		soft::Thread::FinalizeForThisThreadInThisModule();
+//	});
+//
+//	auto start = Clock::ns::now();
+//	MemoryValidationImpl(NUM_TEST_NODES);
+//	GTestLogger::Log(String::Format("Taken time {} ms ...", (Clock::ns::now() - start) / 1000000));
+//
+//	isRunning = false;
+//	thread1.join();
+//	thread2.join();
+//
+//	gc::Run(-1);
+//}
+
+TEST(ManagedPointerTest, ManagedPointerCrossBoundary)
 {
 	volatile bool isRunning = true;
 	std::thread thread1 = std::thread([&] {
@@ -241,79 +337,56 @@ TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads)
 		soft::Thread::FinalizeForThisThreadInThisModule();
 	});
 
-	std::thread thread2 = std::thread([&] {
-		soft::Thread::InitializeForThisThreadInThisModule();
+	auto start = Clock::ns::now();
 
-		auto heap = mheap::internal::Get();
-		while (isRunning)
+	{
+		size_t ids[] = { Random::RangeInt64(10, 20), Random::RangeInt64(21, 50), Random::RangeInt64(51, 100) };
+
+		mheap::internal::SetStableValue(1);
+		Array<Handle<Node>> objects = {};
+		for (size_t i = 0; i < 100000; i++)
 		{
-			if (heap->IsNeedGC())
-			{
-				gc::Run(-1);
-				heap->EndGC();
-			}
-			Thread::Sleep(32);
+			auto node = mheap::New<Node>();
+			node->SetData(ids);
+			objects.Push(node);
 		}
 
-		soft::Thread::FinalizeForThisThreadInThisModule();
-	});
+		mheap::internal::SetStableValue(0);
+		for (size_t i = 0; i < 1'000'000; i++)
+		{
+			if (Random::RangeInt32(0, 3) == 0)
+			{
+				auto id = Random::RangeInt64(0, objects.Size() - 1);
+				Handle<Node> parent = objects[id];
 
-	auto start = Clock::ns::now();
-	MemoryValidationImpl(NUM_TEST_NODES);
+				auto node = mheap::New<Node>();
+				node->SetData(ids);
+
+				parent->AddChild(node);
+			}
+		}
+
+		for (size_t i = 0; i < objects.Size(); i++)
+		{
+			auto& node = objects[i];
+			EXPECT_TRUE(node->IsDataValid(ids));
+
+			auto& childs = node->Childs();
+			for (size_t i = 0; i < childs.Size(); i++)
+			{
+				auto& child = childs[i];
+				EXPECT_TRUE(child->IsDataValid(ids));
+			}
+		}
+	}
+
 	GTestLogger::Log(String::Format("Taken time {} ms ...", (Clock::ns::now() - start) / 1000000));
 
 	isRunning = false;
 	thread1.join();
-	thread2.join();
 
 	gc::Run(-1);
+	mheap::internal::FreeStableObjects(1, 0, 0);
 }
 
-TEST(ManagedPointerTest, MemoryValidationOnGarbageCollection_MultipleThreads_Cached)
-{
-	volatile bool isRunning = true;
-	std::thread thread1 = std::thread([&] {
-		soft::Thread::InitializeForThisThreadInThisModule();
-
-		auto heap = mheap::internal::Get();
-		while (isRunning)
-		{
-			if (heap->IsNeedGC())
-			{
-				gc::Run(-1);
-				heap->EndGC();
-			}
-			Thread::Sleep(32);
-		}
-
-		soft::Thread::FinalizeForThisThreadInThisModule();
-	});
-
-	std::thread thread2 = std::thread([&] {
-		soft::Thread::InitializeForThisThreadInThisModule();
-
-		auto heap = mheap::internal::Get();
-		while (isRunning)
-		{
-			if (heap->IsNeedGC())
-			{
-				gc::Run(-1);
-				heap->EndGC();
-			}
-			Thread::Sleep(32);
-		}
-
-		soft::Thread::FinalizeForThisThreadInThisModule();
-	});
-
-	auto start = Clock::ns::now();
-	MemoryValidationImpl(NUM_TEST_NODES);
-	GTestLogger::Log(String::Format("Taken time {} ms ...", (Clock::ns::now() - start) / 1000000));
-
-	isRunning = false;
-	thread1.join();
-	thread2.join();
-
-	gc::Run(-1);
-}
 #endif // MANAGED_PTR_TESTS

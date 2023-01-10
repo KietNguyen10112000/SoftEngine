@@ -24,7 +24,7 @@ class System
 {
 public:
 	constexpr static size_t MAX_CONTEXTS = 128;
-	constexpr static size_t MAX_TASKS = 512;
+	constexpr static size_t MAX_TASKS = 1024;
 
 	constexpr static size_t MAX_PAGES = 256;
 	constexpr static size_t MAX_POOLS = MAX_PAGES;
@@ -38,8 +38,11 @@ public:
 	{
 		byte*** rootBegin = 0;
 		byte*** rootEnd = 0;
+
+		byte** crossBoundariesBegin = 0;
+		byte** crossBoundariesEnd = 0;
+
 		ManagedLocalScope::S* localScope = 0;
-		void* padding = 0;
 	};
 
 	struct SweepTask
@@ -139,6 +142,8 @@ public:
 	byte** m_roots[MAX_ROOTS] = {};
 	size_t m_rootsCount = 0;
 
+	std::vector<byte*, STDAllocatorMalloc<byte*>> m_trackedCrossBoundaries;
+
 	ManagedLocalScope::S* m_localScopes[MAX_THREADS] = {};
 	size_t m_localScopesCount = 0;
 
@@ -155,6 +160,7 @@ public:
 
 	GCEvent* m_gcEvent = nullptr;
 
+	ConcurrentQueue<byte*> m_crossBoundaries;
 public:
 	System()
 	{
@@ -335,9 +341,45 @@ public:
 			//}
 			//m_localScopes[i]->tLock.unlock();
 
-			m_markTasks1.Push({ 0, 0, m_localScopes[i], 0 });
+			m_markTasks1.Push({ 0, 0, 0, 0, m_localScopes[i] });
 			m_handle.m_targetCounter++;
 		}
+
+
+		if (remark == false)
+		{
+			// cross boundaries marking
+			const size_t NUM_CROSS_BOUNDARIES_TASKS = 8;
+			byte* ptr = 0;
+			while (m_crossBoundaries.try_dequeue(ptr))
+			{
+				m_trackedCrossBoundaries.push_back(ptr);
+			}
+
+			if (m_trackedCrossBoundaries.size() > 0)
+			{
+				byte** trackedCrossBoundariesBegin = m_trackedCrossBoundaries.data();
+				byte** trackedCrossBoundariesEnd = &m_trackedCrossBoundaries.back() + 1;
+				size_t numElmPerTask = m_trackedCrossBoundaries.size() / NUM_CROSS_BOUNDARIES_TASKS;
+				numElmPerTask = numElmPerTask == 0 ? 1 : numElmPerTask;
+
+				for (size_t i = 0; i < NUM_CROSS_BOUNDARIES_TASKS; i++)
+				{
+					auto end = trackedCrossBoundariesBegin + numElmPerTask;
+					end = end > trackedCrossBoundariesEnd ? trackedCrossBoundariesEnd : end;
+
+					m_markTasks1.Push({ 0, 0, trackedCrossBoundariesBegin, end, 0 });
+					m_handle.m_targetCounter++;
+
+					trackedCrossBoundariesBegin = end;
+					if (end == trackedCrossBoundariesEnd)
+					{
+						break;
+					}
+				}
+			}
+		}
+
 
 		if (remark == false)
 		{
@@ -389,6 +431,8 @@ public:
 
 		//ctx->m_sweepIt = 0;
 		//ctx->m_sweepEnd = 0;
+		ctx->m_trackedCrossBoundariesIt = task.crossBoundariesBegin;
+		ctx->m_trackedCrossBoundariesEnd = task.crossBoundariesEnd;
 
 		ctx->m_phase = m_phase;
 
@@ -577,7 +621,8 @@ public:
 		auto mngl = (ManagedLocalScope::S*)s;
 		if (mngl->isRegistered == false)
 		{
-			m_localScopes[m_localScopesCount++] = (ManagedLocalScope::S*)s;
+			m_localScopes[m_localScopesCount++] = mngl;
+			mngl->crossBoundaries = &m_crossBoundaries;
 			mngl->isRegistered = true;
 		}
 		m_globalLock.unlock();
@@ -629,6 +674,22 @@ public:
 	{
 		m_globalLock.lock();
 		m_deferFreeList.push_back(p);
+		m_globalLock.unlock();
+	}
+
+	// stableValue must be tracked stable value
+	inline void ClearTrackedBoundariesOfStableValue(byte stableValue)
+	{
+		m_globalLock.lock();
+		for (size_t i = 0; i < m_trackedCrossBoundaries.size(); i++)
+		{
+			ManagedHandle* handle = (ManagedHandle*)m_trackedCrossBoundaries[i] - 1;
+			if (handle->stableValue == stableValue)
+			{
+				m_trackedCrossBoundaries[i] = m_trackedCrossBoundaries.back();
+				i--;
+			}
+		}
 		m_globalLock.unlock();
 	}
 };

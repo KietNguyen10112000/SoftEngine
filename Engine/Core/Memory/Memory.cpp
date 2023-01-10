@@ -45,10 +45,9 @@ void MemoryFinalize()
 //=========================================================================================
 ManagedHandle* mheap::internal::Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock)
 {
-    if (g_stableValue == 0) return g_gcHeap->Allocate(nBytes, table, managedLocalBlock);
+    if (g_stableValue == 0) return g_gcHeap->Allocate(nBytes, table, managedLocalBlock, g_stableValue);
 
-    auto handle = g_stableHeap->Allocate(nBytes, table, managedLocalBlock);
-    handle->stableValue = g_stableValue;
+    auto handle = g_stableHeap->Allocate(nBytes, table, managedLocalBlock, g_stableValue);
     return handle;
 }
 
@@ -91,7 +90,7 @@ void mheap::internal::Reset()
 //=========================================================================================
 ManagedHandle* rheap::internal::Allocate(size_t nBytes)
 {
-    return g_rawHeap->Allocate(nBytes, 0, 0);
+    return g_rawHeap->Allocate(nBytes, 0, 0, 0);
 }
 
 void rheap::internal::Deallocate(ManagedHandle* handle)
@@ -114,22 +113,19 @@ void rheap::internal::Reset()
     new (g_rawHeap) ManagedHeap(false);
 }
 
-NAMESPACE_MEMORY_END
-
-
 int MemoryInitForNewOperator()
 {
     soft::MemoryInitialize();
     return 0;
 }
 
-void* operator new(size_t _Size)
+void* rheap::internal::OperatorNew(size_t _Size)
 {
     static int _unuse = MemoryInitForNewOperator();
-    return soft::g_rawHeap->Allocate(_Size, 0, 0)->GetUsableMemAddress();
+    return soft::g_rawHeap->Allocate(_Size, 0, 0, 0)->GetUsableMemAddress();
 }
 
-void operator delete(void* ptr) noexcept
+void rheap::internal::OperatorDelete(void* ptr) noexcept
 {
     if (soft::g_rawHeap)
         soft::g_rawHeap->Deallocate((soft::ManagedHandle*)ptr - 1);
@@ -137,3 +133,5 @@ void operator delete(void* ptr) noexcept
         // case of static initalizer
         std::cout << "[   WARN   ]\tinvalid delete call\n";
 }
+
+NAMESPACE_MEMORY_END

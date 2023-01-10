@@ -4,6 +4,8 @@
 #include "ManagedHeap.h"
 #include "ManagedPointers.h"
 
+#include "MemoryUtils.h"
+
 //#define MEMORY_RHEAP_ALLOW_MULTIPLE_INHERITANCE 1
 
 NAMESPACE_MEMORY_BEGIN
@@ -64,6 +66,17 @@ namespace mheap
 
 		CallConstructor(objs, n, std::forward<Args>(args)...);
 
+		auto handle = (ManagedHandle*)ret.m_block - 1;
+		if (handle->stableValue != 0)
+		{
+			MemoryUtils::ForEachManagedPointer(handle, [](byte* ptr, size_t offset)
+				{
+					auto mptr = (Handle<byte>*)ptr;
+					mptr->m_offsetToSelf = offset;
+				}
+			);
+		}
+
 		return ret;
 	}
 
@@ -86,6 +99,9 @@ namespace rheap
 		API ManagedHeap* Get();
 
 		API void Reset();
+
+		API void* OperatorNew(size_t _Size);
+		API void OperatorDelete(void* ptr) noexcept;
 	}
 
 	inline void* malloc(size_t nBytes)
@@ -199,6 +215,15 @@ namespace rheap
 NAMESPACE_MEMORY_END
 
 
+#ifndef GTEST
 // global new, delete operator
-void* operator new(size_t _Size);
-void operator delete(void* ptr) noexcept;
+inline void* operator new(size_t _Size)
+{
+	return soft::rheap::internal::OperatorNew(_Size);
+}
+
+inline void operator delete(void* ptr) noexcept
+{
+	soft::rheap::internal::OperatorDelete(ptr);
+}
+#endif

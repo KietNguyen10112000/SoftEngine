@@ -22,6 +22,12 @@ namespace gc
 	void RegisterRoot(P<T>* arr);
 }
 
+namespace mheap
+{
+	template <typename T, typename ...Args>
+	ManagedPointer<T> NewArray(size_t n, Args&&... args);
+}
+
 #define MANAGED_PTR_FRIEND()										\
 template <															\
 	typename Derived,												\
@@ -55,6 +61,8 @@ protected:
 	friend class ManagedPool;
 	friend class ManagedHeap;
 	friend class Tracer;
+	template <typename T, typename ...Args>
+	friend ManagedPointer<T> mheap::NewArray(size_t n, Args&&... args);
 
 	MANAGED_PTR_FRIEND();
 
@@ -118,9 +126,30 @@ protected:
 		Reset();
 	}
 
+	inline void Set(byte* block, T* ptr)
+	{
+		if (m_offsetToSelf != -1)
+		{
+			ManagedHandle* lhsSelfBlock = (ManagedHandle*)((byte*)this - m_offsetToSelf) - 1;
+			ManagedHandle* rhsSelfBlock = (ManagedHandle*)((byte*)block) - 1;
+			if (lhsSelfBlock->IsNonTrackedStableObject() && !rhsSelfBlock->IsStableObject())
+			{
+				// cross boundary
+				ManagedLocalScope::TrackCrossBoundary(lhsSelfBlock->GetUsableMemAddress());
+				lhsSelfBlock->MakeStableObjectTracked();
+			}
+		}
+
+		ManagedLocalScope::Transaction(&m_block, block);
+
+		m_block = block;
+		m_ptr = ptr;
+	}
+
 public:
 	template <typename Derived>
 	inline void operator=(const ManagedPointer<Derived>& r);
+	inline void operator=(const ManagedPointer<T>& r);
 	inline void operator=(ManagedHandle* handle);
 
 	/*using Base::operator->;
@@ -150,12 +179,12 @@ public:
 		return m_ptr;
 	}
 
-	inline void Set(byte* block, T* ptr)
+	/*inline void Set(byte* block, T* ptr)
 	{
 		ManagedLocalScope::Transaction(&m_block, (byte*)ptr);
 		m_block = block;
 		m_ptr = ptr;
-	}
+	}*/
 
 	// to save a pointer to a field of this pointer
 	template <auto f>
@@ -167,11 +196,13 @@ public:
 
 		using R = typename member_pointer_value<P>::type;
 
-		ManagedPointer<R> ret;
-
 		auto handle = GetHandle();
-		ret.m_block = handle->GetUsableMemAddress();
-		ret.m_ptr = &(Get()->*f);
+
+		ManagedPointer<R> ret;
+		ret.Set(handle->GetUsableMemAddress(), &(Get()->*f));
+
+		//ret.m_block = handle->GetUsableMemAddress();
+		//ret.m_ptr = &(Get()->*f);
 		return ret;
 	}
 
@@ -225,18 +256,36 @@ inline void ManagedPointer<T>::operator=(const ManagedPointer<Derived>& r)
 		return;
 	}
 
-	ManagedLocalScope::Transaction(&m_block, r.m_block);
-	m_block = r.m_block;
-	m_ptr = r.m_ptr;
+	//ManagedLocalScope::Transaction(&m_block, r.m_block);
+	//m_block = r.m_block;
+	//m_ptr = r.m_ptr;
+	Set(r.m_block, r.m_ptr);
+}
+
+template<typename T>
+inline void ManagedPointer<T>::operator=(const ManagedPointer<T>& r)
+{
+	if (r.IsNull())
+	{
+		Reset();
+		return;
+	}
+
+	//ManagedLocalScope::Transaction(&m_block, r.m_block);
+	//m_block = r.m_block;
+	//m_ptr = r.m_ptr;
+	Set(r.m_block, r.m_ptr);
 }
 
 template<typename T>
 inline void ManagedPointer<T>::operator=(ManagedHandle* handle)
 {
 	assert(handle != 0);
-	ManagedLocalScope::Transaction(&m_block, handle->GetUsableMemAddress());
-	m_block = handle->GetUsableMemAddress();
-	m_ptr = (T*)handle->GetUsableMemAddress();
+	auto p = handle->GetUsableMemAddress();
+	//ManagedLocalScope::Transaction(&m_block, p);
+	//m_block = handle->GetUsableMemAddress();
+	//m_ptr = (T*)handle->GetUsableMemAddress();
+	Set(p, p);
 }
 
 
@@ -258,9 +307,10 @@ inline ManagedPointer<Derived> DynamicCast(const PtrType<Base>& ptr)
 
 	if (derived)
 	{
-		ManagedLocalScope::Transaction(&ret.m_block, ptr.m_block);
-		ret.m_block = ptr.m_block;
-		ret.m_ptr = derived;
+		//ManagedLocalScope::Transaction(&ret.m_block, ptr.m_block);
+		//ret.m_block = ptr.m_block;
+		//ret.m_ptr = derived;
+		ret.Set(ptr.m_block, derived);
 	}
 
 	return ret;
@@ -285,9 +335,10 @@ inline ManagedPointer<Derived> StaticCast(const PtrType<Base>& ptr)
 
 	if (derived)
 	{
-		ManagedLocalScope::Transaction(&ret.m_block, ptr.m_block);
-		ret.m_block = ptr.m_block;
-		ret.m_ptr = derived;
+		//ManagedLocalScope::Transaction(&ret.m_block, ptr.m_block);
+		//ret.m_block = ptr.m_block;
+		//ret.m_ptr = derived;
+		ret.Set(ptr.m_block, derived);
 	}
 
 	return ret;
@@ -313,9 +364,10 @@ inline ManagedPointer<Derived> ReinterpretCast(const PtrType<Base>& ptr)
 
 	if (derived)
 	{
-		ManagedLocalScope::Transaction(&ret.m_block, ptr.m_block);
-		ret.m_block = ptr.m_block;
-		ret.m_ptr = derived;
+		//ManagedLocalScope::Transaction(&ret.m_block, ptr.m_block);
+		//ret.m_block = ptr.m_block;
+		//ret.m_ptr = derived;
+		ret.Set(ptr.m_block, derived);
 	}
 
 	return ret;

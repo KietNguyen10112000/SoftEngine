@@ -96,6 +96,11 @@ public:
 	byte*** m_rootIt = 0;
 	byte*** m_rootEnd = 0;
 
+
+	byte** m_trackedCrossBoundariesIt = nullptr;
+	byte** m_trackedCrossBoundariesEnd = nullptr;
+
+
 	// for local
 	ManagedLocalScope::S* m_localScope;
 	size_t m_localScopeAllocatedIdx = 0;

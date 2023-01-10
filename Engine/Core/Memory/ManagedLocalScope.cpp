@@ -54,7 +54,7 @@ ManagedLocalScope::S** ManagedLocalScope::GetManagedLocalScopeBootPhase()
 
 void ManagedLocalScope::ReleaseManagedLocalScopeBootPhase(ManagedLocalScope::S* s)
 {
-	DeleteMalloc(s);
+	//if (s) DeleteMalloc(s);
 }
 
 bool ManagedLocalScope::IsManagedLocalScopeBootPhase(S* s)

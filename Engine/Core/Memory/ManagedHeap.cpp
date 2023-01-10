@@ -4,7 +4,62 @@
 #include "ManagedPage.h"
 #include "GC.h"
 
+#include "GCEvent.h"
+
 NAMESPACE_MEMORY_BEGIN
+
+class ManagedHeapGCEvent : public GCEvent
+{
+private:
+	ManagedHeap* m_heap = nullptr;
+
+public:
+	ManagedHeapGCEvent(ManagedHeap* heap)
+	{
+		m_heap = heap;
+	}
+
+public:
+	virtual void OnMarkBegin() override
+	{
+
+	}
+
+	virtual void OnMarkEnd() override
+	{
+
+	}
+
+	virtual void OnRemarkBegin() override
+	{
+
+	}
+
+	virtual void OnRemarkEnd() override
+	{
+
+	}
+
+	virtual void OnSweepBegin() override
+	{
+
+	}
+
+	virtual void OnSweepEnd() override
+	{
+		if (m_heap->m_tinyObjectsTotalAllocatedBytes > m_heap->m_tinyObjectNextAllocatedBytesToPerformGC)
+		{
+			m_heap->m_tinyObjectNextAllocatedBytesToPerformGC *= 2;
+		}
+
+		if (m_heap->m_smallObjectsTotalAllocatedBytes > m_heap->m_smallObjectNextAllocatedBytesToPerformGC)
+		{
+			m_heap->m_smallObjectNextAllocatedBytesToPerformGC *= 2;
+		}
+
+		m_heap->m_isNeedGC = false;
+	}
+};
 
 
 ManagedHeap::ManagedHeap(bool GC)
@@ -96,6 +151,13 @@ ManagedHeap::ManagedHeap(bool GC)
 	{
 		v = 0;
 	}
+
+
+	if (GC)
+	{
+		m_gcEvent = NewMalloc<ManagedHeapGCEvent>(this);
+		gc::SetGCEvent(m_gcEvent);
+	}
 }
 
 ManagedHeap::~ManagedHeap()
@@ -118,6 +180,11 @@ ManagedHeap::~ManagedHeap()
 		}
 	}
 	::free(m_pagesHead);
+
+	if (m_gcEvent)
+	{
+		DeleteMalloc(m_gcEvent);
+	}
 }
 
 void ManagedHeap::PerformGC(ThreadContext* ctx, spinlock& lock)
@@ -160,10 +227,10 @@ size_t ManagedHeap::ChooseAndLockTinyObjectPool(ThreadContext* ctx, size_t nByte
 		//OnSmallObjectPerformGC(ctx, nBytes);
 		PerformGC(ctx, m_tinyObjectPerformGCLock);
 
-		if (m_tinyObjectsTotalAllocatedBytes > m_tinyObjectNextAllocatedBytesToPerformGC)
+		/*if (m_tinyObjectsTotalAllocatedBytes > m_tinyObjectNextAllocatedBytesToPerformGC)
 		{
 			m_tinyObjectNextAllocatedBytesToPerformGC *= 2;
-		}
+		}*/
 
 		m_tinyObjectPerformGCLock.unlock();
 	}
@@ -211,10 +278,10 @@ size_t ManagedHeap::ChooseAndLockSmallObjectPool(ThreadContext* ctx, size_t nByt
 		//OnSmallObjectPerformGC(ctx, nBytes);
 		PerformGC(ctx, m_smallObjectPerformGCLock);
 
-		if (m_smallObjectsTotalAllocatedBytes > m_smallObjectNextAllocatedBytesToPerformGC)
+		/*if (m_smallObjectsTotalAllocatedBytes > m_smallObjectNextAllocatedBytesToPerformGC)
 		{
 			m_smallObjectNextAllocatedBytesToPerformGC *= 2;
-		}
+		}*/
 
 		m_smallObjectPerformGCLock.unlock();
 	}
@@ -504,7 +571,7 @@ end:
 }
 
 
-ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock)
+ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock, byte stableValue)
 {
 	ManagedHandle* ret = 0;
 	auto realSize = nBytes + EXTERNAL_SIZE;
@@ -583,6 +650,12 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 		*managedLocalBlock = ret->GetUsableMemAddress();
 	}
 
+	ret->stableValue = stableValue;
+	if (stableValue != 0)
+	{
+		ret->marked = MARK_COLOR::WHITE;
+	}
+
 	lock->unlock();
 
 	return ret;
@@ -618,7 +691,7 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 			{
 				if (handle->stableValue != 0)
 				{
-					callback(userPtr, heap, handle);
+					if (callback) callback(userPtr, heap, handle);
 					pools[i]->Deallocate(handle->GetUsableMemAddress());
 				}
 			}
@@ -635,7 +708,7 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 				{
 					if (handle->stableValue != 0)
 					{
-						callback(userPtr, heap, handle);
+						if (callback) callback(userPtr, heap, handle);
 						pages[i]->Deallocate(handle->GetUsableMemAddress());
 					}
 				}

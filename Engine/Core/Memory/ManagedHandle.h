@@ -12,6 +12,13 @@ NAMESPACE_MEMORY_BEGIN
 //	byte* startUsableMemAddr = 0;
 //};
 
+#define STABLE_VALUE_MIN				1
+#define STABLE_VALUE_MAX				127
+#define TRACKED_STABLE_VALUE_START		128
+#define IS_NONTRACKED_STABLE_VALUE(v)	(v < TRACKED_STABLE_VALUE_START && v > 0)
+#define IS_TRACKED_STABLE_VALUE(v)		(v > TRACKED_STABLE_VALUE_START)
+#define TRACK_STABLE_VALUE(v)			v = v + TRACKED_STABLE_VALUE_START;
+
 struct TraceTable;
 
 using Dtor = void(*)(void*);
@@ -104,6 +111,21 @@ struct ManagedHandle
 	{
 		return &((ManagedHandleUsableMem*)poolBlock)->startUsableMemAddr;
 	}*/
+
+	inline bool IsStableObject() const
+	{
+		return stableValue != 0;
+	}
+
+	inline bool IsNonTrackedStableObject() const
+	{
+		return IS_NONTRACKED_STABLE_VALUE(stableValue);
+	}
+
+	inline void MakeStableObjectTracked()
+	{
+		TRACK_STABLE_VALUE(stableValue);
+	}
 };
 
 NAMESPACE_MEMORY_END

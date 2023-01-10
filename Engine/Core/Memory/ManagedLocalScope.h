@@ -9,6 +9,8 @@
 #include "Core/Fiber/FiberInfo.h"
 #include "Core/Thread/Spinlock.h"
 
+#include "Core/Structures/Concurrent/ConcurrentQueue.h"
+
 #include "ManagedHandle.h"
 #include "GC.h"
 #include "NewMalloc.h"
@@ -102,6 +104,14 @@ public:
 		// list of transactions during mark phase
 		List transactions;
 
+		//
+		// queue of tracked cross boudaries, this queue will be consumed by GC process
+		// "boudary" is:
+		// + stable block hold (or store) non-stable block
+		// (just like generation but stable value is setted at allocation)
+		//
+		ConcurrentQueue<byte*>* crossBoundaries;
+
 		inline void Log()
 		{
 			std::cout << "[   LOG    ]\t\t" << stack.size() << " objects live on stack" << "\n";
@@ -143,6 +153,7 @@ public:
 		if (s == 0 || IsManagedLocalScopeBootPhase(*s))
 		{
 			FlushStackForGC();
+			if (s) ReleaseManagedLocalScopeBootPhase(*s);
 			s = GetManagedLocalScope();
 		}
 	}
@@ -252,6 +263,12 @@ public:
 			scope->transactions.push_back({ p, ptr });
 		}	
 		scope->transactionLock.unlock();
+	}
+
+	inline static void TrackCrossBoundary(byte* firstBlockByte)
+	{
+		auto* scope = *s;
+		scope->crossBoundaries->enqueue(firstBlockByte);
 	}
 
 	template <typename C>
