@@ -1,4 +1,5 @@
 #pragma once
+#pragma warning(disable:26495)
 
 #define GLM_FORCE_RADIANS
 #include "glm/glm.hpp"
@@ -50,6 +51,9 @@ private:
 public:
     using Base::Base;
     using Base::operator[];
+    using Base::x;
+    using Base::y;
+    using Base::z;
 
 #define Vec3ScalarOperator(opt)                         \
     template <typename T>                               \
@@ -105,10 +109,25 @@ public:
         return { -v.x, -v.y, -v.z };
     }
 
+    inline friend bool operator==(const Vec3& v1, const Vec3& v2)
+    {
+        return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z;
+    }
+
+    inline friend bool operator!=(const Vec3& v1, const Vec3& v2)
+    {
+        return v1.x != v2.z || v1.y != v2.y || v1.z != v2.z;
+    }
+
 public:
     inline float Length() const
     {
-        return GLMVecConst().length();
+        return glm::length(GLMVecConst());
+    }
+
+    inline float Length2() const
+    {
+        return x * x + y * y + z * z;
     }
 
     inline Vec3& Normalize()
@@ -141,20 +160,20 @@ public:
 };
 
 // Vec3(1, 0, 0)
-constexpr const Vec3 Vec3::X_AXIS   = Vec3(1, 0, 0);
+inline constexpr const Vec3 Vec3::X_AXIS   = Vec3(1, 0, 0);
 // Vec3(0, 1, 0)
-constexpr const Vec3 Vec3::Y_AXIS   = Vec3(0, 1, 0);
+inline constexpr const Vec3 Vec3::Y_AXIS   = Vec3(0, 1, 0);
 // Vec3(0, 0, 1)
-constexpr const Vec3 Vec3::Z_AXIS   = Vec3(0, 0, 1);
+inline constexpr const Vec3 Vec3::Z_AXIS   = Vec3(0, 0, 1);
 
-constexpr const Vec3 Vec3::UP       = Vec3(0, 1, 0);
-constexpr const Vec3 Vec3::DOWN     = Vec3(0, -1, 0);
+inline constexpr const Vec3 Vec3::UP       = Vec3(0, 1, 0);
+inline constexpr const Vec3 Vec3::DOWN     = Vec3(0, -1, 0);
 
-constexpr const Vec3 Vec3::LEFT     = Vec3(-1, 0, 0);
-constexpr const Vec3 Vec3::RIGHT    = Vec3(1, 0, 0);
+inline constexpr const Vec3 Vec3::LEFT     = Vec3(-1, 0, 0);
+inline constexpr const Vec3 Vec3::RIGHT    = Vec3(1, 0, 0);
 
-constexpr const Vec3 Vec3::FORWARD  = Vec3(0, 0, 1);
-constexpr const Vec3 Vec3::BACK     = Vec3(0, 0, -1);
+inline constexpr const Vec3 Vec3::FORWARD  = Vec3(0, 0, 1);
+inline constexpr const Vec3 Vec3::BACK     = Vec3(0, 0, -1);
 
 
 
@@ -235,6 +254,21 @@ public:
 #undef Vec4ScalarOperator
 #undef Vec4Vec4Operator
 
+    inline friend Vec4 operator-(const Vec4& v)
+    {
+        return { -v.x, -v.y, -v.z, -v.w };
+    }
+
+    inline friend bool operator==(const Vec4& v1, const Vec4& v2)
+    {
+        return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
+    }
+
+    inline friend bool operator!=(const Vec4& v1, const Vec4& v2)
+    {
+        return v1.x != v2.z || v1.y != v2.y || v1.z != v2.z || v1.w != v2.w;
+    }
+
 public:
     //using Base::Base;
     using Base::operator[];
@@ -249,6 +283,35 @@ public:
         return *((Vec3*)this);
     }
 
+public:
+    inline float Length() const
+    {
+        return glm::length(GLMVecConst());
+    }
+
+    inline float Length2() const
+    {
+        return x * x + y * y + z * z + w * w;
+    }
+
+    inline Vec4& Normalize()
+    {
+        GLMVec() = glm::normalize(GLMVecConst());
+        return *this;
+    }
+
+    inline Vec4 Normal() const
+    {
+        Vec4 ret = {};
+        ret.GLMVec() = glm::normalize(GLMVecConst());
+        return ret;
+    }
+
+    // dot product
+    inline float Dot(const Vec4& v) const
+    {
+        return glm::dot(GLMVecConst(), v);
+    }
 };
 
 class Mat4;
@@ -270,7 +333,7 @@ private:
     }
 
 public:
-    Mat4 ToMat4() const;
+    inline Mat4 ToMat4() const;
 
 };
 
@@ -583,7 +646,7 @@ public:
 
 };
 
-Mat4 Quaternion::ToMat4() const
+inline Mat4 Quaternion::ToMat4() const
 {
     return Mat4().SetRotation(*this);
 }

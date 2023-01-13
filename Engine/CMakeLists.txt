@@ -30,8 +30,8 @@ file(
     "Math/*.h"
     "Math/*.natvis"
 
-    "Object/*.h"
-    "Object/*.cpp"
+    "Objects/**/*.h"
+    "Objects/**/*.cpp"
 
     "Components/**/*.h"
     "Components/**/*.cpp"

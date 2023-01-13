@@ -76,6 +76,11 @@ void gc::SetGCEvent(GCEvent* evt)
 	g_system->m_gcEvent = evt;
 }
 
+void gc::ClearTrackedBoundariesOfStableValue(byte value)
+{
+	g_system->ClearTrackedBoundariesOfStableValue(value);
+}
+
 void gc::internal::RegisterLocalScope(void* s)
 {
 	Initialize();

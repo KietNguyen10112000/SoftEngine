@@ -387,6 +387,7 @@ TEST(ManagedPointerTest, ManagedPointerCrossBoundary)
 
 	gc::Run(-1);
 	mheap::internal::FreeStableObjects(1, 0, 0);
+	gc::Run(-1);
 }
 
 #endif // MANAGED_PTR_TESTS

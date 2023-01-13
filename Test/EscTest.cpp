@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "Components/Renderers/Renderer.h"
-#include "Object/GameObject.h"
+#include "Objects/GameObject.h"
 
 #include "GTestLogger.h"
 

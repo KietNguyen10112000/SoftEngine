@@ -74,7 +74,9 @@ void mheap::internal::SetStableValue(byte value)
 
 void mheap::internal::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
 {
+    TRACK_STABLE_VALUE(stableValue);
     g_stableHeap->FreeStableObjects(stableValue, userPtr, callback);
+    gc::ClearTrackedBoundariesOfStableValue(stableValue);
 }
 
 void mheap::internal::Reset()

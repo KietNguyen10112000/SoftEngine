@@ -687,6 +687,7 @@ public:
 			if (handle->stableValue == stableValue)
 			{
 				m_trackedCrossBoundaries[i] = m_trackedCrossBoundaries.back();
+				m_trackedCrossBoundaries.pop_back();
 				i--;
 			}
 		}

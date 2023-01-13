@@ -26,6 +26,8 @@ API void Finalize();
 
 API void SetGCEvent(GCEvent* evt);
 
+API void ClearTrackedBoundariesOfStableValue(byte value);
+
 class GC_RESUME_FLAG
 {
 public:
