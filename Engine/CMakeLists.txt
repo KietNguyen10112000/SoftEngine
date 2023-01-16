@@ -36,8 +36,8 @@ file(
     "Components/**/*.h"
     "Components/**/*.cpp"
 
-    "SubSystems/Rendering/*.h"
-    "SubSystems/Rendering/*.cpp"
+    "SubSystems/*.h"
+    "SubSystems/*.cpp"
 
 
     "TaskSystem/*.h"
@@ -46,6 +46,9 @@ file(
 
     "Platform/*.h"
     "Platform/*.cpp"
+
+    "Engine.h"
+    "Engine.cpp"
 )
 
 add_executable (

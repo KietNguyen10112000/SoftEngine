@@ -208,8 +208,9 @@ public:
 
 		if (*p != 0)
 		{
+			// unreachable
 			assert(0);
-			Transaction(p, *p);
+			//Transaction(p, *p);
 		}
 	}
 
@@ -226,7 +227,7 @@ public:
 			// return ManagedPtr case
 			if (*(&back - 1) == p)
 			{
-				Transaction(*(&back - 1), *back);
+				//Transaction(*(&back - 1), *back);
 				*(&back - 1) = back;
 				scope->stack.pop_back();
 			}
@@ -242,6 +243,7 @@ public:
 		auto handle = ((ManagedHandle*)ptr) - 1;
 		if (handle->marked == MARK_COLOR::WHITE || handle->marked == MARK_COLOR::TRANSACTION_COLOR /*|| handle->marked == MARK_COLOR::GRAY*/)
 		{
+			*p = ptr;
 			return;
 		}
 
@@ -261,7 +263,10 @@ public:
 			//DEBUG_CODE(CONSOLE_LOG() << "Transaction[" << p << "]\n";);
 			handle->marked = MARK_COLOR::TRANSACTION_COLOR;
 			scope->transactions.push_back({ p, ptr });
-		}	
+		}
+
+		*p = ptr;
+
 		scope->transactionLock.unlock();
 	}
 

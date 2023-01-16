@@ -13,7 +13,7 @@ TEST(DBVTQueryTreeTest, Construction)
 	AABox box4 = { { 4,0,5 }, { 1,1,2} };
 	AABox box5 = { { 1, 2, 3 }, {5,1,2} };
 
-	DBVTQueryTree* tree = rheap::New<DBVTQueryTree>();
+	AABBQueryStructure* tree = rheap::New<DBVTQueryTree>();
 	tree->Add(box1, (void*)1);
 	tree->Add(box2, (void*)2);
 	tree->Add(box3, (void*)3);
@@ -21,5 +21,7 @@ TEST(DBVTQueryTreeTest, Construction)
 	tree->Add(box5, (void*)5);
 
 	std::Vector<void*> ret = {};
-	tree->QueryAABox(box1.MakedJointed(box2).MakedJointed(box3), ret);
+	tree->QueryAABox(box1.MakeJointed(box2).MakeJointed(box3), ret);
+
+	rheap::Delete(tree);
 }

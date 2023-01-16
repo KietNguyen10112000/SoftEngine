@@ -31,11 +31,13 @@ protected:
 
 public:
 	DBVTQueryTree();
+	~DBVTQueryTree();
 
 protected:
+	void FreeTree(Node* node);
 	void AddNode(Node* root, Node* node);
 	void QueryAABoxRecursive(Node* node, const AABox& aabox, std::Vector<void*>& output);
-
+	
 public:
 	// Inherited via AABBQueryStructure
 	virtual ID Add(const AABox& aabb, void* userPtr) override;

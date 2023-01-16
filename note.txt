@@ -10,6 +10,7 @@ Bugs virtual stack
 
 Bug GC:
 [DONE] + Grow managed heap while running GC
+[DONE] + Core/Memory/System.h Line 333, maybe need lock transactions
 
 Bug route cho nhiều thread cùng chạy GC 1 lúc:
 [OPEN] + Deadlock ???

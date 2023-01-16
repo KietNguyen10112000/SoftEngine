@@ -9,6 +9,29 @@ DBVTQueryTree::DBVTQueryTree()
 
 }
 
+DBVTQueryTree::~DBVTQueryTree()
+{
+    if (m_root)
+    {
+        FreeTree(m_root);
+    }
+}
+
+void DBVTQueryTree::FreeTree(Node* node)
+{
+    if (node->left)
+    {
+        FreeTree(node->left);
+    }
+
+    if (node->right)
+    {
+        FreeTree(node->right);
+    }
+
+    rheap::Delete(node);
+}
+
 #define JOINT_2_NODES(root, node)           \
 Node* jointedNode = rheap::New<Node>();     \
 jointedNode->bound = root->bound;           \

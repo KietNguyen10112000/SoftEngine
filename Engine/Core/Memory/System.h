@@ -327,19 +327,10 @@ public:
 			//m_localScopes[i]->tLock.lock();
 			if (remark == false)
 			{
-				// stop the world
-				//m_localScopes[i]->InterLock();
-				//m_localScopes[i]->lock.lock();
+				m_localScopes[i]->transactionLock.lock();
 				m_localScopes[i]->isRecordingTransactions = true;
-				//m_localScopes[i]->lock.lock();
-				//m_localScopes[i]->transactions.clear();
-				//m_localScopes[i]->InterUnlock();
+				m_localScopes[i]->transactionLock.unlock();
 			}
-			//else
-			//{
-			//	m_localScopes[i]->isRecordingTransactions = false;
-			//}
-			//m_localScopes[i]->tLock.unlock();
 
 			m_markTasks1.Push({ 0, 0, 0, 0, m_localScopes[i] });
 			m_handle.m_targetCounter++;

@@ -230,7 +230,7 @@ public:
 	void TraceNoExpand(T& ptr);
 
 	template<typename T, std::size_t N>
-	void TraceArray(T (&arr)[N]);
+	void Trace(T (&arr)[N]);
 
 	void BindDynamicArrayGetSize(size_t(*GetDynamicArraySize)(void*))
 	{
@@ -495,7 +495,7 @@ inline void Tracer::TraceNoExpand(T& ptr)
 
 
 template<typename T, std::size_t N>
-inline void Tracer::TraceArray(T (&arr)[N])
+inline void Tracer::Trace(T (&arr)[N])
 {
 	static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
 

@@ -36,7 +36,7 @@ protected:
 	static std::mutex s_mutex;
 	static std::atomic<size_t> s_workingWorkersCount;
 	static size_t s_workersCount;
-	static SynchContext s_sychCtxs[SubSystemInfo::SUBSYSTEMS_COUNT];
+	static SynchContext s_sychCtxs[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT];
 	static ConcurrentQueue<Fiber*> s_resumeFibers;
 	static ConcurrentQueue<Task> s_queues[Task::PRIORITY::COUNT];
 
@@ -69,6 +69,14 @@ protected:
 		if (s_workingWorkersCount.load() != s_workersCount)
 		{
 			s_cv.notify_one();
+		}
+	}
+
+	inline static void TryInvokeAllWorkers()
+	{
+		if (s_workingWorkersCount.load() != s_workersCount)
+		{
+			s_cv.notify_all();
 		}
 	}
 
@@ -183,7 +191,7 @@ protected:
 	template <bool WAIT = false>
 	inline static void SubmitOneSynchTempl(const Task& task, size_t sychContextId)
 	{
-		assert(sychContextId < SubSystemInfo::SUBSYSTEMS_COUNT);
+		assert(sychContextId < SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT);
 
 		if constexpr (WAIT)
 		{
@@ -207,7 +215,7 @@ protected:
 	template <bool WAIT = false>
 	inline static void SubmitManySynchTempl(const Task* tasks, size_t count, size_t sychContextId)
 	{
-		assert(sychContextId < SubSystemInfo::SUBSYSTEMS_COUNT);
+		assert(sychContextId < SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT);
 
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)
@@ -259,7 +267,7 @@ protected:
 		}
 
 		s_threadQueues[threadID].enqueue(task);
-		TryInvokeOneMoreWorker();
+		TryInvokeAllWorkers();
 
 		if constexpr (WAIT)
 		{
@@ -298,7 +306,7 @@ protected:
 			queue.enqueue(tasks[i]);
 		}
 
-		TryInvokeOneMoreWorker();
+		TryInvokeAllWorkers();
 
 		if constexpr (WAIT)
 		{

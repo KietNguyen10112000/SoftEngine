@@ -5,9 +5,9 @@ NAMESPACE_BEGIN
 
 std::condition_variable TaskSystem::s_cv;
 std::mutex TaskSystem::s_mutex;
-std::atomic<size_t> TaskSystem::s_workingWorkersCount = { 0 };
+std::atomic<size_t> TaskSystem::s_workingWorkersCount = { 1 };
 size_t TaskSystem::s_workersCount;
-TaskSystem::SynchContext TaskSystem::s_sychCtxs[SubSystemInfo::SUBSYSTEMS_COUNT] = {};
+TaskSystem::SynchContext TaskSystem::s_sychCtxs[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
 ConcurrentQueue<Fiber*> TaskSystem::s_resumeFibers;
 ConcurrentQueue<Task> TaskSystem::s_queues[Task::PRIORITY::COUNT];
 ConcurrentQueue<Task> TaskSystem::s_threadQueues[ThreadLimit::MAX_THREADS];

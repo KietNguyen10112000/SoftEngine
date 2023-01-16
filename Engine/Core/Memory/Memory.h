@@ -142,7 +142,7 @@ namespace rheap
 		// not allow trace on this heap
 		handle->traceTable = TraceTable::Get<T>();
 	#else
-		handle->traceTable = 0;
+		handle->traceTable = (TraceTable*)sizeof(T);
 	#endif
 
 		T* objs = (T*)handle->GetUsableMemAddress();
@@ -197,13 +197,15 @@ namespace rheap
 
 		ManagedHandle* handle = (ManagedHandle*)p - 1;
 
-		auto it = p;
-		auto end = (T*)handle->End();
+		auto it = (byte*)p;
+		auto end = handle->End();
+
+		auto stride = (size_t)handle->traceTable;
 
 		while (it != end)
 		{
-			it->~T();
-			it++;
+			((T*)it)->~T();
+			it += stride;
 		}
 
 		internal::Deallocate(handle);

@@ -3,7 +3,6 @@
 #include "Core/TypeDef.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Structures/Structures.h"
-#include "Core/Memory/SmartPointers.h"
 
 #include "Math/Math.h"
 
@@ -17,18 +16,24 @@ class GameObject : Traceable<GameObject>
 {
 public:
 	using ComponentDtor = void(*)(void*);
-	struct ComponentSlot
+	struct ComponentSlot : Traceable<ComponentSlot>
 	{
-		void (*dtor)(void*) = 0;
-		SharedPtr<void> ptr;
-	};
+		ID identifier = 0;
+		Handle<void> ptr;
 
+	private:
+		TRACEABLE_FRIEND();
+		void Trace(Tracer* tracer)
+		{
+			tracer->Trace(ptr);
+		}
+	};
 
 private:
 	// faster accessing
-	ComponentSlot m_subSystemComponents[SubSystemInfo::SUBSYSTEMS_COUNT] = {};
+	ComponentSlot m_subSystemComponents[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
 
-	std::Vector<ComponentSlot> m_components = {};
+	Array<ComponentSlot> m_components = {};
 
 protected:
 	Handle<GameObject> m_parent = nullptr;
@@ -47,10 +52,10 @@ private:
 	}
 
 	template <typename Comp>
-	GameObject* AddSubSystemComponent(const SharedPtr<Comp>& component)
+	GameObject* AddSubSystemComponent(const Handle<Comp>& component)
 	{
 		auto& slot = m_subSystemComponents[Comp::s_id];
-		if (slot.ptr.get() != nullptr)
+		if (slot.ptr.Get() != nullptr)
 		{
 			return nullptr;
 		}
@@ -64,14 +69,14 @@ private:
 	{
 		auto it = std::find_if(m_components.begin(), m_components.end(), [=](const ComponentSlot& v) -> bool
 			{
-				return v.dtor == dtor;
+				return v.identifier == (ID)dtor;
 			}
 		);
 		return it;
 	}
 
 	template <typename Comp>
-	GameObject* AddNormalComponent(const SharedPtr<Comp>& component)
+	GameObject* AddNormalComponent(const Handle<Comp>& component)
 	{
 		ComponentDtor dtor = GetDtor<Comp>();	
 		auto it = FindComponentFromDtor(dtor);
@@ -81,7 +86,10 @@ private:
 			return nullptr;
 		}
 
-		m_components.push_back({ dtor, component });
+		ComponentSlot slot = {};
+		slot.identifier = (ID)dtor;
+		slot.ptr = component;
+		m_components.Push(slot);
 
 		return this;
 	}
@@ -90,6 +98,8 @@ protected:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
+		tracer->Trace(m_subSystemComponents);
+		tracer->Trace(m_components);
 		tracer->Trace(m_parent);
 		tracer->Trace(m_childs);
 	}
@@ -97,7 +107,7 @@ protected:
 public:
 	// return null if object has one component has same type
 	template <typename Comp>
-	GameObject* AddComponent(const SharedPtr<Comp>& component)
+	GameObject* AddComponent(const Handle<Comp>& component)
 	{
 		if constexpr (std::is_base_of_v<SubSystemComponent<Comp>, Comp>)
 		{
@@ -111,19 +121,19 @@ public:
 
 	// make new component inside object
 	template <typename Comp, typename... Args>
-	SharedPtr<Comp> NewComponent(Args&&... args)
+	Handle<Comp> NewComponent(Args&&... args)
 	{
-		auto comp = MakeShared<Comp>(std::forward<Args>(args)...);
+		auto comp = mheap::New<Comp>(std::forward<Args>(args)...);
 		AddComponent(comp);
 		return comp;
 	}
 
 	template <typename Comp>
-	SharedPtr<Comp> GetComponent() const
+	Handle<Comp> GetComponent() const
 	{
 		if constexpr (std::is_base_of_v<SubSystemComponent<Comp>, Comp>)
 		{
-			return SharedPtrStaticCast<Comp>(m_subSystemComponents[Comp::s_id].ptr);
+			return StaticCast<Comp>(m_subSystemComponents[Comp::s_id].ptr);
 		}
 		else
 		{
@@ -132,7 +142,27 @@ public:
 
 			if (it != m_components.end())
 			{
-				return SharedPtrStaticCast<Comp>(it->ptr);
+				return StaticCast<Comp>(it->ptr);
+			}
+			return nullptr;
+		}
+	}
+
+	template <typename Comp>
+	Comp* GetComponentRaw() const
+	{
+		if constexpr (std::is_base_of_v<SubSystemComponent<Comp>, Comp>)
+		{
+			return (Comp*)(m_subSystemComponents[Comp::s_id].ptr.Get());
+		}
+		else
+		{
+			ComponentDtor dtor = GetDtor<Comp>();
+			auto it = FindComponentFromDtor(dtor);
+
+			if (it != m_components.end())
+			{
+				return (Comp*)(it->ptr.Get());
 			}
 			return nullptr;
 		}

@@ -99,7 +99,7 @@ public:
 		}
 	};
 
-	inline AABox MakedJointed(const AABox& right) const
+	inline AABox MakeJointed(const AABox& right) const
 	{
 		AABox ret = *this;
 		ret.Joint(right);

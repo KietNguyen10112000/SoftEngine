@@ -142,7 +142,7 @@ protected:
 
 		ManagedLocalScope::Transaction(&m_block, block);
 
-		m_block = block;
+		//m_block = block;
 		m_ptr = ptr;
 	}
 
@@ -216,25 +216,34 @@ public:
 		return Get();
 	}
 
-	inline T& operator*() const
+	template <class _Ty2 = T, std::enable_if_t<!std::disjunction_v<std::is_array<_Ty2>, std::is_void<_Ty2>>, int> = 0>
+	inline _Ty2& operator*() const
 	{
 		return *Get();
 	}
 
-	T& operator[](size_t i)
+	template <class _Ty2 = T, std::enable_if_t<!std::disjunction_v<std::is_array<_Ty2>, std::is_void<_Ty2>>, int> = 0>
+	_Ty2& operator[](size_t i) const
 	{
 		return *(Get() + i);
 	}
 
-	const T& operator[](size_t i) const
+	/*const T& operator[](size_t i) const
 	{
 		return *(Get() + i);
-	}
+	}*/
 
 	inline void operator=(nullptr_t)
 	{
 		Reset();
 	}
+
+	/*operator ManagedPointer<byte>() const
+	{
+		ManagedPointer<byte> ret;
+		ret.Set(m_block, (byte*)m_ptr);
+		return ret;
+	}*/
 
 };
 
@@ -248,7 +257,7 @@ template<typename T>
 template<typename Derived>
 inline void ManagedPointer<T>::operator=(const ManagedPointer<Derived>& r)
 {
-	static_assert(std::is_base_of_v<T, Derived> && "");
+	static_assert((std::is_base_of_v<T, Derived> || std::is_void<T>::value) && "");
 
 	if (r.IsNull())
 	{

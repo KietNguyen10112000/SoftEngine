@@ -14,8 +14,11 @@ class API TaskWorker
 {
 protected:
 	static TaskWorker s_workers[FiberInfo::TOTAL_FIBERS];
+	static size_t s_totalInitializedWorker;
 
 protected:
+	size_t m_bindedThreadId = 0;
+	std::thread m_bindedThread;
 	bool m_isRunning = true;
 	Task m_currentTask = {};
 	TaskSystem::SynchContext* m_currentSynchCtx = 0;
@@ -74,7 +77,7 @@ public:
 	}
 
 public:
-	static void Initalize();
+	static void Initalize(size_t maxWorker = 8);
 	static void Finalize();
 
 	// get the current task worker of current fiber

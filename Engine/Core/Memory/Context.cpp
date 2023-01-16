@@ -229,6 +229,8 @@ void gc::Context::MarkPhase()
 			stackPopLock.lock();
 			//m_localScope->transactionLock.lock();
 
+
+			auto buf = stack.data();
 			///
 			/// std::vector::size() is not atomic operator
 			/// with MSVC std, vector::size() = vector::end() - vector::begin() => not atomic
@@ -238,7 +240,6 @@ void gc::Context::MarkPhase()
 			m_localScope->stackPushLock.unlock();
 
 			m_copiedLocals.resize(size);
-			auto buf = stack.data();
 
 			for (size_t i = 0; i < size; i++)
 			{

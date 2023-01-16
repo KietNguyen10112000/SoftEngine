@@ -213,8 +213,18 @@ public:
 		return *(m_buffer.Get() + m_size - 1);
 	}
 
+	inline T* begin() const
+	{
+		return m_buffer.Get();
+	}
+
+	inline T* end() const
+	{
+		return m_buffer.Get() + m_size;
+	}
+
 public:
-	inline T& operator[](size_t i)
+	inline T& operator[](size_t i) const
 	{
 		_MANAGED_ARRAY_CHECK_BOUND(i);
 		return *(m_buffer.Get() + i);
