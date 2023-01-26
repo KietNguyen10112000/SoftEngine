@@ -130,11 +130,10 @@ protected:
 	{
 		if constexpr (WAIT)
 		{
-			TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			task.m_handle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
-
-			//TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			//task.m_handle = &handle;
+			auto fiber = Thread::GetCurrentFiber();
+			task.m_handle = (TaskWaitingHandle*)&fiber->m_localStorage[0];
+			task.m_handle->counter = 1;
+			task.m_handle->waitingFiber = fiber;
 		}
 
 		s_queues[priority].enqueue(task);
@@ -153,11 +152,10 @@ protected:
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)
 		{
-			TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			pHandle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
-
-			//TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			//pHandle = &handle;
+			auto fiber = Thread::GetCurrentFiber();
+			pHandle = (TaskWaitingHandle*)&fiber->m_localStorage[0];
+			pHandle->counter = count;
+			pHandle->waitingFiber = fiber;
 		}
 
 		auto& queue = s_queues[priority];
@@ -195,11 +193,10 @@ protected:
 
 		if constexpr (WAIT)
 		{
-			TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			task.m_handle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
-
-			//TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			//task.m_handle = &handle;
+			auto fiber = Thread::GetCurrentFiber();
+			task.m_handle = (TaskWaitingHandle*)&fiber->m_localStorage[0];
+			task.m_handle->counter = 1;
+			task.m_handle->waitingFiber = fiber;
 		}
 
 		s_sychCtxs[sychContextId].tasks.enqueue(task);
@@ -220,11 +217,10 @@ protected:
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)
 		{
-			TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			pHandle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
-
-			//TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			//pHandle = &handle;
+			auto fiber = Thread::GetCurrentFiber();
+			pHandle = (TaskWaitingHandle*)&fiber->m_localStorage[0];
+			pHandle->counter = count;
+			pHandle->waitingFiber = fiber;
 		}
 
 		auto& queue = s_sychCtxs[sychContextId].tasks;
@@ -259,11 +255,10 @@ protected:
 	{
 		if constexpr (WAIT)
 		{
-			TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			task.m_handle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
-
-			//TaskWaitingHandle handle = { 1, Thread::GetCurrentFiber() };
-			//task.m_handle = &handle;
+			auto fiber = Thread::GetCurrentFiber();
+			task.m_handle = (TaskWaitingHandle*)&fiber->m_localStorage[0];
+			task.m_handle->counter = 1;
+			task.m_handle->waitingFiber = fiber;
 		}
 
 		s_threadQueues[threadID].enqueue(task);
@@ -282,11 +277,10 @@ protected:
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)
 		{
-			//TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			//pHandle = rheap::New<TaskWaitingHandle>(1, Thread::GetCurrentFiber()); //&handle;
-
-			TaskWaitingHandle handle = { count, Thread::GetCurrentFiber() };
-			pHandle = &handle;
+			auto fiber = Thread::GetCurrentFiber();
+			pHandle = (TaskWaitingHandle*)&fiber->m_localStorage[0];
+			pHandle->counter = count;
+			pHandle->waitingFiber = fiber;
 		}
 
 		auto& queue = s_queues[threadID];

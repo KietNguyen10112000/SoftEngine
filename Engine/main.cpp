@@ -14,19 +14,39 @@
 
 int main()
 {
-	soft::MemoryInitialize();
-	soft::Random::Initialize();
-	soft::FiberPool::Initialize();
-	soft::Thread::InitializeForThisThreadInThisModule();
-	soft::TaskWorker::Initalize();
-	soft::SubSystems::Initialize();
+	using namespace soft;
 
-	soft::Engine::Get()->Loop();
+	MemoryInitialize();
+	Random::Initialize();
+	FiberPool::Initialize();
+	Thread::InitializeForThisThreadInThisModule();
+	TaskWorker::Initalize();
+	SubSystems::Initialize();
+
+	auto currentThreadId = Thread::GetID();
+
+	auto task = Task([](void*) { Engine::Get()->Loop(); }, nullptr);
+	TaskSystem::SubmitAndWait(task, Task::CRITICAL);
+
+	if (Thread::GetID() != currentThreadId)
+	{
+		TaskSystem::SubmitForThread(
+			{
+				[](void* arg)
+				{
+					Thread::SwitchToFiber(FiberPool::Get(Thread::GetID()), true);
+				},
+				(void*)0
+			},
+			currentThreadId
+		);
+		Thread::SwitchToFiber(FiberPool::Take(), true);
+	}
 	
-	soft::TaskWorker::Finalize();
-	soft::Thread::FinalizeForThisThreadInThisModule();
-	soft::FiberPool::Finalize();
-	soft::MemoryFinalize();
+	TaskWorker::Finalize();
+	Thread::FinalizeForThisThreadInThisModule();
+	FiberPool::Finalize();
+	MemoryFinalize();
 
 	return 0;
 }

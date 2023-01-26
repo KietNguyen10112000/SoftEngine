@@ -31,6 +31,9 @@ private:
 	// must call at the end of thread entry point func
 	static void FinalizeForThisThread();
 
+	friend class Fiber;
+	static void BeginFiber();
+
 public:
 	static void SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool);
 
@@ -70,6 +73,8 @@ public:
 	{
 		return ThreadID::Get();
 	}
+
+	static void EntryPointOfFiber(void*);
 
 };
 

@@ -7,6 +7,8 @@
 
 #include "ThreadID.h"
 
+#include "TaskSystem/TaskWorker.h"
+
 NAMESPACE_BEGIN
 
 ThreadLocalStorage Thread::s_threadLocalStorage[ThreadLimit::MAX_THREADS] = {};
@@ -45,27 +47,37 @@ void Thread::FinalizeForThisThread()
 	ThreadID::FinalizeForThisThreadInThisModule();
 }
 
+void Thread::BeginFiber()
+{
+	// starting of fiber
+	auto fiber = Thread::GetCurrentFiber();
+
+	std::cout << "Begin Fiber " << fiber->m_id << "\n";
+
+	if (fiber->m_prevFiber)
+	{
+		std::cout << "Fiber switched from " << fiber->m_prevFiber->m_id << " to " << fiber->m_id << "\n";
+
+		fiber->m_prevFiber->m_prevFiber = 0;
+		fiber->m_prevFiber->m_lock.unlock();
+
+		if (fiber->m_returnPrevFiberToPool)
+		{
+			FiberPool::Return(fiber->m_prevFiber);
+		}
+
+		fiber->m_prevFiber = 0;
+	}
+}
+
 void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
 {
-	if (Thread::GetCurrentFiber() == fiber) return;
+	auto currentFiber = Thread::GetCurrentFiber();
+	if (currentFiber == fiber) return;
 
 	auto fiberId = fiber->m_id;
-
-	auto currentFiber = FiberPool::Get(s_threadLocalStorage[ThreadID::Get()].currentFiberID);
 	s_threadLocalStorage[ThreadID::Get()].currentFiberID = fiberId;
 	ManagedLocalScope::s_managedLocalScopeThreads[ThreadID::Get()] = &ManagedLocalScope::s_managedLocalScopeFibers[fiberId];
-
-	if (returnCurrentFiberToFiberPool && !currentFiber->IsPrimary())
-	{
-		//FiberPool::Return(currentFiber);
-		fiber->m_nativeHandleFrom = currentFiber;
-	}
-	else 
-	{
-		fiber->m_nativeHandleFrom = 0;
-	}
-
-	currentFiber->m_lock.unlock();
 
 #ifdef _DEBUG
 	if (fiber->m_lock.try_lock() == false)
@@ -77,19 +89,20 @@ void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
 	fiber->m_lock.lock();
 #endif // _DEBUG
 
-	std::cout << "Switch from " << currentFiber->m_id << " to " << fiber->m_id << "\n";
+	fiber->m_prevFiber = currentFiber;
+
+	if (returnCurrentFiberToFiberPool && !currentFiber->IsPrimary())
+	{
+		fiber->m_returnPrevFiberToPool = true;
+	}
+	else
+	{
+		fiber->m_returnPrevFiberToPool = false;
+	}
 
 	platform::SwitchToFiber(fiber->m_nativeHandle);
 
-	// starting of fiber
-	fiber = Thread::GetCurrentFiber();
-
-	if (fiber->m_nativeHandleFrom != 0)
-	{
-		fiber->m_nativeHandleFrom->m_nativeHandleFrom = 0;
-		FiberPool::Return(fiber->m_nativeHandleFrom);
-		fiber->m_nativeHandleFrom = 0;
-	}
+	Thread::BeginFiber();
 }
 
 void Thread::SwitchToPrimaryFiberOfThisThread()
@@ -114,6 +127,12 @@ void Thread::SwitchToPrimaryFiberOfThisThread()
 void Thread::Sleep(size_t ms)
 {
 	std::this_thread::sleep_for(std::chrono::milliseconds(ms));
+}
+
+void Thread::EntryPointOfFiber(void*)
+{
+	Thread::BeginFiber();
+	TaskWorker::Get()->Main();
 }
 
 NAMESPACE_END

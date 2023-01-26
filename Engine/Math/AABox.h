@@ -2,6 +2,8 @@
 
 #include "Fundamental.h"
 
+#include <algorithm>
+
 namespace math
 {
 

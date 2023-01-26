@@ -2,7 +2,28 @@
 
 #include "Core/Memory/Memory.h"
 
+
 NAMESPACE_BEGIN
+
+class DBVTQueryTreeSession : public AABBQuerySession
+{
+public:
+    constexpr static size_t INIT_CAPACITY = 16 * KB;
+    std::Vector<DBVTQueryTree::Node*> m_stack;
+
+public:
+    DBVTQueryTreeSession()
+    {
+        m_stack.reserve(INIT_CAPACITY);
+        m_result.reserve(INIT_CAPACITY);
+    }
+
+    ~DBVTQueryTreeSession()
+    {
+
+    }
+
+};
 
 DBVTQueryTree::DBVTQueryTree()
 {
@@ -19,17 +40,34 @@ DBVTQueryTree::~DBVTQueryTree()
 
 void DBVTQueryTree::FreeTree(Node* node)
 {
-    if (node->left)
+    Node* it = node;
+    while (it != nullptr)
     {
-        FreeTree(node->left);
-    }
+        if (it->IsLeaf())
+        {
+            rheap::Delete(it);
+            auto parent = it->parent;
 
-    if (node->right)
-    {
-        FreeTree(node->right);
-    }
+            if (!parent)
+            {
+                break;
+            }
 
-    rheap::Delete(node);
+            if (parent->left == it)
+            {
+                parent->left = nullptr;
+            }
+            else
+            {
+                parent->right = nullptr;
+            }
+
+            it = parent;
+            continue;
+        }
+
+        it = it->right ? it->right : it->left;
+    }
 }
 
 #define JOINT_2_NODES(root, node)           \
@@ -64,63 +102,48 @@ else                                        \
 
 void DBVTQueryTree::AddNode(Node* root, Node* node)
 {
-    if (root->IsLeaf())
+    Node* it = root;
+    while (it != nullptr)
     {
-        JOINT_2_NODES(root, node);
+        if (it->IsLeaf())
+        {
+            JOINT_2_NODES(it, node);
+            return;
+        }
+
+        // choose the better side to recursive call
+        auto left = it->left;
+        auto right = it->right;
+
+        // distance from node to childs bound
+        auto dl = (left->bound.GetCenter() - node->bound.GetCenter()).Length2();
+        auto dr = (right->bound.GetCenter() - node->bound.GetCenter()).Length2();
+
+        // self distance
+        auto ds = (left->bound.GetCenter() - right->bound.GetCenter()).Length2();
+
+        auto min = std::min(std::min(dl, dr), ds);
+
+        if (min == dl)
+        {
+            //AddNode(left, node);
+            it = left;
+            continue;
+        }
+
+        if (min == dr)
+        {
+            //AddNode(right, node);
+            it = right;
+            continue;
+        }
+
+        JOINT_2_NODES(it, node);
         return;
     }
-
-    // choose the better side to recursive call
-    auto left = root->left;
-    auto right = root->right;
-
-    // distance from node to childs bound
-    auto dl = (left->bound.GetCenter() - node->bound.GetCenter()).Length2();
-    auto dr = (right->bound.GetCenter() - node->bound.GetCenter()).Length2();
-
-    // self distance
-    auto ds = (left->bound.GetCenter() - right->bound.GetCenter()).Length2();
-
-    auto max = std::max(std::max(dl, dr), ds);
-    
-    if (max == dl)
-    {
-        AddNode(left, node);
-        return;
-    }
-
-    if (max == dr)
-    {
-        AddNode(left, node);
-        return;
-    }
-
-    JOINT_2_NODES(root, node);
 }
 
 #undef JOINT_2_NODES
-
-void DBVTQueryTree::QueryAABoxRecursive(Node* node, const AABox& aabox, std::Vector<void*>& output)
-{
-    auto left = node->left;
-    auto right = node->right;
-
-    if (node->IsLeaf())
-    {
-        output.push_back(node->userPtr);
-        return;
-    }
-
-    if (left->bound.IsOverlap(aabox))
-    {
-        QueryAABoxRecursive(left, aabox, output);
-    }
-
-    if (right->bound.IsOverlap(aabox))
-    {
-        QueryAABoxRecursive(right, aabox, output);
-    }
-}
 
 ID DBVTQueryTree::Add(const AABox& aabb, void* userPtr)
 {
@@ -144,23 +167,59 @@ void DBVTQueryTree::Remove(ID id)
 {
 }
 
-void DBVTQueryTree::QueryAABox(const AABox& aabox, std::Vector<void*>& output)
+AABBQuerySession* DBVTQueryTree::NewSession()
+{
+    return rheap::New<DBVTQueryTreeSession>();
+}
+
+void DBVTQueryTree::DeleteSession(AABBQuerySession* session)
+{
+    return rheap::Delete((DBVTQueryTreeSession*)session);
+}
+
+void DBVTQueryTree::QueryAABox(const AABox& aabox, AABBQuerySession* session)
 {
     if (m_root && m_root->bound.IsOverlap(aabox))
     {
-        QueryAABoxRecursive(m_root, aabox, output);
+        auto* dvbtSession = (DBVTQueryTreeSession*)session;
+        auto& stack = dvbtSession->m_stack;
+        auto& result = dvbtSession->m_result;
+
+        stack.push_back(m_root);
+
+        while (!stack.empty())
+        {
+            auto node = stack.back();
+            stack.pop_back();
+
+            if (node->IsLeaf())
+            {
+                result.push_back(node->userPtr);
+                continue;
+            }
+
+            if (node->right->bound.IsOverlap(aabox))
+            {
+                stack.push_back(node->right);
+            }
+
+            if (node->left->bound.IsOverlap(aabox))
+            {
+                stack.push_back(node->left);
+            }
+        }
     }
 }
 
-void DBVTQueryTree::QuerySphere(const Sphere& sphere, std::Vector<void*>& output)
+void DBVTQueryTree::QuerySphere(const Sphere& sphere, AABBQuerySession* session)
 {
 }
 
-void DBVTQueryTree::QueryBox(const Box& box, std::Vector<void*>& output)
+void DBVTQueryTree::QueryBox(const Box& box, AABBQuerySession* session)
 {
 }
 
-void DBVTQueryTree::Query(AABBQueryTester* tester, std::Vector<void*>& output)
+void DBVTQueryTree::Query(AABBQueryTester* tester, AABBQuerySession* session)
 {
 }
 

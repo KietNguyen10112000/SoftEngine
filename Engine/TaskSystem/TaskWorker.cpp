@@ -13,42 +13,74 @@ void TaskWorker::Initalize(size_t maxWorker)
 
 	s_totalInitializedWorker = numThreads;
 	TaskSystem::s_workersCount = s_totalInitializedWorker;
+	TaskSystem::s_workingWorkersCount = numThreads;
 
+	static TaskWorker* initedWorker = 0;
 	// init all avaiable threads
 	for (uint32_t i = 1; i < numThreads; i++)
 	{
-		auto& worker = s_workers[i];
-		worker.m_bindedThread = std::thread([i]()
+		initedWorker = 0;
+		auto thread = std::thread([]()
 			{
 				Thread::InitializeForThisThreadInThisModule();
-				auto& w = s_workers[i];
-				w.IsRunning() = true;
-				w.m_bindedThreadId = ThreadID::Get();
-				w.Main();
+				auto w = TaskWorker::Get();
+				w->IsRunning() = true;
+				w->m_bindedThreadId = ThreadID::Get();
+				initedWorker = w;
+				w->Main();
 				Thread::FinalizeForThisThreadInThisModule();
 			}
 		);
+
+		while (initedWorker == 0)
+		{
+			Thread::Sleep(16);
+		}
+
+		((TaskWorker*)initedWorker)->m_bindedThread.swap(thread);
 	}
 }
 
 void TaskWorker::Finalize()
 {
+	static std::atomic<size_t> finalized = 0;
+
 	for (uint32_t i = 1; i < s_totalInitializedWorker; i++)
 	{
-		auto& w = s_workers[i];
-		while (w.m_bindedThreadId == 0)
-		{
-			std::this_thread::yield();
-		}
+		TaskSystem::SubmitForThread(
+			{
+				[](void* arg)
+				{
+					Thread::SwitchToFiber(FiberPool::Get(Thread::GetID()), true);
+				},
+				(void*)0
+			},
+			i
+		);
+	}
 
-		while (w.IsRunning())
+	while (finalized.load() != s_totalInitializedWorker - 1)
+	{
+		for (uint32_t i = 1; i < s_totalInitializedWorker; i++)
 		{
-			w.IsRunning() = false;
-			std::this_thread::yield();
+			TaskSystem::SubmitForThread(
+				{
+					[](void* arg)
+					{
+						TaskWorker::Get()->IsRunning() = false;
+						finalized++;
+					},
+					(void*)0
+				},
+				i
+			);
 		}
+	}
+	
 
-		TaskSystem::SubmitForThread({ [](void*) {} ,0 }, w.m_bindedThreadId);
-		w.m_bindedThread.join();
+	for (auto& w : s_workers)
+	{
+		if (w.m_bindedThread.joinable()) w.m_bindedThread.join();
 	}
 }
 

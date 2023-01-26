@@ -14,11 +14,9 @@ FiberNativeHandle* ConvertThisThreadToFiber()
 
 FiberNativeHandle* CreateFiber()
 {
-	return (FiberNativeHandle*)::CreateFiber(FiberInfo::STACK_SIZE, 
-		[](void*) -> void 
-		{
-			TaskWorker::Get()->Main();
-		},
+	return (FiberNativeHandle*)::CreateFiber(
+		FiberInfo::STACK_SIZE,
+		Thread::EntryPointOfFiber,
 		0
 	);
 	//return nullptr;

@@ -2,8 +2,9 @@
 
 #include "Core/TypeDef.h"
 
-#include "Core/Structures/STD/STDContainers.h"
 #include "Math/Math.h"
+
+#include "AABBQuerySession.h"
 
 NAMESPACE_BEGIN
 
@@ -20,13 +21,17 @@ public:
 	// remove what returned by Add()
 	virtual void Remove(ID id) = 0;
 
+	// child class must implement with mediator pattern
+	virtual AABBQuerySession* NewSession() = 0;
+	virtual void DeleteSession(AABBQuerySession* session) = 0;
+
 public:
 	// thread-safe methods
 	// output contains what u added by Add()
-	virtual void QueryAABox(const AABox& aabox, std::Vector<void*>& output) = 0;
-	virtual void QuerySphere(const Sphere& sphere, std::Vector<void*>& output) = 0;
-	virtual void QueryBox(const Box& box, std::Vector<void*>& output) = 0;
-	virtual void Query(AABBQueryTester* tester, std::Vector<void*>& output) = 0;
+	virtual void QueryAABox(const AABox& aabox, AABBQuerySession* session) = 0;
+	virtual void QuerySphere(const Sphere& sphere, AABBQuerySession* session) = 0;
+	virtual void QueryBox(const Box& box, AABBQuerySession* session) = 0;
+	virtual void Query(AABBQueryTester* tester, AABBQuerySession* session) = 0;
 };
 
 

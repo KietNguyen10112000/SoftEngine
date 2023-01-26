@@ -16,10 +16,21 @@ public:
 		auto id = (startId + 1) % N_SPACES;
 		while (true)
 		{
-			if (callable(id) && locks[id].try_lock())
+			if constexpr (std::is_same_v<Condition, nullptr_t>)
 			{
-				break;
+				if (locks[id].try_lock())
+				{
+					break;
+				}
 			}
+			else
+			{
+				if (callable(id) && locks[id].try_lock())
+				{
+					break;
+				}
+			}
+			
 			id = (id + 1) % N_SPACES;
 
 			if constexpr (YIELD)

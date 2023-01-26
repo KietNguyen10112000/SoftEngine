@@ -12,6 +12,12 @@
 
 #include "MemoryLeakDetector.h"
 
+#include "Core/Random/Random.h"
+
+#include "Objects/QueryStructures/DBVTQueryTree.h"
+
+using namespace soft;
+
 int main(int argc, char** argv)
 {
 	::testing::InitGoogleTest(&argc, argv);

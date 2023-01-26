@@ -18,12 +18,21 @@ protected:
 	FiberNativeHandle* m_nativeHandle = 0;
 
 	// which fiber called to switch to me
-	Fiber* m_nativeHandleFrom = 0;
+	Fiber* m_prevFiber = 0;
+	bool m_returnPrevFiberToPool = 0;
 
 public:
+	constexpr static size_t LOCAL_STORAGE_SIZE = 16;
+	size_t m_localStorage[LOCAL_STORAGE_SIZE] = {};
+
 	inline bool IsPrimary() const
 	{
 		return m_id < ThreadLimit::MAX_THREADS;
+	}
+
+	inline auto Id() const
+	{
+		return m_id;
 	}
 
 };

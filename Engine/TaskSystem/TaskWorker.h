@@ -13,6 +13,8 @@ NAMESPACE_BEGIN
 class API TaskWorker
 {
 protected:
+	friend class TaskSystem;
+
 	static TaskWorker s_workers[FiberInfo::TOTAL_FIBERS];
 	static size_t s_totalInitializedWorker;
 
@@ -30,7 +32,7 @@ protected:
 
 		if (m_currentTask.m_handle && m_currentTask.m_handle->waitingFiber && (--(m_currentTask.m_handle->counter)) == 0)
 		{
-			rheap::Delete(m_currentTask.m_handle);
+			//rheap::Delete(m_currentTask.m_handle);
 
 			if (m_currentSynchCtx)
 			{

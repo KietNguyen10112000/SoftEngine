@@ -36,7 +36,6 @@ public:
 protected:
 	void FreeTree(Node* node);
 	void AddNode(Node* root, Node* node);
-	void QueryAABoxRecursive(Node* node, const AABox& aabox, std::Vector<void*>& output);
 	
 public:
 	// Inherited via AABBQueryStructure
@@ -44,13 +43,17 @@ public:
 
 	virtual void Remove(ID id) override;
 
-	virtual void QueryAABox(const AABox& aabox, std::Vector<void*>& output) override;
+	virtual AABBQuerySession* NewSession() override;
 
-	virtual void QuerySphere(const Sphere& sphere, std::Vector<void*>& output) override;
+	virtual void DeleteSession(AABBQuerySession* session) override;
 
-	virtual void QueryBox(const Box& box, std::Vector<void*>& output) override;
+	virtual void QueryAABox(const AABox& aabox, AABBQuerySession* session) override;
 
-	virtual void Query(AABBQueryTester* tester, std::Vector<void*>& output) override;
+	virtual void QuerySphere(const Sphere& sphere, AABBQuerySession* session) override;
+
+	virtual void QueryBox(const Box& box, AABBQuerySession* session) override;
+
+	virtual void Query(AABBQueryTester* tester, AABBQuerySession* session) override;
 
 };
 
