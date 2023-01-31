@@ -35,7 +35,11 @@ file(
 
     "Components/**/*.h"
     "Components/**/*.cpp"
+    "Components/*.h"
+    "Components/*.cpp"
 
+    "SubSystems/**/*.h"
+    "SubSystems/**/*.cpp"
     "SubSystems/*.h"
     "SubSystems/*.cpp"
 

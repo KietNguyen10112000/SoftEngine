@@ -2,15 +2,41 @@
 
 #include "Core/TypeDef.h"
 
-#include "Core/Pattern/Singleton.h"
+#include "Core/Structures/Managed/Array.h"
 
 NAMESPACE_BEGIN
 
+class Scene;
 
-class Engine : public Singleton<Engine>
+class Engine
 {
 public:
-	void Loop();
+	constexpr static byte STABLE_VALUE = 127;
+
+protected:
+	Array<Handle<Scene>> m_scenes;
+
+	TRACEABLE_FRIEND();
+	void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_scenes);
+	}
+
+	bool m_isRunning = true;
+
+public:
+	static Handle<Engine> Initialize();
+	static void Finalize();
+
+	void Setup();
+
+	void Run();
+
+	void Iteration();
+
+	void ProcessInput();
+
+	void SynchronizeAllSubSystems();
 
 };
 

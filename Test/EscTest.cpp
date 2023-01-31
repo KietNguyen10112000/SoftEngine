@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "Components/Renderers/Renderer.h"
+#include "Components/Rendering/RenderingComponent.h"
 #include "Objects/GameObject.h"
 
 #include "GTestLogger.h"
@@ -26,12 +26,22 @@ TEST(EscTest, ComponentTest)
 
 	};
 
-	class TestRenderer : public Renderer
+	class TestRenderer : public RenderingComponent
 	{
 	public:
 		~TestRenderer()
 		{
 			GTestLogger::Log("~TestRenderer()");
+		}
+
+		virtual void OnComponentAdded(GameObject* object) override
+		{
+
+		}
+
+		virtual void OnComponentAddedToScene(const Handle<GameObject>& object) override
+		{
+
 		}
 	};
 

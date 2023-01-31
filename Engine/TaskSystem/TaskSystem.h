@@ -162,10 +162,10 @@ protected:
 
 		for (size_t i = 0; i < count; i++)
 		{
-#ifdef _DEBUG
-			// must same
-			if (i != 0) assert(tasks[i].m_main == tasks[i - 1].m_main);
-#endif // _DEBUG
+//#ifdef _DEBUG
+//			// must same
+//			if (i != 0) assert(tasks[i].m_main == tasks[i - 1].m_main);
+//#endif // _DEBUG
 
 			if constexpr (WAIT)
 			{
@@ -175,7 +175,7 @@ protected:
 			queue.enqueue(tasks[i]);
 		}
 
-		TryInvokeOneMoreWorker();
+		TryInvokeAllWorkers();
 
 		if constexpr (WAIT)
 		{
@@ -369,10 +369,10 @@ public:
 		SubmitManyForThreadTempl<false>(tasks, count, threadId);
 	}
 
-	inline static void SubmitAndWait(const Task* tasks, size_t count, size_t threadId)
+	/*inline static void SubmitAndWait(const Task* tasks, size_t count, size_t threadId)
 	{
 		SubmitManyForThreadTempl<true>(tasks, count, threadId);
-	}
+	}*/
 
 };
 

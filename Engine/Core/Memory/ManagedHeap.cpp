@@ -683,13 +683,15 @@ void ManagedHeap::Deallocate(ManagedHandle* handle)
 
 void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
 {
+	auto trackedStableValue = MAKE_TRACK_STABLE_VALUE(stableValue);
+
 	auto heap = this;
 	auto pools = &m_tinyObjectPools[0];
 	for (size_t i = 0; i < TOTAL_POOLS; i++)
 	{
 		pools[i]->ForEachAllocatedBlocks([&](ManagedHandle* handle)
 			{
-				if (handle->stableValue != 0)
+				if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
 				{
 					if (callback) callback(userPtr, heap, handle);
 					pools[i]->Deallocate(handle->GetUsableMemAddress());
@@ -706,7 +708,7 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 		{
 			pages[i]->ForEachAllocatedBlocks([&](ManagedHandle* handle)
 				{
-					if (handle->stableValue != 0)
+					if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
 					{
 						if (callback) callback(userPtr, heap, handle);
 						pages[i]->Deallocate(handle->GetUsableMemAddress());

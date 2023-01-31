@@ -35,6 +35,8 @@ int main(int argc, char** argv)
 
 		ret = RUN_ALL_TESTS();
 
+		exit(ret);
+
 		soft::Thread::FinalizeForThisThreadInThisModule();
 		soft::TaskWorker::Finalize();
 		soft::FiberPool::Finalize();

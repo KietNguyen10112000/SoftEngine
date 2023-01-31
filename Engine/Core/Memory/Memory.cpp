@@ -2,6 +2,7 @@
 
 #include "ManagedHeap.h"
 #include "NewMalloc.h"
+#include "DeferredBuffer.h"
 
 NAMESPACE_MEMORY_BEGIN
 
@@ -18,10 +19,14 @@ void MemoryInitialize()
     g_rawHeap = NewMalloc<ManagedHeap>(false);
     g_stableHeap = NewMalloc<ManagedHeap>(false);
     g_gcHeap = NewMalloc<ManagedHeap>();
+
+    DeferredBufferTracker::Initialize();
 }
 
 void MemoryFinalize()
 {
+    DeferredBufferTracker::Finalize();
+
     if (g_rawHeap)
     {
         DeleteMalloc(g_rawHeap);
@@ -74,8 +79,8 @@ void mheap::internal::SetStableValue(byte value)
 
 void mheap::internal::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
 {
-    TRACK_STABLE_VALUE(stableValue);
     g_stableHeap->FreeStableObjects(stableValue, userPtr, callback);
+    TRACK_STABLE_VALUE(stableValue);
     gc::ClearTrackedBoundariesOfStableValue(stableValue);
 }
 

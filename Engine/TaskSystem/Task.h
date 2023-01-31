@@ -46,6 +46,17 @@ public:
 	Task(TaskEntryPoint main, TaskParams params) 
 		: m_main(main), m_params(params) {}
 
+public:
+	inline auto& Entry()
+	{
+		return m_main;
+	}
+
+	inline auto& Params()
+	{
+		return m_params;
+	}
+
 };
 
 NAMESPACE_END

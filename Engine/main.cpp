@@ -21,27 +21,41 @@ int main()
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
 	TaskWorker::Initalize();
+
 	SubSystems::Initialize();
 
-	auto currentThreadId = Thread::GetID();
-
-	auto task = Task([](void*) { Engine::Get()->Loop(); }, nullptr);
-	TaskSystem::SubmitAndWait(task, Task::CRITICAL);
-
-	if (Thread::GetID() != currentThreadId)
 	{
-		TaskSystem::SubmitForThread(
-			{
-				[](void* arg)
+		auto engine = Engine::Initialize();
+
+		auto currentThreadId = Thread::GetID();
+
+		auto task = Task([](void* e) { ((Engine*)e)->Run(); }, engine.Get());
+		TaskSystem::SubmitForThread(task, currentThreadId);
+
+		//task = Task([](void*) { TaskWorker::Get()->IsRunning() = false; }, nullptr);
+		//TaskSystem::SubmitForThread(task, currentThreadId);
+
+		TaskWorker::Get()->Main();
+
+		if (Thread::GetID() != currentThreadId)
+		{
+			TaskSystem::SubmitForThread(
 				{
-					Thread::SwitchToFiber(FiberPool::Get(Thread::GetID()), true);
+					[](void* arg)
+					{
+						Thread::SwitchToFiber(FiberPool::Get(Thread::GetID()), true);
+					},
+					(void*)0
 				},
-				(void*)0
-			},
-			currentThreadId
-		);
-		Thread::SwitchToFiber(FiberPool::Take(), true);
+				currentThreadId
+			);
+			Thread::SwitchToFiber(FiberPool::Take(), true);
+		}
 	}
+	
+
+	Engine::Finalize();
+	SubSystems::Finalize();
 	
 	TaskWorker::Finalize();
 	Thread::FinalizeForThisThreadInThisModule();

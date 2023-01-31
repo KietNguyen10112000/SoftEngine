@@ -38,7 +38,7 @@ public:
 	template <bool AVOID_THREAD_COLLIDE = false>
 	void Add(const T& v)
 	{
-		auto start = 0;
+		size_t start = -1;
 
 		if constexpr (AVOID_THREAD_COLLIDE)
 		{
@@ -50,7 +50,7 @@ public:
 		m_locks[chosenId].unlock();
 	}
 
-	void Clear(const T& v)
+	void Clear()
 	{
 		for (size_t i = 0; i < N_SPACES; i++)
 		{
@@ -76,7 +76,7 @@ public:
 		UnlockAll();
 	}
 
-}
+};
 
 
 NAMESPACE_END

@@ -8,7 +8,7 @@ NAMESPACE_BEGIN
 
 class Scene;
 
-class PhysicsSystem : public Singleton<PhysicsSystem>
+class RenderingSystem : public Singleton<RenderingSystem>
 {
 public:
 	void Process(Scene* scene);

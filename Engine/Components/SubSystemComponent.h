@@ -2,19 +2,21 @@
 
 #include "Core/TypeDef.h"
 
+#include "Core/Memory/Memory.h"
+
 NAMESPACE_BEGIN
 
-template <typename T>
+class GameObject;
+
 class SubSystemComponent
 {
-protected:
-	friend class GameObject;
+public:
+	// called when this component is added to object
+	virtual void OnComponentAdded(GameObject* object) = 0;
 
-	static size_t s_id;
+	// called when object contains this component added to scene
+	virtual void OnComponentAddedToScene(const Handle<GameObject>& object) = 0;
 
 };
-
-class Renderer;
-API SubSystemComponent<Renderer>;
 
 NAMESPACE_END

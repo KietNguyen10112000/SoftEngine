@@ -3,6 +3,7 @@
 #include "Core/TypeDef.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Structures/Structures.h"
+#include "Core/TemplateUtils/TemplateUtils.h"
 
 #include "Math/Math.h"
 
@@ -29,16 +30,37 @@ public:
 		}
 	};
 
+	friend class Scene;
+
+	DefineHasClassMethod(OnCompentAdded);
+
+public:
+	struct EventCallback
+	{
+		void (*call)(const Handle<GameObject>&, void*);
+		void* param;
+	};
+
+	enum EVENT
+	{
+		ADDED_TO_SCENE,
+
+		COUNT
+	};
+
 private:
 	// faster accessing
-	ComponentSlot m_subSystemComponents[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
+	Handle<SubSystemComponent> m_subSystemComponents[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
 
 	Array<ComponentSlot> m_components = {};
+
+	std::Vector<EventCallback> m_events[EVENT::COUNT] = {};
 
 protected:
 	Handle<GameObject> m_parent = nullptr;
 	Array<Handle<GameObject>> m_childs;
 
+	ID m_id = -1;
 	Transform m_transform = {};
 
 private:
@@ -54,14 +76,15 @@ private:
 	template <typename Comp>
 	GameObject* AddSubSystemComponent(const Handle<Comp>& component)
 	{
-		auto& slot = m_subSystemComponents[Comp::s_id];
-		if (slot.ptr.Get() != nullptr)
+		auto& slot = m_subSystemComponents[Comp::COMPONENT_ID];
+		if (slot.Get() != nullptr)
 		{
 			return nullptr;
 		}
 
 		//slot.dtor = GetDtor<Comp>();
-		slot.ptr = component;
+		slot = component;
+		component->OnComponentAdded(this);
 		return this;
 	}
 
@@ -91,6 +114,11 @@ private:
 		slot.ptr = component;
 		m_components.Push(slot);
 
+		if constexpr (Has_OnCompentAdded<Comp>::value)
+		{
+			component->OnCompentAdded(this);
+		}
+
 		return this;
 	}
 
@@ -104,12 +132,23 @@ protected:
 		tracer->Trace(m_childs);
 	}
 
+	void TriggerEvent(const Handle<GameObject>& self, EVENT type)
+	{
+		assert(this == self.Get());
+
+		auto& events = m_events[type];
+		for (auto& e : events)
+		{
+			e.call(self, e.param);
+		}
+	}
+
 public:
 	// return null if object has one component has same type
 	template <typename Comp>
 	GameObject* AddComponent(const Handle<Comp>& component)
 	{
-		if constexpr (std::is_base_of_v<SubSystemComponent<Comp>, Comp>)
+		if constexpr (std::is_base_of_v<SubSystemComponent, Comp>)
 		{
 			return AddSubSystemComponent(component);
 		}
@@ -131,9 +170,9 @@ public:
 	template <typename Comp>
 	Handle<Comp> GetComponent() const
 	{
-		if constexpr (std::is_base_of_v<SubSystemComponent<Comp>, Comp>)
+		if constexpr (std::is_base_of_v<SubSystemComponent, Comp>)
 		{
-			return StaticCast<Comp>(m_subSystemComponents[Comp::s_id].ptr);
+			return StaticCast<Comp>(m_subSystemComponents[Comp::COMPONENT_ID]);
 		}
 		else
 		{
@@ -151,9 +190,9 @@ public:
 	template <typename Comp>
 	Comp* GetComponentRaw() const
 	{
-		if constexpr (std::is_base_of_v<SubSystemComponent<Comp>, Comp>)
+		if constexpr (std::is_base_of_v<SubSystemComponent, Comp>)
 		{
-			return (Comp*)(m_subSystemComponents[Comp::s_id].ptr.Get());
+			return (Comp*)(m_subSystemComponents[Comp::COMPONENT_ID].Get());
 		}
 		else
 		{
@@ -166,6 +205,19 @@ public:
 			}
 			return nullptr;
 		}
+	}
+
+public:
+	ID AddEvent(EVENT type, EventCallback callback)
+	{
+		assert(type < EVENT::COUNT);
+		m_events[type].push_back(callback);
+		return 0;
+	}
+
+	void RemoveEvent(ID event)
+	{
+		
 	}
 
 };

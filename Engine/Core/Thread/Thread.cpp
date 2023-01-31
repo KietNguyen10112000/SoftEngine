@@ -52,11 +52,11 @@ void Thread::BeginFiber()
 	// starting of fiber
 	auto fiber = Thread::GetCurrentFiber();
 
-	std::cout << "Begin Fiber " << fiber->m_id << "\n";
+	//std::cout << "Begin Fiber " << fiber->m_id << "\n";
 
 	if (fiber->m_prevFiber)
 	{
-		std::cout << "Fiber switched from " << fiber->m_prevFiber->m_id << " to " << fiber->m_id << "\n";
+		//std::cout << "Fiber switched from " << fiber->m_prevFiber->m_id << " to " << fiber->m_id << "\n";
 
 		fiber->m_prevFiber->m_prevFiber = 0;
 		fiber->m_prevFiber->m_lock.unlock();
