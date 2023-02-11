@@ -191,6 +191,12 @@ public:
 		_Resize(newSize);
 	}
 
+	inline void Clear()
+	{
+		::memset(m_buffer.Get(), 0, sizeof(T) * m_size);
+		m_size = 0;
+	}
+
 public:
 	// STL-like
 	inline size_t size() const
@@ -221,6 +227,11 @@ public:
 	inline T* end() const
 	{
 		return m_buffer.Get() + m_size;
+	}
+
+	inline void clear()
+	{
+		Clear();
 	}
 
 public:

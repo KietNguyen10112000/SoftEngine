@@ -9,7 +9,10 @@
 
 NAMESPACE_MEMORY_BEGIN
 
-template <size_t N, size_t CHUNK_SIZE, size_t CHUNK_ALLOC_COUNT = 1>
+using malloc_func_type = void* (*)(size_t);
+using free_func_type = void (*)(void*);
+
+template <size_t N, size_t CHUNK_SIZE, size_t CHUNK_ALLOC_COUNT = 1, malloc_func_type MALLOC = ::malloc, free_func_type FREE = ::free>
 class Pool
 {
 public:
@@ -73,7 +76,14 @@ public:
 		{
 			auto temp = iter->next;
 			
-			free(iter);
+			//if constexpr (FREE != nullptr)
+			//{
+				FREE(iter);
+			//}
+			//else
+			//{
+			//	::free(iter);
+			//}
 			
 			iter = temp;
 		}
@@ -84,7 +94,16 @@ private:
 	{
 		for (size_t i = 0; i < count; i++)
 		{
-			auto chunk = (Chunk*)::malloc(sizeof(Chunk));
+			Chunk* chunk = (Chunk*)MALLOC(sizeof(Chunk));
+
+			//if constexpr (MALLOC != nullptr)
+			//{
+			//	chunk = (Chunk*)MALLOC(sizeof(Chunk));
+			//}
+			//else
+			//{
+			//	chunk = (Chunk*)::malloc(sizeof(Chunk));
+			//}
 			
 			new (chunk) Chunk();
 			
@@ -325,7 +344,7 @@ public:
 
 
 // allocate only 8 bytes per allocate call
-template <size_t CHUNK_SIZE, size_t CHUNK_ALLOC_COUNT = 1>
+template <size_t CHUNK_SIZE, size_t CHUNK_ALLOC_COUNT = 1, malloc_func_type MALLOC = ::malloc, free_func_type FREE = ::free>
 class Pool0
 {
 public:
@@ -386,7 +405,7 @@ public:
 		{
 			auto temp = iter->next;
 
-			free(iter);
+			FREE(iter);
 
 			iter = temp;
 		}
@@ -397,7 +416,7 @@ private:
 	{
 		for (size_t i = 0; i < count; i++)
 		{
-			auto chunk = (Chunk*)malloc(sizeof(Chunk));
+			auto chunk = (Chunk*)MALLOC(sizeof(Chunk));
 
 			new (chunk) Chunk();
 

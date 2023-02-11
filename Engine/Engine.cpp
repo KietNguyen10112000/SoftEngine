@@ -13,6 +13,10 @@
 #include "Objects/Scene/Scene.h"
 #include "Objects/Scene/TestScene.h"
 
+#include "Objects/Scene/Event/BuiltinEventManager.h"
+
+#include "Objects/Scene/Event/EventManager.h"
+
 NAMESPACE_BEGIN
 
 Handle<Engine> Engine::Initialize()
@@ -27,11 +31,13 @@ Handle<Engine> Engine::Initialize()
 void Engine::Finalize()
 {
 	mheap::internal::FreeStableObjects(Engine::STABLE_VALUE, 0, 0);
+	EventManager::Finalize();
 	gc::Run(-1);
 }
 
 void Engine::Setup()
 {
+	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
 	
 	m_scenes.Push(mheap::New<TestScene>());
@@ -108,6 +114,20 @@ void Engine::ProcessInput()
 
 void Engine::SynchronizeAllSubSystems()
 {
+	auto mainScene = m_scenes[0].Get();
+
+	mainScene->m_objectEventMgr->DispatchObjectEvent(
+		BUILTIN_EVENT::SCENE_ADD_OBJECT,
+		BUILTIN_EVENT_SUIT::SCENE_EVENT,
+		nullptr
+	);
+	mainScene->m_objectEventMgr->DispatchObjectEvent(
+		BUILTIN_EVENT::SCENE_REMOVE_OBJECT,
+		BUILTIN_EVENT_SUIT::SCENE_EVENT,
+		nullptr
+	);
+	mainScene->m_objectEventMgr->FlushAllObjectEvents();
+
 	std::cout << "SynchronizeAllSubSystems()\n";
 	DeferredBufferTracker::Get()->UpdateAllThenClear();
 }

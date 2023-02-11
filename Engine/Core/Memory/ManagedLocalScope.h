@@ -9,7 +9,7 @@
 #include "Core/Fiber/FiberInfo.h"
 #include "Core/Thread/Spinlock.h"
 
-#include "Core/Structures/Concurrent/ConcurrentQueue.h"
+#include "Core/Structures/Raw/ConcurrentQueue.h"
 
 #include "ManagedHandle.h"
 #include "GC.h"

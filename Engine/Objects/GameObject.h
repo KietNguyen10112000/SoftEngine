@@ -2,6 +2,7 @@
 
 #include "Core/TypeDef.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/DeferredBuffer.h"
 #include "Core/Structures/Structures.h"
 #include "Core/TemplateUtils/TemplateUtils.h"
 
@@ -11,9 +12,12 @@
 
 #include "Components/SubSystemComponent.h"
 
+#include "Scene/Event/EventListener.h"
+#include "Scene/Event/EventListenerContainer.h"
+
 NAMESPACE_BEGIN
 
-class GameObject : Traceable<GameObject>
+class GameObject final : Traceable<GameObject>
 {
 public:
 	using ComponentDtor = void(*)(void*);
@@ -35,12 +39,6 @@ public:
 	DefineHasClassMethod(OnCompentAdded);
 
 public:
-	struct EventCallback
-	{
-		void (*call)(const Handle<GameObject>&, void*);
-		void* param;
-	};
-
 	enum EVENT
 	{
 		ADDED_TO_SCENE,
@@ -49,19 +47,31 @@ public:
 	};
 
 private:
+	// the scene, absolutely, live to the end of object-live, no need managed ptr
+	// when the scene destroy, it sets this field to null
+	Scene* m_scene = nullptr;
+
 	// faster accessing
 	Handle<SubSystemComponent> m_subSystemComponents[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
 
 	Array<ComponentSlot> m_components = {};
 
-	std::Vector<EventCallback> m_events[EVENT::COUNT] = {};
+	EventListenerContainer m_eventListeners;
 
-protected:
+private:
+	// >>> scene's control members 
+	ID m_uid = -1;
+	ID m_sceneId = -1;
+	ID m_aabbQueryId = -1;
+
+	AABox m_aabb = {};
+	// <<< scene's control members 
+
 	Handle<GameObject> m_parent = nullptr;
 	Array<Handle<GameObject>> m_childs;
 
-	ID m_id = -1;
-	Transform m_transform = {};
+protected:
+	DeferredBuffer<Transform> m_transform = {};
 
 private:
 	template <typename T>
@@ -132,17 +142,6 @@ protected:
 		tracer->Trace(m_childs);
 	}
 
-	void TriggerEvent(const Handle<GameObject>& self, EVENT type)
-	{
-		assert(this == self.Get());
-
-		auto& events = m_events[type];
-		for (auto& e : events)
-		{
-			e.call(self, e.param);
-		}
-	}
-
 public:
 	// return null if object has one component has same type
 	template <typename Comp>
@@ -208,16 +207,40 @@ public:
 	}
 
 public:
-	ID AddEvent(EVENT type, EventCallback callback)
+	inline void AddEventListener(EVENT type, const Handle<EventListener>& listener)
 	{
 		assert(type < EVENT::COUNT);
-		m_events[type].push_back(callback);
-		return 0;
+
+		// 1 listener belongs to 1 event
+		// 1 event contains many listeners
+		assert(listener->m_id == 0);
+
+		m_eventListeners.Add(type, listener);
 	}
 
-	void RemoveEvent(ID event)
+	inline void RemoveEventListener(const Handle<EventListener>& listener)
 	{
-		
+		m_eventListeners.Remove(listener);
+	}
+
+	inline void InvokeEvent(const Handle<GameObject>& self, EVENT type)
+	{
+		assert(this == self.Get());
+
+		const auto temp = type;
+		m_eventListeners.m_listeners.ForEach([=](const Handle<EventListener>& listener)
+			{
+				if (listener->m_type == temp)
+				{
+					listener->OnInvoke(m_scene);
+				}
+			}
+		);
+	}
+
+	inline void InvokeEvent(EVENT type)
+	{
+		InvokeEvent(this, type);
 	}
 
 };

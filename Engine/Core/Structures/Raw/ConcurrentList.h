@@ -9,6 +9,9 @@
 
 NAMESPACE_BEGIN
 
+namespace raw
+{
+
 // same as ConcurrentBag but dynamic size and for each support
 template <typename T, size_t N_SPACES = 4>
 class ConcurrentList
@@ -78,5 +81,6 @@ public:
 
 };
 
+}
 
 NAMESPACE_END

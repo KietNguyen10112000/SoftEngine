@@ -32,6 +32,8 @@ file(
 
     "Objects/**/*.h"
     "Objects/**/*.cpp"
+    "Objects/**/**/*.h"
+    "Objects/**/**/*.cpp"
 
     "Components/**/*.h"
     "Components/**/*.cpp"

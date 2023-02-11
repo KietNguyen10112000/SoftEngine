@@ -100,6 +100,12 @@ public:
 		OnConstructor();
 	}
 
+	ManagedPointer(T* ptr)
+	{
+		OnConstructor();
+		*this = ptr;
+	}
+
 	~ManagedPointer()
 	{
 		//Reset();
@@ -126,6 +132,7 @@ protected:
 		Reset();
 	}
 
+public:
 	inline void Set(byte* block, T* ptr)
 	{
 		if (m_offsetToSelf != -1)
@@ -146,7 +153,6 @@ protected:
 		m_ptr = ptr;
 	}
 
-public:
 	template <typename Derived>
 	inline void operator=(const ManagedPointer<Derived>& r);
 	inline void operator=(const ManagedPointer<T>& r);
@@ -236,6 +242,20 @@ public:
 	inline void operator=(nullptr_t)
 	{
 		Reset();
+	}
+
+	inline void operator=(T* ptr)
+	{
+		if constexpr (std::is_final_v<T>)
+		{
+			//assert(dynamic_cast<void*>(ptr) == ptr);
+			Set((byte*)ptr, ptr);
+		}
+		else
+		{
+			void* p = dynamic_cast<void*>(ptr);
+			Set((byte*)p, ptr);
+		}
 	}
 
 	/*operator ManagedPointer<byte>() const

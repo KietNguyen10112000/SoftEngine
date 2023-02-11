@@ -7,10 +7,15 @@
 
 // managed structures
 #include "Managed/Array.h"
+#include "Managed/UnorderedList.h"
 
 
 // stl
 #include "STD/STDContainers.h"
+
+
+// custom raw container
+#include "Raw/UnorderedList.h"
 
 
 // string type

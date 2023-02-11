@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Structures/Concurrent/ConcurrentBag.h"
+#include "Core/Structures/Raw/ConcurrentBag.h"
 #include "Core/Thread/ThreadLimit.h"
 
 #include "Fiber.h"
@@ -11,7 +11,7 @@ NAMESPACE_BEGIN
 class API FiberPool
 {
 protected:
-	using Pool = ConcurrentBag<Fiber*, FiberInfo::FIBERS_COUNT>;
+	using Pool = raw::ConcurrentBag<Fiber*, FiberInfo::FIBERS_COUNT>;
 	friend class Thread;
 
 	constexpr static size_t TOTAL_FIBERS = ThreadLimit::MAX_THREADS + FiberInfo::FIBERS_COUNT;

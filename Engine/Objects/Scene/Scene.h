@@ -8,10 +8,15 @@
 NAMESPACE_BEGIN
 
 class AABBQueryStructure;
+class BuiltinEventManager;
+class EventManager;
 
 class Scene
 {
 protected:
+	constexpr static ID TEMP_OBJECT_ID_MASK		= 0x10000000'00000000ULL;
+	constexpr static ID TEMP_OBJECT_ID_UNMASK	= 0x7FFFFFFF'FFFFFFFFULL;
+
 	///
 	/// for long live-time object
 	/// eg: static object
@@ -40,38 +45,59 @@ protected:
 	AABBQueryStructure* m_staticObjsQueryStructure = nullptr;
 	AABBQueryStructure* m_dynamicObjsQueryStructure = nullptr;
 
+	ID m_idMask = 0;
+
+	ID m_uidCounter = 0;
+
+	friend class Engine;
+	BuiltinEventManager* m_objectEventMgr = nullptr;
+
+	Handle<EventManager> m_eventMgr = nullptr;
+
+protected:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_tempObjects);
+		tracer->Trace(m_eventMgr);
 	}
 
 public:
-	inline virtual ~Scene() {};
+	Scene();
+	virtual ~Scene();
 
-protected:
-	inline void SetId(GameObject* obj, ID id)
+private:
+	inline ID GetSceneId()
 	{
-		obj->m_id = id;
+		return m_objsAccessor->Size() | TEMP_OBJECT_ID_MASK;
+	}
+
+	inline ID UnmaskId(ID id)
+	{
+		return id & TEMP_OBJECT_ID_UNMASK;
 	}
 
 public:
 	inline void BeginSetup()
 	{
 		m_objsAccessor = &m_stableObjects;
+		m_idMask = 0;
 	}
 
 	inline void EndSetup()
 	{
 		m_objsAccessor = &m_tempObjects;
+		m_idMask = TEMP_OBJECT_ID_MASK;
 	}
 
-	void Add(const Handle<GameObject>& obj);
+	void AddObject(Handle<GameObject>& obj);
+	void RemoveObject(Handle<GameObject>& obj);
 
 public:
 	///
 	/// re-construct the scene for next frame
 	/// include:
+	/// + Defer add, remove objects
 	/// + Re-construct query structure
 	/// 
 	virtual void ReConstruct() = 0;

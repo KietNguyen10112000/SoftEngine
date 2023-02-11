@@ -2,7 +2,7 @@
 
 #include "TypeDef.h"
 
-#include "Core/Structures/Concurrent/ConcurrentList.h"
+#include "Core/Structures/Raw/ConcurrentList.h"
 #include "Core/Pattern/Singleton.h"
 
 NAMESPACE_MEMORY_BEGIN
@@ -32,7 +32,7 @@ class API DeferredBufferTracker : public Singleton<DeferredBufferTracker>
 {
 public:
 	constexpr static size_t N_SPACE = 16;
-	ConcurrentList<DeferredBufferState*, N_SPACE> m_buffers;
+	raw::ConcurrentList<DeferredBufferState*, N_SPACE> m_buffers;
 	size_t m_turn = 0;
 
 public:

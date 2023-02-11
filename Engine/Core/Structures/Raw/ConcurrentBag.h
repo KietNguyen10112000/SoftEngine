@@ -7,6 +7,9 @@
 
 NAMESPACE_BEGIN
 
+namespace raw
+{
+
 // fixed capacity ConcurrentBag
 template <typename T, size_t N_ELEMENTS, size_t N_SPACES = 8>
 class ConcurrentBag
@@ -85,5 +88,7 @@ public:
 	}
 
 };
+
+}
 
 NAMESPACE_END

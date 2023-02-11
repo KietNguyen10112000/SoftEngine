@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Core/TypeDef.h"
-#include "Core/Structures/Concurrent/ConcurrentQueue.h"
+#include "Core/Structures/Raw/ConcurrentQueue.h"
 #include "Core/Thread/Spinlock.h"
 #include "Core/Thread/ThreadLimit.h"
 #include "Core/Memory/Memory.h"
