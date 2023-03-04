@@ -17,3 +17,23 @@ Bug route cho nhiều thread cùng chạy GC 1 lúc:
 
 Performance improvement:
 [TODO] + std::vector::size() is not atomic operator so when marking stack we must lock the stack to copy its content
+
+
+Multi-thread scene re-construction:
++ 1 AABBQueryStructure cho các static object
++ Lưu các dynamic object vào 2 AABBQueryStructure (gọi tắt là cây)
++ Luân chuyển các dynamic object qua lại giữa 2 cây khi cần để đảm bảo performance
++ Ví dụ:
+	[Problem]: số lượng dynamic object di chuyển (trong scene, không phải trên cây, gọi các object này là target object) trong một tick rất nhiều (1000 ~ 100000) => cần refresh lại các object này trên cây
+		[Solution]: Nếu số lượng các target object giữa 2 cây lệch quá 1 ngưỡng (gọi là độ lệch) thì thực hiện chuyển bớt object của cây này qua cây bên kia, khi đó:
+			[Parallelism]:
+				[Task]: Cây 1 chỉ cần remove bớt các target object cho cây 2 và refresh lại các target object của mình
+				[Task]: Cây 2 sẽ refresh các target object của mình và add thêm các target object mà cây 1 vừa gỡ
+			[Problem]: Cây 1 lệch cây 2, ảnh hưởng đến phép query
+				[Solution]: Khi cây 2 quá cao so với cây 1 thì một cách tự nhiên các target object ở cây 2 trong tick sẽ tăng lên, khi đó quá trình trên sẽ bị lặp lại với 2 cây đổi chỗ cho nhau :)))
+				[Solution]: Khi thực hiện add object vào scene thì ưu tiên add vào cây thấp hơn
+				[Solution]: Tại mỗi tick, nếu độ lệch không vượt quá ngưỡng thì thực hiện cân bằng lại 2 cây dần dần (mỗi tick cân bằng 1 ít, incrementally)
+
+Multi-thread physics:
++ Dùng 2 task để tìm các collision pair, thuật toán biến thể của tri-color graph marking
++ Mỗi khi tìm đủ số lượng collision pair (batch size: 128, 256, 512, 1024, ...) thì kick luôn ra thành Task để cho các luồng khác Solve collision pair

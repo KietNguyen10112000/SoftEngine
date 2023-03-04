@@ -11,11 +11,13 @@
 #include "SubSystems/Rendering/RenderingSystem.h"
 
 #include "Objects/Scene/Scene.h"
-#include "Objects/Scene/TestScene.h"
+#include "Objects/Scene/DoubleDynamicLayersScene.h"
 
 #include "Objects/Scene/Event/BuiltinEventManager.h"
 
 #include "Objects/Scene/Event/EventManager.h"
+
+#include "Core/Structures/Managed/Function.h"
 
 NAMESPACE_BEGIN
 
@@ -40,7 +42,26 @@ void Engine::Setup()
 	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
 	
-	m_scenes.Push(mheap::New<TestScene>());
+	m_scenes.Push(mheap::New<DoubleDynamicLayersScene>());
+
+	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
+		std::cout << "Func called --- " << number << "\n";
+	};
+
+	auto func = MakeAsyncFunction(fn, m_scenes[0], 100ull);
+	func->Invoke();
+
+	
+	auto func1 = MakeAsyncFunction(fn, m_scenes[0], 1000ull)->Then(
+		[]()
+		{
+			std::cout << "Post func called\n";
+		}
+	);
+	func1->Invoke();
+
+	Handle<FunctionBase> fn1 = func1;
+	fn1->Invoke();*/
 }
 
 void Engine::Run()
@@ -76,7 +97,7 @@ void Engine::Iteration()
 	reconstructScene.Entry() = [](void* s)
 	{
 		auto scene = (Scene*)s;
-		scene->ReConstruct();
+		scene->PrevIteration();
 	};
 
 	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
@@ -116,7 +137,7 @@ void Engine::SynchronizeAllSubSystems()
 {
 	auto mainScene = m_scenes[0].Get();
 
-	mainScene->m_objectEventMgr->DispatchObjectEvent(
+	/*mainScene->m_objectEventMgr->DispatchObjectEvent(
 		BUILTIN_EVENT::SCENE_ADD_OBJECT,
 		BUILTIN_EVENT_SUIT::SCENE_EVENT,
 		nullptr
@@ -126,7 +147,7 @@ void Engine::SynchronizeAllSubSystems()
 		BUILTIN_EVENT_SUIT::SCENE_EVENT,
 		nullptr
 	);
-	mainScene->m_objectEventMgr->FlushAllObjectEvents();
+	mainScene->m_objectEventMgr->FlushAllObjectEvents();*/
 
 	std::cout << "SynchronizeAllSubSystems()\n";
 	DeferredBufferTracker::Get()->UpdateAllThenClear();

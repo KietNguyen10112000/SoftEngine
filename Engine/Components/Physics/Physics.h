@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN
 
-class PhysicsComponent : public SubSystemComponent
+class Physics : public SubSystemComponent
 {
 public:
 	constexpr static size_t COMPONENT_ID = SubSystemComponentId::PHYSICS_SUBSYSTEM_COMPONENT_ID;
@@ -22,8 +22,8 @@ protected:
 	const TYPE m_TYPE = STATIC;
 
 public:
-	inline PhysicsComponent(TYPE type) : m_TYPE(type) {};
-	inline virtual ~PhysicsComponent() {};
+	inline Physics(TYPE type) : m_TYPE(type) {};
+	inline virtual ~Physics() {};
 
 public:
 	inline auto Type() const

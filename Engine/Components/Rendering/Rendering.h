@@ -6,13 +6,13 @@
 
 NAMESPACE_BEGIN
 
-class RenderingComponent : public SubSystemComponent
+class Rendering : public SubSystemComponent
 {
 public:
 	constexpr static size_t COMPONENT_ID = SubSystemComponentId::RENDERING_SUBSYSTEM_COMPONENT_ID;
 
-	inline RenderingComponent() {};
-	inline virtual ~RenderingComponent() {};
+	inline Rendering() {};
+	inline virtual ~Rendering() {};
 
 };
 

@@ -53,6 +53,18 @@ public:
 		m_locks[chosenId].unlock();
 	}
 
+	void AddToSpace(size_t spaceId, const T& v)
+	{
+		m_locks[spaceId].lock();
+		m_lists[spaceId].push_back(v);
+		m_locks[spaceId].unlock();
+	}
+
+	void AddToSpaceUnsafe(size_t spaceId, const T& v)
+	{
+		m_lists[spaceId].push_back(v);
+	}
+
 	void Clear()
 	{
 		for (size_t i = 0; i < N_SPACES; i++)
@@ -77,6 +89,40 @@ public:
 		}
 
 		UnlockAll();
+	}
+
+	inline size_t size() const
+	{
+		size_t sum = 0;
+		for (auto& l : m_lists)
+		{
+			sum += l.size();
+		}
+		return sum;
+	}
+
+	template <bool AVOID_THREAD_COLLIDE = false>
+	inline T Take()
+	{
+		assert(size() > 0);
+
+		size_t start = -1;
+
+		if constexpr (AVOID_THREAD_COLLIDE)
+		{
+			start = ThreadID::Get() % N_SPACES;
+		}
+
+		auto chosenId = ThreadUtils::RingBufferLock<false>(start, m_locks,
+			[&](size_t id)
+			{
+				return m_lists[id].size() > 0;
+			}
+		);
+
+		T ret = m_lists[chosenId].back();
+		m_lists[chosenId].pop_back();
+		return ret;
 	}
 
 };
