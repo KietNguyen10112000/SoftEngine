@@ -12,6 +12,15 @@
 
 #include "Engine/Engine.h"
 
+namespace soft
+{
+	namespace gc
+	{
+		class System;
+		extern System* g_system;
+	}
+}
+
 int main()
 {
 	using namespace soft;
@@ -23,6 +32,8 @@ int main()
 	TaskWorker::Initalize();
 
 	SubSystems::Initialize();
+
+	auto sys = soft::gc::g_system;
 
 	{
 		auto engine = Engine::Initialize();

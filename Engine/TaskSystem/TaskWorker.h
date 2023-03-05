@@ -13,6 +13,8 @@ NAMESPACE_BEGIN
 class API TaskWorker
 {
 protected:
+	constexpr static size_t SPIN_TIMES = 10000;
+
 	friend class TaskSystem;
 
 	static TaskWorker s_workers[FiberInfo::TOTAL_FIBERS];
@@ -52,9 +54,27 @@ public:
 		{
 			if (TaskSystem::Take(m_currentTask, m_currentSynchCtx) == false)
 			{
-				TaskSystem::WorkerWait();
-				TaskSystem::WorkerResume();
-				continue;
+				bool pause = true;
+
+				// spins before wait
+				for (size_t i = 0; i < SPIN_TIMES; i++)
+				//while (true)
+				{
+					if (TaskSystem::Take(m_currentTask, m_currentSynchCtx) == true)
+					{
+						pause = false;
+						break;
+					}
+
+					std::this_thread::yield();
+				}
+
+				if (pause)
+				{
+					TaskSystem::WorkerWait();
+					TaskSystem::WorkerResume();
+					continue;
+				}
 			}
 
 			ExecuteCurrentTask();

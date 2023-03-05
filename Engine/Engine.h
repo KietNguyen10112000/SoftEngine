@@ -8,7 +8,7 @@ NAMESPACE_BEGIN
 
 class Scene;
 
-class Engine
+class Engine : Traceable<Engine>
 {
 public:
 	constexpr static byte STABLE_VALUE = 127;

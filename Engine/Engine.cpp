@@ -69,6 +69,7 @@ void Engine::Run()
 	Setup();
 
 	//while (m_isRunning)
+	for (size_t i = 0; i < 100; i++)
 	{
 		Iteration();
 	}

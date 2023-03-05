@@ -95,6 +95,12 @@ public:
 		*this = r;
 	}
 
+	ManagedPointer(const ManagedPointer<T>& r)
+	{
+		OnConstructor();
+		*this = r;
+	}
+
 	ManagedPointer(nullptr_t) 
 	{
 		OnConstructor();

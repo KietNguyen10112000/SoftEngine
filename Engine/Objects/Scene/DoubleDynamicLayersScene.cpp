@@ -6,6 +6,8 @@
 
 #include "Objects/QueryStructures/AABBQueryStructure.h"
 
+#include <Windows.h>
+
 NAMESPACE_BEGIN
 
 void DoubleDynamicLayersScene::AddDynamicObject(GameObject* obj)
@@ -425,21 +427,24 @@ void DoubleDynamicLayersScene::ReConstruct()
 {
 	auto start = Clock::ns::now();
 
-	std::cout << "DoubleDynamicLayersScene::ProcessRemoveLists()\n";
+	//std::cout << "DoubleDynamicLayersScene::ProcessRemoveLists()\n";
 	ProcessRemoveLists();
 
-	std::cout << "DoubleDynamicLayersScene::ProcessRefreshLists()\n";
+	//std::cout << "DoubleDynamicLayersScene::ProcessRefreshLists()\n";
 	ProcessRefreshLists();
 
-	std::cout << "DoubleDynamicLayersScene::ProcessAddLists()\n";
+	//std::cout << "DoubleDynamicLayersScene::ProcessAddLists()\n";
 	ProcessAddLists();
 
-	auto now = Clock::ns::now();
-	if (now - start < LIMIT_RECONSTRUCT_TIME_NS)
+	auto dt = Clock::ns::now() - start;
+	if (dt < LIMIT_RECONSTRUCT_TIME_NS)
 	{
-		std::cout << "DoubleDynamicLayersScene::IncrementalBalance()\n";
-		IncrementalBalance(now - start);
+		//std::cout << "DoubleDynamicLayersScene::IncrementalBalance()\n";
+		IncrementalBalance(LIMIT_RECONSTRUCT_TIME_NS - dt);
 	}
+
+	dt = Clock::ns::now() - start;
+	std::cout << "DoubleDynamicLayersScene::ReConstruct() --- " << dt << " ns\n";
 }
 
 void DoubleDynamicLayersScene::Synchronize()
