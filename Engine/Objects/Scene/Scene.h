@@ -112,6 +112,8 @@ public:
 	void AddObject(Handle<GameObject>& obj);
 	void RemoveObject(Handle<GameObject>& obj);
 
+	virtual void RefreshDynamicObject(GameObject* obj) = 0;
+
 protected:
 	// call whenever a dynamic object need to add, or remove
 	// must be thread-safe methods

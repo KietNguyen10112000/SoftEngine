@@ -243,6 +243,13 @@ public:
 		InvokeEvent(this, type);
 	}
 
+public:
+	inline const auto& GetAABB() const
+	{
+		return m_aabb;
+	}
+
+
 };
 
 NAMESPACE_END

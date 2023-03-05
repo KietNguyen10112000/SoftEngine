@@ -35,9 +35,10 @@ public:
 	};
 
 private:
-	Pool<sizeof(Node), GROWTH_SIZE, 1, rheap::malloc, rheap::free> m_mem;
+	Pool<sizeof(Node), GROWTH_SIZE, 1, rheap::malloc, rheap::free> m_mem = { 1 };
 
 	Node* m_head = nullptr;
+	size_t m_size = 0;
 
 public:
 	inline ID Add(const T& v)
@@ -52,6 +53,8 @@ public:
 		}
 
 		m_head = node;
+
+		m_size++;
 
 		return (ID)node;
 	}
@@ -76,6 +79,24 @@ public:
 		{
 			next->prev = prev;
 		}
+
+		m_size--;
+	}
+
+	inline auto size() const
+	{
+		return m_size;
+	}
+
+
+	inline ID backId() const
+	{
+		return (ID)m_head;
+	}
+
+	inline T& back() const
+	{
+		return m_head->value;
 	}
 };
 

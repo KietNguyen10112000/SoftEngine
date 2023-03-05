@@ -24,6 +24,8 @@ protected:
 
 	bool m_isRunning = true;
 
+	std::atomic<bool> m_gcIsRunning = false;
+
 public:
 	static Handle<Engine> Initialize();
 	static void Finalize();

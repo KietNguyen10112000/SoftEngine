@@ -78,6 +78,26 @@ void Engine::Run()
 
 void Engine::Iteration()
 {
+	if (m_gcIsRunning.exchange(true, std::memory_order_release) == false)
+	{
+		Task gcTask;
+		gcTask.Entry() = [](void* e)
+		{
+			Engine* engine = (Engine*)e;
+			auto heap = mheap::internal::Get();
+			if (heap->IsNeedGC())
+			{
+				gc::Run(-1);
+				heap->EndGC();
+			}
+			engine->m_gcIsRunning.exchange(false, std::memory_order_release);
+		};
+		gcTask.Params() = this;
+
+		TaskSystem::Submit(gcTask, Task::HIGH);
+	}
+	
+
 	auto mainScene = m_scenes[0].Get();
 
 	Task tasks[16];
