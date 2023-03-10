@@ -20,6 +20,7 @@ public:
 	virtual ID Add(const AABox& aabb, void* userPtr) = 0;
 	// remove what returned by Add()
 	virtual void Remove(ID id) = 0;
+	virtual void Clear() = 0;
 
 	// child class must implement with mediator pattern
 	virtual AABBQuerySession* NewSession() = 0;

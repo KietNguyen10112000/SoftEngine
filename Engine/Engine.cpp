@@ -11,7 +11,7 @@
 #include "SubSystems/Rendering/RenderingSystem.h"
 
 #include "Objects/Scene/Scene.h"
-#include "Objects/Scene/DoubleDynamicLayersScene.h"
+#include "Objects/Scene/MultipleDynamicLayersScene.h"
 
 #include "Objects/Scene/Event/BuiltinEventManager.h"
 
@@ -44,7 +44,7 @@ void Engine::Setup()
 	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
 	
-	m_scenes.Push(mheap::New<DoubleDynamicLayersScene>());
+	m_scenes.Push(mheap::New<MultipleDynamicLayersScene>());
 
 	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
 		std::cout << "Func called --- " << number << "\n";
@@ -77,7 +77,7 @@ void Engine::Setup()
 	mainScene->BeginSetup();
 	mainScene->EndSetup();
 
-	for (size_t i = 0; i < 5000; i++)
+	for (size_t i = 0; i < 3000; i++)
 	{
 		auto dynamicObj = mheap::New<GameObject>();
 		auto aabb = (AABox*)&dynamicObj->GetAABB();
@@ -113,7 +113,7 @@ void Engine::Run()
 		size_t count = 0;
 		for (size_t j = 0; j < dynamicObjs.size(); j++)
 		{
-			if (Random::RangeInt64(0, 1) == 0)
+			//if (Random::RangeInt64(0, 1) == 0)
 			{
 				mainScene->RefreshDynamicObject(dynamicObjs[j].Get());
 				count++;

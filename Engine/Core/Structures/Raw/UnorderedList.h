@@ -45,6 +45,7 @@ public:
 	{
 		Node* node = (Node*)m_mem.Allocate();
 
+		node->prev = nullptr;
 		node->next = m_head;
 
 		if (m_head)
@@ -55,6 +56,8 @@ public:
 		m_head = node;
 
 		m_size++;
+
+		node->value = v;
 
 		return (ID)node;
 	}
@@ -81,6 +84,8 @@ public:
 		}
 
 		m_size--;
+
+		m_mem.Deallocate(node);
 	}
 
 	inline auto size() const
@@ -98,6 +103,19 @@ public:
 	{
 		return m_head->value;
 	}
+
+public:
+	template <typename F>
+	inline void ForEach(F callback)
+	{
+		auto it = m_head;
+		while (it)
+		{
+			callback(it->value);
+			it = it->next;
+		}
+	}
+
 };
 
 template<typename T, size_t GROWTH_SIZE = 128>

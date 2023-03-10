@@ -71,9 +71,9 @@ void DynamicLayer::ProcessRemoveLists()
 			[&](GameObject* obj)
 			{
 				auto treeId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
-		freeIds.AddToSpaceUnsafe(id, treeId);
-		queryStructure->Remove(treeId->m[id].id);
-		objects.Remove(treeId->m[id].ulistId);
+				freeIds.AddToSpaceUnsafe(id, treeId);
+				queryStructure->Remove(treeId->m[id].id);
+				objects.Remove(treeId->m[id].ulistId);
 			}
 		);
 
@@ -253,6 +253,50 @@ void DynamicLayer::ProcessAddLists()
 	//m_queryStructuresSizes[1] += addSize - sizeOf1;
 }
 
+void DynamicLayer::RefreshAll()
+{
+	struct CurrentTaskParam
+	{
+		DynamicLayer* layer;
+		ID treeId;
+	};
+
+	void (*taskFn)(void*) = [](void* p)
+	{
+		auto param = (CurrentTaskParam*)p;
+		auto layer = param->layer;
+		auto id = param->treeId;
+
+		auto queryStructure = layer->m_queryStructures[id];
+		auto& objects = layer->m_objects[id];
+
+		queryStructure->Clear();
+
+		objects.ForEach(
+			[&](GameObject* obj)
+			{
+				auto queryId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
+				auto& nodeId = queryId->m[id].id;
+				nodeId = queryStructure->Add(obj->GetAABB(), obj);
+
+				//std::cout << nodeId << "\n";
+			}
+		);
+	};
+
+	CurrentTaskParam params[2] = {
+		{ this, 0 },
+		{ this, 1 }
+	};
+
+	Task tasks[2] = {
+		{ taskFn, &params[0] },
+		{ taskFn, &params[1] }
+	};
+
+	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
+}
+
 void DynamicLayer::ProcessRefreshLists()
 {
 	struct CurrentTaskParam
@@ -263,6 +307,18 @@ void DynamicLayer::ProcessRefreshLists()
 
 	size_t tree1RefreshSize = m_waitForRefreshObjs[0].size();
 	size_t tree2RefreshSize = m_waitForRefreshObjs[1].size();
+
+	if (tree1RefreshSize + tree2RefreshSize > 1 + (m_objects[0].size() + m_objects[1].size()) / 2)
+	{
+		/// 
+		/// each Add or Remove operator on DVBTQueryTree cost O(log(n)) (n is num objs on tree)
+		/// => if we Remove then Add num objects that greater than n / 2, we cost n*O(log(n)) same as time to RefreshAll tree
+		/// 
+
+		RefreshAll();
+		goto Return;
+	}
+
 	intmax_t deltaSize = tree1RefreshSize - tree2RefreshSize;
 
 	size_t lessSize = std::min(tree1RefreshSize, tree2RefreshSize);
@@ -344,7 +400,7 @@ void DynamicLayer::ProcessRefreshLists()
 
 		size_t i = 0;
 
-#define LOOP(chunkName, body)								\
+#define LOOP(chunkName, body)										\
 		while (chunkName[i])										\
 		{															\
 			auto it = chunkName[i];									\
@@ -361,25 +417,25 @@ void DynamicLayer::ProcessRefreshLists()
 		LOOP(
 			removeChunks,
 			auto queryId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
-		auto & nodeId = queryId->m[id].id;
-		auto & ulistId = queryId->m[id].ulistId;
+			auto& nodeId = queryId->m[id].id;
+			auto& ulistId = queryId->m[id].ulistId;
 
-		queryStructure->Remove(nodeId);
-		objects.Remove(ulistId);
+			queryStructure->Remove(nodeId);
+			objects.Remove(ulistId);
 
-		nodeId = INVALID_ID;
-		ulistId = INVALID_ID;
+			nodeId = INVALID_ID;
+			ulistId = INVALID_ID;
 		);
 
 		i = 0;
 		LOOP(
 			addChunks,
 			auto queryId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
-		auto & nodeId = queryId->m[id].id;
-		auto & ulistId = queryId->m[id].ulistId;
+			auto& nodeId = queryId->m[id].id;
+			auto& ulistId = queryId->m[id].ulistId;
 
-		nodeId = queryStructure->Add(obj->GetAABB(), obj);
-		ulistId = objects.Add(obj);
+			nodeId = queryStructure->Add(obj->GetAABB(), obj);
+			ulistId = objects.Add(obj);
 		);
 
 #undef LOOP
@@ -407,6 +463,7 @@ void DynamicLayer::ProcessRefreshLists()
 	//std::cout << "Dt: " << dt / 1000000 << " ms\n";
 	////tasks[1].Entry()(tasks[1].Params());
 
+Return:
 	m_waitForRefreshObjs[0].Clear();
 	m_waitForRefreshObjs[1].Clear();
 }
@@ -491,8 +548,8 @@ void DynamicLayer::ReConstruct()
 		IncrementalBalance(LIMIT_RECONSTRUCT_TIME_NS - dt);
 	}
 
-	dt = (Clock::ns::now() - start) / 1000000;
-	std::cout << "DynamicLayer::ReConstruct() --- " << dt << " ms\n";
+	//dt = (Clock::ns::now() - start) / 1000000;
+	//std::cout << "DynamicLayer::ReConstruct() --- " << dt << " ms\n";
 }
 
 NAMESPACE_END

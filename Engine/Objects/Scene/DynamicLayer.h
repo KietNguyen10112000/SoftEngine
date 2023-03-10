@@ -72,6 +72,8 @@ protected:
 	void ProcessRefreshLists();
 	void IncrementalBalance(size_t remainNS);
 
+	void RefreshAll();
+
 public:
 	DynamicLayer();
 	~DynamicLayer();

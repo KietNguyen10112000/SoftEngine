@@ -50,15 +50,12 @@ DBVTQueryTree::~DBVTQueryTree()
 
 DBVTQueryTree::NodeId DBVTQueryTree::AllocateNode()
 {
+    NodeId ret;
     if (m_allocatedNode != INVALID_ID)
     {
-        auto ret = m_allocatedNode;
+        ret = m_allocatedNode;
         m_allocatedNode = Get(ret).next;
-
-        Get(ret).child1 = INVALID_ID;
-        Get(ret).child2 = INVALID_ID;
-        Get(ret).height = 0;
-        return ret;
+        goto Return;
     }
 
     if (m_nodesAllocatedCount == m_nodes.size())
@@ -66,7 +63,15 @@ DBVTQueryTree::NodeId DBVTQueryTree::AllocateNode()
         m_nodes.resize(m_nodes.size() * 2);
     }
 
-    return m_nodesAllocatedCount++;
+    ret = m_nodesAllocatedCount++;
+
+Return:
+    Get(ret).parent = INVALID_ID;
+    Get(ret).child1 = INVALID_ID;
+    Get(ret).child2 = INVALID_ID;
+    Get(ret).height = 0;
+
+    return ret;
 }
 
 void DBVTQueryTree::DeallocateNode(DBVTQueryTree::NodeId node)
@@ -439,9 +444,9 @@ ID DBVTQueryTree::Add(const AABox& aabb, void* userPtr)
         AddNode(newNode);
     }
 
-#ifdef _DEBUG
-    Validate(m_root);
-#endif // _DEBUG
+//#ifdef _DEBUG
+//    Validate(m_root);
+//#endif // _DEBUG
 
     return (ID)newNode;
 }
@@ -451,9 +456,16 @@ void DBVTQueryTree::Remove(ID id)
     // assert id must be leaf node
     RemoveNode((NodeId)id);
 
-#ifdef _DEBUG
-    Validate(m_root);
-#endif // _DEBUG
+//#ifdef _DEBUG
+//    Validate(m_root);
+//#endif // _DEBUG
+}
+
+void DBVTQueryTree::Clear()
+{
+    m_allocatedNode = INVALID_ID;
+    m_nodesAllocatedCount = 0;
+    m_root = INVALID_ID;
 }
 
 AABBQuerySession* DBVTQueryTree::NewSession()

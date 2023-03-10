@@ -36,12 +36,10 @@ protected:
 	//Node* m_root = nullptr;
 	//Node* m_allocatedNode = nullptr;
 
-	NodeId m_root = INVALID_ID;
-
 	std::Vector<Node> m_nodes;
 	size_t m_nodesAllocatedCount = 0;
-
 	NodeId m_allocatedNode = INVALID_ID;
+	NodeId m_root = INVALID_ID;
 
 public:
 	DBVTQueryTree();
@@ -74,6 +72,8 @@ public:
 	virtual ID Add(const AABox& aabb, void* userPtr) override;
 
 	virtual void Remove(ID id) override;
+
+	virtual void Clear() override;
 
 	virtual AABBQuerySession* NewSession() override;
 

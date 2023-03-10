@@ -35,6 +35,8 @@ public:
 	};
 
 	friend class Scene;
+	friend class DynamicLayer;
+	friend class MultipleDynamicLayersScene;
 
 	DefineHasClassMethod(OnCompentAdded);
 
@@ -60,9 +62,10 @@ private:
 
 private:
 	// >>> scene's control members 
-	ID m_uid = -1;
-	ID m_sceneId = -1;
-	ID m_aabbQueryId = -1;
+	ID m_uid = INVALID_ID;
+	ID m_sceneId = INVALID_ID;
+	ID m_sceneDynamicId = INVALID_ID;
+	ID m_aabbQueryId = INVALID_ID;
 
 	AABox m_aabb = {};
 	// <<< scene's control members 
