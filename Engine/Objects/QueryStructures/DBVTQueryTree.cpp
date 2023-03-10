@@ -9,7 +9,7 @@ class DBVTQueryTreeSession : public AABBQuerySession
 {
 public:
     constexpr static size_t INIT_CAPACITY = 16 * KB;
-    std::Vector<DBVTQueryTree::Node*> m_stack;
+    std::Vector<DBVTQueryTree::NodeId> m_stack;
 
 public:
     DBVTQueryTreeSession()
@@ -27,20 +27,57 @@ public:
 
 DBVTQueryTree::DBVTQueryTree()
 {
-
+    m_nodes.resize(1024);
 }
 
 DBVTQueryTree::~DBVTQueryTree()
 {
-    if (m_root)
+    /*if (m_root)
     {
         FreeTree(m_root);
     }
+
+    if (m_allocatedNode)
+    {
+        while (m_allocatedNode)
+        {
+            auto next = m_allocatedNode->next;
+            rheap::Delete(m_allocatedNode);
+            m_allocatedNode = next;
+        }
+    }*/
+}
+
+DBVTQueryTree::NodeId DBVTQueryTree::AllocateNode()
+{
+    if (m_allocatedNode != INVALID_ID)
+    {
+        auto ret = m_allocatedNode;
+        m_allocatedNode = Get(ret).next;
+
+        Get(ret).child1 = INVALID_ID;
+        Get(ret).child2 = INVALID_ID;
+        Get(ret).height = 0;
+        return ret;
+    }
+
+    if (m_nodesAllocatedCount == m_nodes.size())
+    {
+        m_nodes.resize(m_nodes.size() * 2);
+    }
+
+    return m_nodesAllocatedCount++;
+}
+
+void DBVTQueryTree::DeallocateNode(DBVTQueryTree::NodeId node)
+{
+    Get(node).next = m_allocatedNode;
+    m_allocatedNode = node;
 }
 
 void DBVTQueryTree::FreeTree(Node* node)
 {
-    Node* it = node;
+    /*Node* it = node;
     while (it != nullptr)
     {
         if (it->IsLeaf())
@@ -53,32 +90,32 @@ void DBVTQueryTree::FreeTree(Node* node)
                 break;
             }
 
-            if (parent->left == it)
+            if (parent->child1 == it)
             {
-                parent->left = nullptr;
+                parent->child1 = nullptr;
             }
             else
             {
-                parent->right = nullptr;
+                parent->child2 = nullptr;
             }
 
             it = parent;
             continue;
         }
 
-        it = it->right ? it->right : it->left;
-    }
+        it = it->child2 ? it->child2 : it->child1;
+    }*/
 }
 
 #define JOINT_2_NODES(root, node)           \
-Node* jointedNode = rheap::New<Node>();     \
+Node* jointedNode = AllocateNode();         \
 jointedNode->bound = root->bound;           \
 jointedNode->bound.Joint(node->bound);      \
                                             \
 auto parent = root->parent;                 \
                                             \
-jointedNode->left = root;                   \
-jointedNode->right = node;                  \
+jointedNode->child1 = root;                 \
+jointedNode->child2 = node;                 \
 jointedNode->parent = parent;               \
                                             \
 root->parent = jointedNode;                 \
@@ -86,13 +123,13 @@ node->parent = jointedNode;                 \
                                             \
 if (parent)                                 \
 {                                           \
-    if (parent->left == root)               \
+    if (parent->child1 == root)             \
     {                                       \
-        parent->left = jointedNode;         \
+        parent->child1 = jointedNode;       \
     }                                       \
     else                                    \
     {                                       \
-        parent->right = jointedNode;        \
+        parent->child2 = jointedNode;       \
     }                                       \
 }                                           \
 else                                        \
@@ -100,71 +137,323 @@ else                                        \
     m_root = jointedNode;                   \
 }
 
-void DBVTQueryTree::AddNode(Node* root, Node* node)
+DBVTQueryTree::NodeId DBVTQueryTree::Balance(NodeId node)
 {
-    Node* it = root;
-    while (it != nullptr)
+    NodeId ret = node;
+
+    auto parent = Get(node).parent;
+    auto child1 = Get(node).child1;
+    auto child2 = Get(node).child2;
+
+    intmax_t dh12 = Get(child1).height - Get(child2).height;
+
+    NodeId target = INVALID_ID;
+    //Node* lowerChild = nullptr;
+    if (dh12 > 1)
     {
-        if (it->IsLeaf())
+        //lowerChild = child2;
+
+        if (Get(Get(child1).child1).height > Get(Get(child1).child2).height)
         {
-            JOINT_2_NODES(it, node);
-            return;
+            target = Get(child1).child2;
+            Get(child1).child2 = node;
+        }
+        else
+        {
+            target = Get(child1).child1;
+            Get(child1).child1 = node;
+        }
+
+        Get(node).parent = child1;
+        Get(child1).parent = parent;
+
+        if (parent != INVALID_ID)
+        {
+            if (Get(parent).child1 == node)
+            {
+                Get(parent).child1 = child1;
+            }
+            else
+            {
+                Get(parent).child2 = child1;
+            }
+        }
+        else
+        {
+            m_root = child1;
+        }
+
+        Get(node).child1 = target;
+        Get(target).parent = node;
+
+        ret = child2;
+    }
+
+    if (dh12 < -1)
+    {
+        //lowerChild = child1;
+
+        if (Get(Get(child2).child1).height > Get(Get(child2).child2).height)
+        {
+            target = Get(child2).child2;
+            Get(child2).child2 = node;
+        }
+        else
+        {
+            target = Get(child2).child1;
+            Get(child2).child1 = node;
+        }
+
+        Get(node).parent = child2;
+        Get(child2).parent = parent;
+
+        if (parent != INVALID_ID)
+        {
+            if (Get(parent).child1 == node)
+            {
+                Get(parent).child1 = child2;
+            }
+            else
+            {
+                Get(parent).child2 = child2;
+            }
+        }
+        else
+        {
+            m_root = child2;
+        }
+
+        Get(node).child2 = target;
+        Get(target).parent = node;
+
+        ret = child1;
+    }
+
+    return ret;
+}
+
+void DBVTQueryTree::AddNode(NodeId node)
+{
+    //size_t count = 0;
+
+    // find the best node for insertion
+    NodeId it = m_root;
+    while (true)
+    {
+        if (Get(it).IsLeaf())
+        {
+            break;
         }
 
         // choose the better side to recursive call
-        auto left = it->left;
-        auto right = it->right;
+        auto child1 = Get(it).child1;
+        auto child2 = Get(it).child2;
 
         // distance from node to childs bound
-        auto dl = (left->bound.GetCenter() - node->bound.GetCenter()).Length2();
-        auto dr = (right->bound.GetCenter() - node->bound.GetCenter()).Length2();
+        auto d1 = (Get(child1).bound.GetCenter() - Get(node).bound.GetCenter()).Length2();
+        auto d2 = (Get(child2).bound.GetCenter() - Get(node).bound.GetCenter()).Length2();
 
         // self distance
-        auto ds = (left->bound.GetCenter() - right->bound.GetCenter()).Length2();
+        auto d12 = (Get(child1).bound.GetCenter() - Get(child2).bound.GetCenter()).Length2();
 
-        auto min = std::min(std::min(dl, dr), ds);
+        auto min = std::min(std::min(d1, d2), d12);
 
-        if (min == dl)
+        if (min == d1)
         {
-            //AddNode(left, node);
-            it = left;
+            it = child1;
+            //count++;
             continue;
         }
 
-        if (min == dr)
+        if (min == d2)
         {
-            //AddNode(right, node);
-            it = right;
+            it = child2;
+            //count++;
             continue;
         }
 
-        JOINT_2_NODES(it, node);
-        return;
+        break;
+    }
+
+    //std::cout << "Insert depth: " << count << "\n";
+
+    // insert node to the best node
+    NodeId jointedNode = AllocateNode();
+    Get(jointedNode).bound = Get(it).bound;
+    Get(jointedNode).bound.Joint(Get(node).bound);
+
+    auto parent = Get(it).parent;
+
+    Get(jointedNode).child1 = it;
+    Get(jointedNode).child2 = node;
+    Get(jointedNode).parent = parent;
+
+    Get(it).parent = jointedNode;
+    Get(node).parent = jointedNode;
+
+    if (parent != INVALID_ID)
+    {
+        if (Get(parent).child1 == it)
+        {
+            Get(parent).child1 = jointedNode;
+        }
+        else
+        {
+            Get(parent).child2 = jointedNode;
+        }
+    }
+    else
+    {
+        m_root = jointedNode;
+    }
+
+    // walk back to fix height
+    it = jointedNode;
+    while (it != INVALID_ID)
+    {
+        it = Balance(it);
+
+        if (Get(it).IsLeaf())
+        {
+            Get(it).height = 0;
+        }
+        else
+        {
+            Get(it).height = std::max(Get(Get(it).child1).height, Get(Get(it).child2).height) + 1;
+            Get(it).bound = Get(Get(it).child1).bound.MakeJointed(Get(Get(it).child2).bound);
+        }
+
+        it = Get(it).parent;
     }
 }
+
+void DBVTQueryTree::RemoveNode(NodeId node)
+{
+    assert(Get(node).IsLeaf());
+
+    auto parent = Get(node).parent;
+    auto grandParent = Get(parent).parent;
+    auto sibling = Get(parent).child1 == node ? Get(parent).child2 : Get(parent).child1;
+
+    if (parent == INVALID_ID)
+    {
+        m_root = INVALID_ID;
+        goto Return;
+    }
+
+    if (grandParent == INVALID_ID)
+    {
+        m_root = sibling;
+        Get(sibling).parent = INVALID_ID;
+        goto Return;
+    }
+
+    if (Get(grandParent).child1 == parent)
+    {
+        Get(grandParent).child1 = sibling;
+    }
+    else
+    {
+        Get(grandParent).child2 = sibling;
+    }
+
+    Get(sibling).parent = grandParent;
+
+    auto it = grandParent;
+    while (it != INVALID_ID)
+    {
+        it = Balance(it);
+
+        if (Get(it).IsLeaf())
+        {
+            Get(it).height = 0;
+        }
+        else
+        {
+            Get(it).height = std::max(Get(Get(it).child1).height, Get(Get(it).child2).height) + 1;
+            Get(it).bound = Get(Get(it).child1).bound.MakeJointed(Get(Get(it).child2).bound);
+        }
+
+        it = Get(it).parent;
+    }
+
+Return:
+    DeallocateNode(parent);
+    DeallocateNode(node);
+}
+
+size_t DBVTQueryTree::Height(NodeId node)
+{
+    if (node == INVALID_ID || Get(node).IsLeaf()) return 0;
+
+    auto h1 = Height(Get(node).child1);
+    auto h2 = Height(Get(node).child2);
+
+    return std::max(h1, h2) + 1;
+}
+
+size_t DBVTQueryTree::Height()
+{
+    return Height(m_root);
+}
+
+
+void DBVTQueryTree::Validate(NodeId node)
+{
+    if (Get(node).IsLeaf())
+    {
+        if (Get(node).height != 0)
+        {
+            std::cout << "[ERROR]:\tDBVTQueryTree::Validate failed\n";
+            assert(0);
+        }
+        return;
+    }
+
+    intmax_t d = Get(Get(node).child1).height - Get(Get(node).child2).height;
+    if (d > 1 || d < -1)
+    {
+        std::cout << "[ERROR]:\tDBVTQueryTree::Validate failed\n";
+        assert(0);
+    }
+
+    Validate(Get(node).child1);
+    Validate(Get(node).child2);
+}
+
 
 #undef JOINT_2_NODES
 
 ID DBVTQueryTree::Add(const AABox& aabb, void* userPtr)
 {
-    Node* newNode = rheap::New<Node>();
-    newNode->bound = aabb;
-    newNode->userPtr = userPtr;
+    NodeId newNode = AllocateNode();
+    Get(newNode).bound = aabb;
+    Get(newNode).userPtr = userPtr;
 
-    if (m_root == nullptr)
+    if (m_root == INVALID_ID)
     {
         m_root = newNode;
     }
     else
     {
-        AddNode(m_root, newNode);
+        AddNode(newNode);
     }
+
+#ifdef _DEBUG
+    Validate(m_root);
+#endif // _DEBUG
 
     return (ID)newNode;
 }
 
 void DBVTQueryTree::Remove(ID id)
 {
+    // assert id must be leaf node
+    RemoveNode((NodeId)id);
+
+#ifdef _DEBUG
+    Validate(m_root);
+#endif // _DEBUG
 }
 
 AABBQuerySession* DBVTQueryTree::NewSession()
@@ -179,7 +468,7 @@ void DBVTQueryTree::DeleteSession(AABBQuerySession* session)
 
 void DBVTQueryTree::QueryAABox(const AABox& aabox, AABBQuerySession* session)
 {
-    if (m_root && m_root->bound.IsOverlap(aabox))
+    if (m_root != INVALID_ID && Get(m_root).bound.IsOverlap(aabox))
     {
         auto* dvbtSession = (DBVTQueryTreeSession*)session;
         auto& stack = dvbtSession->m_stack;
@@ -192,20 +481,20 @@ void DBVTQueryTree::QueryAABox(const AABox& aabox, AABBQuerySession* session)
             auto node = stack.back();
             stack.pop_back();
 
-            if (node->IsLeaf())
+            if (Get(node).IsLeaf())
             {
-                result.push_back(node->userPtr);
+                result.push_back(Get(node).userPtr);
                 continue;
             }
 
-            if (node->right->bound.IsOverlap(aabox))
+            if (Get(Get(node).child1).bound.IsOverlap(aabox))
             {
-                stack.push_back(node->right);
+                stack.push_back(Get(node).child1);
             }
 
-            if (node->left->bound.IsOverlap(aabox))
+            if (Get(Get(node).child2).bound.IsOverlap(aabox))
             {
-                stack.push_back(node->left);
+                stack.push_back(Get(node).child2);
             }
         }
     }

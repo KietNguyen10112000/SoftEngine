@@ -18,6 +18,9 @@ protected:
 	constexpr static ID TEMP_OBJECT_ID_MASK		= 0x10000000'00000000ULL;
 	constexpr static ID TEMP_OBJECT_ID_UNMASK	= 0x7FFFFFFF'FFFFFFFFULL;
 
+	friend class Engine;
+	friend class DynamicLayer;
+
 	///
 	/// for long live-time object
 	/// eg: static object
@@ -61,7 +64,6 @@ private:
 
 	ID m_uidCounter = 0;
 
-	friend class Engine;
 	BuiltinEventManager* m_objectEventMgr = nullptr;
 
 	Handle<EventManager> m_eventMgr = nullptr;

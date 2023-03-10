@@ -1,4 +1,4 @@
-#include "DoubleDynamicLayersScene.h"
+#include "DynamicLayer.h"
 
 #include "Core/Time/Clock.h"
 
@@ -10,13 +10,13 @@
 
 NAMESPACE_BEGIN
 
-DoubleDynamicLayersScene::DoubleDynamicLayersScene()
+DynamicLayer::DynamicLayer()
 {
 	m_queryStructures[0] = rheap::New<DBVTQueryTree>();
 	m_queryStructures[1] = rheap::New<DBVTQueryTree>();
 }
 
-DoubleDynamicLayersScene::~DoubleDynamicLayersScene()
+DynamicLayer::~DynamicLayer()
 {
 	rheap::Delete(m_queryStructures[0]);
 	rheap::Delete(m_queryStructures[1]);
@@ -29,30 +29,30 @@ DoubleDynamicLayersScene::~DoubleDynamicLayersScene()
 	);
 }
 
-void DoubleDynamicLayersScene::AddDynamicObject(GameObject* obj)
+void DynamicLayer::AddDynamicObject(GameObject* obj)
 {
 	//auto id = m_addCounter++;
 	//auto treeId = id % 2;
 	m_waitForAddObj.Add(obj);
 }
 
-void DoubleDynamicLayersScene::RemoveDynamicObject(GameObject* obj)
+void DynamicLayer::RemoveDynamicObject(GameObject* obj)
 {
 	auto treeId = GetAABBQueryStructureIdOf(obj);
 	m_waitForRemoveObjs[treeId].Add(obj);
 }
 
-void DoubleDynamicLayersScene::RefreshDynamicObject(GameObject* obj)
+void DynamicLayer::RefreshDynamicObject(GameObject* obj)
 {
 	auto treeId = GetAABBQueryStructureIdOf(obj);
 	m_waitForRefreshObjs[treeId].Add(obj);
 }
 
-void DoubleDynamicLayersScene::ProcessRemoveLists()
+void DynamicLayer::ProcessRemoveLists()
 {
 	struct CurrentTaskParam
 	{
-		DoubleDynamicLayersScene* scene;
+		DynamicLayer* scene;
 		ID treeId;
 	};
 
@@ -71,9 +71,9 @@ void DoubleDynamicLayersScene::ProcessRemoveLists()
 			[&](GameObject* obj)
 			{
 				auto treeId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
-				freeIds.AddToSpaceUnsafe(id, treeId);
-				queryStructure->Remove(treeId->m[id].id);
-				objects.Remove(treeId->m[id].ulistId);
+		freeIds.AddToSpaceUnsafe(id, treeId);
+		queryStructure->Remove(treeId->m[id].id);
+		objects.Remove(treeId->m[id].ulistId);
 			}
 		);
 
@@ -94,10 +94,10 @@ void DoubleDynamicLayersScene::ProcessRemoveLists()
 	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
 }
 
-void DoubleDynamicLayersScene::BeginAllocateID()
+void DynamicLayer::BeginAllocateID()
 {
 	auto freeIdsSize = m_freeIds.size();
-	if (freeIdsSize > 0) 
+	if (freeIdsSize > 0)
 	{
 		m_isFreeIdsAvaiable[0] = true;
 		m_isFreeIdsAvaiable[1] = true;
@@ -116,7 +116,7 @@ void DoubleDynamicLayersScene::BeginAllocateID()
 	}
 }
 
-DoubleDynamicLayersScene::AABBQueryID* DoubleDynamicLayersScene::AllocateID(size_t treeId)
+DynamicLayer::AABBQueryID* DynamicLayer::AllocateID(size_t treeId)
 {
 	if (!m_isFreeIdsAvaiable[treeId])
 	{
@@ -156,7 +156,7 @@ DoubleDynamicLayersScene::AABBQueryID* DoubleDynamicLayersScene::AllocateID(size
 	return ret;
 }
 
-void DoubleDynamicLayersScene::EndAllocateID()
+void DynamicLayer::EndAllocateID()
 {
 	for (size_t i = 0; i < m_freeIdsNumChunks; i++)
 	{
@@ -165,11 +165,11 @@ void DoubleDynamicLayersScene::EndAllocateID()
 	}
 }
 
-void DoubleDynamicLayersScene::ProcessAddLists()
+void DynamicLayer::ProcessAddLists()
 {
 	struct CurrentTaskParam
 	{
-		DoubleDynamicLayersScene* scene;
+		DynamicLayer* scene;
 		ID treeId;
 	};
 
@@ -253,11 +253,11 @@ void DoubleDynamicLayersScene::ProcessAddLists()
 	//m_queryStructuresSizes[1] += addSize - sizeOf1;
 }
 
-void DoubleDynamicLayersScene::ProcessRefreshLists()
+void DynamicLayer::ProcessRefreshLists()
 {
 	struct CurrentTaskParam
 	{
-		DoubleDynamicLayersScene* scene;
+		DynamicLayer* scene;
 		ID treeId;
 	};
 
@@ -270,8 +270,8 @@ void DoubleDynamicLayersScene::ProcessRefreshLists()
 	auto numTransferObjs = std::abs(deltaSize);
 
 	if (numTransferObjs < (lessSize / REFRESH_BALANCE_PARAM))
-	//if (numTransferObjs == 0)
-	//if (numTransferObjs != -1)
+		//if (numTransferObjs == 0)
+		//if (numTransferObjs != -1)
 	{
 		m_waitForRefreshObjs[0].GetChunks(m_splitAddList[0]);
 		m_waitForRefreshObjs[0].GetChunks(m_splitRemoveList[0]);
@@ -344,7 +344,7 @@ void DoubleDynamicLayersScene::ProcessRefreshLists()
 
 		size_t i = 0;
 
-		#define LOOP(chunkName, body)								\
+#define LOOP(chunkName, body)								\
 		while (chunkName[i])										\
 		{															\
 			auto it = chunkName[i];									\
@@ -361,28 +361,28 @@ void DoubleDynamicLayersScene::ProcessRefreshLists()
 		LOOP(
 			removeChunks,
 			auto queryId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
-			auto& nodeId = queryId->m[id].id;
-			auto& ulistId = queryId->m[id].ulistId;
+		auto & nodeId = queryId->m[id].id;
+		auto & ulistId = queryId->m[id].ulistId;
 
-			queryStructure->Remove(nodeId);
-			objects.Remove(ulistId);
+		queryStructure->Remove(nodeId);
+		objects.Remove(ulistId);
 
-			nodeId = INVALID_ID;
-			ulistId = INVALID_ID;
+		nodeId = INVALID_ID;
+		ulistId = INVALID_ID;
 		);
 
 		i = 0;
 		LOOP(
 			addChunks,
 			auto queryId = (AABBQueryID*)Scene::GetObjectAABBQueryId(obj);
-			auto& nodeId = queryId->m[id].id;
-			auto& ulistId = queryId->m[id].ulistId;
+		auto & nodeId = queryId->m[id].id;
+		auto & ulistId = queryId->m[id].ulistId;
 
-			nodeId = queryStructure->Add(obj->GetAABB(), obj);
-			ulistId = objects.Add(obj);
+		nodeId = queryStructure->Add(obj->GetAABB(), obj);
+		ulistId = objects.Add(obj);
 		);
 
-		#undef LOOP
+#undef LOOP
 	};
 
 	CurrentTaskParam params[2] = {
@@ -411,7 +411,7 @@ void DoubleDynamicLayersScene::ProcessRefreshLists()
 	m_waitForRefreshObjs[1].Clear();
 }
 
-void DoubleDynamicLayersScene::IncrementalBalance(size_t remainNS)
+void DynamicLayer::IncrementalBalance(size_t remainNS)
 {
 	auto start = Clock::ns::now();
 
@@ -471,32 +471,28 @@ void DoubleDynamicLayersScene::IncrementalBalance(size_t remainNS)
 	}
 }
 
-void DoubleDynamicLayersScene::ReConstruct()
+void DynamicLayer::ReConstruct()
 {
 	auto start = Clock::ns::now();
 
-	//std::cout << "DoubleDynamicLayersScene::ProcessRemoveLists()\n";
+	//std::cout << "DynamicLayer::ProcessRemoveLists()\n";
 	ProcessRemoveLists();
 
-	//std::cout << "DoubleDynamicLayersScene::ProcessRefreshLists()\n";
+	//std::cout << "DynamicLayer::ProcessRefreshLists()\n";
 	ProcessRefreshLists();
 
-	//std::cout << "DoubleDynamicLayersScene::ProcessAddLists()\n";
+	//std::cout << "DynamicLayer::ProcessAddLists()\n";
 	ProcessAddLists();
 
 	auto dt = Clock::ns::now() - start;
 	if (dt < LIMIT_RECONSTRUCT_TIME_NS)
 	{
-		//std::cout << "DoubleDynamicLayersScene::IncrementalBalance()\n";
+		//std::cout << "DynamicLayer::IncrementalBalance()\n";
 		IncrementalBalance(LIMIT_RECONSTRUCT_TIME_NS - dt);
 	}
 
 	dt = (Clock::ns::now() - start) / 1000000;
-	std::cout << "DoubleDynamicLayersScene::ReConstruct() --- " << dt << " ms\n";
-}
-
-void DoubleDynamicLayersScene::Synchronize()
-{
+	std::cout << "DynamicLayer::ReConstruct() --- " << dt << " ms\n";
 }
 
 NAMESPACE_END

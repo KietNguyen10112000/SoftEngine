@@ -131,6 +131,9 @@ public:
 	inline void Split(size_t output1Count, T** output1, T** output2, 
 		size_t* output1EndIndex = 0, size_t* output2EndIndex = 0)
 	{
+		output1[0] = 0;
+		output2[0] = 0;
+
 		size_t total = 0;
 		size_t i = 0;
 		T** p = output1;

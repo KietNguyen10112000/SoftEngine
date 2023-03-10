@@ -1,10 +1,15 @@
 #pragma once
 
+#include "Core/TypeDef.h"
+
 #include "Scene.h"
 
 NAMESPACE_BEGIN
 
-class DoubleDynamicLayersScene : Traceable<DoubleDynamicLayersScene>, public Scene
+class AABBQueryStructure;
+class GameObject;
+
+class DynamicLayer
 {
 protected:
 	constexpr static size_t ADD_BALANCE_PARAM = 5;
@@ -14,8 +19,6 @@ protected:
 	constexpr static size_t REBALANCE_BATCH_SIZE = 128;
 
 	constexpr static size_t LIMIT_RECONSTRUCT_TIME_NS = 3 * 1000000; // 3 ms
-
-	using Base = Scene;
 
 	struct AABBQueryID
 	{
@@ -54,15 +57,9 @@ protected:
 	GameObject** m_splitRemoveList[2][32] = { {}, {} };
 
 protected:
-	TRACEABLE_FRIEND();
-	void Trace(Tracer* tracer)
-	{
-		Base::Trace(tracer);
-	}
-
 	inline size_t GetAABBQueryStructureIdOf(GameObject* obj)
 	{
-		auto id = GetObjectAABBQueryId(obj);
+		auto id = Scene::GetObjectAABBQueryId(obj);
 		return ((AABBQueryID*)id)->m[0].id == INVALID_ID ? 1 : 0;
 	}
 
@@ -76,20 +73,18 @@ protected:
 	void IncrementalBalance(size_t remainNS);
 
 public:
-	DoubleDynamicLayersScene();
-	~DoubleDynamicLayersScene();
+	DynamicLayer();
+	~DynamicLayer();
 
 public:
 	// Inherited via Scene
-	virtual void AddDynamicObject(GameObject* obj);
+	void AddDynamicObject(GameObject* obj);
 
-	virtual void RemoveDynamicObject(GameObject* obj);
+	void RemoveDynamicObject(GameObject* obj);
 
-	virtual void RefreshDynamicObject(GameObject* obj);
+	void RefreshDynamicObject(GameObject* obj);
 
-	virtual void ReConstruct();
-
-	virtual void Synchronize();
+	void ReConstruct();
 
 };
 

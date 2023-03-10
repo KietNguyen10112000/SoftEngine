@@ -37,3 +37,4 @@ constexpr static size_t KB = 1024;
 constexpr static size_t MB = 1024 * 1024;
 using byte = uint8_t;
 using ID = size_t;
+constexpr static ID INVALID_ID = -1;

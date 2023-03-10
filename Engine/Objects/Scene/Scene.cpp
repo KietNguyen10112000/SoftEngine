@@ -1,12 +1,14 @@
 #include "Scene.h"
 
 #include "Components/Physics/Physics.h"
-#include "Objects/QueryStructures/AABBQueryStructure.h"
 
 #include "Event/BuiltinEventManager.h"
 #include "Event/EventManager.h"
 
 #include "TaskSystem/TaskSystem.h"
+
+#include "Objects/QueryStructures/AABBQueryStructure.h"
+#include "Objects/QueryStructures/DBVTQueryTree.h"
 
 NAMESPACE_BEGIN
 
@@ -14,11 +16,14 @@ Scene::Scene()
 {
 	m_objectEventMgr = rheap::New<BuiltinEventManager>(this);
 	m_eventMgr = mheap::New<EventManager>(512);
+
+	m_staticObjsQueryStructure = rheap::New<DBVTQueryTree>();
 }
 
 Scene::~Scene()
 {
 	rheap::Delete(m_objectEventMgr);
+	rheap::Delete(m_staticObjsQueryStructure);
 }
 
 void Scene::AddObject(Handle<GameObject>& obj)
@@ -48,7 +53,7 @@ void Scene::AddObject(Handle<GameObject>& obj)
 	}
 
 	// insert by default
-	if (m_idMask == TEMP_OBJECT_ID_MASK)
+	if (m_idMask == 0)
 	{
 		// stable object treat as static object
 		obj->m_aabbQueryId = m_staticObjsQueryStructure->Add(obj->m_aabb, obj.Get());

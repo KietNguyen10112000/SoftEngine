@@ -8,35 +8,67 @@ NAMESPACE_BEGIN
 class API DBVTQueryTree : public AABBQueryStructure
 {
 public:
+	using NodeId = ID;
+
 	struct Node
 	{
-		Node* parent = nullptr;
-		Node* left = nullptr;
-		Node* right = nullptr;
+		NodeId parent = INVALID_ID;
+		NodeId child1 = INVALID_ID;
+		union
+		{
+			NodeId child2 = INVALID_ID;
+			NodeId next;
+			void* userPtr;
+		};
+
+		size_t height = 0;
+
 		AABox bound;
-		void* userPtr;
 
 		inline bool IsLeaf() const
 		{
-#ifdef _DEBUG
-			if (left == nullptr) assert(right == nullptr);
-#endif
-
-			return left == nullptr;
+			return child1 == INVALID_ID;
 		}
 	};
 
+
 protected:
-	Node* m_root = nullptr;
+	//Node* m_root = nullptr;
+	//Node* m_allocatedNode = nullptr;
+
+	NodeId m_root = INVALID_ID;
+
+	std::Vector<Node> m_nodes;
+	size_t m_nodesAllocatedCount = 0;
+
+	NodeId m_allocatedNode = INVALID_ID;
 
 public:
 	DBVTQueryTree();
 	~DBVTQueryTree();
 
 protected:
+	NodeId AllocateNode();
+	void DeallocateNode(NodeId node);
+
+	NodeId Balance(NodeId node);
+
 	void FreeTree(Node* node);
-	void AddNode(Node* root, Node* node);
+	void AddNode(NodeId node);
+	void RemoveNode(NodeId node);
+
+	size_t Height(NodeId node);
+
+	void Validate(NodeId node);
+
+	inline Node& Get(NodeId id)
+	{
+		return m_nodes[id];
+	}
 	
+public:
+	size_t Height();
+
 public:
 	// Inherited via AABBQueryStructure
 	virtual ID Add(const AABox& aabb, void* userPtr) override;
