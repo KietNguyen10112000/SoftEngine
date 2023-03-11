@@ -197,6 +197,22 @@ public:
 		m_size = 0;
 	}
 
+	inline void Remove(T* it)
+	{
+		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
+
+		size_t index = it - m_buffer.Get();
+		_MANAGED_ARRAY_CHECK_BOUND(index);
+
+		auto buf = m_buffer.Get();
+		size_t i;
+		for (i = index; i < m_size - 1; i++)
+		{
+			buf[i] = buf[i + 1];
+		}
+		m_size--;
+	}
+
 public:
 	// STL-like
 	inline size_t size() const

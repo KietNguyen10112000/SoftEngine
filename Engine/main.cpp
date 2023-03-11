@@ -8,7 +8,6 @@
 #include "Core/Random/Random.h"
 
 #include "TaskSystem/TaskWorker.h"
-#include "SubSystems/SubSystems.h"
 
 #include "Engine/Engine.h"
 
@@ -30,8 +29,6 @@ int main()
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
 	TaskWorker::Initalize();
-
-	SubSystems::Initialize();
 
 	auto sys = soft::gc::g_system;
 
@@ -66,7 +63,6 @@ int main()
 	
 
 	Engine::Finalize();
-	SubSystems::Finalize();
 	
 	TaskWorker::Finalize();
 	Thread::FinalizeForThisThreadInThisModule();

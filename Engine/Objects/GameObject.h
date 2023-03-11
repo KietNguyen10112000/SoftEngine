@@ -11,9 +11,11 @@
 #include "SubSystems/SubSystemInfo.h"
 
 #include "Components/SubSystemComponent.h"
+#include "Components/SubSystemComponentId.h"
 
 #include "Scene/Event/EventListener.h"
 #include "Scene/Event/EventListenerContainer.h"
+
 
 NAMESPACE_BEGIN
 
@@ -34,16 +36,20 @@ public:
 		}
 	};
 
+	friend class GameObjectDirectAccessor;
 	friend class Scene;
 	friend class DynamicLayer;
 	friend class MultipleDynamicLayersScene;
+	friend class SubSystem;
 
 	DefineHasClassMethod(OnCompentAdded);
+	DefineHasClassMethod(OnCompentRemoved);
 
 public:
 	enum EVENT
 	{
 		ADDED_TO_SCENE,
+		REMOVED_FROM_SCENE,
 
 		COUNT
 	};
@@ -70,6 +76,13 @@ private:
 	AABox m_aabb = {};
 	// <<< scene's control members 
 
+	// num components flush data to this obj in 1 iteration
+	std::atomic<size_t> m_numBranchCount;
+	size_t m_numBranch;
+	ID m_mainComponent = INVALID_ID;
+	std::atomic<bool> m_isBranched;
+	bool m_padding[3];
+
 	Handle<GameObject> m_parent = nullptr;
 	Array<Handle<GameObject>> m_childs;
 
@@ -87,7 +100,7 @@ private:
 	}
 
 	template <typename Comp>
-	GameObject* AddSubSystemComponent(const Handle<Comp>& component)
+	GameObject* AddSubSystemComponent(Handle<Comp>& component)
 	{
 		auto& slot = m_subSystemComponents[Comp::COMPONENT_ID];
 		if (slot.Get() != nullptr)
@@ -98,6 +111,26 @@ private:
 		//slot.dtor = GetDtor<Comp>();
 		slot = component;
 		component->OnComponentAdded(this);
+
+		if (m_mainComponent == INVALID_ID && SubSystemComponentId::PRIORITY[Comp::COMPONENT_ID] != -1)
+		{
+			m_mainComponent = Comp::COMPONENT_ID;
+			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain(this);
+		}
+
+		if (m_mainComponent != INVALID_ID 
+			&& SubSystemComponentId::PRIORITY[m_mainComponent] > SubSystemComponentId::PRIORITY[Comp::COMPONENT_ID])
+		{
+			m_subSystemComponents[m_mainComponent]->SetAsExtra(this);
+			m_mainComponent = Comp::COMPONENT_ID;
+			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain(this);
+		}
+
+		if (component->IsConflict())
+		{
+			m_numBranch++;
+		}
+
 		return this;
 	}
 
@@ -135,6 +168,95 @@ private:
 		return this;
 	}
 
+	template <typename Comp>
+	GameObject* RemoveSubSystemComponent()
+	{
+		auto& slot = m_subSystemComponents[Comp::COMPONENT_ID];
+
+		if (slot.Get() != nullptr)
+		{
+			slot->OnCompentRemoved(this);
+		}
+
+		if (slot->IsConflict())
+		{
+			m_numBranch--;
+		}
+
+		slot = nullptr;
+
+		if (m_mainComponent == Comp::COMPONENT_ID)
+		{
+			size_t newMainId = INVALID_ID;
+			size_t priority = -1;
+			for (auto& compId : SubSystemComponentId::PROCESS_DATA_COMPONENTS)
+			{
+				auto comp = m_subSystemComponents[compId].Get();
+				if (comp && priority > SubSystemComponentId::PRIORITY[compId])
+				{
+					priority = SubSystemComponentId::PRIORITY[compId];
+					newMainId = compId;
+				}
+			}
+
+			m_mainComponent = newMainId;
+			if (m_mainComponent != INVALID_ID)
+			{
+				m_subSystemComponents[m_mainComponent]->SetAsMain(this);
+			}
+		}
+
+		return this;
+	}
+
+	template <typename Comp>
+	GameObject* RemoveNormalComponent()
+	{
+		ComponentDtor dtor = GetDtor<Comp>();
+		auto it = FindComponentFromDtor(dtor);
+
+		if constexpr (Has_OnCompentRemoved<Comp>::value)
+		{
+			if (it != m_components.end())
+			{
+				component->OnCompentRemoved(this);
+			}
+		}
+
+		m_components.Remove(it);
+
+		return this;
+	}
+
+	template <typename... Args>
+	inline void InvokeSubSystemComponentFunc(void (SubSystemComponent::* func)(Args...), Args&&... args)
+	{
+		for (auto& comp : m_subSystemComponents)
+		{
+			if (comp.Get())
+			{
+				(comp.Get()->*func)(std::forward<Args>(args)...);
+			}
+		}
+	}
+
+	inline void MergeSubSystemComponentsData()
+	{
+		for (auto& compId : SubSystemComponentId::PROCESS_DATA_COMPONENTS)
+		{
+			if (compId == m_mainComponent) continue;
+
+			auto comp = m_subSystemComponents[compId].Get();
+			if (comp)
+			{
+				comp->ResolveConflict(this);
+			}
+		}
+
+		m_numBranchCount.store(m_numBranch);
+		m_isBranched.store(false);
+	}
+
 protected:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
@@ -160,13 +282,29 @@ public:
 		}
 	}
 
+	/*template <typename Comp>
+	GameObject* RemoveComponent()
+	{
+		if constexpr (std::is_base_of_v<SubSystemComponent, Comp>)
+		{
+			return RemoveSubSystemComponent<Comp>();
+		}
+		else
+		{
+			return RemoveNormalComponent<Comp>();
+		}
+	}*/
+
 	// make new component inside object
 	template <typename Comp, typename... Args>
 	Handle<Comp> NewComponent(Args&&... args)
 	{
 		auto comp = mheap::New<Comp>(std::forward<Args>(args)...);
-		AddComponent(comp);
-		return comp;
+		if (AddComponent(comp))
+		{
+			return comp;
+		}
+		return nullptr;
 	}
 
 	template <typename Comp>

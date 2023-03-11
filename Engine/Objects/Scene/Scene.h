@@ -20,6 +20,9 @@ protected:
 
 	friend class Engine;
 	friend class DynamicLayer;
+	friend class SubSystem;
+
+	raw::ConcurrentList<GameObject*> m_branchedObjects;
 
 	///
 	/// for long live-time object
@@ -95,6 +98,13 @@ private:
 
 	void ProcessRemoveLists();
 	void ProcessAddLists();
+	void ProcessRecordedBranchedLists();
+
+	inline void RecordBranchedObject(GameObject* obj)
+	{
+		assert(obj->m_scene == this);
+		m_branchedObjects.Add(obj);
+	}
 
 public:
 	inline void BeginSetup()
@@ -114,13 +124,13 @@ public:
 	void AddObject(Handle<GameObject>& obj);
 	void RemoveObject(Handle<GameObject>& obj);
 
-	virtual void RefreshDynamicObject(GameObject* obj) = 0;
-
 protected:
 	// call whenever a dynamic object need to add, or remove
 	// must be thread-safe methods
 	virtual void AddDynamicObject(GameObject* obj) = 0;
 	virtual void RemoveDynamicObject(GameObject* obj) = 0;
+
+	virtual void RefreshDynamicObject(GameObject* obj) = 0;
 
 	inline static ID GetObjectAABBQueryId(GameObject* obj)
 	{

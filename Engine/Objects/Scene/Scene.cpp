@@ -93,6 +93,16 @@ void Scene::ProcessRemoveLists()
 		}
 	);
 	list->Clear();
+
+	m_waitForRemove->ForEach(
+		[&](Handle<GameObject>& obj)
+		{
+			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentRemovedFromScene, obj.Get());
+			obj->InvokeEvent(GameObject::REMOVED_FROM_SCENE);
+			obj->m_scene = nullptr;
+		}
+	);
+
 	m_waitForRemove = list;
 }
 
@@ -101,12 +111,30 @@ void Scene::ProcessAddLists()
 	m_waitForAdd.ForEach(
 		[&](Handle<GameObject>& obj)
 		{
+			obj->m_scene = this;
 			obj->m_uid = m_uidCounter++;
 			obj->m_sceneId = GetSceneId();
 			m_objsAccessor->Push(obj);
+
+			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentAdded, obj.Get());
+			obj->InvokeEvent(GameObject::ADDED_TO_SCENE);
 		}
 	);
 	m_waitForAdd.Clear();
+}
+
+void Scene::ProcessRecordedBranchedLists()
+{
+	m_branchedObjects.ForEach(
+		[](GameObject* obj)
+		{
+			if (obj->m_numBranchCount.load() != obj->m_numBranch)
+			{
+				obj->MergeSubSystemComponentsData();
+			}
+		}
+	);
+	m_branchedObjects.Clear();
 }
 
 void Scene::PrevIteration()
@@ -126,6 +154,7 @@ void Scene::PrevIteration()
 	reconstruct.Entry() = [](void* s)
 	{
 		Scene* scene = (Scene*)s;
+		scene->ProcessRecordedBranchedLists();
 		scene->ReConstruct();
 	};
 	reconstruct.Params() = this;

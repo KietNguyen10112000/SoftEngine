@@ -65,7 +65,7 @@ void Engine::Setup()
 	Handle<FunctionBase> fn1 = func1;
 	fn1->Invoke();*/
 
-	constexpr float rangeX = 1000;
+	/*constexpr float rangeX = 1000;
 	constexpr float rangeY = 1000;
 	constexpr float rangeZ = 1000;
 
@@ -95,7 +95,11 @@ void Engine::Setup()
 				),
 		};
 		mainScene->AddObject(dynamicObj);
-	}
+	}*/
+
+	/*auto dynamicObj = mheap::New<GameObject>();
+	auto aabb = (AABox*)&dynamicObj->GetAABB();
+	*aabb = {};*/
 }
 
 void Engine::Run()

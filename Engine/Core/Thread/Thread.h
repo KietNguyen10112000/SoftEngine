@@ -76,6 +76,12 @@ public:
 
 	static void EntryPointOfFiber(void*);
 
+#undef Yield
+	inline static void Yield()
+	{
+		std::this_thread::yield();
+	}
+
 };
 
 NAMESPACE_END
