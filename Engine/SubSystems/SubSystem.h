@@ -24,7 +24,7 @@ for (size_t i = 0; i < num; i++)				\
 class SubSystem
 {
 protected:
-	constexpr static size_t MERGE_BATCHSIZE = 512;
+	constexpr static size_t MERGE_BATCHSIZE = 256;
 
 	struct MergeTaskParam
 	{
@@ -75,13 +75,13 @@ public:
 
 public:
 	// call before scene reconstruction, so all scene query methods can not be use
-	virtual void PrevIteration() = 0;
+	virtual void PrevIteration(float dt) = 0;
 
 	// call after scene reconstruction
-	virtual void Iteration() = 0;
+	virtual void Iteration(float dt) = 0;
 
 	// call after Iteration =)))
-	virtual void PostIteration() = 0;
+	virtual void PostIteration(float dt) = 0;
 
 public:
 	inline void MergeSynch()
@@ -120,6 +120,11 @@ public:
 
 	inline void Merge(GameObject* obj)
 	{
+		if (obj->m_numBranch == 1)
+		{
+			return;
+		}
+
 		if (GameObjectDirectAccessor::BranchMerge(obj))
 		{
 			auto index = m_currentMergingObjsSize++;
@@ -151,6 +156,7 @@ public:
 				// record obj
 				m_currentMergingObjs[index] = obj;
 			}
+			return;
 		}
 
 		if (obj->m_isBranched.load() == false)

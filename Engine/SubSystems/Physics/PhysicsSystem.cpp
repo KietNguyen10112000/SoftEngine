@@ -2,11 +2,25 @@
 
 #include <iostream>
 
+#include "Components/Physics/Physics.h"
+
 NAMESPACE_BEGIN
 
-void PhysicsSystem::Process(Scene* scene)
+PhysicsSystem::PhysicsSystem(Scene* scene) : SubSystem(scene, Physics::COMPONENT_ID)
 {
-	std::cout << "PhysicsSystem::Process(Scene)\n";
+}
+
+void PhysicsSystem::PrevIteration(float dt)
+{
+}
+
+void PhysicsSystem::Iteration(float dt)
+{
+	std::cout << "PhysicsSystem::Iteration()\n";
+}
+
+void PhysicsSystem::PostIteration(float dt)
+{
 }
 
 NAMESPACE_END

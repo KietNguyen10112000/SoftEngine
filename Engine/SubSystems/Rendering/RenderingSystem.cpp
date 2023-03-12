@@ -2,11 +2,26 @@
 
 #include <iostream>
 
+#include "Components/Rendering/Rendering.h"
+
 NAMESPACE_BEGIN
 
-void RenderingSystem::Process(Scene* scene)
+RenderingSystem::RenderingSystem(Scene* scene) : SubSystem(scene, Rendering::COMPONENT_ID)
 {
-	std::cout << "RenderingSystem::Process(Scene)\n";
 }
+
+void RenderingSystem::PrevIteration(float dt)
+{
+}
+
+void RenderingSystem::Iteration(float dt)
+{
+	std::cout << "RenderingSystem::Iteration()\n";
+}
+
+void RenderingSystem::PostIteration(float dt)
+{
+}
+
 
 NAMESPACE_END

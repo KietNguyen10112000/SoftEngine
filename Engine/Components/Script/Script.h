@@ -10,8 +10,11 @@ class Script : public SubSystemComponent
 public:
 	constexpr static size_t COMPONENT_ID = SubSystemComponentId::SCRIPT_SUBSYSTEM_COMPONENT_ID;
 
-public:
+protected:
+	
 
+public:
+	virtual void OnComponentAddedToScene(GameObject* obj) override;
 
 };
 

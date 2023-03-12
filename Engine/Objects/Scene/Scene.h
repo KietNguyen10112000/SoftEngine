@@ -12,6 +12,7 @@ class AABBQueryStructure;
 class BuiltinEventManager;
 class EventManager;
 
+
 class Scene : Traceable<Scene>
 {
 protected:
@@ -21,8 +22,20 @@ protected:
 	friend class Engine;
 	friend class DynamicLayer;
 	friend class SubSystem;
+	friend class RenderingSystem;
+	friend class PhysicsSystem;
+	friend class ScriptSystem;
 
 	raw::ConcurrentList<GameObject*> m_branchedObjects;
+
+	RenderingSystem*	m_renderingSystem	= nullptr;
+	PhysicsSystem*		m_physicsSystem		= nullptr;
+	ScriptSystem*		m_scriptSystem		= nullptr;
+
+	float m_dt = 0; // in sec
+	float padd;
+	size_t m_prevTimeSinceEpochNs = 0;
+	size_t m_curTimeSinceEpochNs = 0;
 
 	///
 	/// for long live-time object
@@ -43,7 +56,7 @@ protected:
 	/// with backend memory, no object pooling is needed (but still available)
 	/// 
 	
-	Array<Handle<GameObject>>* m_objsAccessor = &m_stableObjects;
+	//Array<Handle<GameObject>>* m_objsAccessor = &m_stableObjects;
 
 
 	/// 
@@ -86,9 +99,10 @@ public:
 	virtual ~Scene();
 
 private:
-	inline ID GetSceneId()
+	inline ID GetSceneId(bool isDynamic)
 	{
-		return m_objsAccessor->Size() | TEMP_OBJECT_ID_MASK;
+		//return m_objsAccessor->Size() | TEMP_OBJECT_ID_MASK;
+		return isDynamic ? (m_tempObjects.size() | TEMP_OBJECT_ID_MASK) : m_stableObjects.size();
 	}
 
 	inline ID UnmaskId(ID id)
@@ -106,16 +120,42 @@ private:
 		m_branchedObjects.Add(obj);
 	}
 
+	inline bool IsDynamicObject(GameObject* obj)
+	{
+		auto physicsComp = obj->GetComponentRaw<Physics>();
+		if (physicsComp)
+		{
+			auto type = physicsComp->Type();
+
+			switch (type)
+			{
+			case soft::Physics::STATIC:
+				return false;
+			case soft::Physics::DYNAMIC:
+			case soft::Physics::KINEMATIC:
+				return true;
+				break;
+			}
+		}
+
+		if (m_idMask == 0)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 public:
 	inline void BeginSetup()
 	{
-		m_objsAccessor = &m_stableObjects;
+		//m_objsAccessor = &m_stableObjects;
 		m_idMask = 0;
 	}
 
 	inline void EndSetup()
 	{
-		m_objsAccessor = &m_tempObjects;
+		//m_objsAccessor = &m_tempObjects;
 		m_idMask = TEMP_OBJECT_ID_MASK;
 	}
 
@@ -144,6 +184,7 @@ protected:
 
 public:
 	void PrevIteration();
+	void Iteration();
 	void PostIteration();
 
 	///
@@ -160,6 +201,22 @@ public:
 	/// call at the end of iteration
 	///
 	virtual void Synchronize() = 0;
+
+public:
+	inline auto GetRenderingSystem()
+	{
+		return m_renderingSystem;
+	}
+
+	inline auto GetPhysicsSystem()
+	{
+		return m_physicsSystem;
+	}
+
+	inline auto GetScriptSystem()
+	{
+		return m_scriptSystem;
+	}
 
 };
 

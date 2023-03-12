@@ -7,8 +7,6 @@
 
 #include "TaskSystem/TaskSystem.h"
 #include "TaskSystem/TaskWorker.h"
-#include "SubSystems/Physics/PhysicsSystem.h"
-#include "SubSystems/Rendering/RenderingSystem.h"
 
 #include "Objects/Scene/Scene.h"
 #include "Objects/Scene/MultipleDynamicLayersScene.h"
@@ -65,7 +63,7 @@ void Engine::Setup()
 	Handle<FunctionBase> fn1 = func1;
 	fn1->Invoke();*/
 
-	/*constexpr float rangeX = 1000;
+	constexpr float rangeX = 1000;
 	constexpr float rangeY = 1000;
 	constexpr float rangeZ = 1000;
 
@@ -95,7 +93,7 @@ void Engine::Setup()
 				),
 		};
 		mainScene->AddObject(dynamicObj);
-	}*/
+	}
 
 	/*auto dynamicObj = mheap::New<GameObject>();
 	auto aabb = (AABox*)&dynamicObj->GetAABB();
@@ -132,7 +130,7 @@ void Engine::Run()
 
 void Engine::Iteration()
 {
-	if (m_gcIsRunning.exchange(true, std::memory_order_release) == false)
+	if (m_gcIsRunning.exchange(true, std::memory_order_acquire) == false)
 	{
 		Task gcTask;
 		gcTask.Entry() = [](void* e)
@@ -156,7 +154,6 @@ void Engine::Iteration()
 
 	Task tasks[16];
 
-
 	// process input & reconstruct scene => 2 tasks
 	auto& processInput = tasks[0];
 	processInput.Params() = this;
@@ -176,30 +173,10 @@ void Engine::Iteration()
 
 	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
 
-
-	// process rendering, physics, ... => 2 tasks, currently
-	auto& rendering = tasks[0];
-	rendering.Params() = mainScene;
-	rendering.Entry() = [](void* s)
-	{
-		auto scene = (Scene*)s;
-		RenderingSystem::Get()->Process(scene);
-	};
-
-	auto& physics = tasks[1];
-	physics.Params() = mainScene;
-	physics.Entry() = [](void* s)
-	{
-		auto scene = (Scene*)s;
-		PhysicsSystem::Get()->Process(scene);
-	};
-
-	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
-
+	mainScene->Iteration();
 
 	// SynchronizeAllSubSystems
 	SynchronizeAllSubSystems();
-
 }
 
 void Engine::ProcessInput()
@@ -222,6 +199,8 @@ void Engine::SynchronizeAllSubSystems()
 		nullptr
 	);
 	mainScene->m_objectEventMgr->FlushAllObjectEvents();*/
+
+	mainScene->PostIteration();
 
 	std::cout << "SynchronizeAllSubSystems()\n";
 	DeferredBufferTracker::Get()->UpdateAllThenClear();

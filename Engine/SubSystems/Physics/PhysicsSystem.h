@@ -1,17 +1,22 @@
 #pragma once
 
-#include "Core/TypeDef.h"
-
-#include "Core/Pattern/Singleton.h"
+#include "SubSystems/SubSystem.h"
 
 NAMESPACE_BEGIN
 
 class Scene;
 
-class PhysicsSystem : public Singleton<PhysicsSystem>
+class PhysicsSystem : public SubSystem
 {
 public:
-	void Process(Scene* scene);
+	PhysicsSystem(Scene* scene);
+
+public:
+	virtual void PrevIteration(float dt) override;
+
+	virtual void Iteration(float dt) override;
+
+	virtual void PostIteration(float dt) override;
 
 };
 

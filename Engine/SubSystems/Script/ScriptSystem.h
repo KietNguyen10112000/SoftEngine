@@ -5,11 +5,12 @@
 NAMESPACE_BEGIN
 
 class Scene;
+class Script;
 
-class RenderingSystem : public SubSystem
+class ScriptSystem : public SubSystem
 {
 public:
-	RenderingSystem(Scene* scene);
+	ScriptSystem(Scene* scene);
 
 public:
 	virtual void PrevIteration(float dt) override;
@@ -17,6 +18,10 @@ public:
 	virtual void Iteration(float dt) override;
 
 	virtual void PostIteration(float dt) override;
+
+public:
+	virtual void AddScript(Script* script);
+	virtual void RemoveScript(Script* script);
 
 };
 
