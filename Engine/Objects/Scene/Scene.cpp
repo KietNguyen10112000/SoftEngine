@@ -123,7 +123,7 @@ void Scene::ProcessRemoveLists()
 				m_staticObjsQueryStructure->Remove(obj->m_aabbQueryId);
 			}
 
-			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentRemovedFromScene, obj.Get());
+			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentRemovedFromScene);
 			obj->InvokeEvent(GameObject::REMOVED_FROM_SCENE);
 			obj->m_scene = nullptr;
 		}
@@ -172,7 +172,7 @@ void Scene::ProcessAddLists()
 			obj->m_sceneId = GetSceneId(objs == &m_tempObjects);
 			objs->Push(obj);
 
-			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentAdded, obj.Get());
+			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentAddedToScene);
 			obj->InvokeEvent(GameObject::ADDED_TO_SCENE);
 		}
 	);

@@ -41,6 +41,7 @@ public:
 	friend class DynamicLayer;
 	friend class MultipleDynamicLayersScene;
 	friend class SubSystem;
+	friend class SubSystemMergingUnit;
 
 	DefineHasClassMethod(OnCompentAdded);
 	DefineHasClassMethod(OnCompentRemoved);
@@ -84,7 +85,7 @@ private:
 	bool m_padding[3];
 
 	Handle<GameObject> m_parent = nullptr;
-	Array<Handle<GameObject>> m_childs;
+	Array<Handle<GameObject>> m_children;
 
 protected:
 	DeferredBuffer<Transform> m_transform = {};
@@ -100,7 +101,7 @@ private:
 	}
 
 	template <typename Comp>
-	GameObject* AddSubSystemComponent(Handle<Comp>& component)
+	GameObject* AddSubSystemComponent(const Handle<Comp>& component)
 	{
 		auto& slot = m_subSystemComponents[Comp::COMPONENT_ID];
 		if (slot.Get() != nullptr)
@@ -228,14 +229,18 @@ private:
 		return this;
 	}
 
-	template <typename... Args>
-	inline void InvokeSubSystemComponentFunc(void (SubSystemComponent::* func)(Args...), Args&&... args)
+	inline void InvokeSubSystemComponentFunc(void (SubSystemComponent::* func)(GameObject*))
 	{
+		for (size_t i = 0; i < m_children.Size(); i++)
+		{
+			m_children[i]->InvokeSubSystemComponentFunc(func);
+		}
+
 		for (auto& comp : m_subSystemComponents)
 		{
 			if (comp.Get())
 			{
-				(comp.Get()->*func)(std::forward<Args>(args)...);
+				(comp.Get()->*func)(this);
 			}
 		}
 	}
@@ -264,7 +269,7 @@ protected:
 		tracer->Trace(m_subSystemComponents);
 		tracer->Trace(m_components);
 		tracer->Trace(m_parent);
-		tracer->Trace(m_childs);
+		tracer->Trace(m_children);
 	}
 
 public:
@@ -388,6 +393,11 @@ public:
 	inline const auto& GetAABB() const
 	{
 		return m_aabb;
+	}
+
+	inline auto GetScene() const
+	{
+		return m_scene;
 	}
 
 

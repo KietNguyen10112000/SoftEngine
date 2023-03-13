@@ -6,6 +6,8 @@
 
 #include "Objects/GameObject.h"
 
+#include "Components/Physics/Physics.h"
+
 NAMESPACE_BEGIN
 
 class AABBQueryStructure;
@@ -22,6 +24,7 @@ protected:
 	friend class Engine;
 	friend class DynamicLayer;
 	friend class SubSystem;
+	friend class SubSystemMergingUnit;
 	friend class RenderingSystem;
 	friend class PhysicsSystem;
 	friend class ScriptSystem;

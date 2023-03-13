@@ -4,20 +4,20 @@
 
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/DeferredBuffer.h"
+#include "Core/Structures/Managed/Function.h"
+#include "Core/Random/Random.h"
 
 #include "TaskSystem/TaskSystem.h"
 #include "TaskSystem/TaskWorker.h"
 
 #include "Objects/Scene/Scene.h"
 #include "Objects/Scene/MultipleDynamicLayersScene.h"
-
 #include "Objects/Scene/Event/BuiltinEventManager.h"
-
 #include "Objects/Scene/Event/EventManager.h"
 
-#include "Core/Structures/Managed/Function.h"
 
-#include "Core/Random/Random.h"
+#include "Components/Script/Script.h"
+
 
 NAMESPACE_BEGIN
 
@@ -98,6 +98,44 @@ void Engine::Setup()
 	/*auto dynamicObj = mheap::New<GameObject>();
 	auto aabb = (AABox*)&dynamicObj->GetAABB();
 	*aabb = {};*/
+
+	class MyScript : public Script
+	{
+	public:
+		~MyScript()
+		{
+			std::cout << "MyScript::~MyScript()\n";
+		}
+
+		virtual void OnStart() override
+		{
+			std::cout << "MyScript::OnStart()\n";
+		}
+
+		virtual void OnUpdate(float dt) override
+		{
+			std::cout << "MyScript::OnUpdate()\n";
+		}
+
+	};
+
+	auto object = mheap::New<GameObject>();
+	auto aabb = (AABox*)&object->GetAABB();
+	*aabb = {
+			Vec3(
+				Random::RangeFloat(-rangeX, rangeX),
+				Random::RangeFloat(-rangeY, rangeY),
+				Random::RangeFloat(-rangeZ, rangeZ)
+			),
+
+			Vec3(
+				Random::RangeFloat(1, rangeDimX),
+				Random::RangeFloat(1, rangeDimY),
+				Random::RangeFloat(1, rangeDimZ)
+			),
+	};
+	auto script = object->NewComponent<MyScript>();
+	mainScene->AddObject(object);
 }
 
 void Engine::Run()

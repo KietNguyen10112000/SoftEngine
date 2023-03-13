@@ -374,6 +374,41 @@ public:
 		SubmitManyForThreadTempl<true>(tasks, count, threadId);
 	}*/
 
+
+
+	// use these 3 function to do dynamic submit-wait tasking
+	inline static void PrepareHandle(TaskWaitingHandle* handle)
+	{
+		handle->counter = 1;
+		handle->waitingFiber = Thread::GetCurrentFiber();
+	}
+
+	inline static void WaitForHandle(TaskWaitingHandle* handle)
+	{
+		if ((--handle->counter) != 0)
+		{
+			auto fiber = FiberPool::Take();
+			Thread::SwitchToFiber(fiber, false);
+		}
+	}
+
+	inline static void Submit(TaskWaitingHandle* handle, const Task& task, Task::PRIORITY priority = Task::PRIORITY::NORMAL)
+	{
+		task.m_handle = handle;
+		task.m_handle->counter++;
+
+		assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
+
+		s_queues[priority].enqueue(task);
+		TryInvokeOneMoreWorker();
+	}
+
+public:
+	inline static auto GetWorkerCount()
+	{
+		return s_workersCount;
+	}
+
 };
 
 NAMESPACE_END

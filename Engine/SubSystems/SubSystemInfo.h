@@ -13,7 +13,7 @@ public:
 	/// scripting
 	/// audio
 	/// 
-	constexpr static size_t INDEXED_SUBSYSTEMS_COUNT = 8;
+	constexpr static size_t INDEXED_SUBSYSTEMS_COUNT = 4;
 
 	//constexpr static size_t SUBSYSTEMS_COUNT = 8;
 
