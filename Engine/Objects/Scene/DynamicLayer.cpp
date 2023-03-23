@@ -174,6 +174,9 @@ void DynamicLayer::ProcessAddLists()
 	};
 
 	size_t addSize = m_waitForAddObj.size();
+
+	//std::cout << "Add size " << addSize << "\n";
+
 	//intmax_t deltaSize = m_queryStructuresSizes[0] - m_queryStructuresSizes[1];
 	intmax_t deltaSize = m_objects[0].size() - m_objects[1].size();
 
@@ -491,6 +494,7 @@ void DynamicLayer::IncrementalBalance(size_t remainNS)
 
 	// p1 is higher tree
 
+	//std::cout << objs1->size() << ", " << objs2->size() << '\n';
 	while (true)
 	{
 		for (size_t i = 0; i < REBALANCE_BATCH_SIZE; i++)
@@ -515,7 +519,7 @@ void DynamicLayer::IncrementalBalance(size_t remainNS)
 			nodeId2 = p2->Add(obj->GetAABB(), obj);
 			ulistId2 = objs2->Add(obj);
 
-			if (objs1->size() == objs2->size())
+			if (objs1->size() <= objs2->size())
 			{
 				return;
 			}

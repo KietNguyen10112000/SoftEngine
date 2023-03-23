@@ -27,7 +27,11 @@ public:
 			{
 				if (callable(id) && locks[id].try_lock())
 				{
-					break;
+					if (callable(id))
+					{
+						break;
+					}
+					locks[id].unlock();
 				}
 			}
 			

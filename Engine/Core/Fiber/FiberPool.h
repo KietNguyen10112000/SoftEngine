@@ -1,5 +1,7 @@
 #pragma once
 
+//#include <iostream>
+
 #include "Core/Structures/Raw/ConcurrentBag.h"
 #include "Core/Thread/ThreadLimit.h"
 
@@ -25,12 +27,16 @@ public:
 
 	inline static Fiber* Take()
 	{
+		/*auto ret = s_pool.Take();
+		std::cout << "Take FiberPool.size() = " << s_pool.size() << "\n";
+		return ret;*/
 		return s_pool.Take();
 	}
 
 	inline static void Return(Fiber* fiber)
 	{
 		s_pool.Store(fiber);
+		//std::cout << "Return FiberPool.size() = " << s_pool.size() << "\n";
 	}
 
 	/*inline static void Swap(Fiber* from, Fiber* to)

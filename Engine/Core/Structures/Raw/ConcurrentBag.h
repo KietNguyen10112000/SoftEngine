@@ -87,6 +87,11 @@ public:
 		return ret;
 	}
 
+
+	inline auto size() const
+	{
+		return m_size.load(std::memory_order_relaxed);
+	}
 };
 
 }
