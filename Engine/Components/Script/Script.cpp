@@ -4,37 +4,35 @@
 
 NAMESPACE_BEGIN
 
-void Script::OnComponentAddedToScene(GameObject* obj)
+void Script::OnComponentAddedToScene()
 {
-	m_object = obj;
-
-	auto scene = obj->GetScene();
+	auto scene = m_object->GetScene();
 	scene->GetScriptSystem()->AddScript(this);
 
 	OnStart();
 }
 
-void Script::OnComponentAdded(GameObject* object)
+void Script::OnComponentAdded()
 {
 }
 
-void Script::OnComponentRemoved(GameObject* object)
+void Script::OnComponentRemoved()
 {
 }
 
-void Script::OnComponentRemovedFromScene(GameObject* object)
+void Script::OnComponentRemovedFromScene()
 {
 }
 
-void Script::SetAsMain(GameObject* object)
+void Script::SetAsMain()
 {
 }
 
-void Script::SetAsExtra(GameObject* object)
+void Script::SetAsExtra()
 {
 }
 
-void Script::ResolveConflict(GameObject* object)
+void Script::ResolveConflict()
 {
 }
 

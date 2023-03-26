@@ -85,6 +85,8 @@ public:
 
 	virtual void QueryBox(const Box& box, AABBQuerySession* session) override;
 
+	virtual void QueryFrustum(const Frustum& frustum, AABBQuerySession* session) override;
+
 	virtual void Query(AABBQueryTester* tester, AABBQuerySession* session) override;
 
 };

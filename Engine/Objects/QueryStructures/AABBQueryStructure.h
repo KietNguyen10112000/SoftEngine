@@ -32,7 +32,9 @@ public:
 	virtual void QueryAABox(const AABox& aabox, AABBQuerySession* session) = 0;
 	virtual void QuerySphere(const Sphere& sphere, AABBQuerySession* session) = 0;
 	virtual void QueryBox(const Box& box, AABBQuerySession* session) = 0;
+	virtual void QueryFrustum(const Frustum& frustum, AABBQuerySession* session) = 0;
 	virtual void Query(AABBQueryTester* tester, AABBQuerySession* session) = 0;
+
 };
 
 

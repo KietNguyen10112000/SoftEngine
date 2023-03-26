@@ -5,6 +5,17 @@
 
 NAMESPACE_BEGIN
 
+struct MultipleDynamicLayersSceneQuerySession final : public SceneQuerySession
+{
+	// we can share session between DynamicLayer
+	DynamicLayerQuerySession session;
+
+	virtual void Clear()
+	{
+		session.Clear();
+	}
+};
+
 class MultipleDynamicLayersScene : Traceable<MultipleDynamicLayersScene>, public Scene
 {
 protected:
@@ -38,6 +49,12 @@ public:
 	virtual void ReConstruct();
 
 	virtual void Synchronize();
+
+public:
+	virtual UniquePtr<SceneQuerySession> NewDynamicQuerySession() override;
+	// query dynamic objects
+	virtual void AABBDynamicQueryAABox(const AABox& aaBox, SceneQuerySession* session) override;
+	virtual void AABBDynamicQueryFrustum(const Frustum& frustum, SceneQuerySession* session) override;
 
 };
 

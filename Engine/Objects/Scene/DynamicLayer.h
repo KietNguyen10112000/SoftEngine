@@ -7,7 +7,29 @@
 NAMESPACE_BEGIN
 
 class AABBQueryStructure;
+class AABBQuerySession;
 class GameObject;
+
+struct DynamicLayerQuerySession
+{
+	AABBQueryStructure* queryStructure;
+	AABBQuerySession* querySession;
+
+	inline void Clear()
+	{
+		querySession->ClearPrevQueryResult();
+	}
+
+	~DynamicLayerQuerySession()
+	{
+		if (queryStructure)
+		{
+			queryStructure->DeleteSession(querySession);
+			querySession = nullptr;
+			queryStructure = nullptr;
+		}
+	}
+};
 
 class DynamicLayer
 {
@@ -79,7 +101,6 @@ public:
 	~DynamicLayer();
 
 public:
-	// Inherited via Scene
 	void AddDynamicObject(GameObject* obj);
 
 	void RemoveDynamicObject(GameObject* obj);
@@ -87,6 +108,13 @@ public:
 	void RefreshDynamicObject(GameObject* obj);
 
 	void ReConstruct();
+
+public:
+	void InitSession(DynamicLayerQuerySession& session);
+
+	// thread-safe method
+	void AABBQueryAABox(const AABox& aaBox, DynamicLayerQuerySession& session);
+	void AABBQueryFrustum(const Frustum& frustum, DynamicLayerQuerySession& session);
 
 };
 

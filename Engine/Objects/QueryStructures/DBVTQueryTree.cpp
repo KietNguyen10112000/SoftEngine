@@ -512,6 +512,40 @@ void DBVTQueryTree::QueryAABox(const AABox& aabox, AABBQuerySession* session)
     }
 }
 
+void DBVTQueryTree::QueryFrustum(const Frustum& frustum, AABBQuerySession* session)
+{
+    if (m_root != INVALID_ID && frustum.IsOverlap(Get(m_root).bound))
+    {
+        auto* dvbtSession = (DBVTQueryTreeSession*)session;
+        auto& stack = dvbtSession->m_stack;
+        auto& result = dvbtSession->m_result;
+
+        stack.push_back(m_root);
+
+        while (!stack.empty())
+        {
+            auto node = stack.back();
+            stack.pop_back();
+
+            if (Get(node).IsLeaf())
+            {
+                result.push_back(Get(node).userPtr);
+                continue;
+            }
+
+            if (frustum.IsOverlap(Get(Get(node).child1).bound))
+            {
+                stack.push_back(Get(node).child1);
+            }
+
+            if (frustum.IsOverlap(Get(Get(node).child2).bound))
+            {
+                stack.push_back(Get(node).child2);
+            }
+        }
+    }
+}
+
 void DBVTQueryTree::QuerySphere(const Sphere& sphere, AABBQuerySession* session)
 {
 }

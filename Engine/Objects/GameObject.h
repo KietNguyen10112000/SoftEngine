@@ -111,20 +111,21 @@ private:
 
 		//slot.dtor = GetDtor<Comp>();
 		slot = component;
-		component->OnComponentAdded(this);
+		component->m_object = this;
+		component->OnComponentAdded();
 
 		if (m_mainComponent == INVALID_ID && SubSystemComponentId::PRIORITY[Comp::COMPONENT_ID] != -1)
 		{
 			m_mainComponent = Comp::COMPONENT_ID;
-			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain(this);
+			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain();
 		}
 
 		if (m_mainComponent != INVALID_ID 
 			&& SubSystemComponentId::PRIORITY[m_mainComponent] > SubSystemComponentId::PRIORITY[Comp::COMPONENT_ID])
 		{
-			m_subSystemComponents[m_mainComponent]->SetAsExtra(this);
+			m_subSystemComponents[m_mainComponent]->SetAsExtra();
 			m_mainComponent = Comp::COMPONENT_ID;
-			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain(this);
+			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain();
 		}
 
 		if (component->IsConflict())
@@ -229,7 +230,7 @@ private:
 		return this;
 	}
 
-	inline void InvokeSubSystemComponentFunc(void (SubSystemComponent::* func)(GameObject*))
+	inline void InvokeSubSystemComponentFunc(void (SubSystemComponent::* func)())
 	{
 		for (size_t i = 0; i < m_children.Size(); i++)
 		{
@@ -240,7 +241,7 @@ private:
 		{
 			if (comp.Get())
 			{
-				(comp.Get()->*func)(this);
+				(comp.Get()->*func)();
 			}
 		}
 	}
@@ -254,7 +255,7 @@ private:
 			auto comp = m_subSystemComponents[compId].Get();
 			if (comp)
 			{
-				comp->ResolveConflict(this);
+				comp->ResolveConflict();
 			}
 		}
 

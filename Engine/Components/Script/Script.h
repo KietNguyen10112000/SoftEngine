@@ -15,23 +15,21 @@ protected:
 
 	ID m_scriptId = INVALID_ID;
 
-	GameObject* m_object = nullptr;
-
 public:
-	virtual void OnComponentAddedToScene(GameObject* obj) final override;
+	virtual void OnComponentAddedToScene() final override;
 
 	// Inherited via SubSystemComponent
-	virtual void OnComponentAdded(GameObject* object) override;
+	virtual void OnComponentAdded() override;
 
-	virtual void OnComponentRemoved(GameObject* object) override;
+	virtual void OnComponentRemoved() override;
 
-	virtual void OnComponentRemovedFromScene(GameObject* object) override;
+	virtual void OnComponentRemovedFromScene() override;
 
-	virtual void SetAsMain(GameObject* object) override;
+	virtual void SetAsMain() override;
 
-	virtual void SetAsExtra(GameObject* object) override;
+	virtual void SetAsExtra() override;
 
-	virtual void ResolveConflict(GameObject* object) override;
+	virtual void ResolveConflict() override;
 
 	virtual bool IsConflict() override;
 

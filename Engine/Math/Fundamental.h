@@ -55,23 +55,32 @@ public:
     using Base::y;
     using Base::z;
 
-#define Vec3ScalarOperator(opt)                         \
-    template <typename T>                               \
-    inline Vec3& operator##opt##=(T scalar)             \
-    {                                                   \
-        x opt##= static_cast<float>(scalar);            \
-        y opt##= static_cast<float>(scalar);            \
-        z opt##= static_cast<float>(scalar);            \
-        return *this;                                   \
-    }                                                   \
-    template <typename T>                               \
-    inline Vec3 operator##opt##(T scalar) const         \
-    {                                                   \
-        Vec3 ret = {};                                  \
-        ret.x = x opt static_cast<float>(scalar);       \
-        ret.y = y opt static_cast<float>(scalar);       \
-        ret.z = z opt static_cast<float>(scalar);       \
-        return ret;                                     \
+#define Vec3ScalarOperator(opt)                             \
+    template <typename T>                                   \
+    inline Vec3& operator##opt##=(T scalar)                 \
+    {                                                       \
+        x opt##= static_cast<float>(scalar);                \
+        y opt##= static_cast<float>(scalar);                \
+        z opt##= static_cast<float>(scalar);                \
+        return *this;                                       \
+    }                                                       \
+    template <typename T>                                   \
+    inline Vec3 operator##opt##(T scalar) const             \
+    {                                                       \
+        Vec3 ret;                                           \
+        ret.x = x opt static_cast<float>(scalar);           \
+        ret.y = y opt static_cast<float>(scalar);           \
+        ret.z = z opt static_cast<float>(scalar);           \
+        return ret;                                         \
+    }                                                       \
+    template<typename T>                                    \
+    friend Vec3 operator##opt##(T scalar, const Vec3& vec)  \
+    {                                                       \
+        Vec3 ret;                                           \
+        ret.x = static_cast<float>(scalar) opt vec.x;       \
+        ret.y = static_cast<float>(scalar) opt vec.y;       \
+        ret.z = static_cast<float>(scalar) opt vec.z;       \
+        return ret;                                         \
     }
 
 #define Vec3Vec3Operator(opt)                           \
@@ -84,7 +93,7 @@ public:
     }                                                   \
     inline Vec3 operator##opt##(const Vec3& v) const    \
     {                                                   \
-        Vec3 ret = {};                                  \
+        Vec3 ret;                                       \
         ret.x = x opt v.x;                              \
         ret.y = y opt v.y;                              \
         ret.z = z opt v.z;                              \
@@ -138,7 +147,7 @@ public:
 
     inline Vec3 Normal() const
     {
-        Vec3 ret = {};
+        Vec3 ret;
         ret.GLMVec() = glm::normalize(GLMVecConst());
         return ret;
     }
@@ -152,7 +161,7 @@ public:
     // cross product
     inline Vec3 Cross(const Vec3& v) const
     {
-        Vec3 ret = {};
+        Vec3 ret;
         ret.GLMVec() = glm::cross(GLMVecConst(), v);
         return ret;
     }
@@ -201,25 +210,35 @@ public:
     Vec4(const Vec3& v, float w) : Base(v, w) {}
 
 public:
-#define Vec4ScalarOperator(opt)                         \
-    template <typename T>                               \
-    inline Vec4& operator##opt##=(T scalar)             \
-    {                                                   \
-        x opt##= static_cast<float>(scalar);            \
-        y opt##= static_cast<float>(scalar);            \
-        z opt##= static_cast<float>(scalar);            \
-        w opt##= static_cast<float>(scalar);            \
-        return *this;                                   \
-    }                                                   \
-    template <typename T>                               \
-    inline Vec4 operator##opt##(T scalar) const         \
-    {                                                   \
-        Vec4 ret = {};                                  \
-        ret.x = x opt static_cast<float>(scalar);       \
-        ret.y = y opt static_cast<float>(scalar);       \
-        ret.z = z opt static_cast<float>(scalar);       \
-        ret.w = w opt static_cast<float>(scalar);       \
-        return ret;                                     \
+#define Vec4ScalarOperator(opt)                             \
+    template <typename T>                                   \
+    inline Vec4& operator##opt##=(T scalar)                 \
+    {                                                       \
+        x opt##= static_cast<float>(scalar);                \
+        y opt##= static_cast<float>(scalar);                \
+        z opt##= static_cast<float>(scalar);                \
+        w opt##= static_cast<float>(scalar);                \
+        return *this;                                       \
+    }                                                       \
+    template <typename T>                                   \
+    inline Vec4 operator##opt##(T scalar) const             \
+    {                                                       \
+        Vec4 ret;                                           \
+        ret.x = x opt static_cast<float>(scalar);           \
+        ret.y = y opt static_cast<float>(scalar);           \
+        ret.z = z opt static_cast<float>(scalar);           \
+        ret.w = w opt static_cast<float>(scalar);           \
+        return ret;                                         \
+    }                                                       \
+    template<typename T>                                    \
+    friend Vec4 operator##opt##(T scalar, const Vec4& vec)  \
+    {                                                       \
+        Vec3 ret;                                           \
+        ret.x = static_cast<float>(scalar) opt vec.x;       \
+        ret.y = static_cast<float>(scalar) opt vec.y;       \
+        ret.z = static_cast<float>(scalar) opt vec.z;       \
+        ret.w = static_cast<float>(scalar) opt vec.w;       \
+        return ret;                                         \
     }
 
 #define Vec4Vec4Operator(opt)                           \
@@ -233,7 +252,7 @@ public:
     }                                                   \
     inline Vec4 operator##opt##(const Vec4& v) const    \
     {                                                   \
-        Vec4 ret = {};                                  \
+        Vec4 ret;                                       \
         ret.x = x opt v.x;                              \
         ret.y = y opt v.y;                              \
         ret.z = z opt v.z;                              \
@@ -302,7 +321,7 @@ public:
 
     inline Vec4 Normal() const
     {
-        Vec4 ret = {};
+        Vec4 ret;
         ret.GLMVec() = glm::normalize(GLMVecConst());
         return ret;
     }
@@ -381,14 +400,14 @@ public:
 
     inline Mat4 operator*(const Mat4& mat)
     {
-        Mat4 ret = {};
+        Mat4 ret;
         ret.GLMMat() = mat.GLMMatConst() * GLMMatConst();
         return ret;
     }
 
     /*inline Vec4 operator*(const Vec4& vec)
     {
-        Vec4 ret = {};
+        Vec4 ret;
         ret.GLMVec() = GLMMatConst() * vec;
         return ret;
     }*/

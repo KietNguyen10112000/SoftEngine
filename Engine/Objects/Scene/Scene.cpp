@@ -259,4 +259,32 @@ void Scene::PostIteration()
 	Synchronize();
 }
 
+void Scene::AABBStaticQueryAABox(const AABox& aaBox, SceneStaticQuerySession* session)
+{
+	assert(m_staticObjsQueryStructure == session->queryStructure);
+
+	auto& ss = session->session;
+	m_staticObjsQueryStructure->QueryAABox(aaBox, ss);
+
+	if (ss->m_result.size() != 0)
+	{
+		session->begin = (GameObject**)&ss->m_result[0];
+		session->end = session->begin + ss->m_result.size();
+	}
+}
+
+void Scene::AABBStaticQueryFrustum(const Frustum& frustum, SceneStaticQuerySession* session)
+{
+	assert(m_staticObjsQueryStructure == session->queryStructure);
+
+	auto& ss = session->session;
+	m_staticObjsQueryStructure->QueryFrustum(frustum, ss);
+
+	if (ss->m_result.size() != 0)
+	{
+		session->begin = (GameObject**)&ss->m_result[0];
+		session->end = session->begin + ss->m_result.size();
+	}
+}
+
 NAMESPACE_END

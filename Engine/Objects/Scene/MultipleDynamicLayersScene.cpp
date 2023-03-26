@@ -80,4 +80,43 @@ void MultipleDynamicLayersScene::Synchronize()
 {
 }
 
+UniquePtr<SceneQuerySession> MultipleDynamicLayersScene::NewDynamicQuerySession()
+{
+	auto ret = MakeUnique<MultipleDynamicLayersSceneQuerySession>();
+	m_layers[0].InitSession(ret->session);
+	return ret;
+}
+
+void MultipleDynamicLayersScene::AABBDynamicQueryAABox(const AABox& aaBox, SceneQuerySession* session)
+{
+	auto ss = ((MultipleDynamicLayersSceneQuerySession*)session)->session;
+	for (size_t i = 0; i < NUM_LAYERS; i++)
+	{
+		m_layers[i].AABBQueryAABox(aaBox, ss);
+	}
+
+	auto& ret = ss.querySession->m_result;
+	if (ret.size() != 0)
+	{
+		session->begin = (GameObject**)&ret[0];
+		session->end = session->begin + ret.size();
+	}
+}
+
+void MultipleDynamicLayersScene::AABBDynamicQueryFrustum(const Frustum& frustum, SceneQuerySession* session)
+{
+	auto ss = ((MultipleDynamicLayersSceneQuerySession*)session)->session;
+	for (size_t i = 0; i < NUM_LAYERS; i++)
+	{
+		m_layers[i].AABBQueryFrustum(frustum, ss);
+	}
+
+	auto& ret = ss.querySession->m_result;
+	if (ret.size() != 0)
+	{
+		session->begin = (GameObject**)&ret[0];
+		session->end = session->begin + ret.size();
+	}
+}
+
 NAMESPACE_END

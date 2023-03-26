@@ -145,7 +145,7 @@ void Engine::Run()
 	auto mainScene = m_scenes[0].Get();
 
 	//while (m_isRunning)
-	for (size_t i = 0; i < 10000; i++)
+	for (size_t i = 0; i < 100; i++)
 	{
 		Iteration();
 

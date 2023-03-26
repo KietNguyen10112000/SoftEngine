@@ -3,10 +3,16 @@
 
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/Managed/ConcurrentList.h"
+#include "Core/Memory/SmartPointers.h"
 
 #include "Objects/GameObject.h"
+#include "Objects/QueryStructures/AABBQuerySession.h"
+#include "Objects/QueryStructures/AABBQueryStructure.h"
 
 #include "Components/Physics/Physics.h"
+
+#include "SceneQuerySession.h"
+
 
 NAMESPACE_BEGIN
 
@@ -14,6 +20,28 @@ class AABBQueryStructure;
 class BuiltinEventManager;
 class EventManager;
 
+struct SceneStaticQuerySession final : public SceneQuerySession
+{
+	AABBQueryStructure* queryStructure;
+	AABBQuerySession* session;
+
+	virtual void Clear() override
+	{
+		session->ClearPrevQueryResult();
+		begin = nullptr;
+		end = nullptr;
+	}
+
+	~SceneStaticQuerySession()
+	{
+		if (queryStructure)
+		{
+			queryStructure->DeleteSession(session);
+			queryStructure = nullptr;
+			session = nullptr;
+		}
+	}
+};
 
 class Scene : Traceable<Scene>
 {
@@ -204,6 +232,28 @@ public:
 	/// call at the end of iteration
 	///
 	virtual void Synchronize() = 0;
+
+public:
+	friend class SceneQuerySession;
+
+	UniquePtr<SceneStaticQuerySession> NewStaticQuerySession()
+	{
+		auto ret = MakeUnique<SceneStaticQuerySession>();
+		ret->queryStructure = m_staticObjsQueryStructure;
+		ret->session = m_staticObjsQueryStructure->NewSession();
+		return ret;
+	}
+
+	// query static objects
+	void AABBStaticQueryAABox(const AABox& aaBox, SceneStaticQuerySession* session);
+	void AABBStaticQueryFrustum(const Frustum& frustum, SceneStaticQuerySession* session);
+
+
+
+	virtual UniquePtr<SceneQuerySession> NewDynamicQuerySession() = 0;
+	// query dynamic objects
+	virtual void AABBDynamicQueryAABox(const AABox& aaBox, SceneQuerySession* session) = 0;
+	virtual void AABBDynamicQueryFrustum(const Frustum& frustum, SceneQuerySession* session) = 0;
 
 public:
 	inline auto GetRenderingSystem()

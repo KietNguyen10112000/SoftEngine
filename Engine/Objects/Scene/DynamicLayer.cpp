@@ -175,6 +175,11 @@ void DynamicLayer::ProcessAddLists()
 
 	size_t addSize = m_waitForAddObj.size();
 
+	if (addSize == 0)
+	{
+		return;
+	}
+
 	//std::cout << "Add size " << addSize << "\n";
 
 	//intmax_t deltaSize = m_queryStructuresSizes[0] - m_queryStructuresSizes[1];
@@ -483,7 +488,7 @@ void DynamicLayer::IncrementalBalance(size_t remainNS)
 	auto* objs2 = &m_objects[1];
 	size_t treeId2 = 1;
 
-	if (objs1->size() == objs2->size()) return;
+	if (std::abs((intmax_t)objs1->size() - (intmax_t)objs2->size()) < 2) return;
 
 	if (objs1->size() < objs2->size())
 	{
@@ -554,6 +559,24 @@ void DynamicLayer::ReConstruct()
 
 	//dt = (Clock::ns::now() - start) / 1000000;
 	//std::cout << "DynamicLayer::ReConstruct() --- " << dt << " ms\n";
+}
+
+void DynamicLayer::InitSession(DynamicLayerQuerySession& session)
+{
+	session.queryStructure = m_queryStructures[0];
+	session.querySession = m_queryStructures[0]->NewSession();
+}
+
+void DynamicLayer::AABBQueryAABox(const AABox& aaBox, DynamicLayerQuerySession& session)
+{
+	m_queryStructures[0]->QueryAABox(aaBox, session.querySession);
+	m_queryStructures[1]->QueryAABox(aaBox, session.querySession);
+}
+
+void DynamicLayer::AABBQueryFrustum(const Frustum& frustum, DynamicLayerQuerySession& session)
+{
+	m_queryStructures[0]->QueryFrustum(frustum, session.querySession);
+	m_queryStructures[1]->QueryFrustum(frustum, session.querySession);
 }
 
 NAMESPACE_END
