@@ -241,7 +241,9 @@ public:
 		auto* scope = *s;
 
 		auto handle = ((ManagedHandle*)ptr) - 1;
-		if (handle->marked == MARK_COLOR::WHITE || handle->marked == MARK_COLOR::TRANSACTION_COLOR /*|| handle->marked == MARK_COLOR::GRAY*/)
+		if (handle->marked == MARK_COLOR::WHITE 
+			/* || handle->marked == MARK_COLOR::TRANSACTION_COLOR */ 
+			/* || handle->marked == MARK_COLOR::GRAY */)
 		{
 			*p = ptr;
 			return;
@@ -253,7 +255,7 @@ public:
 			gc::Run(GC_BREAK_TIME, gc::GC_RESUME_FLAG::RETURN_ON_EMPTY_TASK);
 		}
 
-		if (scope->isRecordingTransactions == true)
+		if (scope->isRecordingTransactions == true && handle->marked != MARK_COLOR::TRANSACTION_COLOR)
 		{
 			/*if (handle->marked == MARK_COLOR::GRAY)
 			{

@@ -20,5 +20,23 @@ public:
 			return now();
 		}
 	};
+
+	class ms
+	{
+	public:
+		inline static size_t now()
+		{
+			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::system_clock::now().time_since_epoch()
+			);
+			return ms.count();
+		}
+
+		inline static size_t Now()
+		{
+			return now();
+		}
+
+	};
 	
 };

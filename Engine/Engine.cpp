@@ -6,6 +6,9 @@
 #include "Core/Memory/DeferredBuffer.h"
 #include "Core/Structures/Managed/Function.h"
 #include "Core/Random/Random.h"
+#include "Core/Input/Input.h"
+
+#include "Platform/Platform.h"
 
 #include "TaskSystem/TaskSystem.h"
 #include "TaskSystem/TaskWorker.h"
@@ -27,6 +30,7 @@ Handle<Engine> Engine::Initialize()
 	mheap::internal::SetStableValue(Engine::STABLE_VALUE);
 	auto ret = mheap::New<Engine>();
 	mheap::internal::SetStableValue(old);
+	ret->Setup();
 	return ret;
 }
 
@@ -37,11 +41,23 @@ void Engine::Finalize()
 	gc::Run(-1);
 }
 
+Engine::Engine()
+{
+	m_input = rheap::New<Input>();
+	m_window = (void*)platform::CreateWindow(m_input, 0, 0, 1280, 720, "SoftEngine");
+}
+
+Engine::~Engine()
+{
+	platform::DeleteWindow(m_window);
+	rheap::Delete(m_input);
+}
+
 void Engine::Setup()
 {
 	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
-	
+
 	m_scenes.Push(mheap::New<MultipleDynamicLayersScene>());
 
 	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
@@ -140,12 +156,12 @@ void Engine::Setup()
 
 void Engine::Run()
 {
-	Setup();
+	//Setup();
 
 	auto mainScene = m_scenes[0].Get();
 
-	//while (m_isRunning)
-	for (size_t i = 0; i < 100; i++)
+	while (m_isRunning)
+	//for (size_t i = 0; i < 100; i++)
 	{
 		Iteration();
 
@@ -219,7 +235,16 @@ void Engine::Iteration()
 
 void Engine::ProcessInput()
 {
-	std::cout << "ProcessInput()\n";
+	//std::cout << "ProcessInput()\n";
+	m_input->RollEvent();
+	m_isRunning = !platform::ProcessPlatformMsg(m_window);
+
+	if (m_input->IsKeyPressed('A'))
+	{
+		std::cout << "Pressed\n";
+	}
+
+	Thread::Sleep(16);
 }
 
 void Engine::SynchronizeAllSubSystems()

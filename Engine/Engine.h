@@ -7,13 +7,14 @@
 NAMESPACE_BEGIN
 
 class Scene;
+class Input;
 
 class Engine : Traceable<Engine>
 {
 public:
 	constexpr static byte STABLE_VALUE = 127;
 
-protected:
+private:
 	Array<Handle<Scene>> m_scenes;
 
 	TRACEABLE_FRIEND();
@@ -22,6 +23,9 @@ protected:
 		tracer->Trace(m_scenes);
 	}
 
+	Input* m_input = nullptr;
+	void* m_window = nullptr;
+
 	bool m_isRunning = true;
 
 	std::atomic<bool> m_gcIsRunning = false;
@@ -29,6 +33,9 @@ protected:
 public:
 	static Handle<Engine> Initialize();
 	static void Finalize();
+
+	Engine();
+	~Engine();
 
 	void Setup();
 

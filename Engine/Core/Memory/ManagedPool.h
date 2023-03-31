@@ -30,6 +30,7 @@ protected:
 	friend class gc::ContextSharedHandle;
 	friend class gc::Context;
 	friend class gc::System;
+	friend class ManagedHeap;
 
 	using Handle = ManagedHandle;
 	//using HandlesPool = ManagedHandlesPool;

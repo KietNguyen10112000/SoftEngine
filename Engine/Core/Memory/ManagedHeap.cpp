@@ -694,6 +694,16 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 				if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
 				{
 					if (callback) callback(userPtr, heap, handle);
+
+					if (handle->traceTable)
+					{
+						auto dtor = handle->traceTable->dtor;
+						if (dtor)
+						{
+							dtor(handle->GetUsableMemAddress());
+						}
+					}
+
 					pools[i]->Deallocate(handle->GetUsableMemAddress());
 				}
 			}

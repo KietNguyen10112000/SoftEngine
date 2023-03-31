@@ -265,10 +265,18 @@ public:
 		m_GetDynamicArraySize = 0;
 		m_GetTraceState = 0;
 
-		m_dtor = [](void* self)
+		if constexpr (std::is_trivially_destructible<T>::value)
 		{
-			((T*)self)->~T();
-		};
+			m_dtor = 0;
+		}
+		else
+		{
+			m_dtor = [](void* self)
+			{
+				((T*)self)->~T();
+			};
+		}
+		
 
 #ifdef _TRACE_DEBUG
 		m_className = typeid(T).name();
