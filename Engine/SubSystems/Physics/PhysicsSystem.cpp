@@ -16,7 +16,7 @@ void PhysicsSystem::PrevIteration(float dt)
 
 void PhysicsSystem::Iteration(float dt)
 {
-	std::cout << "PhysicsSystem::Iteration()\n";
+	//std::cout << "PhysicsSystem::Iteration()\n";
 }
 
 void PhysicsSystem::PostIteration(float dt)

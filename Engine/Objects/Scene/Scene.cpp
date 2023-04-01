@@ -16,16 +16,19 @@
 #include "SubSystems/Physics/PhysicsSystem.h"
 #include "SubSystems/Script/ScriptSystem.h"
 
+#include "Engine.h"
+
 NAMESPACE_BEGIN
 
-Scene::Scene()
+Scene::Scene(Engine* engine)
 {
 	m_objectEventMgr = rheap::New<BuiltinEventManager>(this);
 	m_eventMgr = mheap::New<EventManager>(512);
 
 	m_staticObjsQueryStructure = rheap::New<DBVTQueryTree>();
 
-
+	m_engine			= engine;
+	m_input				= engine->GetInput();
 	m_renderingSystem	= rheap::New<RenderingSystem>(this);
 	m_physicsSystem		= rheap::New<PhysicsSystem>(this);
 	m_scriptSystem		= rheap::New<ScriptSystem>(this);

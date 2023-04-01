@@ -3,6 +3,8 @@
 #include "Components/SubSystemComponent.h"
 #include "Components/SubSystemComponentId.h"
 
+#include "Objects/Scene/Scene.h"
+
 NAMESPACE_BEGIN
 
 class Script : public SubSystemComponent
@@ -14,6 +16,7 @@ protected:
 	friend class ScriptSystem;
 
 	ID m_scriptId = INVALID_ID;
+	Scene* m_scene = nullptr;
 
 public:
 	virtual void OnComponentAddedToScene() final override;
@@ -36,6 +39,12 @@ public:
 public:
 	virtual void OnStart() = 0;
 	virtual void OnUpdate(float dt) = 0;
+
+public:
+	inline auto Input()
+	{
+		return m_scene->GetInput();
+	}
 
 };
 

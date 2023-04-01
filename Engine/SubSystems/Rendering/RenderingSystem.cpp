@@ -16,7 +16,7 @@ void RenderingSystem::PrevIteration(float dt)
 
 void RenderingSystem::Iteration(float dt)
 {
-	std::cout << "RenderingSystem::Iteration()\n";
+	//std::cout << "RenderingSystem::Iteration()\n";
 }
 
 void RenderingSystem::PostIteration(float dt)

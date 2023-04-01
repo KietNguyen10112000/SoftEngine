@@ -39,18 +39,17 @@ private:
 protected:
 	inline void DownKey(byte keyCode)
 	{
-		m_keysDownTime[keyCode] = m_currentTime;
-		m_curKeys[keyCode] = true;
+		if (m_curKeys[keyCode] == false)
+		{
+			m_prevKeys[keyCode] = m_curKeys[keyCode];
+			m_keysDownTime[keyCode] = m_currentTime;
+			m_curKeys[keyCode] = true;
+		}
 	}
 
 	inline void UpKey(byte keyCode)
 	{
-		if (m_currentTime == m_keysDownTime[keyCode])
-		{
-			m_prevKeys[keyCode] = m_curKeys[keyCode];
-		}
-
-		//m_keysUpTime[keyCode] = m_currentTime;
+		m_prevKeys[keyCode] = m_curKeys[keyCode];
 		m_curKeys[keyCode] = false;
 	}
 

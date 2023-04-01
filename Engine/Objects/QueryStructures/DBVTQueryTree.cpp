@@ -2,6 +2,7 @@
 
 #include "Core/Memory/Memory.h"
 
+#define Get(n) m_nodes[n]
 
 NAMESPACE_BEGIN
 
@@ -560,3 +561,5 @@ void DBVTQueryTree::Query(AABBQueryTester* tester, AABBQuerySession* session)
 
 
 NAMESPACE_END
+
+#undef Get

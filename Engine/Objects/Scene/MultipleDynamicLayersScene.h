@@ -35,7 +35,7 @@ protected:
 	}
 
 public:
-	MultipleDynamicLayersScene();
+	MultipleDynamicLayersScene(Engine* engine);
 	~MultipleDynamicLayersScene();
 
 public:

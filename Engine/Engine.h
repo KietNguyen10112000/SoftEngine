@@ -47,6 +47,12 @@ public:
 
 	void SynchronizeAllSubSystems();
 
+public:
+	inline auto GetInput()
+	{
+		return m_input;
+	}
+
 };
 
 

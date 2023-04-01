@@ -138,7 +138,7 @@ public:
 	inline SubSystem(Scene* scene, ID subSystemID) : m_scene(scene), COMPONENT_ID(subSystemID) 
 	{
 		// allocator of SubSystemMergingUnit allocate large block memory, so dynamic initialize it
-		m_numMergingUnits = TaskSystem::GetWorkerCount() / SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT;
+		m_numMergingUnits = std::max(1ull, TaskSystem::GetWorkerCount() / SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT);
 		for (size_t i = 0; i < m_numMergingUnits; i++)
 		{
 			m_mergingUnits[i] = (SubSystemMergingUnit*)&m_buffer[i * sizeof(SubSystemMergingUnit)];

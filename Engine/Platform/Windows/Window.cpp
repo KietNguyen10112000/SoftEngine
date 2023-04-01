@@ -110,6 +110,8 @@ class PlatformInput : public Input
 #undef CreateWindow
 WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int height, const char* title)
 {
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
     WindowsWindow* ret = rheap::New<WindowsWindow>();
 
     int wtitleLen = MultiByteToWideChar(CP_UTF8, 0, title, -1, NULL, 0);
@@ -153,12 +155,24 @@ WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int he
     int maxW = GetSystemMetrics(SM_CXSCREEN);
     int maxH = GetSystemMetrics(SM_CYSCREEN);
 
+    width = width == -1 ? maxW : width;
+    height = height == -1 ? maxH : height;
+
+    if (height == maxH)
+    {
+        RECT rect;
+        SystemParametersInfo(SPI_GETWORKAREA, 0, &rect, 0);
+        height = rect.bottom - rect.top;
+    }
+
+    auto style = WS_SYSMENU | WS_BORDER | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
+
     RECT rc;
 
     SetRect(&rc, 0, 0, width, height);
     AdjustWindowRect(
         &rc,
-        WS_OVERLAPPEDWINDOW,
+        style,
         false
     );
 
@@ -166,7 +180,7 @@ WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int he
     auto hwnd = CreateWindowW(
         wtitle,
         wtitle,
-        WS_OVERLAPPEDWINDOW,
+        style,
         CW_USEDEFAULT, CW_USEDEFAULT,
         (rc.right - rc.left), (rc.bottom - rc.top),
         0,
@@ -180,7 +194,7 @@ WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int he
     ret->input = input;
 
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)ret);
-    ShowWindow(hwnd, SW_SHOW);
+    ShowWindow(hwnd, SW_SHOWMAXIMIZED);
 
     return ret;
 }

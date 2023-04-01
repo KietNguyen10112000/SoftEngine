@@ -59,10 +59,10 @@ protected:
 
 	void Validate(NodeId node);
 
-	inline Node& Get(NodeId id)
+	/*inline Node& Get(NodeId id)
 	{
 		return m_nodes[id];
-	}
+	}*/
 	
 public:
 	size_t Height();

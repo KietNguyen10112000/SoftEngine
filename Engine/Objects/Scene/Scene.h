@@ -19,6 +19,8 @@ NAMESPACE_BEGIN
 class AABBQueryStructure;
 class BuiltinEventManager;
 class EventManager;
+class Engine;
+class Input;
 
 struct SceneStaticQuerySession final : public SceneQuerySession
 {
@@ -59,6 +61,8 @@ protected:
 
 	raw::ConcurrentList<GameObject*> m_branchedObjects;
 
+	Engine*				m_engine			= nullptr;
+	Input*				m_input				= nullptr;
 	RenderingSystem*	m_renderingSystem	= nullptr;
 	PhysicsSystem*		m_physicsSystem		= nullptr;
 	ScriptSystem*		m_scriptSystem		= nullptr;
@@ -126,7 +130,7 @@ protected:
 	}
 
 public:
-	Scene();
+	Scene(Engine* engine);
 	virtual ~Scene();
 
 private:
@@ -269,6 +273,11 @@ public:
 	inline auto GetScriptSystem()
 	{
 		return m_scriptSystem;
+	}
+
+	inline auto GetInput()
+	{
+		return m_input;
 	}
 
 };

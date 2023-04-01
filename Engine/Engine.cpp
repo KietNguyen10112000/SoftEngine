@@ -44,7 +44,7 @@ void Engine::Finalize()
 Engine::Engine()
 {
 	m_input = rheap::New<Input>();
-	m_window = (void*)platform::CreateWindow(m_input, 0, 0, 1280, 720, "SoftEngine");
+	m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
 }
 
 Engine::~Engine()
@@ -58,7 +58,7 @@ void Engine::Setup()
 	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
 
-	m_scenes.Push(mheap::New<MultipleDynamicLayersScene>());
+	m_scenes.Push(mheap::New<MultipleDynamicLayersScene>(this));
 
 	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
 		std::cout << "Func called --- " << number << "\n";
@@ -91,7 +91,7 @@ void Engine::Setup()
 	mainScene->BeginSetup();
 	mainScene->EndSetup();
 
-	for (size_t i = 0; i < 3000; i++)
+	for (size_t i = 0; i < 200; i++)
 	{
 		auto dynamicObj = mheap::New<GameObject>();
 		auto aabb = (AABox*)&dynamicObj->GetAABB();
@@ -130,7 +130,11 @@ void Engine::Setup()
 
 		virtual void OnUpdate(float dt) override
 		{
-			std::cout << "MyScript::OnUpdate()\n";
+			//std::cout << "MyScript::OnUpdate()\n";
+			if (Input()->IsKeyPressed('A'))
+			{
+				std::cout << "Pressed\n";
+			}
 		}
 
 	};
@@ -176,7 +180,7 @@ void Engine::Run()
 			}
 		}
 
-		std::cout << "Refresh: " << count << " objects\n";
+		//std::cout << "Refresh: " << count << " objects\n";
 	}
 
 	TaskWorker::Get()->IsRunning() = false;
@@ -239,12 +243,7 @@ void Engine::ProcessInput()
 	m_input->RollEvent();
 	m_isRunning = !platform::ProcessPlatformMsg(m_window);
 
-	if (m_input->IsKeyPressed('A'))
-	{
-		std::cout << "Pressed\n";
-	}
-
-	Thread::Sleep(16);
+	Thread::Sleep(8);
 }
 
 void Engine::SynchronizeAllSubSystems()
@@ -265,7 +264,7 @@ void Engine::SynchronizeAllSubSystems()
 
 	mainScene->PostIteration();
 
-	std::cout << "SynchronizeAllSubSystems()\n";
+	//std::cout << "SynchronizeAllSubSystems()\n";
 	DeferredBufferTracker::Get()->UpdateAllThenClear();
 }
 

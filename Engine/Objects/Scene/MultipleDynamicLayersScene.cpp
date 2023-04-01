@@ -9,7 +9,7 @@
 
 NAMESPACE_BEGIN
 
-MultipleDynamicLayersScene::MultipleDynamicLayersScene()
+MultipleDynamicLayersScene::MultipleDynamicLayersScene(Engine* engine) : Scene(engine)
 {
 	for (size_t i = 0; i < NUM_LAYERS; i++)
 	{
@@ -70,10 +70,10 @@ void MultipleDynamicLayersScene::ReConstruct()
 		tasks[i].Params() = &m_layers[i];
 	}
 
-	auto start = Clock::ns::now();
+	//auto start = Clock::ns::now();
 	TaskSystem::SubmitAndWait(tasks, NUM_LAYERS, Task::CRITICAL);
-	auto dt = (Clock::ns::now() - start) / 1000000;
-	std::cout << "MultipleDynamicLayersScene::ReConstruct() --- " << dt << " ms\n";
+	//auto dt = (Clock::ns::now() - start) / 1000000;
+	//std::cout << "MultipleDynamicLayersScene::ReConstruct() --- " << dt << " ms\n";
 }
 
 void MultipleDynamicLayersScene::Synchronize()
