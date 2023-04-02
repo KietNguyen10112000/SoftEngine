@@ -21,6 +21,7 @@
 
 #include "Components/Script/Script.h"
 
+#include "Graphics/Graphics.h"
 
 NAMESPACE_BEGIN
 
@@ -45,10 +46,12 @@ Engine::Engine()
 {
 	m_input = rheap::New<Input>();
 	m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
+	Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12);
 }
 
 Engine::~Engine()
 {
+	Graphics::Finalize();
 	platform::DeleteWindow(m_window);
 	rheap::Delete(m_input);
 }
@@ -242,8 +245,6 @@ void Engine::ProcessInput()
 	//std::cout << "ProcessInput()\n";
 	m_input->RollEvent();
 	m_isRunning = !platform::ProcessPlatformMsg(m_window);
-
-	Thread::Sleep(8);
 }
 
 void Engine::SynchronizeAllSubSystems()

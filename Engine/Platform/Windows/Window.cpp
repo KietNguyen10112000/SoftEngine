@@ -225,4 +225,10 @@ void DeleteWindow(WindowNative* window)
     rheap::Delete(w);
 }
 
+void* GetWindowNativeHandle(WindowNative* window)
+{
+    WindowsWindow* w = (WindowsWindow*)window;
+    return w->hwnd;
+}
+
 NAMESPACE_PLATFORM_END

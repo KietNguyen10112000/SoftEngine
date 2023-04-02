@@ -26,5 +26,6 @@ void DeleteWindow(WindowNative* window);
 
 // return true if platform ask me quit
 bool ProcessPlatformMsg(WindowNative* window);
+void* GetWindowNativeHandle(WindowNative* window);
 
 NAMESPACE_PLATFORM_END

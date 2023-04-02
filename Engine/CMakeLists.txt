@@ -53,6 +53,12 @@ file(
     "Platform/*.h"
     "Platform/*.cpp"
 
+
+    "Graphics/*.h"
+    "Graphics/*.cpp"
+    "Graphics/API/API.h"
+    "Graphics/API/API.cpp"
+
     "Engine.h"
     "Engine.cpp"
 )
