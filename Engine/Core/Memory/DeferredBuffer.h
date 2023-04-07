@@ -19,12 +19,26 @@ struct DeferredBufferState
 	size_t backBufferIndex = 0;
 	size_t updateTurn = 0;
 
+	// up to date read and write head
+	void* readHead;
+	void* writeHead;
+
+#ifdef _DEBUG
+	bool callTracked = false;
+	bool padd[3];
+#endif // _DEBUG
+
+
 	inline void Update(size_t turn)
 	{
-		if (turn <= updateTurn) return;
-
 		backBufferIndex = (backBufferIndex + 1) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER;
 		updateTurn = turn;
+
+
+#ifdef _DEBUG
+		assert(callTracked == true);
+		callTracked = false;
+#endif // _DEBUG
 	}
 };
 
@@ -67,75 +81,107 @@ template <typename T>
 class DeferredBuffer
 {
 protected:
-	T m_buffer[DEFERRED_BUFFER_CONFIG::NUM_BUFFER] = {};
-
 	// current buffer state
 	DeferredBufferState m_state;
 
+	T m_buffer[DEFERRED_BUFFER_CONFIG::NUM_BUFFER] = {};
+
+//public:
+//	class Accessor
+//	{
+//	protected:
+//		friend class DeferredBuffer<T>;
+//
+//		DeferredBufferState* m_targetState;
+//		T* m_read;
+//		T* m_write;
+//
+//	public:
+//		Accessor(DeferredBufferState* targetState, T* read, T* write) : m_targetState(targetState), m_read(read), m_write(write) {};
+//
+//	public:
+//		template <auto field>
+//		inline const auto& Get() const
+//		{
+//			//using P = decltype(field);
+//			//using R = typename member_pointer_value<P>::type;
+//			return (m_read->*field);
+//		}
+//
+//		template <auto field, typename T = decltype(field)>
+//		inline Accessor& Set(const T& v)
+//		{
+//			(m_write->*field) = v;
+//
+//			if (m_read != m_write)
+//			{
+//				m_read = m_write;
+//				DeferredBufferTracker::Get()->Track(m_targetState);
+//			}
+//
+//			return *this;
+//		}
+//
+//		inline const T* Read() const
+//		{
+//			return m_read;
+//		}
+//
+//		inline T* BeginWrite()
+//		{
+//			return m_write;
+//		}
+//
+//		inline void EndWrite()
+//		{
+//			m_read = m_write;
+//		}
+//	};
+
 public:
-	class Accessor
+	DeferredBuffer()
 	{
-	protected:
-		friend class DeferredBuffer<T>;
-
-		DeferredBufferState* m_targetState;
-		T* m_read;
-		T* m_write;
-
-	public:
-		Accessor(DeferredBufferState* targetState, T* read, T* write) : m_targetState(targetState), m_read(read), m_write(write) {};
-
-	public:
-		template <auto field>
-		inline const auto& Get() const
-		{
-			//using P = decltype(field);
-			//using R = typename member_pointer_value<P>::type;
-			return (m_read->*field);
-		}
-
-		template <auto field, typename T = decltype(field)>
-		inline Accessor& Set(const T& v)
-		{
-			(m_write->*field) = v;
-
-			if (m_read != m_write)
-			{
-				m_read = m_write;
-				DeferredBufferTracker::Get()->Track(m_targetState);
-			}
-
-			return *this;
-		}
-
-		inline const T* Read() const
-		{
-			return m_read;
-		}
-
-		inline T* BeginWrite()
-		{
-			return m_write;
-		}
-
-		inline void EndWrite()
-		{
-			m_read = m_write;
-		}
-	};
+		m_state.readHead = &m_buffer[m_state.backBufferIndex];
+		m_state.writeHead = &m_buffer[(m_state.backBufferIndex + 1) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER];
+	}
 
 public:
-	inline T* Read()
+	inline void Init(const T& v)
+	{
+		for (auto& buf : m_buffer)
+		{
+			buf = v;
+		}
+	}
+
+public:
+	inline T* GetReadHead()
 	{
 		return &m_buffer[m_state.backBufferIndex];
 	}
 
-	inline Accessor GetAccessor() const
+	inline T* GetWriteHead()
 	{
-		auto writeId = (m_state.backBufferIndex + 1) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER;
-		auto read = &m_buffer[m_state.backBufferIndex];
-		auto write = &m_buffer[writeId];
-		return { (DeferredBufferState*)&m_state,(T*)read,(T*)write};
+		assert(GetReadHead() != (T*)m_state.writeHead);
+		return (T*)m_state.writeHead;
+	}
+
+	inline T* GetUpToDateReadHead()
+	{
+		return (T*)m_state.readHead;
+	}
+
+	inline void UpdateReadWriteHead()
+	{
+		m_state.readHead = m_state.writeHead;
+		m_state.writeHead = &m_buffer[(backBufferIndex + 1) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER];
+
+#ifdef _DEBUG
+		assert(m_state.callTracked == false);
+		m_state.callTracked = true;
+#endif // _DEBUG
+
+		DeferredBufferTracker::Get()->Track(&m_state);
 	}
 
 };

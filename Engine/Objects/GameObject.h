@@ -42,6 +42,7 @@ public:
 	friend class MultipleDynamicLayersScene;
 	friend class SubSystem;
 	friend class SubSystemMergingUnit;
+	friend class Script;
 
 	DefineHasClassMethod(OnCompentAdded);
 	DefineHasClassMethod(OnCompentRemoved);
@@ -74,6 +75,7 @@ private:
 	ID m_sceneDynamicId = INVALID_ID;
 	ID m_aabbQueryId = INVALID_ID;
 
+	// global aabb, this aabb bound this object and its children
 	AABox m_aabb = {};
 	// <<< scene's control members 
 
@@ -81,8 +83,10 @@ private:
 	std::atomic<size_t> m_numBranchCount;
 	size_t m_numBranch;
 	ID m_mainComponent = INVALID_ID;
+
 	std::atomic<bool> m_isBranched;
-	bool m_padding[3];
+	bool m_isNeedRefresh = false;
+	bool m_padding[2];
 
 	Handle<GameObject> m_parent = nullptr;
 	Array<Handle<GameObject>> m_children;
@@ -246,6 +250,11 @@ private:
 		}
 	}
 
+	inline bool IsRootObject()
+	{
+		return m_parent.IsNull();
+	}
+
 	inline void MergeSubSystemComponentsData()
 	{
 		for (auto& compId : SubSystemComponentId::PROCESS_DATA_COMPONENTS)
@@ -261,6 +270,35 @@ private:
 
 		m_numBranchCount.store(m_numBranch);
 		m_isBranched.store(false);
+	}
+
+	template <typename Func>
+	void ForEachSubSystemComponents(Func func)
+	{
+		for (auto& v : m_subSystemComponents)
+		{
+			if (!v.IsNull()) func(v);
+		}
+	}
+
+	template <typename Func>
+	inline static void PostTraversal(GameObject* obj, Func func)
+	{
+		for (auto& child : obj->m_children)
+		{
+			PostTraversal(child.Get(), func);
+		}
+
+		func(obj);
+	}
+
+	template <typename Func>
+	inline void ForEachChildren(Func func)
+	{
+		for (auto& child : m_children)
+		{
+			func(child.Get());
+		}
 	}
 
 protected:
@@ -399,6 +437,11 @@ public:
 	inline auto GetScene() const
 	{
 		return m_scene;
+	}
+
+	inline void ScheduleRefresh()
+	{
+		m_isNeedRefresh = true;
 	}
 
 

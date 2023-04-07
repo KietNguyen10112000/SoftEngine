@@ -17,6 +17,12 @@ public:
 
 	//constexpr static size_t SUBSYSTEMS_COUNT = 8;
 
+	inline static size_t s_numAvailableIndexedSubSystemsCount = INDEXED_SUBSYSTEMS_COUNT;
+	inline static size_t GetNumAvailabelIndexedSubSystemCount()
+	{
+		return  s_numAvailableIndexedSubSystemsCount;
+	}
+
 };
 
 NAMESPACE_END

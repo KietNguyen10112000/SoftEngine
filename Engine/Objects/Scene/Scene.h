@@ -4,6 +4,7 @@
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/Managed/ConcurrentList.h"
 #include "Core/Memory/SmartPointers.h"
+#include "Core/Time/Clock.h"
 
 #include "Objects/GameObject.h"
 #include "Objects/QueryStructures/AABBQuerySession.h"
@@ -69,8 +70,9 @@ protected:
 
 	float m_dt = 0; // in sec
 	float padd;
-	size_t m_prevTimeSinceEpochNs = 0;
-	size_t m_curTimeSinceEpochNs = 0;
+	size_t m_prevTimeSinceEpoch = 0;
+	size_t m_curTimeSinceEpoch = 0;
+	size_t m_iterationCount = 0;
 
 	///
 	/// for long live-time object
@@ -192,10 +194,13 @@ public:
 	{
 		//m_objsAccessor = &m_tempObjects;
 		m_idMask = TEMP_OBJECT_ID_MASK;
+		m_prevTimeSinceEpoch = m_curTimeSinceEpoch;
+		m_curTimeSinceEpoch = Clock::ms::now();
 	}
 
 public:
 	// thread-safe method
+	// for user use
 	void AddObject(Handle<GameObject>& obj);
 	void RemoveObject(Handle<GameObject>& obj);
 
@@ -260,6 +265,10 @@ public:
 	virtual void AABBDynamicQueryFrustum(const Frustum& frustum, SceneQuerySession* session) = 0;
 
 public:
+	// refresh object on scene graph
+	void RefreshObject(GameObject* obj);
+
+public:
 	inline auto GetRenderingSystem()
 	{
 		return m_renderingSystem;
@@ -278,6 +287,17 @@ public:
 	inline auto GetInput()
 	{
 		return m_input;
+	}
+
+	inline auto GetIterationCount()
+	{
+		return m_iterationCount;
+	}
+
+	// delta time in sec
+	inline auto Dt()
+	{
+		return m_dt;
 	}
 
 };

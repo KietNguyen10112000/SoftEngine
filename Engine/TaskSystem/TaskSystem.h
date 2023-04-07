@@ -83,32 +83,32 @@ protected:
 	inline static bool Take(Task& output, SynchContext*& sych)
 	{
 	begin:
-		sych = 0;
+		//sych = 0;
 
 		// thread specified task
 		auto& threadQueue = s_threadQueues[ThreadID::Get()];
-		if (threadQueue.try_dequeue(output))
+		if (threadQueue.size_approx() != 0 && threadQueue.try_dequeue(output))
 		{
 			return true;
 		}
 
-		// synch task
-		for (auto& ctx : s_sychCtxs)
-		{
-			if (ctx.isRunning == false && 
-				ctx.tasks.size_approx() != 0
-				&& ctx.lock.try_lock()
-				&& ctx.tasks.try_dequeue(output))
-			{
-				sych = &ctx;
-				ctx.isRunning = true;
-				return true;
-			}
-		}
+		//// synch task
+		//for (auto& ctx : s_sychCtxs)
+		//{
+		//	if (ctx.isRunning == false && 
+		//		ctx.tasks.size_approx() != 0
+		//		&& ctx.lock.try_lock()
+		//		&& ctx.tasks.try_dequeue(output))
+		//	{
+		//		sych = &ctx;
+		//		ctx.isRunning = true;
+		//		return true;
+		//	}
+		//}
 
 		// resume task
 		Fiber* fiber = 0;
-		while (s_resumeFibers.try_dequeue(fiber))
+		while (s_resumeFibers.size_approx() != 0 && s_resumeFibers.try_dequeue(fiber))
 		{
 			Thread::SwitchToFiber(fiber, true);
 			goto begin;
@@ -116,7 +116,7 @@ protected:
 
 		for (auto& queue : s_queues)
 		{
-			if (queue.try_dequeue(output))
+			if (queue.size_approx() != 0 && queue.try_dequeue(output))
 			{
 				return true;
 			}

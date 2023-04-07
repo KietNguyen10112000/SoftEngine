@@ -4,6 +4,8 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Math/AABox.h"
+
 NAMESPACE_BEGIN
 
 class GameObject;
@@ -44,6 +46,12 @@ public:
 	///
 	virtual void ResolveConflict() = 0;
 	virtual bool IsConflict() = 0;
+
+	// override this method if modifies AABB during process
+	inline virtual math::AABox GetLocalAABB()
+	{
+		return math::AABox();
+	}
 };
 
 NAMESPACE_END

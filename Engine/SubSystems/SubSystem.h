@@ -15,10 +15,17 @@ NAMESPACE_BEGIN
 class Scene;
 class GameObject;
 
+// call refresh only on root obj
 #define MERGE_OBJECTS(objs, num)				\
 for (size_t i = 0; i < num; i++)				\
 {												\
-	objs[i]->MergeSubSystemComponentsData();	\
+	auto* o = objs[i];							\
+	o->MergeSubSystemComponentsData();			\
+	if (o->m_isNeedRefresh && o->IsRootObject())\
+	{											\
+		o->m_scene->RefreshObject(o);			\
+		o->m_isNeedRefresh = false;				\
+	}											\
 }
 
 class SubSystemMergingUnit
@@ -138,7 +145,7 @@ public:
 	inline SubSystem(Scene* scene, ID subSystemID) : m_scene(scene), COMPONENT_ID(subSystemID) 
 	{
 		// allocator of SubSystemMergingUnit allocate large block memory, so dynamic initialize it
-		m_numMergingUnits = std::max(1ull, TaskSystem::GetWorkerCount() / SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT);
+		m_numMergingUnits = std::max(1ull, TaskSystem::GetWorkerCount() / SubSystemInfo::GetNumAvailabelIndexedSubSystemCount());
 		for (size_t i = 0; i < m_numMergingUnits; i++)
 		{
 			m_mergingUnits[i] = (SubSystemMergingUnit*)&m_buffer[i * sizeof(SubSystemMergingUnit)];

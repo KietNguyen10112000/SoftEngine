@@ -18,9 +18,6 @@ public:
 	ComPtr<ID3D12Resource>                  m_renderTargets		[NUM_GRAPHICS_BACK_BUFFERS];
 	ComPtr<ID3D12DescriptorHeap>            m_dsvDescriptorHeap;
 	ComPtr<ID3D12Resource>                  m_depthBuffers		[NUM_GRAPHICS_BACK_BUFFERS];
-	ComPtr<ID3D12Fence>                     m_rtvFences			[NUM_GRAPHICS_BACK_BUFFERS];
-	UINT64                                  m_rtvFenceValues	[NUM_GRAPHICS_BACK_BUFFERS] = {};
-	HANDLE                                  m_rtvFenceEvents	[NUM_GRAPHICS_BACK_BUFFERS] = {};
 
 	size_t									m_currentBackBufferId		= 0;
 	size_t                                  m_cpuRTVDescriptorSize		= 0;

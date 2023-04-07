@@ -54,13 +54,15 @@ file(
     "Platform/*.cpp"
 
 
-    "Graphics/*.h"
-    "Graphics/*.cpp"
-    "Graphics/API/API.h"
-    "Graphics/API/API.cpp"
+    "Modules/Graphics/*.h"
+    "Modules/Graphics/*.cpp"
+    "Modules/Graphics/API/API.h"
+    "Modules/Graphics/API/API.cpp"
 
     "Engine.h"
     "Engine.cpp"
+    "StartupConfig.h"
+    "StartupConfig.cpp"
 )
 
 add_executable (
@@ -77,6 +79,7 @@ add_library (
 
 include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}"
+     "${CMAKE_CURRENT_SOURCE_DIR}/Modules"
      "${CMAKE_SOURCE_DIR}"
 
 

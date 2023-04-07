@@ -23,7 +23,7 @@ ScriptSystem::ScriptSystem(Scene* scene) : SubSystem(scene, Script::COMPONENT_ID
 		while (it != end)
 		{
 			auto script = *it;
-			script->OnUpdate(dt);
+			script->Update(dt);
 			mergingUnit->Merge(script->m_object);
 			it++;
 		}

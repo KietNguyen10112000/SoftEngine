@@ -13,7 +13,7 @@ NAMESPACE_BEGIN
 class API TaskWorker
 {
 protected:
-	constexpr static size_t SPIN_TIMES = 5;
+	constexpr static size_t SPIN_TIMES = 10000;
 
 	friend class TaskSystem;
 

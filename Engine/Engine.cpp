@@ -22,6 +22,7 @@
 #include "Components/Script/Script.h"
 
 #include "Graphics/Graphics.h"
+#include "StartupConfig.h"
 
 NAMESPACE_BEGIN
 
@@ -44,16 +45,22 @@ void Engine::Finalize()
 
 Engine::Engine()
 {
-	m_input = rheap::New<Input>();
-	m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
-	Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12);
+	if (StartupConfig::Get().isEnableRendering)
+	{
+		m_input = rheap::New<Input>();
+		m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
+		Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12);
+	}
 }
 
 Engine::~Engine()
 {
-	Graphics::Finalize();
-	platform::DeleteWindow(m_window);
-	rheap::Delete(m_input);
+	if (StartupConfig::Get().isEnableRendering)
+	{
+		Graphics::Finalize();
+		platform::DeleteWindow(m_window);
+		rheap::Delete(m_input);
+	}
 }
 
 void Engine::Setup()
@@ -133,7 +140,7 @@ void Engine::Setup()
 
 		virtual void OnUpdate(float dt) override
 		{
-			//std::cout << "MyScript::OnUpdate()\n";
+			std::cout << dt << '\n';
 			if (Input()->IsKeyPressed('A'))
 			{
 				std::cout << "Pressed\n";

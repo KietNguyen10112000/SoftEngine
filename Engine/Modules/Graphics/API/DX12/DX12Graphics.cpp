@@ -12,12 +12,6 @@ DX12Graphics::DX12Graphics(void* _hwnd)
 
 DX12Graphics::~DX12Graphics()
 {
-    for (size_t i = 0; i < NUM_GRAPHICS_BACK_BUFFERS; i++)
-    {
-        WaitForFence(m_rtvFences[i], m_rtvFenceValues[i], m_rtvFenceEvents[i]);
-        CloseHandle(m_rtvFenceEvents[i]);
-    }
-
     m_graphicsCommandList.Destroy();
 }
 
@@ -183,14 +177,6 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
         m_device->CreateDepthStencilView(m_depthBuffers[i].Get(), &dsvDesc, cpuDSVHandle);
         cpuDSVHandle.ptr += cpuDSVDescriptorSize;
     }
-
-    // create fence
-    for (size_t i = 0; i < NUM_GRAPHICS_BACK_BUFFERS; i++)
-    {
-        ThrowIfFailed(m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_rtvFences[i])));
-        m_rtvFenceValues[i] = 0; // set the initial fence value to 0
-        m_rtvFenceEvents[i] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    }
 }
 
 void DX12Graphics::InitCommandLists()
@@ -221,14 +207,7 @@ void DX12Graphics::EndCommandList(GraphicsCommandList** cmdList)
 
 void DX12Graphics::BeginFrame()
 {
-    m_swapChain->Present(1, 0);
-
     m_currentBackBufferId = m_swapChain->GetCurrentBackBufferIndex();
-    WaitForFence(
-        m_rtvFences[m_currentBackBufferId],
-        m_rtvFenceValues[m_currentBackBufferId],
-        m_rtvFenceEvents[m_currentBackBufferId]
-    );
 }
 
 void DX12Graphics::EndFrame()
@@ -248,10 +227,8 @@ void DX12Graphics::EndFrame()
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
     m_graphicsCommandList.EndCommandList(m_commandQueue.Get());
 
-    // end of frame
-    ThrowIfFailed(
-        m_commandQueue->Signal(m_rtvFences[m_currentBackBufferId].Get(), m_rtvFenceValues[m_currentBackBufferId])
-    );
+    // 2th param can be DXGI_PRESENT_ALLOW_TEARING
+    m_swapChain->Present(1, 0);
 }
 
 NAMESPACE_DX12_END

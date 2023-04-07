@@ -20,6 +20,9 @@ void RenderingSystem::PrevIteration(float dt)
 void RenderingSystem::Iteration(float dt)
 {
 	auto graphics = Graphics::Get();
+
+	if (!graphics) return;
+
 	graphics->BeginFrame();
 
 	GraphicsCommandList* cmdList = nullptr;

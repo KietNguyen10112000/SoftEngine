@@ -5,6 +5,8 @@
 
 #include "Objects/Scene/Scene.h"
 
+#include "Objects/GameObject.h"
+
 NAMESPACE_BEGIN
 
 class Script : public SubSystemComponent
@@ -18,7 +20,9 @@ protected:
 	ID m_scriptId = INVALID_ID;
 	Scene* m_scene = nullptr;
 
-public:
+	Transform* m_transform;
+
+private:
 	virtual void OnComponentAddedToScene() final override;
 
 	// Inherited via SubSystemComponent
@@ -36,6 +40,27 @@ public:
 
 	virtual bool IsConflict() override;
 
+	inline void BeginUpdate()
+	{
+		auto& transform = m_object->m_transform;
+		m_transform = transform.GetWriteHead();
+		auto read = transform.GetReadHead();
+		*m_transform = *read;
+	}
+
+	inline void EndUpdate()
+	{
+		auto& transform = m_object->m_transform;
+		transform.UpdateReadWriteHead();
+	}
+
+	inline void Update(float dt)
+	{
+		BeginUpdate();
+		OnUpdate(dt);
+		EndUpdate();
+	}
+
 public:
 	virtual void OnStart() = 0;
 	virtual void OnUpdate(float dt) = 0;
@@ -44,6 +69,11 @@ public:
 	inline auto Input()
 	{
 		return m_scene->GetInput();
+	}
+
+	inline auto& Transform()
+	{
+		return *m_transform;
 	}
 
 };

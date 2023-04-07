@@ -16,6 +16,10 @@
 #include "SubSystems/Physics/PhysicsSystem.h"
 #include "SubSystems/Script/ScriptSystem.h"
 
+#include "Components/Dummy.h"
+
+#include "Core/TemplateUtils/TemplateUtils.h"
+
 #include "Engine.h"
 
 NAMESPACE_BEGIN
@@ -88,6 +92,65 @@ void Scene::RemoveObject(Handle<GameObject>& obj)
 			RemoveDynamicObject(obj.Get());
 		}
 	}
+}
+
+void Scene::RefreshObject(GameObject* obj)
+{
+	//static dummy::SubSystemComponent dummyComp;
+
+	// only on root object
+	assert(obj->m_parent.IsNull());
+
+#ifdef _DEBUG
+	AABox oriAABB = obj->m_aabb;
+#endif // _DEBUG
+
+	GameObject::PostTraversal(obj, 
+		[](GameObject* object)
+		{
+			bool first = false;
+			AABox localAABB;
+			object->ForEachSubSystemComponents(
+				[&](Handle<SubSystemComponent>& comp) 
+				{
+					if (first)
+					{
+						localAABB = comp->GetLocalAABB();
+						return;
+					}
+
+					auto aabb = comp->GetLocalAABB();
+					localAABB.Joint(aabb);
+				}
+			);
+
+			auto& globalAABB = localAABB;
+			object->ForEachChildren(
+				[&](GameObject* child)
+				{
+					globalAABB.Joint(child->m_aabb);
+				}
+			);
+
+			object->m_aabb = globalAABB;
+			object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->ToTransformMatrix());
+		}
+	);
+
+	if (IsDynamicObject(obj))
+	{
+		RefreshDynamicObject(obj);
+	}
+
+#ifdef _DEBUG
+	else
+	{
+		// with static object, object can move only inside its initialized aabb
+		AABox aabb = oriAABB;
+		aabb.Joint(obj->m_aabb);
+		assert(memcmp(&aabb, &oriAABB, sizeof(AABox)) == 0);
+	}
+#endif // _DEBUG
 }
 
 void Scene::ProcessRemoveLists()
@@ -198,9 +261,9 @@ void Scene::ProcessRecordedBranchedLists()
 
 void Scene::PrevIteration()
 {
-	m_prevTimeSinceEpochNs = m_curTimeSinceEpochNs;
-	m_curTimeSinceEpochNs = Clock::ns::now();
-	m_dt = (m_curTimeSinceEpochNs - m_prevTimeSinceEpochNs) / 1'000'000'000.0f;
+	m_prevTimeSinceEpoch = m_curTimeSinceEpoch;
+	m_curTimeSinceEpoch = Clock::ms::now();
+	m_dt = (m_curTimeSinceEpoch - m_prevTimeSinceEpoch) / 1'000.0f;
 
 	Task tasks[2] = {};
 

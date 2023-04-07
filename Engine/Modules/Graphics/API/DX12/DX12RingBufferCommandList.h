@@ -10,10 +10,11 @@ class DX12RingBufferCommandList
 {
 public:
 	ComPtr<ID3D12CommandAllocator>          m_commandAllocators		[N] = {};
-	ComPtr<CommandList>						m_commandList			    = {};
-	ComPtr<ID3D12Fence>						m_fences				[N] = {};
 	UINT64                                  m_fenceValues			[N] = {};
-	HANDLE                                  m_fenceEvents			[N] = {};
+	HANDLE                                  m_fenceEvent			    = {};
+    ComPtr<ID3D12Fence>						m_fence 				    = {};
+    UINT64                                  m_fenceValue                = 0;
+    ComPtr<CommandList>						m_commandList               = {};
 	size_t						            m_currentCommandListId		= { 0 };
 
 public:
@@ -29,20 +30,13 @@ public:
         m_commandList->Close();
 
         // create fence
-        for (size_t i = 0; i < N; i++)
-        {
-            ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fences[i])));
-            m_fenceValues[i] = 0; // set the initial fence value to 0
-            m_fenceEvents[i] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        }
+        ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
+        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 	}
 
     inline void Destroy()
     {
-        for (size_t i = 0; i < N; i++)
-        {
-            CloseHandle(m_fenceEvents[i]);
-        }
+        CloseHandle(m_fenceEvent);
     }
 
     inline void Reset()
@@ -50,13 +44,11 @@ public:
         auto id = (m_currentCommandListId++);
         id = id % N;
 
-        /*if (m_fences[id]->GetCompletedValue() != m_fenceValues[i])
+        if (m_fence->GetCompletedValue() < m_fenceValues[id])
         {
-            ThrowIfFailed(m_fences[i]->SetEventOnCompletion(m_fenceValues[id], m_fenceEvents[id]));
-            WaitForSingleObject(m_fenceEvents[id], INFINITE);
-        }*/
-
-        WaitForFence(m_fences[id], m_fenceValues[id], m_fenceEvents[id]);
+            ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[id], m_fenceEvent));
+            WaitForSingleObject(m_fenceEvent, INFINITE);
+        }
 
         ThrowIfFailed(m_commandAllocators[id]->Reset());
         ThrowIfFailed(m_commandList->Reset(m_commandAllocators[id].Get(), NULL));
@@ -69,10 +61,12 @@ public:
 
         ThrowIfFailed(
             commandQueue->Signal(
-                m_fences[id].Get(), 
-                m_fenceValues[id]
+                m_fence.Get(), 
+                ++m_fenceValue
             )
         );
+
+        m_fenceValues[id] = m_fenceValue;
     }
 };
 
