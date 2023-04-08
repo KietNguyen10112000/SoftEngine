@@ -16,6 +16,8 @@ struct StartupConfig
 	bool isEnablePhysics	= true;
 	bool isEnableScript		= true;
 
+	uint32_t maxThreads		= -1;
+
 };
 
 NAMESPACE_END

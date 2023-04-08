@@ -253,11 +253,17 @@ void Scene::ProcessAddLists()
 void Scene::ProcessRecordedBranchedLists()
 {
 	m_branchedObjects.ForEach(
-		[](GameObject* obj)
+		[&](GameObject* obj)
 		{
-			if (obj->m_numBranchCount.load() != obj->m_numBranch)
+			if (obj->m_numBranchCount.load(std::memory_order_relaxed) != obj->m_numBranch)
 			{
 				obj->MergeSubSystemComponentsData();
+
+				if (obj->m_isNeedRefresh)
+				{
+					RefreshObject(obj);
+					obj->m_isNeedRefresh = false;
+				}
 			}
 		}
 	);
@@ -269,6 +275,7 @@ void Scene::PrevIteration()
 	m_prevTimeSinceEpoch = m_curTimeSinceEpoch;
 	m_curTimeSinceEpoch = Clock::ms::now();
 	m_dt = (m_curTimeSinceEpoch - m_prevTimeSinceEpoch) / 1'000.0f;
+	m_iterationCount++;
 
 	Task tasks[2] = {};
 

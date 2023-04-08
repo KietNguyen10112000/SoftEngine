@@ -140,7 +140,7 @@ void Engine::Setup()
 
 		virtual void OnUpdate(float dt) override
 		{
-			std::cout << dt << '\n';
+			//std::cout << dt << '\n';
 			if (Input()->IsKeyPressed('A'))
 			{
 				std::cout << "Pressed\n";

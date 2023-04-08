@@ -16,6 +16,7 @@ public:
 
 protected:
 	friend class ScriptSystem;
+	friend class GameObject;
 
 	ID m_scriptId = INVALID_ID;
 	Scene* m_scene = nullptr;
@@ -52,6 +53,13 @@ private:
 	{
 		auto& transform = m_object->m_transform;
 		transform.UpdateReadWriteHead();
+
+		auto read = transform.GetReadHead();
+
+		if (::memcmp(m_transform, read, sizeof(class Transform)) != 0)
+		{
+			m_object->ScheduleRefresh();
+		}
 	}
 
 	inline void Update(float dt)

@@ -19,6 +19,14 @@ public:
 	};
 
 
+	// use root object
+	constexpr static size_t IS_USE_ROOT_OBJECTS[] = {
+		false,
+		true,
+		true,
+	};
+
+
 	// list of component priority, smaller is higher
 	// eg: 
 	//		PRIORITY[SCRIPT_SUBSYSTEM_COMPONENT_ID] == 0

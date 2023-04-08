@@ -28,9 +28,11 @@ private:
 	// ms
 	size_t m_currentTime = 0;
 	size_t m_keysDownTime[NUM_KEYS] = {};
+	uint32_t m_keysDownCount[NUM_KEYS] = {};
+	uint32_t m_keysUpCount[NUM_KEYS] = {};
 	//size_t m_keysUpTime[NUM_KEYS] = {};
 
-	bool m_prevKeys[NUM_KEYS] = {};
+	//bool m_prevKeys[NUM_KEYS] = {};
 	bool m_curKeys[NUM_KEYS] = {};
 
 	Cursor m_prevCursors[NUM_CURSORS] = {};
@@ -39,9 +41,10 @@ private:
 protected:
 	inline void DownKey(byte keyCode)
 	{
+		m_keysDownCount[keyCode]++;
 		if (m_curKeys[keyCode] == false)
 		{
-			m_prevKeys[keyCode] = m_curKeys[keyCode];
+			//m_prevKeys[keyCode] = m_curKeys[keyCode];
 			m_keysDownTime[keyCode] = m_currentTime;
 			m_curKeys[keyCode] = true;
 		}
@@ -49,7 +52,8 @@ protected:
 
 	inline void UpKey(byte keyCode)
 	{
-		m_prevKeys[keyCode] = m_curKeys[keyCode];
+		//m_prevKeys[keyCode] = m_curKeys[keyCode];
+		m_keysUpCount[keyCode]++;
 		m_curKeys[keyCode] = false;
 	}
 
@@ -73,22 +77,24 @@ public:
 	inline void RollEvent()
 	{
 		m_currentTime = Clock::ms::now();
-		::memcpy(m_prevKeys, m_curKeys, sizeof(bool) * NUM_KEYS);
+		::memset(m_keysDownCount, 0, sizeof(uint32_t) * NUM_KEYS);
+		::memset(m_keysUpCount, 0, sizeof(uint32_t) * NUM_KEYS);
+		//::memcpy(m_prevKeys, m_curKeys, sizeof(bool) * NUM_KEYS);
 		::memcpy(m_prevCursors, m_curCursors, sizeof(Cursor) * NUM_CURSORS);
 	}
 
 	inline bool IsKeyDown(byte keyCode)
 	{
-		return m_curKeys[keyCode];
+		return m_keysDownCount[keyCode] != 0;
 	}
 
 	inline bool IsKeyUp(byte keyCode)
 	{
-		return m_prevKeys[keyCode] == true && m_curKeys[keyCode] == false;
+		return m_keysUpCount[keyCode] != 0;
 	}
 
 	// pressDuration in ms
-	inline bool IsKeyPressed(byte keyCode, size_t pressDuration = 1000)
+	inline bool IsKeyPressed(byte keyCode, size_t pressDuration = 500)
 	{
 		return IsKeyUp(keyCode) && ((m_currentTime - m_keysDownTime[keyCode]) < pressDuration);
 	}

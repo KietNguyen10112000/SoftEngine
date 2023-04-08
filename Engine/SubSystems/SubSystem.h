@@ -14,122 +14,124 @@ NAMESPACE_BEGIN
 
 class Scene;
 class GameObject;
-
-// call refresh only on root obj
-#define MERGE_OBJECTS(objs, num)				\
-for (size_t i = 0; i < num; i++)				\
-{												\
-	auto* o = objs[i];							\
-	o->MergeSubSystemComponentsData();			\
-	if (o->m_isNeedRefresh && o->IsRootObject())\
-	{											\
-		o->m_scene->RefreshObject(o);			\
-		o->m_isNeedRefresh = false;				\
-	}											\
-}
-
-class SubSystemMergingUnit
-{
-public:
-	constexpr static size_t MERGE_BATCHSIZE = 512;
-
-protected:
-	constexpr static void(*TASK_FN)(void*) = [](void* p)
-	{
-		auto objs = (GameObject**)p;
-		MERGE_OBJECTS(objs, MERGE_BATCHSIZE);
-	};
-
-	Pool<sizeof(GameObject*)* MERGE_BATCHSIZE, 16, 1, rheap::malloc, rheap::free> m_allocator = { 1 };
-
-	Scene* m_scene = nullptr;
-
-	GameObject** m_currentMergingObjs = nullptr;
-	size_t m_currentMergingObjsSize = 0;
-
-	std::Vector<GameObject**> m_mergingTasks;
-
-	TaskWaitingHandle m_taskWaitingHandle = { 0,0 };
-
-public:
-	SubSystemMergingUnit(Scene* scene) : m_scene(scene)
-	{
-		m_currentMergingObjs = (GameObject**)m_allocator.Allocate();
-		m_mergingTasks.reserve(1024);
-	}
-
-public:
-	inline void MergeBegin()
-	{
-		TaskSystem::PrepareHandle(&m_taskWaitingHandle);
-	}
-
-	inline void MergeEnd()
-	{
-		if (m_currentMergingObjs)
-		{
-			MERGE_OBJECTS(m_currentMergingObjs, m_currentMergingObjsSize);
-		}
-
-		TaskSystem::WaitForHandle(&m_taskWaitingHandle);
-
-		for (auto& param : m_mergingTasks)
-		{
-			m_allocator.Deallocate(param);
-		}
-
-		m_mergingTasks.clear();
-		m_currentMergingObjs = nullptr;
-		m_currentMergingObjsSize = 0;
-	}
-
-	inline void Merge(GameObject* obj)
-	{
-		assert(obj->IsRootObject());
-
-		if (obj->m_numBranch == 1)
-		{
-			return;
-		}
-
-		if (GameObjectDirectAccessor::BranchMerge(obj))
-		{
-			auto index = m_currentMergingObjsSize++;
-
-			if (index == MERGE_BATCHSIZE)
-			{
-				// dispatch merging task for other threads
-				Task task;
-				task.Params() = m_currentMergingObjs;
-				task.Entry() = TASK_FN;
-				TaskSystem::Submit(&m_taskWaitingHandle, task, Task::HIGH);
-
-				m_mergingTasks.push_back(m_currentMergingObjs);
-				m_currentMergingObjs = (GameObject**)m_allocator.Allocate();
-				m_currentMergingObjsSize = 0;
-			}
-			else
-			{
-				// record obj
-				m_currentMergingObjs[index] = obj;
-			}
-			return;
-		}
-
-		if (obj->m_isBranched.load() == false)
-		{
-			if (obj->m_isBranched.exchange(true) == false)
-			{
-				m_scene->RecordBranchedObject(obj);
-			}
-		}
-	}
-
-};
+//
+//// call refresh only on root obj
+//#define MERGE_OBJECTS(objs, num)				\
+//for (size_t i = 0; i < num; i++)				\
+//{												\
+//	auto* o = objs[i];							\
+//	o->MergeSubSystemComponentsData();			\
+//	if (o->m_isNeedRefresh && o->IsRootObject())\
+//	{											\
+//		o->m_scene->RefreshObject(o);			\
+//		o->m_isNeedRefresh = false;				\
+//	}											\
+//}
+//
+//class SubSystemMergingUnit
+//{
+//public:
+//	constexpr static size_t MERGE_BATCHSIZE = 512;
+//
+//protected:
+//	constexpr static void(*TASK_FN)(void*) = [](void* p)
+//	{
+//		auto objs = (GameObject**)p;
+//		MERGE_OBJECTS(objs, MERGE_BATCHSIZE);
+//	};
+//
+//	Pool<sizeof(GameObject*)* MERGE_BATCHSIZE, 16, 1, rheap::malloc, rheap::free> m_allocator = { 1 };
+//
+//	Scene* m_scene = nullptr;
+//
+//	GameObject** m_currentMergingObjs = nullptr;
+//	size_t m_currentMergingObjsSize = 0;
+//
+//	std::Vector<GameObject**> m_mergingTasks;
+//
+//	TaskWaitingHandle m_taskWaitingHandle = { 0,0 };
+//
+//public:
+//	SubSystemMergingUnit(Scene* scene) : m_scene(scene)
+//	{
+//		m_currentMergingObjs = (GameObject**)m_allocator.Allocate();
+//		m_mergingTasks.reserve(1024);
+//	}
+//
+//public:
+//	inline void MergeBegin()
+//	{
+//		TaskSystem::PrepareHandle(&m_taskWaitingHandle);
+//	}
+//
+//	inline void MergeEnd()
+//	{
+//		if (m_currentMergingObjs)
+//		{
+//			MERGE_OBJECTS(m_currentMergingObjs, m_currentMergingObjsSize);
+//		}
+//
+//		TaskSystem::WaitForHandle(&m_taskWaitingHandle);
+//
+//		for (auto& param : m_mergingTasks)
+//		{
+//			m_allocator.Deallocate(param);
+//		}
+//
+//		m_mergingTasks.clear();
+//		m_currentMergingObjs = nullptr;
+//		m_currentMergingObjsSize = 0;
+//	}
+//
+//	inline void Merge(GameObject* obj)
+//	{
+//		assert(obj->IsRootObject());
+//
+//		if (obj->m_numBranch == 1)
+//		{
+//			return;
+//		}
+//
+//		if (GameObjectDirectAccessor::BranchMerge(obj))
+//		{
+//			auto index = m_currentMergingObjsSize++;
+//
+//			if (index == MERGE_BATCHSIZE)
+//			{
+//				// dispatch merging task for other threads
+//				Task task;
+//				task.Params() = m_currentMergingObjs;
+//				task.Entry() = TASK_FN;
+//				TaskSystem::Submit(&m_taskWaitingHandle, task, Task::HIGH);
+//
+//				m_mergingTasks.push_back(m_currentMergingObjs);
+//				m_currentMergingObjs = (GameObject**)m_allocator.Allocate();
+//				m_currentMergingObjsSize = 0;
+//			}
+//			else
+//			{
+//				// record obj
+//				m_currentMergingObjs[index] = obj;
+//			}
+//			return;
+//		}
+//
+//		if (obj->m_isBranched.load() == false)
+//		{
+//			if (obj->m_isBranched.exchange(true) == false)
+//			{
+//				m_scene->RecordBranchedObject(obj);
+//			}
+//		}
+//	}
+//
+//};
 
 class SubSystem
 {
 protected:
+	constexpr static size_t MERGE_BATCHSIZE = 512;
+
 	const union
 	{
 		ID COMPONENT_ID;
@@ -138,9 +140,9 @@ protected:
 	
 	Scene* m_scene = nullptr;
 
-	byte m_buffer[sizeof(SubSystemMergingUnit) * ThreadLimit::MAX_THREADS];
+	//byte m_buffer[sizeof(SubSystemMergingUnit) * ThreadLimit::MAX_THREADS];
 
-	SubSystemMergingUnit*		m_mergingUnits[ThreadLimit::MAX_THREADS];
+	//SubSystemMergingUnit*		m_mergingUnits[ThreadLimit::MAX_THREADS];
 	size_t						m_numMergingUnits = 0;
 
 	// root objects to be processed by this SubSystem
@@ -154,6 +156,7 @@ protected:
 		SubSystem*		subSystem;
 		size_t			startIdx;
 		size_t			dispatchId;
+		void*			userPtr;
 		//ForEachCallback callback;
 	};
 
@@ -193,68 +196,19 @@ public:
 	{
 		// allocator of SubSystemMergingUnit allocate large block memory, so dynamic initialize it
 		m_numMergingUnits = std::max(1ull, TaskSystem::GetWorkerCount() / SubSystemInfo::GetNumAvailabelIndexedSubSystemCount());
-		for (size_t i = 0; i < m_numMergingUnits; i++)
+		/*for (size_t i = 0; i < m_numMergingUnits; i++)
 		{
 			m_mergingUnits[i] = (SubSystemMergingUnit*)&m_buffer[i * sizeof(SubSystemMergingUnit)];
 			new (m_mergingUnits[i]) SubSystemMergingUnit(m_scene);
-		}
-	};
-
-	template <auto callback>
-	inline SubSystem(Scene* scene, ID subSystemID) : SubSystem(scene, subSystemID)
-	{
-		constexpr void(*TASK_FN)(void*) = [](void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_3(TaskParam, p, subSystem, startIdx, dispatchId);
-
-			auto mergingUnit = subSystem->m_mergingUnits[dispatchId];
-			auto objects = subSystem->m_rootObjects.data();
-
-			auto size = subSystem->m_rootObjectCount;
-			auto& processedCount = subSystem->m_processedObjectCount;
-
-			auto endId = startIdx == 0 ? size : startIdx - 1;
-			auto id = startIdx;
-
-			mergingUnit->MergeBegin();
-			while (processedCount.load(std::memory_order_relaxed) == size)
-			{
-				auto obj = objects[id];
-
-				callback(dispatchId, subSystem, obj, 0);
-
-				processedCount++;
-
-				mergingUnit->Merge(script->m_object);
-
-				if (id == endId)
-				{
-					break;
-				}
-
-				id = (id + 1) % size;
-			}
-			mergingUnit->MergeEnd();
-		};
-
-		for (size_t i = 0; i < ThreadLimit::MAX_THREADS; i++)
-		{
-			auto& task = m_processTasks[i];
-			auto& param = m_processParams[i];
-			task.Entry() = TASK_FN;
-			task.Params() = &param;
-
-			param.subSystem = this;
-			param.dispatchId = i;
-		}
+		}*/
 	};
 
 	inline virtual ~SubSystem()
 	{
-		for (size_t i = 0; i < m_numMergingUnits; i++)
+		/*for (size_t i = 0; i < m_numMergingUnits; i++)
 		{
 			m_mergingUnits[i]->~SubSystemMergingUnit();
-		}
+		}*/
 	}
 
 public:
@@ -268,16 +222,109 @@ public:
 	virtual void PostIteration(float dt) = 0;
 
 protected:
+	template <auto FN>
+	void InitForEachRootObjects()
+	{
+		constexpr void(*TASK_FN)(void*) = [](void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_4(TaskParam, p, subSystem, startIdx, dispatchId, userPtr);
+
+			//auto mergingUnit = subSystem->m_mergingUnits[dispatchId];
+			auto objects = subSystem->m_rootObjects.data();
+
+			auto size = subSystem->m_rootObjectCount;
+			auto& processedCount = subSystem->m_processedObjectCount;
+
+			auto endId = startIdx == 0 ? size : startIdx - 1;
+			auto id = startIdx;
+
+			auto scene = subSystem->m_scene;
+			auto iterationCount = scene->GetIterationCount();
+
+			const auto COMPONENT_ID = subSystem->COMPONENT_ID;
+
+			bool refresh = false;
+
+			//mergingUnit->MergeBegin();
+			while (processedCount.load(std::memory_order_relaxed) != size)
+			{
+				processedCount++;
+
+				auto obj = objects[id];
+				auto& lock = obj->m_subSystemProcessCount[COMPONENT_ID];
+				if (lock.load(std::memory_order_relaxed) == iterationCount
+					|| lock.exchange(iterationCount) == iterationCount)
+				{
+					goto Next;
+				}
+
+				assert(scene == obj->m_scene);
+				assert(obj->IsRootObject());
+
+				FN(dispatchId, subSystem, obj, userPtr);
+
+				refresh = false;
+				if (obj->m_numBranch != 1)
+				{
+					if (GameObjectDirectAccessor::BranchMerge(obj))
+					{
+						obj->MergeSubSystemComponentsData();
+						refresh = true;
+					}
+					else 
+					{
+						// record
+						if (obj->m_isBranched.load(std::memory_order_relaxed) == false 
+							&& obj->m_isBranched.exchange(true) == false)
+						{
+							scene->RecordBranchedObject(obj);
+						}
+					}
+				}
+				else
+				{
+					refresh = true;
+				}
+
+				if (refresh && obj->m_isNeedRefresh)
+				{
+					scene->RefreshObject(obj);
+					obj->m_isNeedRefresh = false;
+				}
+				
+			Next:
+				if (id == endId)
+				{
+					break;
+				}
+
+				id = (id + 1) % size;
+			}
+		};
+
+		for (size_t i = 0; i < ThreadLimit::MAX_THREADS; i++)
+		{
+			auto& task = m_processTasks[i];
+			auto& param = m_processParams[i];
+			task.Entry() = TASK_FN;
+			task.Params() = &param;
+
+			param.subSystem = this;
+			param.dispatchId = i;
+		}
+	}
+
 	// multi-threaded
-	void ForEachRootObjects(ForEachCallback callback, void* userPtr)
+	void ForEachRootObjects(void* userPtr)
 	{
 		m_rootObjectCount = m_rootObjects.size();
 		m_processedObjectCount = 0;
 
-		if (m_rootObjectCount <= SubSystemMergingUnit::MERGE_BATCHSIZE)
+		if (m_rootObjectCount <= MERGE_BATCHSIZE)
 		{
 			auto& param = m_processParams[0];
 			param.startIdx = 0;
+			param.userPtr = userPtr;
 			m_processTasks[0].Entry()(&param);
 			return;
 		}
@@ -289,6 +336,7 @@ protected:
 		{
 			auto& param = m_processParams[i];
 			param.startIdx = start;
+			param.userPtr = userPtr;
 			start += numPerTask;
 		}
 

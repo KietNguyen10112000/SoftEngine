@@ -11,6 +11,8 @@
 
 #include "Engine/Engine.h"
 
+#include "StartupConfig.h"
+
 namespace soft
 {
 	namespace gc
@@ -28,7 +30,7 @@ int main()
 	Random::Initialize();
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
-	TaskWorker::Initalize();
+	TaskWorker::Initalize(StartupConfig::Get().maxThreads);
 
 	auto sys = soft::gc::g_system;
 

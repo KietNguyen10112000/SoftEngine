@@ -40,7 +40,7 @@ public:
 	inline static bool BranchMerge(GameObject* obj)
 	{
 #ifdef _DEBUG
-		auto ret = --obj->m_numBranchCount;
+		auto ret = --(obj->m_numBranchCount);
 		assert(ret != (size_t)(-1));
 		if (ret == 0)
 		{

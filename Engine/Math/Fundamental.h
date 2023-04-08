@@ -354,6 +354,11 @@ private:
 public:
     inline Mat4 ToMat4() const;
 
+
+    inline friend bool operator==(const Quaternion& v1, const Quaternion& v2)
+    {
+        return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
+    }
 };
 
 class Mat4 : glm::mat4

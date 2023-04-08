@@ -7,11 +7,7 @@ NAMESPACE_BEGIN
 void Script::OnComponentAddedToScene()
 {
 	auto scene = m_object->GetScene();
-
 	m_scene = scene;
-
-	scene->GetScriptSystem()->AddScript(this);
-
 	OnStart();
 }
 

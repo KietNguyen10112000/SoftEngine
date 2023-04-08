@@ -66,8 +66,14 @@ private:
 
 	// count all descension child object components (include this object's component)
 	int						   m_subSystemCompCounts[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
+
+	// store sub system root object id
 	ID						   m_subSystemId		[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
 
+	// store number of iteration that sub system process this obj
+	std::atomic<size_t>		   m_subSystemProcessCount[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
+
+	// external components
 	Array<ComponentSlot> m_components = {};
 
 	EventListenerContainer m_eventListeners;
@@ -274,13 +280,19 @@ inline void name()																\
 	DEF_INVOKE_FUNC(
 		InvokeOnComponentAddedToScene,
 		OnComponentAddedToScene,
-		InvokeAddRootComponentToSubSystem(comp.Get(), i)
+		if (SubSystemComponentId::IS_USE_ROOT_OBJECTS[i])
+		{
+			InvokeAddRootComponentToSubSystem(comp.Get(), i);
+		}
 	);
 
 	DEF_INVOKE_FUNC(
 		InvokeOnComponentRemovedFromScene,
 		OnComponentRemovedFromScene,
-		InvokeRemoveRootComponentFromSubSystem(comp.Get(), i)
+		if (SubSystemComponentId::IS_USE_ROOT_OBJECTS[i])
+		{
+			InvokeRemoveRootComponentFromSubSystem(comp.Get(), i);
+		}
 	);
 
 #undef DEF_INVOKE_FUNC
@@ -292,6 +304,13 @@ inline void name()																\
 
 	inline void MergeSubSystemComponentsData()
 	{
+		assert(IsRootObject());
+
+		for (auto& child : m_children)
+		{
+			child->MergeSubSystemComponentsData();
+		}
+
 		for (auto& compId : SubSystemComponentId::PROCESS_DATA_COMPONENTS)
 		{
 			if (compId == m_mainComponent) continue;
@@ -314,17 +333,6 @@ inline void name()																\
 		{
 			if (!v.IsNull()) func(v);
 		}
-	}
-
-	template <typename Func>
-	inline static void PostTraversal(GameObject* obj, Func func)
-	{
-		for (auto& child : obj->m_children)
-		{
-			PostTraversal(child.Get(), func);
-		}
-
-		func(obj);
 	}
 
 	template <typename Func>
@@ -463,6 +471,17 @@ public:
 		InvokeEvent(this, type);
 	}
 
+	template <typename Func>
+	inline static void PostTraversal(GameObject* obj, Func func)
+	{
+		for (auto& child : obj->m_children)
+		{
+			PostTraversal(child.Get(), func);
+		}
+
+		func(obj);
+	}
+
 public:
 	inline const auto& GetAABB() const
 	{
@@ -481,12 +500,15 @@ public:
 
 	inline GameObject* GetRoot()
 	{
-		auto it = m_parent.Get();
-		while (it->m_parent.Get())
+		auto it = this;
+		while (it)
 		{
+			if (it->IsRootObject()) return it;
 			it = it->m_parent.Get();
 		}
-		return it;
+
+		// unreachable
+		assert(0);
 	}
 
 

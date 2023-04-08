@@ -174,7 +174,7 @@ public:
 	inline void UpdateReadWriteHead()
 	{
 		m_state.readHead = m_state.writeHead;
-		m_state.writeHead = &m_buffer[(backBufferIndex + 1) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER];
+		m_state.writeHead = &m_buffer[(m_state.backBufferIndex + 2) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER];
 
 #ifdef _DEBUG
 		assert(m_state.callTracked == false);
