@@ -64,6 +64,10 @@ private:
 	// faster accessing
 	Handle<SubSystemComponent> m_subSystemComponents[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
 
+	// count all descension child object components (include this object's component)
+	int						   m_subSystemCompCounts[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
+	ID						   m_subSystemId		[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
+
 	Array<ComponentSlot> m_components = {};
 
 	EventListenerContainer m_eventListeners;
@@ -104,6 +108,14 @@ private:
 		};
 	}
 
+#define TRACE_TO_ROOT(invokeFunc)						\
+auto it = this;											\
+while (it)												\
+{														\
+	invokeFunc;											\
+	it = it->m_parent.Get();							\
+}
+
 	template <typename Comp>
 	GameObject* AddSubSystemComponent(const Handle<Comp>& component)
 	{
@@ -112,6 +124,8 @@ private:
 		{
 			return nullptr;
 		}
+
+		TRACE_TO_ROOT(it->m_subSystemCompCounts[Comp::COMPONENT_ID]++);
 
 		//slot.dtor = GetDtor<Comp>();
 		slot = component;
@@ -139,6 +153,8 @@ private:
 
 		return this;
 	}
+
+#undef TRACE_TO_ROOT
 
 	inline auto FindComponentFromDtor(ComponentDtor dtor) const
 	{
@@ -174,7 +190,7 @@ private:
 		return this;
 	}
 
-	template <typename Comp>
+	/*template <typename Comp>
 	GameObject* RemoveSubSystemComponent()
 	{
 		auto& slot = m_subSystemComponents[Comp::COMPONENT_ID];
@@ -232,23 +248,42 @@ private:
 		m_components.Remove(it);
 
 		return this;
-	}
+	}*/
 
-	inline void InvokeSubSystemComponentFunc(void (SubSystemComponent::* func)())
-	{
-		for (size_t i = 0; i < m_children.Size(); i++)
-		{
-			m_children[i]->InvokeSubSystemComponentFunc(func);
-		}
+	void InvokeAddRootComponentToSubSystem(SubSystemComponent* comp, const ID id);
+	void InvokeRemoveRootComponentFromSubSystem(SubSystemComponent* comp, const ID id);
 
-		for (auto& comp : m_subSystemComponents)
-		{
-			if (comp.Get())
-			{
-				(comp.Get()->*func)();
-			}
-		}
-	}
+#define DEF_INVOKE_FUNC(name, invoke1, invoke2)									\
+inline void name()																\
+{																				\
+	for (size_t i = 0; i < m_children.Size(); i++)								\
+	{																			\
+		m_children[i]->name();													\
+	}																			\
+	for (size_t i = 0; i < SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT; i++)		\
+	{																			\
+		auto& comp = m_subSystemComponents[i];									\
+		if (comp.Get())															\
+		{																		\
+			invoke2;															\
+			comp->invoke1();													\
+		}																		\
+	}																			\
+}
+
+	DEF_INVOKE_FUNC(
+		InvokeOnComponentAddedToScene,
+		OnComponentAddedToScene,
+		InvokeAddRootComponentToSubSystem(comp.Get(), i)
+	);
+
+	DEF_INVOKE_FUNC(
+		InvokeOnComponentRemovedFromScene,
+		OnComponentRemovedFromScene,
+		InvokeRemoveRootComponentFromSubSystem(comp.Get(), i)
+	);
+
+#undef DEF_INVOKE_FUNC
 
 	inline bool IsRootObject()
 	{
@@ -442,6 +477,16 @@ public:
 	inline void ScheduleRefresh()
 	{
 		m_isNeedRefresh = true;
+	}
+
+	inline GameObject* GetRoot()
+	{
+		auto it = m_parent.Get();
+		while (it->m_parent.Get())
+		{
+			it = it->m_parent.Get();
+		}
+		return it;
 	}
 
 

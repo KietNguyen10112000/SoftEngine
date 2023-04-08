@@ -52,6 +52,13 @@ public:
 	{
 		return math::AABox();
 	}
+
+public:
+	inline GameObject* GetObject()
+	{
+		return m_object;
+	}
+
 };
 
 NAMESPACE_END

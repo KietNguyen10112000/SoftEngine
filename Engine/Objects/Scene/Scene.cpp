@@ -1,8 +1,11 @@
 #include "Scene.h"
 
 #include "Core/Time/Clock.h"
+#include "Core/TemplateUtils/TemplateUtils.h"
 
+#include "Components/Rendering/Rendering.h"
 #include "Components/Physics/Physics.h"
+#include "Components/Script/Script.h"
 
 #include "Event/BuiltinEventManager.h"
 #include "Event/EventManager.h"
@@ -17,8 +20,6 @@
 #include "SubSystems/Script/ScriptSystem.h"
 
 #include "Components/Dummy.h"
-
-#include "Core/TemplateUtils/TemplateUtils.h"
 
 #include "Engine.h"
 
@@ -36,6 +37,10 @@ Scene::Scene(Engine* engine)
 	m_renderingSystem	= rheap::New<RenderingSystem>(this);
 	m_physicsSystem		= rheap::New<PhysicsSystem>(this);
 	m_scriptSystem		= rheap::New<ScriptSystem>(this);
+
+	m_subSystems[Rendering::COMPONENT_ID]	= m_renderingSystem;
+	m_subSystems[Physics::COMPONENT_ID]		= m_physicsSystem;
+	m_subSystems[Script::COMPONENT_ID]		= m_scriptSystem;
 }
 
 Scene::~Scene()
@@ -189,7 +194,7 @@ void Scene::ProcessRemoveLists()
 				m_staticObjsQueryStructure->Remove(obj->m_aabbQueryId);
 			}
 
-			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentRemovedFromScene);
+			obj->InvokeOnComponentRemovedFromScene();
 			obj->InvokeEvent(GameObject::REMOVED_FROM_SCENE);
 			obj->m_scene = nullptr;
 		}
@@ -238,7 +243,7 @@ void Scene::ProcessAddLists()
 			obj->m_sceneId = GetSceneId(objs == &m_tempObjects);
 			objs->Push(obj);
 
-			obj->InvokeSubSystemComponentFunc(&SubSystemComponent::OnComponentAddedToScene);
+			obj->InvokeOnComponentAddedToScene();
 			obj->InvokeEvent(GameObject::ADDED_TO_SCENE);
 		}
 	);

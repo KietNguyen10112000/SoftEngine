@@ -10,6 +10,8 @@
 
 #include "SubSystems/SubSystemInfo.h"
 
+#include "TaskParamUnpack.h"
+
 NAMESPACE_BEGIN
 
 class Fiber;

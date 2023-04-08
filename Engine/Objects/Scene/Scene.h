@@ -68,6 +68,8 @@ protected:
 	PhysicsSystem*		m_physicsSystem		= nullptr;
 	ScriptSystem*		m_scriptSystem		= nullptr;
 
+	SubSystem*			m_subSystems[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT] = {};
+
 	float m_dt = 0; // in sec
 	float padd;
 	size_t m_prevTimeSinceEpoch = 0;
@@ -282,6 +284,11 @@ public:
 	inline auto GetScriptSystem()
 	{
 		return m_scriptSystem;
+	}
+
+	inline auto GetSubSystem(ID id)
+	{
+		return m_subSystems[id];
 	}
 
 	inline auto GetInput()

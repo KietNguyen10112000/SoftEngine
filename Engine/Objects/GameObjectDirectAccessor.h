@@ -9,6 +9,17 @@ NAMESPACE_BEGIN
 class GameObjectDirectAccessor
 {
 public:
+	inline static ID GetObjectAABBQueryId(GameObject* obj)
+	{
+		return obj->m_aabbQueryId;
+	}
+
+	inline static void SetObjectAABBQueryId(GameObject* obj, ID id)
+	{
+		obj->m_aabbQueryId = id;
+	}
+
+public:
 	inline static void BranchAdd(GameObject* obj)
 	{
 		obj->m_numBranch++;

@@ -37,3 +37,5 @@ Multi-thread scene re-construction:
 Multi-thread physics:
 + Dùng 2 task để tìm các collision pair, thuật toán biến thể của tri-color graph marking
 + Mỗi khi tìm đủ số lượng collision pair (batch size: 128, 256, 512, 1024, ...) thì kick luôn ra thành Task để cho các luồng khác Solve collision pair
+
+Mọi tính toán của các SubSytem đều bắt đầu từ root object

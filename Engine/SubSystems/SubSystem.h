@@ -85,6 +85,8 @@ public:
 
 	inline void Merge(GameObject* obj)
 	{
+		assert(obj->IsRootObject());
+
 		if (obj->m_numBranch == 1)
 		{
 			return;
@@ -138,8 +140,53 @@ protected:
 
 	byte m_buffer[sizeof(SubSystemMergingUnit) * ThreadLimit::MAX_THREADS];
 
-	SubSystemMergingUnit* m_mergingUnits[ThreadLimit::MAX_THREADS];
-	size_t m_numMergingUnits = 0;
+	SubSystemMergingUnit*		m_mergingUnits[ThreadLimit::MAX_THREADS];
+	size_t						m_numMergingUnits = 0;
+
+	// root objects to be processed by this SubSystem
+	std::Vector<GameObject*>	m_rootObjects;
+
+
+	// for multi-thread foreach m_rootObjects
+	using ForEachCallback = void(*)(ID, SubSystem*, GameObject*, void*);
+	struct TaskParam
+	{
+		SubSystem*		subSystem;
+		size_t			startIdx;
+		size_t			dispatchId;
+		//ForEachCallback callback;
+	};
+
+	Task					m_processTasks[ThreadLimit::MAX_THREADS] = {};
+	TaskParam				m_processParams[ThreadLimit::MAX_THREADS] = {};
+	size_t					m_rootObjectCount = 0;
+	std::atomic<size_t>		m_processedObjectCount = { 0 };
+
+	/*constexpr static void(*TASK_FN)(void*) = [](void* p)
+	{
+		TASK_SYSTEM_UNPACK_PARAM_4(TaskParam, p, subSystem, startIdx, dispatchId, callback);
+
+		auto objects = subSystem->m_rootObjects.data();
+
+		auto size = subSystem->m_rootObjectCount;
+		auto& processedCount = subSystem->m_processedObjectCount;
+
+		auto endId = startIdx == 0 ? size : startIdx - 1;
+		auto id = startIdx;
+		while (processedCount.load(std::memory_order_relaxed) == size)
+		{
+			auto obj = objects[id];
+
+			callback(dispatchId, subSystem, obj, 0);
+
+			if (id == endId)
+			{
+				break;
+			}
+
+			id = (id + 1) % size;
+		}
+	};*/
 
 public:
 	inline SubSystem(Scene* scene, ID subSystemID) : m_scene(scene), COMPONENT_ID(subSystemID) 
@@ -150,6 +197,55 @@ public:
 		{
 			m_mergingUnits[i] = (SubSystemMergingUnit*)&m_buffer[i * sizeof(SubSystemMergingUnit)];
 			new (m_mergingUnits[i]) SubSystemMergingUnit(m_scene);
+		}
+	};
+
+	template <auto callback>
+	inline SubSystem(Scene* scene, ID subSystemID) : SubSystem(scene, subSystemID)
+	{
+		constexpr void(*TASK_FN)(void*) = [](void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_3(TaskParam, p, subSystem, startIdx, dispatchId);
+
+			auto mergingUnit = subSystem->m_mergingUnits[dispatchId];
+			auto objects = subSystem->m_rootObjects.data();
+
+			auto size = subSystem->m_rootObjectCount;
+			auto& processedCount = subSystem->m_processedObjectCount;
+
+			auto endId = startIdx == 0 ? size : startIdx - 1;
+			auto id = startIdx;
+
+			mergingUnit->MergeBegin();
+			while (processedCount.load(std::memory_order_relaxed) == size)
+			{
+				auto obj = objects[id];
+
+				callback(dispatchId, subSystem, obj, 0);
+
+				processedCount++;
+
+				mergingUnit->Merge(script->m_object);
+
+				if (id == endId)
+				{
+					break;
+				}
+
+				id = (id + 1) % size;
+			}
+			mergingUnit->MergeEnd();
+		};
+
+		for (size_t i = 0; i < ThreadLimit::MAX_THREADS; i++)
+		{
+			auto& task = m_processTasks[i];
+			auto& param = m_processParams[i];
+			task.Entry() = TASK_FN;
+			task.Params() = &param;
+
+			param.subSystem = this;
+			param.dispatchId = i;
 		}
 	};
 
@@ -170,6 +266,69 @@ public:
 
 	// call after Iteration =)))
 	virtual void PostIteration(float dt) = 0;
+
+protected:
+	// multi-threaded
+	void ForEachRootObjects(ForEachCallback callback, void* userPtr)
+	{
+		m_rootObjectCount = m_rootObjects.size();
+		m_processedObjectCount = 0;
+
+		if (m_rootObjectCount <= SubSystemMergingUnit::MERGE_BATCHSIZE)
+		{
+			auto& param = m_processParams[0];
+			param.startIdx = 0;
+			m_processTasks[0].Entry()(&param);
+			return;
+		}
+
+		auto numTasks = m_numMergingUnits;
+		auto numPerTask = m_rootObjectCount / numTasks;
+		auto start = 0;
+		for (size_t i = 0; i < m_numMergingUnits; i++)
+		{
+			auto& param = m_processParams[i];
+			param.startIdx = start;
+			start += numPerTask;
+		}
+
+		TaskSystem::SubmitAndWait(m_processTasks, numTasks, Task::HIGH);
+	}
+
+public:
+	inline void AddSubSystemComponent(SubSystemComponent* comp, const ID COMPONENT_ID)
+	{
+		auto obj = comp->GetObject();
+		auto root = obj->GetRoot();
+
+		assert(root->m_subSystemCompCounts[COMPONENT_ID] != 0);
+
+		if (root->m_subSystemCompCounts[COMPONENT_ID] == 1)
+		{
+			root->m_subSystemId[COMPONENT_ID] = m_rootObjects.size();
+			m_rootObjects.push_back(root);
+		}
+	}
+
+	inline void RemoveSubSystemComponent(SubSystemComponent* comp, const ID COMPONENT_ID)
+	{
+		auto obj = comp->GetObject();
+		auto root = obj->GetRoot();
+
+		assert(root->m_subSystemCompCounts[COMPONENT_ID] != 0);
+
+		if (root->m_subSystemCompCounts[COMPONENT_ID] == 1)
+		{
+			if (m_rootObjects.size() > 1)
+			{
+				auto back = m_rootObjects.back();
+				back->m_subSystemId[COMPONENT_ID] = root->m_subSystemId[COMPONENT_ID];
+				m_rootObjects[root->m_subSystemId[COMPONENT_ID]] = back;
+				return;
+			}
+			m_rootObjects.clear();
+		}
+	}
 
 };
 
