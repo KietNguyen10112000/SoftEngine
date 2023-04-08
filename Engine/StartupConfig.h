@@ -15,6 +15,7 @@ struct StartupConfig
 	bool isEnableRendering	= true;
 	bool isEnablePhysics	= true;
 	bool isEnableScript		= true;
+	bool isEnableNetwork	= true;
 
 	uint32_t maxThreads		= -1;
 

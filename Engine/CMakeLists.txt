@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.8)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
-add_compile_definitions(EXPORTS UNICODE)
+add_compile_definitions(EXPORTS UNICODE DEV)
 
 set(BINARY Engine)
 set(LIB_ENGINE LibEngine)
@@ -60,6 +60,11 @@ file(
     "Modules/Graphics/*.cpp"
     "Modules/Graphics/API/API.h"
     "Modules/Graphics/API/API.cpp"
+
+    "Modules/Network/*.h"
+    "Modules/Network/*.cpp"
+    "Modules/Network/API/API.h"
+    "Modules/Network/API/API.cpp"
 
     "Engine.h"
     "Engine.cpp"

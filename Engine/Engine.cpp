@@ -22,6 +22,7 @@
 #include "Components/Script/Script.h"
 
 #include "Graphics/Graphics.h"
+#include "Network/Network.h"
 #include "StartupConfig.h"
 
 NAMESPACE_BEGIN
@@ -45,11 +46,19 @@ void Engine::Finalize()
 
 Engine::Engine()
 {
+	if (StartupConfig::Get().isEnableNetwork)
+	{
+		Network::Initialize();
+	}
+
 	if (StartupConfig::Get().isEnableRendering)
 	{
 		m_input = rheap::New<Input>();
 		m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
-		Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12);
+		if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
+		{
+			m_isRunning = false;
+		}
 	}
 }
 
@@ -60,6 +69,11 @@ Engine::~Engine()
 		Graphics::Finalize();
 		platform::DeleteWindow(m_window);
 		rheap::Delete(m_input);
+	}
+
+	if (StartupConfig::Get().isEnableNetwork)
+	{
+		Network::Finalize();
 	}
 }
 

@@ -23,7 +23,7 @@ public:
 	virtual ~Graphics() {};
 
 public:
-	static void Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAPI);
+	static int Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAPI);
 	static void Finalize();
 
 public:

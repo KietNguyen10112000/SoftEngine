@@ -138,6 +138,11 @@ while (it)												\
 		component->m_object = this;
 		component->OnComponentAdded();
 
+		if (!component->IsConflict())
+		{
+			return this;
+		}
+
 		if (m_mainComponent == INVALID_ID && SubSystemComponentId::PRIORITY[Comp::COMPONENT_ID] != -1)
 		{
 			m_mainComponent = Comp::COMPONENT_ID;
@@ -152,10 +157,12 @@ while (it)												\
 			m_subSystemComponents[Comp::COMPONENT_ID]->SetAsMain();
 		}
 
-		if (component->IsConflict())
-		{
-			m_numBranch++;
-		}
+		//if (component->IsConflict())
+		//{
+		//	m_numBranch++;
+		//}
+
+		m_numBranch++;
 
 		return this;
 	}

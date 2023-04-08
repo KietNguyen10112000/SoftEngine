@@ -231,4 +231,22 @@ void* GetWindowNativeHandle(WindowNative* window)
     return w->hwnd;
 }
 
+String GetExecutablePath()
+{
+#ifdef _WIN32
+    wchar_t path[MAX_PATH] = { 0 };
+    auto len = GetModuleFileNameW(NULL, path, MAX_PATH);
+
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &path[0], (int)len, NULL, 0, NULL, NULL);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &path[0], (int)len, &strTo[0], size_needed, NULL, NULL);
+
+    return strTo.c_str();
+#else
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    return std::string(result, (count > 0) ? count : 0);
+#endif
+}
+
 NAMESPACE_PLATFORM_END

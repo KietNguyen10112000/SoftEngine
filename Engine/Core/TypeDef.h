@@ -18,6 +18,8 @@
 #    define API_VAR extern __declspec(dllimport)
 #endif
 
+#define IMPORT __declspec(dllimport)
+
 #ifdef STATIC_BUILD
 #ifdef API
 #undef API
@@ -25,6 +27,9 @@
 #endif // API
 #else
 #endif // STATIC_BUILD
+
+#define _STRINGIZEX(x)  #x
+#define _STRINGIZE(x)   _STRINGIZEX(x)
 
 #ifdef _DEBUG
 #define Throw(msg) throw msg ", file: " __FILE__ ", line: " _STRINGIZE(__LINE__)
