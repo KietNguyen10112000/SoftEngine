@@ -14,6 +14,11 @@ public:
 	constexpr static size_t NUM_GRAPHICS_COMMAND_LISTS	= 128;
 	constexpr static size_t NUM_GRAPHICS_BACK_BUFFERS	= 3;
 
+	constexpr static size_t NUM_SRV_PER_PSO				= 16;
+	constexpr static size_t NUM_CBV_PER_PSO				= 16;
+
+	constexpr static size_t GPU_DESCRIPTOR_HEAP_SIZE	= 64*KB;
+
 	ComPtr<ID3D12DescriptorHeap>            m_rtvDescriptorHeap;
 	ComPtr<ID3D12Resource>                  m_renderTargets		[NUM_GRAPHICS_BACK_BUFFERS];
 	ComPtr<ID3D12DescriptorHeap>            m_dsvDescriptorHeap;
@@ -31,6 +36,13 @@ public:
 	// ring buffer command list
 	DX12RingBufferCommandList<ID3D12GraphicsCommandList, NUM_GRAPHICS_COMMAND_LISTS> m_graphicsCommandList;
 	
+	// brrow from below m_graphicsCommandList
+	HANDLE									m_fenceEvent;
+	UINT64*									m_fenceValue;
+	ID3D12Fence*							m_fence;
+
+	ComPtr<ID3D12RootSignature>				m_rootSignature;
+	ComPtr<ID3D12DescriptorHeap>			m_gpuDescriptorHeap;
 
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
 	ComPtr<ID3D12Device2>                   m_device;
@@ -47,6 +59,9 @@ private:
 	void InitD3D12();
 	void InitSwapchain(void* hwnd);
 	void InitCommandLists();
+	void InitRootSignature();
+	void InitDescriptorHeap();
+	void SetInitState();
 
 public:
 	// Inherited via Graphics

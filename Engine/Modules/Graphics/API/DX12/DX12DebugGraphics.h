@@ -5,8 +5,23 @@
 
 NAMESPACE_DX12_BEGIN
 
+class DX12Graphics;
+
 class DX12DebugGraphics : public DebugGraphics
 {
+public:
+	// brrow from DX12Graphics
+	DX12Graphics* m_graphics;
+	ID3D12Device2* m_device;
+
+
+public:
+	DX12DebugGraphics(DX12Graphics* graphics);
+	~DX12DebugGraphics();
+
+private:
+	void InitCubeInstancingRenderer();
+
 public:
 	// Inherited via DebugGraphics
 	virtual void SetCamera(const Mat4& view, const Mat4& proj) override;

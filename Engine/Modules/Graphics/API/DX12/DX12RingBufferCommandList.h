@@ -54,8 +54,17 @@ public:
         ThrowIfFailed(m_commandList->Reset(m_commandAllocators[id].Get(), NULL));
     }
 
+    inline void BeginCommandList(ID3D12CommandQueue* commandQueue)
+    {
+        Reset();
+    }
+
     inline void EndCommandList(ID3D12CommandQueue* commandQueue)
     {
+        m_commandList->Close();
+        ID3D12CommandList* ppCommandLists[] = { m_commandList.Get()};
+        commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
         auto id = m_currentCommandListId;
         id = id % N;
 

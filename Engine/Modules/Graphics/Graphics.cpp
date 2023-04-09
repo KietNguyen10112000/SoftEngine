@@ -53,7 +53,7 @@ int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
 	const char* msg = "DX12";
 	auto send = tcp.Send((byte*)msg, (int)4);
 
-	char buf[1024] = {};
+	char buf[1025] = {};
 	int len = tcp.Recv((byte*)buf, 1024);
 	buf[len] = 0;
 
@@ -98,7 +98,7 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 #ifdef _WIN32
 	case soft::GRAPHICS_BACKEND_API::DX12:
 		ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
-		ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>();
+		ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>((dx12::DX12Graphics*)ret);
 		s_instance.reset(ret);
 		break;
 #endif

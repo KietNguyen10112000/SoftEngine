@@ -2,6 +2,20 @@
 
 NAMESPACE_DX12_BEGIN
 
+DX12DebugGraphics::DX12DebugGraphics(DX12Graphics* graphics) : m_graphics(graphics)
+{
+	m_device = graphics->m_device.Get();
+}
+
+DX12DebugGraphics::~DX12DebugGraphics()
+{
+}
+
+void DX12DebugGraphics::InitCubeInstancingRenderer()
+{
+
+}
+
 void DX12DebugGraphics::SetCamera(const Mat4& view, const Mat4& proj)
 {
 }

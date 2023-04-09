@@ -265,11 +265,28 @@ class Handler(FileSystemEventHandler):
 
         srcPath = event.src_path.replace('\\\\', '/').replace('\\', '/')
 
+        print(f'File \'{srcPath}\' {event.event_type}')
+
         if not MyWatch.instance.Contains(srcPath): return
  
         if event.event_type == 'created' or event.event_type == 'modified':
             MyWatch.modifiedFiles[srcPath] = str(os.path.getmtime(srcPath))
-        elif event.event_type == 'deleted' or event.event_type == 'moved':
+        elif event.event_type == 'moved':
+            destPath = event.dest_path.replace('\\\\', '/').replace('\\', '/')
+
+            if os.path.exists(srcPath):
+                MyWatch.modifiedFiles[srcPath] = str(os.path.getmtime(srcPath))
+
+            if not MyWatch.instance.Contains(destPath):
+                return
+
+            if srcPath in MyWatch.modifiedFiles:
+                del MyWatch.modifiedFiles[srcPath]
+
+            if MyWatch.instance.srcPath in destPath:
+                MyWatch.modifiedFiles[destPath] = str(os.path.getmtime(destPath))
+
+        elif event.event_type == 'deleted':
             if srcPath in MyWatch.modifiedFiles:
                 del MyWatch.modifiedFiles[srcPath]
              
