@@ -6,6 +6,7 @@
 
 #include "Graphics/Graphics.h"
 #include "Graphics/GraphicsCommandList.h"
+#include "Graphics/DebugGraphics.h"
 
 NAMESPACE_BEGIN
 
@@ -25,10 +26,16 @@ void RenderingSystem::Iteration(float dt)
 
 	graphics->BeginFrame();
 
+	auto dbg = graphics->GetDebugGraphics();
+
 	GraphicsCommandList* cmdList = nullptr;
 	graphics->BeginCommandList(&cmdList);
 
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
+
+	dbg->BeginDrawBatch(cmdList);
+	dbg->DrawCube({}, {});
+	dbg->EndDrawBatch();
 
 	graphics->EndCommandList(&cmdList);
 

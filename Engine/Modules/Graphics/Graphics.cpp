@@ -12,7 +12,7 @@ NAMESPACE_BEGIN
 
 int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
 {
-	std::string_view file_path = __FILE__;
+	/*std::string_view file_path = __FILE__;
 	std::string_view dir_path = file_path.substr(0, file_path.rfind("\\"));
 	std::string msg;
 
@@ -35,7 +35,7 @@ int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
 	default:
 		assert(0);
 		break;
-	}
+	}*/
 
 #ifdef DEV
 	TCP_SOCKET_DESCRIPTION desc = {};
@@ -50,7 +50,8 @@ int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
 		return -1;
 	}
 
-	auto send = tcp.Send((byte*)msg.data(), (int)msg.size());
+	const char* msg = "DX12";
+	auto send = tcp.Send((byte*)msg, (int)4);
 
 	char buf[1024] = {};
 	int len = tcp.Recv((byte*)buf, 1024);

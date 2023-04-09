@@ -49,6 +49,9 @@ struct SceneStaticQuerySession final : public SceneQuerySession
 class Scene : Traceable<Scene>
 {
 protected:
+	constexpr static byte SCENE_MEM_STABLE_VALUE1	= 1;
+	constexpr static byte SCENE_MEM_STABLE_VALUE2	= 2;
+
 	constexpr static ID TEMP_OBJECT_ID_MASK		= 0x10000000'00000000ULL;
 	constexpr static ID TEMP_OBJECT_ID_UNMASK	= 0x7FFFFFFF'FFFFFFFFULL;
 
@@ -115,8 +118,9 @@ private:
 	ConcurrentList<Handle<GameObject>> m_waitForRemoves[2];
 	ConcurrentList<Handle<GameObject>>* m_waitForRemove = &m_waitForRemoves[0];
 
+	ID m_oldStableValue = 0;
+	ID m_id = 0;
 	ID m_idMask = 0;
-
 	ID m_uidCounter = 0;
 
 	BuiltinEventManager* m_objectEventMgr = nullptr;
@@ -189,11 +193,17 @@ public:
 	inline void BeginSetup()
 	{
 		//m_objsAccessor = &m_stableObjects;
+		m_oldStableValue = mheap::internal::GetStableValue();
+		byte value = SCENE_MEM_STABLE_VALUE1;
+		value = m_id % 2 ? value : SCENE_MEM_STABLE_VALUE2;
+		mheap::internal::SetStableValue(value);
+
 		m_idMask = 0;
 	}
 
 	inline void EndSetup()
 	{
+		mheap::internal::SetStableValue((byte)m_oldStableValue);
 		//m_objsAccessor = &m_tempObjects;
 		m_idMask = TEMP_OBJECT_ID_MASK;
 		m_prevTimeSinceEpoch = m_curTimeSinceEpoch;

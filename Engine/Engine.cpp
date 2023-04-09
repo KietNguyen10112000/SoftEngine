@@ -82,7 +82,9 @@ void Engine::Setup()
 	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
 
-	m_scenes.Push(mheap::New<MultipleDynamicLayersScene>(this));
+	auto scene = mheap::New<MultipleDynamicLayersScene>(this);
+	scene->m_id = 0;
+	m_scenes.Push(scene);
 
 	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
 		std::cout << "Func called --- " << number << "\n";
@@ -193,16 +195,16 @@ void Engine::Run()
 	{
 		Iteration();
 
-		auto& dynamicObjs = mainScene->m_tempObjects;
-		size_t count = 0;
-		for (size_t j = 0; j < dynamicObjs.size(); j++)
-		{
-			//if (Random::RangeInt64(0, 1) == 0)
-			{
-				mainScene->RefreshDynamicObject(dynamicObjs[j].Get());
-				count++;
-			}
-		}
+		//auto& dynamicObjs = mainScene->m_tempObjects;
+		//size_t count = 0;
+		//for (size_t j = 0; j < dynamicObjs.size(); j++)
+		//{
+		//	//if (Random::RangeInt64(0, 1) == 0)
+		//	{
+		//		mainScene->RefreshDynamicObject(dynamicObjs[j].Get());
+		//		count++;
+		//	}
+		//}
 
 		//std::cout << "Refresh: " << count << " objects\n";
 	}

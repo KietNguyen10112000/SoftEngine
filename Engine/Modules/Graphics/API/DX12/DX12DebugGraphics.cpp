@@ -6,7 +6,7 @@ void DX12DebugGraphics::SetCamera(const Mat4& view, const Mat4& proj)
 {
 }
 
-void DX12DebugGraphics::BeginDrawBatch(DEBUG_GRAPHICS_MODE mode)
+void DX12DebugGraphics::BeginDrawBatch(GraphicsCommandList* cmdList, DEBUG_GRAPHICS_MODE mode)
 {
 }
 

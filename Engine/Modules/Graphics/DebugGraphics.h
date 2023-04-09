@@ -11,6 +11,8 @@ enum class DEBUG_GRAPHICS_MODE
 	SOLID
 };
 
+class GraphicsCommandList;
+
 class DebugGraphics
 {
 public:
@@ -19,7 +21,7 @@ public:
 public:
 	virtual void SetCamera(const Mat4& view, const Mat4& proj) = 0;
 
-	virtual void BeginDrawBatch(DEBUG_GRAPHICS_MODE mode) = 0;
+	virtual void BeginDrawBatch(GraphicsCommandList* cmdList, DEBUG_GRAPHICS_MODE mode = DEBUG_GRAPHICS_MODE::SOLID) = 0;
 	virtual void EndDrawBatch() = 0;
 
 	virtual void DrawAABox(const AABox& aaBox, const Vec4& color) = 0;
