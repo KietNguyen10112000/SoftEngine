@@ -255,7 +255,7 @@ void Scene::ProcessRecordedBranchedLists()
 	m_branchedObjects.ForEach(
 		[&](GameObject* obj)
 		{
-			if (obj->m_numBranchCount.load(std::memory_order_relaxed) != obj->m_numBranch)
+			if (obj->m_numBranchCount.load(std::memory_order_relaxed) != obj->m_numBranch.load(std::memory_order_relaxed))
 			{
 				obj->MergeSubSystemComponentsData();
 

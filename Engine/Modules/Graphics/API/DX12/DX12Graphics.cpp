@@ -8,13 +8,12 @@ DX12Graphics::DX12Graphics(void* _hwnd)
     InitD3D12();
     InitSwapchain(_hwnd);
     InitCommandLists();
-    InitRootSignature();
-    InitDescriptorHeap();
-    SetInitState();
+    InitRenderRooms();
 }
 
 DX12Graphics::~DX12Graphics()
 {
+    m_renderRooms.Destroy();
     m_graphicsCommandList.Destroy();
 }
 
@@ -180,6 +179,18 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
         m_device->CreateDepthStencilView(m_depthBuffers[i].Get(), &dsvDesc, cpuDSVHandle);
         cpuDSVHandle.ptr += cpuDSVDescriptorSize;
     }
+
+    m_backBufferViewport.TopLeftX   = 0;
+    m_backBufferViewport.TopLeftY   = 0;
+    m_backBufferViewport.MinDepth   = 0.0f;
+    m_backBufferViewport.MaxDepth   = 1.0f;
+    m_backBufferViewport.Width      = WINDOW_WIDTH;
+    m_backBufferViewport.Height     = WINDOW_HEIGHT;
+
+    m_backBufferScissorRect.top     = 0;
+    m_backBufferScissorRect.left    = 0;
+    m_backBufferScissorRect.right   = WINDOW_WIDTH;
+    m_backBufferScissorRect.bottom  = WINDOW_HEIGHT;
 }
 
 void DX12Graphics::InitCommandLists()
@@ -187,107 +198,52 @@ void DX12Graphics::InitCommandLists()
     m_graphicsCommandList.Init(m_device.Get());
     m_userCmdList.Init(this);
 
-    m_fenceEvent    = m_graphicsCommandList.m_fenceEvent;
-    m_fenceValue    = &m_graphicsCommandList.m_fenceValue;
-    m_fence         = m_graphicsCommandList.m_fence.Get();
+    m_synchObject.fenceEvent    = m_graphicsCommandList.m_fenceEvent;
+    m_synchObject.fenceValue    = &m_graphicsCommandList.m_fenceValue;
+    m_synchObject.fence         = m_graphicsCommandList.m_fence.Get();
+
+    m_commandList = m_graphicsCommandList.m_commandList.Get();
 }
 
-void DX12Graphics::InitRootSignature()
+void DX12Graphics::InitRenderRooms()
 {
-    D3D12_DESCRIPTOR_RANGE ranges[2] = {};
-
-    D3D12_DESCRIPTOR_RANGE& cbvRange = ranges[0];
-    cbvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-    cbvRange.BaseShaderRegister = 0;
-    cbvRange.RegisterSpace = 0;
-    cbvRange.NumDescriptors = NUM_CBV_PER_PSO;
-    cbvRange.OffsetInDescriptorsFromTableStart = 0;
-
-    D3D12_DESCRIPTOR_RANGE& srvRange = ranges[1];
-    srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    srvRange.BaseShaderRegister = 0;
-    srvRange.RegisterSpace = 0;
-    srvRange.NumDescriptors = NUM_SRV_PER_PSO;
-    srvRange.OffsetInDescriptorsFromTableStart = NUM_CBV_PER_PSO;
-
-    D3D12_ROOT_PARAMETER rootParameter = {};
-    rootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    rootParameter.DescriptorTable.pDescriptorRanges = ranges;
-    rootParameter.DescriptorTable.NumDescriptorRanges = ARRAYSIZE(ranges);
-    rootParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-    D3D12_STATIC_SAMPLER_DESC rootSampler = {};
-    rootSampler.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-    rootSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    rootSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    rootSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    rootSampler.MipLODBias = 0;
-    rootSampler.MaxAnisotropy = 0;
-    rootSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-    rootSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-    rootSampler.MinLOD = 0.0f;
-    rootSampler.MaxLOD = D3D12_FLOAT32_MAX;
-    rootSampler.ShaderRegister = 0;
-    rootSampler.RegisterSpace = 0;
-    rootSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    rootSignatureDesc.pParameters = &rootParameter;
-    rootSignatureDesc.NumParameters = 1;
-    rootSignatureDesc.pStaticSamplers = &rootSampler;
-    rootSignatureDesc.NumStaticSamplers = 1;
-
-    ComPtr<ID3DBlob> signature;
-    ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr));
-
-    ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
-        IID_PPV_ARGS(&m_rootSignature)));
+    m_renderRooms.Init(NUM_RENDER_ROOMS, m_device.Get(), &m_synchObject);
 }
 
-void DX12Graphics::InitDescriptorHeap()
-{
-    D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-    cbvHeapDesc.NumDescriptors = GPU_DESCRIPTOR_HEAP_SIZE;
-    cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    ThrowIfFailed(m_device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&m_gpuDescriptorHeap)));
-}
-
-void DX12Graphics::SetInitState()
-{
-    auto dx12CmdList = m_graphicsCommandList.m_commandList.Get();
-    m_graphicsCommandList.BeginCommandList(m_commandQueue.Get());
-
-    ID3D12DescriptorHeap* ppHeaps[] = { m_gpuDescriptorHeap.Get() };
-    dx12CmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
-    dx12CmdList->SetGraphicsRootSignature(m_rootSignature.Get());
-
-    m_graphicsCommandList.EndCommandList(m_commandQueue.Get());
-}
-
-void DX12Graphics::BeginCommandList(GraphicsCommandList** cmdList)
-{
-    *cmdList = &m_userCmdList;
-    m_graphicsCommandList.Reset();
-}
-
-void DX12Graphics::EndCommandList(GraphicsCommandList** cmdList)
-{
-    *cmdList = nullptr;
-    m_graphicsCommandList.EndCommandList(m_commandQueue.Get());
-}
-
-void DX12Graphics::BeginFrame()
+void DX12Graphics::BeginCommandList()
 {
     m_currentBackBufferId = m_swapChain->GetCurrentBackBufferIndex();
+
+    m_graphicsCommandList.Reset();
+
+    m_renderRooms.BeginCommandList(m_commandList);
+
+    auto currentRTV = m_cpuRTVDescriptorHandle;
+    currentRTV.ptr += m_currentBackBufferId * m_cpuRTVDescriptorSize;
+    auto currentDSV = m_cpuDSVDescriptorHandle;
+    currentDSV.ptr += m_currentBackBufferId * m_cpuDSVDescriptorSize;
+    m_commandList->OMSetRenderTargets(1, &currentRTV, 0, &currentDSV);
+
+    m_commandList->RSSetViewports(1, &m_backBufferViewport);
+    m_commandList->RSSetScissorRects(1, &m_backBufferScissorRect);
 }
 
-void DX12Graphics::EndFrame()
+void DX12Graphics::EndCommandList()
 {
-    m_graphicsCommandList.Reset();
-    auto dx12CmdList = m_graphicsCommandList.m_commandList.Get();
+    m_graphicsCommandList.EndCommandList(m_commandQueue.Get());
+}
+
+void DX12Graphics::BeginFrame(GraphicsCommandList** cmdList)
+{
+    *cmdList = &m_userCmdList;
+    BeginCommandList();
+}
+
+void DX12Graphics::EndFrame(GraphicsCommandList** cmdList)
+{
+    *cmdList = nullptr;
+
+    auto dx12CmdList = m_commandList;
 
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -296,7 +252,7 @@ void DX12Graphics::EndFrame()
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
     dx12CmdList->ResourceBarrier(1, &barrier);
 
-    m_graphicsCommandList.EndCommandList(m_commandQueue.Get());
+    EndCommandList();
 
     // 2th param can be DXGI_PRESENT_ALLOW_TEARING
     m_swapChain->Present(1, 0);

@@ -49,6 +49,13 @@ inline void ForEachManagedPointer(ManagedHandle* handle, C callback)
 	}
 }
 
+// align num bytes to ALIGNMENT_SIZE bytes
+template <size_t ALIGNMENT_SIZE>
+inline size_t Align(size_t num)
+{
+	return (num / ALIGNMENT_SIZE + (num % ALIGNMENT_SIZE != 0)) * ALIGNMENT_SIZE;
+}
+
 }
 
 

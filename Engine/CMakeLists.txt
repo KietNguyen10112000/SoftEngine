@@ -66,6 +66,9 @@ file(
     "Modules/Network/API/API.h"
     "Modules/Network/API/API.cpp"
 
+    "Modules/FileSystem/*.h"
+    "Modules/FileSystem/*.cpp"
+
     "Engine.h"
     "Engine.cpp"
     "StartupConfig.h"

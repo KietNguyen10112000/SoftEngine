@@ -18,8 +18,8 @@ public:
 	virtual void OnComponentRemovedFromScene() {};
 	virtual void SetAsMain() {};
 	virtual void SetAsExtra() {};
-	virtual void ResolveConflict() {};
-	virtual bool IsConflict() {};
+	virtual void ResolveBranch() {};
+	virtual bool IsNewBranch() {};
 };
 
 }

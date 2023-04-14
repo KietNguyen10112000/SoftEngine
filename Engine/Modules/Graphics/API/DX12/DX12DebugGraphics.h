@@ -3,6 +3,8 @@
 
 #include "Graphics/DebugGraphics.h"
 
+#include "DX12RenderParams.h"
+
 NAMESPACE_DX12_BEGIN
 
 class DX12Graphics;
@@ -15,12 +17,15 @@ public:
 	ID3D12Device2* m_device;
 
 
+	DX12RenderParams m_cubeParams;
+	ComPtr<ID3D12PipelineState> m_cubePSO;
+
 public:
 	DX12DebugGraphics(DX12Graphics* graphics);
 	~DX12DebugGraphics();
 
 private:
-	void InitCubeInstancingRenderer();
+	void InitCubeRenderer();
 
 public:
 	// Inherited via DebugGraphics

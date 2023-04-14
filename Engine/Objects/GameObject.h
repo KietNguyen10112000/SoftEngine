@@ -91,7 +91,7 @@ private:
 
 	// num components flush data to this obj in 1 iteration
 	std::atomic<size_t> m_numBranchCount;
-	size_t m_numBranch;
+	std::atomic<size_t> m_numBranch;
 	ID m_mainComponent = INVALID_ID;
 
 	std::atomic<bool> m_isBranched;
@@ -138,7 +138,7 @@ while (it)												\
 		component->m_object = this;
 		component->OnComponentAdded();
 
-		if (!component->IsConflict())
+		if (!component->IsNewBranch())
 		{
 			return this;
 		}
@@ -325,12 +325,12 @@ inline void name()																\
 			auto comp = m_subSystemComponents[compId].Get();
 			if (comp)
 			{
-				comp->ResolveConflict();
+				comp->ResolveBranch();
 			}
 		}
 
-		m_numBranchCount.store(m_numBranch);
-		m_isBranched.store(false);
+		m_numBranchCount.store(0, std::memory_order_relaxed);
+		m_isBranched.store(false, std::memory_order_relaxed);
 	}
 
 	template <typename Func>

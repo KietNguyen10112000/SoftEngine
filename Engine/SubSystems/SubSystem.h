@@ -378,6 +378,12 @@ public:
 		}
 	}
 
+public:
+	inline auto GetScene() const
+	{
+		return m_scene;
+	}
+
 };
 
 #undef MERGE_OBJECTS

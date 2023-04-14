@@ -20,16 +20,17 @@ void RenderingSystem::PrevIteration(float dt)
 
 void RenderingSystem::Iteration(float dt)
 {
+	GraphicsCommandList* cmdList = nullptr;
+
 	auto graphics = Graphics::Get();
 
 	if (!graphics) return;
 
-	graphics->BeginFrame();
+	graphics->Bind(this);
+
+	graphics->BeginFrame(&cmdList);
 
 	auto dbg = graphics->GetDebugGraphics();
-
-	GraphicsCommandList* cmdList = nullptr;
-	graphics->BeginCommandList(&cmdList);
 
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
 
@@ -37,9 +38,7 @@ void RenderingSystem::Iteration(float dt)
 	dbg->DrawCube({}, {});
 	dbg->EndDrawBatch();
 
-	graphics->EndCommandList(&cmdList);
-
-	graphics->EndFrame();
+	graphics->EndFrame(&cmdList);
 }
 
 void RenderingSystem::PostIteration(float dt)

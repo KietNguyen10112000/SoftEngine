@@ -1,7 +1,7 @@
 #include "Platform/Platform.h"
 
-#include "Core/Input/Input.h"
-#include "Core/Input/KEYBOARD.h"
+#include "Input/Input.h"
+#include "Input/KEYBOARD.h"
 
 #include <Windows.h>
 

@@ -44,8 +44,8 @@ public:
 	/// + Physics modifies transform
 	/// + Animation modifies transform
 	///
-	virtual void ResolveConflict() = 0;
-	virtual bool IsConflict() = 0;
+	virtual void ResolveBranch() = 0;
+	virtual bool IsNewBranch() = 0;
 
 	// override this method if modifies AABB during process
 	inline virtual math::AABox GetLocalAABB()

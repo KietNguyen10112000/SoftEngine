@@ -6,7 +6,6 @@
 #include "Core/Memory/DeferredBuffer.h"
 #include "Core/Structures/Managed/Function.h"
 #include "Core/Random/Random.h"
-#include "Core/Input/Input.h"
 
 #include "Platform/Platform.h"
 
@@ -21,6 +20,7 @@
 
 #include "Components/Script/Script.h"
 
+#include "Input/Input.h"
 #include "Graphics/Graphics.h"
 #include "Network/Network.h"
 #include "StartupConfig.h"

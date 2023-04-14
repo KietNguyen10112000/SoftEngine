@@ -37,9 +37,9 @@ private:
 
 	virtual void SetAsExtra() override;
 
-	virtual void ResolveConflict() override;
+	virtual void ResolveBranch() override;
 
-	virtual bool IsConflict() override;
+	virtual bool IsNewBranch() override;
 
 	inline void BeginUpdate()
 	{

@@ -403,7 +403,7 @@ public:
         return *this;
     }
 
-    inline Mat4 operator*(const Mat4& mat)
+    inline Mat4 operator*(const Mat4& mat) const
     {
         Mat4 ret;
         ret.GLMMat() = mat.GLMMatConst() * GLMMatConst();

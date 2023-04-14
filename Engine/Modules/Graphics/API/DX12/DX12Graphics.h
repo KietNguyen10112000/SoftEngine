@@ -5,6 +5,7 @@
 
 #include "DX12RingBufferCommandList.h"
 #include "DX12GraphicsCommandList.h"
+#include "DX12RenderRooms.h"
 
 NAMESPACE_DX12_BEGIN
 
@@ -14,10 +15,9 @@ public:
 	constexpr static size_t NUM_GRAPHICS_COMMAND_LISTS	= 128;
 	constexpr static size_t NUM_GRAPHICS_BACK_BUFFERS	= 3;
 
-	constexpr static size_t NUM_SRV_PER_PSO				= 16;
-	constexpr static size_t NUM_CBV_PER_PSO				= 16;
+	//constexpr static size_t GPU_DESCRIPTOR_HEAP_SIZE	= 64*KB;
 
-	constexpr static size_t GPU_DESCRIPTOR_HEAP_SIZE	= 64*KB;
+	constexpr static size_t NUM_RENDER_ROOMS			= 2*KB;
 
 	ComPtr<ID3D12DescriptorHeap>            m_rtvDescriptorHeap;
 	ComPtr<ID3D12Resource>                  m_renderTargets		[NUM_GRAPHICS_BACK_BUFFERS];
@@ -35,13 +35,18 @@ public:
 
 	// ring buffer command list
 	DX12RingBufferCommandList<ID3D12GraphicsCommandList, NUM_GRAPHICS_COMMAND_LISTS> m_graphicsCommandList;
+
+	ID3D12GraphicsCommandList*				m_commandList;
 	
 	// brrow from below m_graphicsCommandList
-	HANDLE									m_fenceEvent;
-	UINT64*									m_fenceValue;
-	ID3D12Fence*							m_fence;
+	DX12SynchObject							m_synchObject;
 
-	ComPtr<ID3D12RootSignature>				m_rootSignature;
+
+	D3D12_RECT								m_backBufferScissorRect	= {};
+	D3D12_VIEWPORT							m_backBufferViewport	= {};
+	DX12RenderRooms							m_renderRooms;
+
+	
 	ComPtr<ID3D12DescriptorHeap>			m_gpuDescriptorHeap;
 
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
@@ -59,17 +64,16 @@ private:
 	void InitD3D12();
 	void InitSwapchain(void* hwnd);
 	void InitCommandLists();
-	void InitRootSignature();
-	void InitDescriptorHeap();
-	void SetInitState();
+	void InitRenderRooms();
 
 public:
 	// Inherited via Graphics
-	virtual void BeginCommandList(GraphicsCommandList** cmdList) override;
-	virtual void EndCommandList(GraphicsCommandList** cmdList) override;
+	virtual void BeginFrame(GraphicsCommandList** cmdList) override;
+	virtual void EndFrame(GraphicsCommandList** cmdList) override;
 
-	virtual void BeginFrame() override;
-	virtual void EndFrame() override;
+public:
+	void BeginCommandList();
+	void EndCommandList();
 
 };
 

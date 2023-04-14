@@ -31,11 +31,11 @@ void Script::SetAsExtra()
 {
 }
 
-void Script::ResolveConflict()
+void Script::ResolveBranch()
 {
 }
 
-bool Script::IsConflict()
+bool Script::IsNewBranch()
 {
 	return true;
 }

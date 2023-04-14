@@ -36,6 +36,15 @@ public:
 
     inline void Destroy()
     {
+        for (auto& v : m_fenceValues)
+        {
+            if (m_fence->GetCompletedValue() < v)
+            {
+                ThrowIfFailed(m_fence->SetEventOnCompletion(v, m_fenceEvent));
+                WaitForSingleObject(m_fenceEvent, INFINITE);
+            }
+        }
+
         CloseHandle(m_fenceEvent);
     }
 

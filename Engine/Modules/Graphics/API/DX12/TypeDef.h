@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/TypeDef.h"
 
+#define NOMINMAX
 #include <wrl/client.h>
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -18,14 +19,42 @@ using Microsoft::WRL::ComPtr;
 #endif // _DEBUG
 
 #define WaitForFence(fence, fenceValue, fenceEvent)                                         \
-if (fence->GetCompletedValue() != fenceValue)                                               \
+if (fence->GetCompletedValue() < fenceValue)                                               \
 {                                                                                           \
     ThrowIfFailed(fence->SetEventOnCompletion(fenceValue, fenceEvent));                     \
     WaitForSingleObject(fenceEvent, INFINITE);                                              \
-}                                                                                           \
-fenceValue++;
+}
 
 
 #define NAMESPACE_DX12_BEGIN NAMESPACE_BEGIN namespace dx12 {
 
 #define NAMESPACE_DX12_END } NAMESPACE_END
+
+
+NAMESPACE_DX12_BEGIN
+
+struct DX12SynchObject
+{
+    HANDLE			fenceEvent;
+    UINT64*         fenceValue;
+    ID3D12Fence*    fence;
+
+    inline UINT64 MakeBarrier(ID3D12CommandQueue* commandQueue)
+    {
+        auto& v = *fenceValue;
+        ThrowIfFailed(
+            commandQueue->Signal(
+                fence,
+                ++v
+            )
+        );
+        return v;
+    }
+
+    inline void WaitFor(UINT64 value)
+    {
+        WaitForFence(fence, value, fenceEvent);
+    }
+};
+
+NAMESPACE_DX12_END

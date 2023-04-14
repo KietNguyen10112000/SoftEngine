@@ -11,13 +11,15 @@ enum class GRAPHICS_BACKEND_API
 };
 
 class DebugGraphics;
-
 class GraphicsCommandList;
+class RenderingSystem;
 
 class Graphics : public Singleton<Graphics>
 {
 public:
 	DebugGraphics* m_debugGraphics = nullptr;
+
+	RenderingSystem* m_bindedRdSys = nullptr;
 
 public:
 	virtual ~Graphics() {};
@@ -27,19 +29,23 @@ public:
 	static void Finalize();
 
 public:
-	// get a new command list to execute command
-	virtual void BeginCommandList(GraphicsCommandList** cmdList) = 0;
-
-	// close command list and flush to command queue
-	virtual void EndCommandList(GraphicsCommandList** cmdList) = 0;
-
-	virtual void BeginFrame() = 0;
-	virtual void EndFrame() = 0;
+	virtual void BeginFrame(GraphicsCommandList** cmdList) = 0;
+	virtual void EndFrame(GraphicsCommandList** cmdList) = 0;
 
 public:
 	inline auto GetDebugGraphics()
 	{
 		return m_debugGraphics;
+	}
+
+	inline void Bind(RenderingSystem* sys)
+	{
+		m_bindedRdSys = sys;
+	}
+
+	inline auto GetRenderingSystem()
+	{
+		return m_bindedRdSys;
 	}
 
 };

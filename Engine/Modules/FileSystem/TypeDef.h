@@ -1,0 +1,6 @@
+#pragma once
+#include "Core/TypeDef.h"
+
+#define NAMESPACE_FILE_SYSTEM_BEGIN NAMESPACE_BEGIN
+
+#define NAMESPACE_FILE_SYSTEM_END NAMESPACE_END
