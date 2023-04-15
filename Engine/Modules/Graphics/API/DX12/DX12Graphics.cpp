@@ -1,6 +1,13 @@
 #include "DX12Graphics.h"
 #include <cassert>
 
+#include "Components/Rendering/Camera.h"
+
+#include "DX12DebugGraphics.h"
+
+#define CPP
+#include "Shaders/TypeDef.hlsli"
+
 NAMESPACE_DX12_BEGIN
 
 DX12Graphics::DX12Graphics(void* _hwnd)
@@ -9,12 +16,16 @@ DX12Graphics::DX12Graphics(void* _hwnd)
     InitSwapchain(_hwnd);
     InitCommandLists();
     InitRenderRooms();
+    InitBuiltInParams();
 }
 
 DX12Graphics::~DX12Graphics()
 {
     m_renderRooms.Destroy();
     m_graphicsCommandList.Destroy();
+
+    m_sceneParams.Destroy();
+    m_cameraParams.Destroy();
 }
 
 void DX12Graphics::InitD3D12()
@@ -210,6 +221,27 @@ void DX12Graphics::InitRenderRooms()
     m_renderRooms.Init(NUM_RENDER_ROOMS, m_device.Get(), &m_synchObject);
 }
 
+void DX12Graphics::InitBuiltInParams()
+{
+    {
+        size_t constBufSizes[] = {
+            MemoryUtils::Align<256>(sizeof(SceneData)),
+        };
+
+        m_sceneParams.Init(m_device.Get(), 1, 3, 0, 1, constBufSizes, 0, 0, 0, &m_synchObject);
+        m_builtInCBVs[0] = m_sceneParams.m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    }
+
+    {
+        size_t constBufSizes[] = {
+            MemoryUtils::Align<256>(sizeof(CameraData)),
+        };
+
+        m_cameraParams.Init(m_device.Get(), 1, 16, 1, 1, constBufSizes, 0, 0, 0, &m_synchObject);
+        m_builtInCBVs[1] = m_cameraParams.m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    }
+}
+
 void DX12Graphics::BeginCommandList()
 {
     m_currentBackBufferId = m_swapChain->GetCurrentBackBufferIndex();
@@ -237,6 +269,20 @@ void DX12Graphics::BeginFrame(GraphicsCommandList** cmdList)
 {
     *cmdList = &m_userCmdList;
     BeginCommandList();
+
+    static float t = 0;
+    auto dt = GetRenderingSystem()->GetScene()->Dt();
+    t += dt;
+
+    {
+        auto head = m_sceneParams.AllocateConstantBufferWriteHead();
+        auto scene = (SceneData*)m_sceneParams.GetConstantBuffer(head, 0);
+        scene->t = t;
+        scene->dt = dt;
+        m_sceneParams.BeginRenderingAsBuiltInParam(m_commandList, m_builtInCBVs, 0);
+    }
+
+    ((DX12DebugGraphics*)m_debugGraphics)->BeginFrame();
 }
 
 void DX12Graphics::EndFrame(GraphicsCommandList** cmdList)
@@ -244,6 +290,10 @@ void DX12Graphics::EndFrame(GraphicsCommandList** cmdList)
     *cmdList = nullptr;
 
     auto dx12CmdList = m_commandList;
+
+    m_sceneParams.EndRenderingAsBuiltInParam(m_commandQueue.Get());
+
+    ((DX12DebugGraphics*)m_debugGraphics)->EndFrame();
 
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -256,6 +306,34 @@ void DX12Graphics::EndFrame(GraphicsCommandList** cmdList)
 
     // 2th param can be DXGI_PRESENT_ALLOW_TEARING
     m_swapChain->Present(1, 0);
+}
+
+void DX12Graphics::BeginCamera(Camera* camera)
+{
+    auto head = m_cameraParams.AllocateConstantBufferWriteHead();
+    auto camData = (CameraData*)m_cameraParams.GetConstantBuffer(head, 1);
+
+    auto view = camera->GetView();
+    auto& proj = camera->GetProj();
+
+    camData->transform = camera->GetObject()->GetTransformMat4();
+    camData->view = view;
+    camData->proj = proj;
+    camData->vp = view * proj;
+
+    /*camData->vp = 
+        Mat4::Identity().SetLookAtLH({ 0, 0, 10 }, { 0,0,0 }, Vec3::UP)
+        * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 16 / 9.0f, 0.01f, 1000);*/
+
+    m_cameraParams.BeginRenderingAsBuiltInParam(m_commandList, m_builtInCBVs + 1, 0);
+
+    ((DX12DebugGraphics*)m_debugGraphics)->BeginCamera();
+}
+
+void DX12Graphics::EndCamera(Camera* camera)
+{
+    ((DX12DebugGraphics*)m_debugGraphics)->EndCamera();
+    m_cameraParams.EndRenderingAsBuiltInParam(m_commandQueue.Get());
 }
 
 NAMESPACE_DX12_END

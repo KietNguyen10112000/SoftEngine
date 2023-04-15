@@ -1,3 +1,7 @@
+#ifdef CPP
+#pragma once
+#endif // CPP
+
 #ifndef CPP
 	#define Vec3 float3
 	#define Vec4 float4

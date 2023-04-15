@@ -54,6 +54,7 @@ public:
 	}
 
 public:
+#undef GetObject
 	inline GameObject* GetObject()
 	{
 		return m_object;

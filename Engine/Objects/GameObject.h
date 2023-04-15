@@ -102,7 +102,25 @@ private:
 	Array<Handle<GameObject>> m_children;
 
 protected:
-	DeferredBuffer<Transform> m_transform = {};
+	struct _Transform
+	{
+		union
+		{
+			Mat4 mat = Mat4::Identity();
+
+			struct
+			{
+				float padd[4];
+				Transform transform;
+			};
+		};
+
+		_Transform() = default;
+		_Transform(const Mat4& mat) : mat(mat) {};
+		_Transform(const Transform& transform) : transform(transform) {};
+	};
+
+	mutable DeferredBuffer<_Transform> m_transform = {};
 
 private:
 	template <typename T>
@@ -518,6 +536,31 @@ public:
 		assert(0);
 	}
 
+public:
+	inline void InitializeTransform(const Mat4& mat)
+	{
+		m_transform.Init({ mat });
+	}
+
+	inline void InitializeTransform(const Transform& tranform)
+	{
+		m_transform.Init({ tranform });
+	}
+
+	inline bool IsTransformMat4() const
+	{
+		return m_transform.GetReadHead()->mat[3][3] != 0;
+	}
+
+	inline Mat4 GetTransformMat4() const
+	{
+		if (IsTransformMat4())
+		{
+			return m_transform.GetReadHead()->mat;
+		}
+
+		return m_transform.GetReadHead()->transform.ToTransformMatrix();
+	}
 
 };
 

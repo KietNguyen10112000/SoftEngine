@@ -644,6 +644,12 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 	m_totalAllocatedBytes_ += ret->TotalSize();
 
 	ret->traceTable = table;
+
+#ifdef _DEBUG
+	::memset(ret->GetUsableMemAddress(), -2, ret->UsableSize());
+#endif // _DEBUG
+
+
 	if (managedLocalBlock)
 	{
 		::memset(ret->GetUsableMemAddress(), 0, ret->UsableSize());

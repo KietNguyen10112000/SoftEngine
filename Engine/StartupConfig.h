@@ -18,6 +18,7 @@ struct StartupConfig
 	bool isEnableNetwork	= true;
 
 	uint32_t maxThreads		= -1;
+	uint32_t reservedThread = 4;
 
 };
 

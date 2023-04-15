@@ -19,7 +19,6 @@ DX12DebugGraphics::DX12DebugGraphics(DX12Graphics* graphics) : m_graphics(graphi
 DX12DebugGraphics::~DX12DebugGraphics()
 {
     m_cubeParams.Destroy();
-    m_sceneParams.Destroy();
 }
 
 void DX12DebugGraphics::InitCubeRenderer()
@@ -90,35 +89,12 @@ void DX12DebugGraphics::InitCubeRenderer()
 
     {
         size_t constBufSizes[] = {
-            MemoryUtils::Align<256>(sizeof(SceneData)),
-        };
-
-        m_sceneParams.Init(m_device, 1, 3, 0, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
-
-        m_builtInCBVs[0] = m_sceneParams.m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
-    }
-
-    {
-        size_t constBufSizes[] = {
-            MemoryUtils::Align<256>(sizeof(CameraData)),
             MemoryUtils::Align<256>(sizeof(ObjectData)),
         };
 
-        m_cubeParams.Init(m_device, 32, 4, 1, 2, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
+        m_cubeParams.Init(m_device, 32, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
     }
 
-}
-
-void DX12DebugGraphics::SetCamera(const Mat4& view, const Mat4& proj)
-{
-}
-
-void DX12DebugGraphics::BeginDrawBatch(GraphicsCommandList* cmdList, DEBUG_GRAPHICS_MODE mode)
-{
-}
-
-void DX12DebugGraphics::EndDrawBatch()
-{
 }
 
 void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
@@ -127,66 +103,80 @@ void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
 
 void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color)
 {
-    static float t = 0;
     auto dt = m_graphics->GetRenderingSystem()->GetScene()->Dt();
-    t += dt;
-
-    {
-        auto head = m_sceneParams.AllocateConstantBufferWriteHead();
-        auto scene = (SceneData*)m_sceneParams.GetConstantBuffer(head, 0);
-        scene->t = t;
-    }
-
     {
         static auto transform = Mat4::Identity();
 
         // write all data for rendering
         auto head = m_cubeParams.AllocateConstantBufferWriteHead();
-
-        auto camData = (CameraData*)m_cubeParams.GetConstantBuffer(head, 1);
         auto objectData = (ObjectData*)m_cubeParams.GetConstantBuffer(head, 2);
-
-        camData->vp =
-            Mat4::Identity().SetLookAtLH({ 0, 0, 10 }, { 0,0,0 }, Vec3::UP)
-            * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 16 / 9.0f, 0.01f, 1000);
 
         transform *= 
               Mat4::Rotation(Vec3::LEFT,    dt * PI / 5.0f)
             * Mat4::Rotation(Vec3::FORWARD, dt * PI / 3.0f)
-            * Mat4::Rotation(Vec3::UP,      dt * PI / 6.0f);
+            * Mat4::Rotation(Vec3::UP,      -dt * PI / 6.0f);
 
         objectData->transform = transform;
     }
 
+    if (m_cubeParams.IsNeedFlush())
     {
-        // render
-        auto cmdList = m_graphics->m_commandList;
-        cmdList->SetPipelineState(m_cubePSO.Get());
-        cmdList->IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        m_sceneParams.BeginRenderingAsBuiltInParam(cmdList);
-
-        m_cubeParams.RenderBatch(
-            m_graphics,
-            m_device,
-            m_graphics->m_commandQueue.Get(),
-            cmdList,
-            &m_graphics->m_renderRooms,
-            1,m_builtInCBVs,
-            0,0,
-            [&]()
-            {
-                cmdList->DrawInstanced(36, 1, 0, 0);
-            }
-        );
-
-        m_sceneParams.EndRenderingAsBuiltInParam(m_graphics->m_commandQueue.Get());
+        RenderCubes();
     }
-    
 }
 
 void DX12DebugGraphics::DrawSphere(const Sphere& sphere, const Vec4& color)
 {
+}
+
+void DX12DebugGraphics::BeginFrame()
+{
+}
+
+void DX12DebugGraphics::EndFrame()
+{
+    
+}
+
+void DX12DebugGraphics::BeginCamera()
+{
+}
+
+void DX12DebugGraphics::EndCamera()
+{
+    while (m_cubeParams.IsRemainBatch())
+    {
+        RenderCubes();
+    }
+}
+
+void DX12DebugGraphics::RenderCubes()
+{
+    // render
+    auto cmdList = m_graphics->m_commandList;
+    cmdList->SetPipelineState(m_cubePSO.Get());
+    cmdList->IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    //m_sceneParams.BeginRenderingAsBuiltInParam(cmdList, m_builtInCBVs, m_builtInSRVs);
+    //m_cameraParams.BeginRenderingAsBuiltInParam(cmdList, m_builtInCBVs + 1, m_builtInSRVs + 1);
+
+    auto& builtInCBVs = m_graphics->m_builtInCBVs;
+    m_cubeParams.RenderBatch(
+        m_graphics,
+        m_device,
+        m_graphics->m_commandQueue.Get(),
+        cmdList,
+        &m_graphics->m_renderRooms,
+        2, builtInCBVs,
+        0, 0,
+        [&]()
+        {
+            cmdList->DrawInstanced(36, 1, 0, 0);
+        }
+    );
+
+    //m_cameraParams.EndRenderingAsBuiltInParam(m_graphics->m_commandQueue.Get());
+    //m_sceneParams.EndRenderingAsBuiltInParam(m_graphics->m_commandQueue.Get());
 }
 
 NAMESPACE_DX12_END

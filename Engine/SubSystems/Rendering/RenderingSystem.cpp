@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "Components/Rendering/Rendering.h"
+#include "Components/Rendering/Camera.h"
 
 #include "Graphics/Graphics.h"
 #include "Graphics/GraphicsCommandList.h"
@@ -26,17 +27,23 @@ void RenderingSystem::Iteration(float dt)
 
 	if (!graphics) return;
 
+	auto dbg = graphics->GetDebugGraphics();
+
 	graphics->Bind(this);
 
 	graphics->BeginFrame(&cmdList);
 
-	auto dbg = graphics->GetDebugGraphics();
-
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
 
-	dbg->BeginDrawBatch(cmdList);
-	dbg->DrawCube({}, {});
-	dbg->EndDrawBatch();
+	if (!m_cameraObjects.empty())
+	{
+		auto mainCam = m_cameraObjects[0];
+		graphics->BeginCamera(mainCam->GetComponentRaw<Camera>());
+
+		dbg->DrawCube({}, {});
+
+		graphics->EndCamera(mainCam->GetComponentRaw<Camera>());
+	}
 
 	graphics->EndFrame(&cmdList);
 }

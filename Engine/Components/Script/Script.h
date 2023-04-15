@@ -44,8 +44,8 @@ private:
 	inline void BeginUpdate()
 	{
 		auto& transform = m_object->m_transform;
-		m_transform = transform.GetWriteHead();
-		auto read = transform.GetReadHead();
+		m_transform = &transform.GetWriteHead()->transform;
+		auto read = &transform.GetReadHead()->transform;
 		*m_transform = *read;
 	}
 

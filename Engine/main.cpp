@@ -30,7 +30,7 @@ int main()
 	Random::Initialize();
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
-	TaskWorker::Initalize(StartupConfig::Get().maxThreads);
+	TaskWorker::Initalize(StartupConfig::Get().maxThreads, StartupConfig::Get().reservedThread);
 
 	auto sys = soft::gc::g_system;
 

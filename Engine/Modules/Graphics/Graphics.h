@@ -13,6 +13,7 @@ enum class GRAPHICS_BACKEND_API
 class DebugGraphics;
 class GraphicsCommandList;
 class RenderingSystem;
+class Camera;
 
 class Graphics : public Singleton<Graphics>
 {
@@ -31,6 +32,9 @@ public:
 public:
 	virtual void BeginFrame(GraphicsCommandList** cmdList) = 0;
 	virtual void EndFrame(GraphicsCommandList** cmdList) = 0;
+
+	virtual void BeginCamera(Camera* camera) = 0;
+	virtual void EndCamera(Camera* camera) = 0;
 
 public:
 	inline auto GetDebugGraphics()

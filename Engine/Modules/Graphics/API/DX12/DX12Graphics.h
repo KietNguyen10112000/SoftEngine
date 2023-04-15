@@ -6,6 +6,7 @@
 #include "DX12RingBufferCommandList.h"
 #include "DX12GraphicsCommandList.h"
 #include "DX12RenderRooms.h"
+#include "DX12RenderParams.h"
 
 NAMESPACE_DX12_BEGIN
 
@@ -17,7 +18,7 @@ public:
 
 	//constexpr static size_t GPU_DESCRIPTOR_HEAP_SIZE	= 64*KB;
 
-	constexpr static size_t NUM_RENDER_ROOMS			= 2*KB;
+	constexpr static size_t NUM_RENDER_ROOMS			= 30*KB;
 
 	ComPtr<ID3D12DescriptorHeap>            m_rtvDescriptorHeap;
 	ComPtr<ID3D12Resource>                  m_renderTargets		[NUM_GRAPHICS_BACK_BUFFERS];
@@ -46,8 +47,14 @@ public:
 	D3D12_VIEWPORT							m_backBufferViewport	= {};
 	DX12RenderRooms							m_renderRooms;
 
-	
-	ComPtr<ID3D12DescriptorHeap>			m_gpuDescriptorHeap;
+
+	DX12RenderParams						m_sceneParams;
+	DX12RenderParams						m_cameraParams;
+	size_t									m_numBuiltInSRV = 2;
+	size_t									m_numBuiltInCBV = 2;
+	D3D12_CPU_DESCRIPTOR_HANDLE				m_builtInCBVs[2] = {};
+	D3D12_CPU_DESCRIPTOR_HANDLE				m_builtInSRVs[2] = {};
+
 
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
 	ComPtr<ID3D12Device2>                   m_device;
@@ -66,10 +73,15 @@ private:
 	void InitCommandLists();
 	void InitRenderRooms();
 
+	void InitBuiltInParams();
+
 public:
 	// Inherited via Graphics
 	virtual void BeginFrame(GraphicsCommandList** cmdList) override;
 	virtual void EndFrame(GraphicsCommandList** cmdList) override;
+
+	virtual void BeginCamera(Camera* camera) override;
+	virtual void EndCamera(Camera* camera) override;
 
 public:
 	void BeginCommandList();

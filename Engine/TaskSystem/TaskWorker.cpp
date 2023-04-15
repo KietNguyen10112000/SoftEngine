@@ -5,11 +5,14 @@ NAMESPACE_BEGIN
 TaskWorker TaskWorker::s_workers[FiberInfo::TOTAL_FIBERS] = {};
 size_t TaskWorker::s_totalInitializedWorker = 0;
 
-void TaskWorker::Initalize(size_t maxWorker)
+void TaskWorker::Initalize(size_t maxWorker, size_t reservedThread)
 {
 	auto numThreads = std::thread::hardware_concurrency();
 	numThreads = std::min((uint32_t)maxWorker, numThreads);
 	numThreads = std::min((uint32_t)FiberInfo::TOTAL_FIBERS, numThreads);
+
+	assert(numThreads > reservedThread);
+	numThreads -= reservedThread;
 
 	s_totalInitializedWorker = numThreads;
 	TaskSystem::s_workersCount = s_totalInitializedWorker;

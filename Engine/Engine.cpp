@@ -19,6 +19,7 @@
 
 
 #include "Components/Script/Script.h"
+#include "Components/Rendering/Camera.h"
 
 #include "Input/Input.h"
 #include "Graphics/Graphics.h"
@@ -55,10 +56,10 @@ Engine::Engine()
 	{
 		m_input = rheap::New<Input>();
 		m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
-		if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
+		/*if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
 		{
 			m_isRunning = false;
-		}
+		}*/
 	}
 }
 
@@ -141,47 +142,96 @@ void Engine::Setup()
 	auto aabb = (AABox*)&dynamicObj->GetAABB();
 	*aabb = {};*/
 
-	class MyScript : public Script
 	{
-	public:
-		~MyScript()
+		class MyScript : public Script
 		{
-			std::cout << "MyScript::~MyScript()\n";
-		}
-
-		virtual void OnStart() override
-		{
-			std::cout << "MyScript::OnStart()\n";
-		}
-
-		virtual void OnUpdate(float dt) override
-		{
-			//std::cout << dt << '\n';
-			if (Input()->IsKeyPressed('A'))
+		public:
+			~MyScript()
 			{
-				std::cout << "Pressed\n";
+				std::cout << "MyScript::~MyScript()\n";
 			}
-		}
 
-	};
+			virtual void OnStart() override
+			{
+				std::cout << "MyScript::OnStart()\n";
+			}
 
-	auto object = mheap::New<GameObject>();
-	auto aabb = (AABox*)&object->GetAABB();
-	*aabb = {
-			Vec3(
-				Random::RangeFloat(-rangeX, rangeX),
-				Random::RangeFloat(-rangeY, rangeY),
-				Random::RangeFloat(-rangeZ, rangeZ)
-			),
+			virtual void OnUpdate(float dt) override
+			{
+				//std::cout << dt << '\n';
+				if (Input()->IsKeyPressed('U'))
+				{
+					std::cout << "Pressed\n";
+				}
+			}
 
-			Vec3(
-				Random::RangeFloat(1, rangeDimX),
-				Random::RangeFloat(1, rangeDimY),
-				Random::RangeFloat(1, rangeDimZ)
-			),
-	};
-	auto script = object->NewComponent<MyScript>();
-	mainScene->AddObject(object);
+		};
+
+		auto object = mheap::New<GameObject>();
+		auto aabb = (AABox*)&object->GetAABB();
+		*aabb = {
+				Vec3(
+					Random::RangeFloat(-rangeX, rangeX),
+					Random::RangeFloat(-rangeY, rangeY),
+					Random::RangeFloat(-rangeZ, rangeZ)
+				),
+
+				Vec3(
+					Random::RangeFloat(1, rangeDimX),
+					Random::RangeFloat(1, rangeDimY),
+					Random::RangeFloat(1, rangeDimZ)
+				),
+		};
+		auto script = object->NewComponent<MyScript>();
+		mainScene->AddObject(object);
+	}
+	
+	{
+		class CameraScript : public Script
+		{
+		public:
+			~CameraScript()
+			{
+				std::cout << "CameraScript::~CameraScript()\n";
+			}
+
+			virtual void OnStart() override
+			{
+				std::cout << "CameraScript::OnStart()\n";
+			}
+
+			virtual void OnUpdate(float dt) override
+			{
+				if (Input()->IsKeyDown('W'))
+				{
+					Transform().Translation() -= Vec3::FORWARD * dt * 20;
+				}
+
+				if (Input()->IsKeyDown('S'))
+				{
+					Transform().Translation() += Vec3::FORWARD * dt * 20;
+				}
+			}
+
+		};
+
+		auto object = mheap::New<GameObject>();
+		auto aabb = (AABox*)&object->GetAABB();
+		*aabb = {
+				Vec3(0,0,0),
+				Vec3(0.01f, 0.01f, 0.01f),
+		};
+
+		auto camera = object->NewComponent<Camera>(PI / 3.0f, 16 / 9.0f, 0.01f, 1000.0f);
+		object->InitializeTransform(
+			Mat4::Identity().SetLookAtLH({ 0, 0, 10 }, { 0,0,0 }, Vec3::UP).Inverse()
+		);
+
+		object->NewComponent<CameraScript>();
+
+		mainScene->AddObject(object);
+	}
+
 }
 
 void Engine::Run()

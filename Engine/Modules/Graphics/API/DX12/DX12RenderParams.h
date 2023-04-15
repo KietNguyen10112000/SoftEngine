@@ -2,12 +2,13 @@
 
 #include "TypeDef.h"
 #include "DX12RenderRooms.h"
-#include "DX12Graphics.h"
 
 #include "Core/Memory/MemoryUtils.h"
 #include "Core/Memory/Memory.h"
 
 NAMESPACE_DX12_BEGIN
+
+class DX12Graphics;
 
 class DX12RenderParams
 {
@@ -47,7 +48,7 @@ public:
 		DX12SynchObject* synch
 	) {
 		m_synchObject = synch;
-        m_cbBatchFenceValues = rheap::New<UINT64>(numBatches);
+        m_cbBatchFenceValues = rheap::NewArray<UINT64>(numBatches);
         ::memset(m_cbBatchFenceValues, 0, sizeof(UINT64) * numBatches);
 
         m_numCBVs = numCBV;
@@ -182,6 +183,8 @@ public:
                 gpuAddr += constBufSizes[i];
                 cpuAddr.ptr += cpuDescriptorSize;
             }
+
+            cpuAddr.ptr += cpuDescriptorSize * m_numSRVs;
         }
 
     }
@@ -210,6 +213,11 @@ public:
     inline bool IsNeedFlush()
     {
         return m_curCBInBatchIdx >= m_numElmPerBatch;
+    }
+
+    inline bool IsRemainBatch()
+    {
+        return m_curCBInBatchIdx != 0;
     }
 
     // flush data to render
@@ -250,37 +258,34 @@ public:
         return EndRenderingBatch(graphics, commandQueue, cmdList);
     }
 
-    inline UINT64 EndRenderingBatch(DX12Graphics* graphics, ID3D12CommandQueue* commandQueue, ID3D12GraphicsCommandList* cmdList)
-    {
-        m_curBatchIdx = (m_curBatchIdx + 1) % m_numBatches;
-
-        graphics->EndCommandList();
-        m_cbBatchFenceValues[m_curBatchIdx] = m_synchObject->MakeBarrier(commandQueue);
-        graphics->BeginCommandList();
-        
-        auto waitBatch = (m_curBatchIdx + 1) % m_numBatches;
-
-        assert(m_curCBInBatchIdx < 2 * m_numElmPerBatch);
-        if (m_curCBInBatchIdx >= m_numElmPerBatch)
-        {
-            m_curCBInBatchIdx -= m_numElmPerBatch;
-        }
-        else
-        {
-            m_curCBInBatchIdx = 0;
-        }
-
-        m_synchObject->WaitFor(m_cbBatchFenceValues[waitBatch]);
-        return m_cbBatchFenceValues[m_curBatchIdx];
-    }
+    UINT64 EndRenderingBatch(DX12Graphics* graphics, 
+        ID3D12CommandQueue* commandQueue, ID3D12GraphicsCommandList* cmdList);
 
 
     // for using params as builtin params
-    inline void BeginRenderingAsBuiltInParam(ID3D12GraphicsCommandList* cmdList)
+    inline void BeginRenderingAsBuiltInParam(ID3D12GraphicsCommandList* cmdList, 
+        D3D12_CPU_DESCRIPTOR_HANDLE* outputCBVs, D3D12_CPU_DESCRIPTOR_HANDLE* outputSRVs)
     {
         auto offset = m_curBatchIdx * m_numElmPerBatch * m_cbStride;
         cmdList->CopyBufferRegion(m_gpuConstBuf.Get(), offset, m_uploadConstBuf.Get(),
             offset, m_numElmPerBatch * m_cbStride);
+
+        auto cpuTable = m_cpuHandle;
+        auto cpuDescriptorSize = m_descriptorHandleSize;
+
+        cpuTable.ptr += cpuDescriptorSize * m_curBatchIdx * m_numElmPerBatch * m_numDescriptorsPerRoom;
+
+        for (size_t i = 0; i < m_numCBVs; i++)
+        {
+            outputCBVs[i] = cpuTable;
+            cpuTable.ptr += cpuDescriptorSize;
+        }
+
+        for (size_t i = 0; i < m_numSRVs; i++)
+        {
+            outputSRVs[i] = cpuTable;
+            cpuTable.ptr += cpuDescriptorSize;
+        }
     }
 
     inline void EndRenderingAsBuiltInParam(ID3D12CommandQueue* commandQueue)

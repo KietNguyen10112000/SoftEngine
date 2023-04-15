@@ -138,7 +138,15 @@ void Scene::RefreshObject(GameObject* obj)
 			);
 
 			object->m_aabb = globalAABB;
-			object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->ToTransformMatrix());
+
+			if (object->IsTransformMat4())
+			{
+				object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->mat);
+			}
+			else
+			{
+				object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->transform.ToTransformMatrix());
+			}
 		}
 	);
 

@@ -99,7 +99,7 @@ public:
 	}
 
 public:
-	static void Initalize(size_t maxWorker = 8);
+	static void Initalize(size_t maxWorker = 8, size_t reservedThread = 2);
 	static void Finalize();
 
 	// get the current task worker of current fiber

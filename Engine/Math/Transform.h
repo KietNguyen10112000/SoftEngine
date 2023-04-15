@@ -28,17 +28,17 @@ public:
 	}
 
 public:
-	inline auto& Scale() const
+	inline auto& Scale()
 	{
-		return m_scale;
+		return m_scale.xyz();
 	}
 
-	inline auto& Translation() const
+	inline auto& Translation()
 	{
-		return m_translation;
+		return m_translation.xyz();
 	}
 
-	inline auto& Rotation() const
+	inline auto& Rotation()
 	{
 		return m_rotation;
 	}

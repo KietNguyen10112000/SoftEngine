@@ -8,6 +8,9 @@ class Scene;
 
 class RenderingSystem : public SubSystem
 {
+private:
+	std::Vector<GameObject*> m_cameraObjects;
+
 public:
 	RenderingSystem(Scene* scene);
 
@@ -17,6 +20,12 @@ public:
 	virtual void Iteration(float dt) override;
 
 	virtual void PostIteration(float dt) override;
+
+public:
+	inline void AddCamera(GameObject* obj)
+	{
+		m_cameraObjects.push_back(obj);
+	}
 
 };
 
