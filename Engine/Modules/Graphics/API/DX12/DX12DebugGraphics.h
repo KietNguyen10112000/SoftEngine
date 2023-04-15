@@ -17,8 +17,14 @@ public:
 	ID3D12Device2* m_device;
 
 
+	DX12RenderParams m_sceneParams;
 	DX12RenderParams m_cubeParams;
 	ComPtr<ID3D12PipelineState> m_cubePSO;
+
+	size_t m_numBuiltInSRV = 2;
+	size_t m_numBuiltInCBV = 2;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_builtInCBVs[2] = {};
+	D3D12_CPU_DESCRIPTOR_HANDLE m_builtInSRVs[2] = {};
 
 public:
 	DX12DebugGraphics(DX12Graphics* graphics);

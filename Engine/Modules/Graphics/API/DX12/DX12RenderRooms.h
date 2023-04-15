@@ -126,7 +126,12 @@ public:
 
 	// prepare cbv, srv for rendering pipeline
 	// srcParamsTable is addr of DescriptorHeap contains NUM_PARAMS_PER_PSO (cbv + srv) from cpu side
-	inline void PrepareARoom(D3D12_CPU_DESCRIPTOR_HANDLE srcParamsTable, size_t numSrcDescriptor, ID3D12GraphicsCommandList* cmdList)
+	inline void PrepareARoom(
+		size_t numBuiltInCBV, D3D12_CPU_DESCRIPTOR_HANDLE* srcBuiltInCBVs,
+		size_t numCBV, D3D12_CPU_DESCRIPTOR_HANDLE srcCBVTable,
+		size_t numBuiltInSRV, D3D12_CPU_DESCRIPTOR_HANDLE* srcBuiltInSRVs,
+		size_t numSRV, D3D12_CPU_DESCRIPTOR_HANDLE srcSRVTable,
+		ID3D12GraphicsCommandList* cmdList)
 	{
 		// wait for current room available
 		m_synchObject->WaitFor(m_roomFenceValue[m_curRoomIdx]);
@@ -137,7 +142,41 @@ public:
 		D3D12_CPU_DESCRIPTOR_HANDLE dest = m_gpuDescriptorHeapCPUAddr;
 		dest.ptr += offset;
 
-		m_device->CopyDescriptorsSimple(numSrcDescriptor, dest, srcParamsTable, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+		// copy CBVs to shader visible descriptor heap
+		if (numBuiltInCBV)
+		{
+			for (size_t i = 0; i < numBuiltInCBV; i++)
+			{
+				m_device->CopyDescriptorsSimple(1, dest, srcBuiltInCBVs[i], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				dest.ptr += m_gpuDescriptorHeapCPUAddrSize;
+			}
+		}
+
+		if (numCBV)
+		{
+			m_device->CopyDescriptorsSimple(numCBV, dest, srcCBVTable, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+
+
+		// copy SRVs to shader visible descriptor heap
+		dest = m_gpuDescriptorHeapCPUAddr;
+		dest.ptr += offset + NUM_CBV_PER_PSO * m_gpuDescriptorHeapCPUAddrSize;
+
+		if (numBuiltInSRV)
+		{
+			for (size_t i = 0; i < numBuiltInSRV; i++)
+			{
+				m_device->CopyDescriptorsSimple(1, dest, srcBuiltInSRVs[i], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				dest.ptr += m_gpuDescriptorHeapCPUAddrSize;
+			}
+		}
+
+		if (numSRV)
+		{
+			m_device->CopyDescriptorsSimple(numSRV, dest, srcSRVTable, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		}
+
 
 		m_curRoomIdx = (m_curRoomIdx + 1) % m_roomCount;
 

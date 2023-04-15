@@ -31,16 +31,18 @@ public:
     size_t                          m_numBatches            = 0;
     UINT64*                         m_cbBatchFenceValues    = nullptr;
     size_t                          m_cbAccessIdx[DX12RenderRooms::NUM_CBV_PER_PSO] = {};
-    size_t                          m_numDescriptors        = 0;
+    size_t                          m_numDescriptorsPerRoom = 0;
+    size_t                          m_numCBVs               = 0;
+    size_t                          m_numSRVs               = 0;
 
 
     // size of constant buffer must 256 bytes alignment
 	inline void Init(
 		ID3D12Device1* device,
 		size_t numElmPerBatch, size_t numBatches,
-        size_t numBuiltInCBV, size_t* builtInCBVIndices, D3D12_CPU_DESCRIPTOR_HANDLE builtInCBVDescriptorTable,
+        size_t numBuiltInCBV,
 		size_t numCBV, size_t* constBufSizes,
-        size_t numBuiltInSRV, size_t* builtInSRVIndices, D3D12_CPU_DESCRIPTOR_HANDLE builtInSRVDescriptorTable,
+        size_t numBuiltInSRV,
 		size_t numSRV, void** shaderResourceGPUAddresses,
 		DX12SynchObject* synch
 	) {
@@ -48,13 +50,22 @@ public:
         m_cbBatchFenceValues = rheap::New<UINT64>(numBatches);
         ::memset(m_cbBatchFenceValues, 0, sizeof(UINT64) * numBatches);
 
+        m_numCBVs = numCBV;
+        m_numSRVs = numSRV;
+
         assert(numCBV <= DX12RenderRooms::NUM_CBV_PER_PSO);
-        m_numDescriptors = numCBV + numSRV;
+        m_numDescriptorsPerRoom = numCBV + numSRV;
 
         size_t cbSize = 0;
+
+        for (size_t i = 0; i < numBuiltInCBV; i++)
+        {
+            m_cbAccessIdx[i] = -1;
+        }
+
         for (size_t i = 0; i < numCBV; i++)
         {
-            m_cbAccessIdx[i] = cbSize;
+            m_cbAccessIdx[i + numBuiltInCBV] = cbSize;
 
             // must be 256 bytes alignment
             assert(MemoryUtils::Align<256>(constBufSizes[i]) == constBufSizes[i]);
@@ -66,9 +77,9 @@ public:
         m_numElmPerBatch    = numElmPerBatch;
 
         InitResource(device, cbSize * numElmPerBatch * numBatches, 
-            numElmPerBatch * numBatches * DX12RenderRooms::NUM_PARAMS_PER_PSO);
+            numElmPerBatch * numBatches * m_numDescriptorsPerRoom);
         InitCBVDescriptorHeap(device, numElmPerBatch, numBatches, numBuiltInCBV, 
-            builtInCBVIndices, builtInCBVDescriptorTable, numCBV, constBufSizes);
+            numCBV, constBufSizes);
 
         if (numSRV || numBuiltInSRV)
         {
@@ -137,7 +148,7 @@ public:
 
     inline void InitCBVDescriptorHeap(ID3D12Device1* device, 
         size_t numElmPerBatch, size_t numBatches,
-        size_t numBuiltIn, size_t* builtInIndices, D3D12_CPU_DESCRIPTOR_HANDLE builtInDescriptorTable,
+        size_t numBuiltIn,
         size_t numCBV, size_t* constBufSizes)
     {
         D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
@@ -150,18 +161,17 @@ public:
         auto cpuDescriptorSize = m_descriptorHandleSize;
         auto total = numElmPerBatch * numBatches;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE builtInHandle = builtInDescriptorTable;
+        D3D12_CPU_DESCRIPTOR_HANDLE builtInHandle = {};
 
         for (size_t j = 0; j < total; j++)
         {
             // set n descriptors first as built in constant buffer
-            for (size_t i = 0; i < numBuiltIn; i++)
+            /*for (size_t i = 0; i < numBuiltIn; i++)
             {
-                builtInHandle = builtInDescriptorTable;
-                builtInHandle.ptr += cpuDescriptorSize * builtInIndices[i];
+                builtInHandle = builtInDescriptors[i];
                 device->CopyDescriptorsSimple(1, cpuAddr, builtInHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                 cpuAddr.ptr += cpuDescriptorSize;
-            }
+            }*/
 
             for (size_t i = 0; i < numCBV; i++)
             {
@@ -176,7 +186,7 @@ public:
 
     }
 
-    inline byte* GetConstantBufferWriteHead()
+    inline byte* AllocateConstantBufferWriteHead()
     {
         auto ret = m_curCBInBatchIdx;
         m_curCBInBatchIdx++;
@@ -188,10 +198,12 @@ public:
 
 
     // get constant buffer shader register at index
-    // auto head = GetConstantBufferWriteHead()
+    // auto head = AllocateConstantBufferWriteHead()
     // auto buf = GetConstantBuffer(head, 0)
+    // built-in constant buffer cannot be modified,
     inline byte* GetConstantBuffer(byte* writeHead, size_t index)
     {
+        if (m_cbAccessIdx[index] == -1) return nullptr;
         return &writeHead[m_cbAccessIdx[index]];
     }
 
@@ -202,12 +214,14 @@ public:
 
     // flush data to render
     template <typename FUNC>
-    inline void RenderBatch(
+    inline UINT64 RenderBatch(
         DX12Graphics* graphics,
         ID3D12Device1* device, 
         ID3D12CommandQueue* commandQueue, 
         ID3D12GraphicsCommandList* cmdList, 
         DX12RenderRooms* rooms,
+        size_t numBuiltInCBV, D3D12_CPU_DESCRIPTOR_HANDLE* srcBuiltInCBVs,
+        size_t numBuiltInSRV, D3D12_CPU_DESCRIPTOR_HANDLE* srcBuiltInSRVs,
         FUNC drawcall)
     {
         auto offset = m_curBatchIdx * m_numElmPerBatch * m_cbStride;
@@ -219,20 +233,24 @@ public:
         auto cpuTable = m_cpuHandle;
         auto cpuDescriptorSize = m_descriptorHandleSize;
 
-        cpuTable.ptr += cpuDescriptorSize * m_curBatchIdx * m_numElmPerBatch * m_numDescriptors;
+        cpuTable.ptr += cpuDescriptorSize * m_curBatchIdx * m_numElmPerBatch * m_numDescriptorsPerRoom;
+
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuSRVTable = cpuTable;
+        cpuSRVTable.ptr += cpuDescriptorSize * m_numCBVs;
 
         auto num = std::min(m_curCBInBatchIdx, m_numElmPerBatch);
         for (size_t i = 0; i < num; i++)
         {
-            rooms->PrepareARoom(cpuTable, m_numDescriptors, cmdList);
+            rooms->PrepareARoom(numBuiltInCBV, srcBuiltInCBVs, m_numCBVs, cpuTable, 
+                numBuiltInSRV, srcBuiltInSRVs, m_numSRVs, cpuSRVTable, cmdList);
             drawcall();
             cpuTable.ptr += cpuDescriptorSize * DX12RenderRooms::NUM_PARAMS_PER_PSO;
         }
 
-        EndRenderingBatch(graphics, commandQueue, cmdList);
+        return EndRenderingBatch(graphics, commandQueue, cmdList);
     }
 
-    inline void EndRenderingBatch(DX12Graphics* graphics, ID3D12CommandQueue* commandQueue, ID3D12GraphicsCommandList* cmdList)
+    inline UINT64 EndRenderingBatch(DX12Graphics* graphics, ID3D12CommandQueue* commandQueue, ID3D12GraphicsCommandList* cmdList)
     {
         m_curBatchIdx = (m_curBatchIdx + 1) % m_numBatches;
 
@@ -240,6 +258,37 @@ public:
         m_cbBatchFenceValues[m_curBatchIdx] = m_synchObject->MakeBarrier(commandQueue);
         graphics->BeginCommandList();
         
+        auto waitBatch = (m_curBatchIdx + 1) % m_numBatches;
+
+        assert(m_curCBInBatchIdx < 2 * m_numElmPerBatch);
+        if (m_curCBInBatchIdx >= m_numElmPerBatch)
+        {
+            m_curCBInBatchIdx -= m_numElmPerBatch;
+        }
+        else
+        {
+            m_curCBInBatchIdx = 0;
+        }
+
+        m_synchObject->WaitFor(m_cbBatchFenceValues[waitBatch]);
+        return m_cbBatchFenceValues[m_curBatchIdx];
+    }
+
+
+    // for using params as builtin params
+    inline void BeginRenderingAsBuiltInParam(ID3D12GraphicsCommandList* cmdList)
+    {
+        auto offset = m_curBatchIdx * m_numElmPerBatch * m_cbStride;
+        cmdList->CopyBufferRegion(m_gpuConstBuf.Get(), offset, m_uploadConstBuf.Get(),
+            offset, m_numElmPerBatch * m_cbStride);
+    }
+
+    inline void EndRenderingAsBuiltInParam(ID3D12CommandQueue* commandQueue)
+    {
+        m_curBatchIdx = (m_curBatchIdx + 1) % m_numBatches;
+
+        m_cbBatchFenceValues[m_curBatchIdx] = m_synchObject->MakeBarrier(commandQueue);
+
         auto waitBatch = (m_curBatchIdx + 1) % m_numBatches;
 
         assert(m_curCBInBatchIdx < 2 * m_numElmPerBatch);

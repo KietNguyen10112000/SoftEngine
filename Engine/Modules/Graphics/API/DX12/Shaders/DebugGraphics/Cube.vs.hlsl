@@ -71,12 +71,17 @@ struct VS_OUTPUT
     float4 color        : COLOR;
 };
 
-cbuffer CameraCBuffer : register(b0)
+cbuffer SceneCBuffer : register(b0)
+{
+    SceneData Scene;
+};
+
+cbuffer CameraCBuffer : register(b1)
 {
     CameraData Camera;
 };
 
-cbuffer ObjectCBuffer : register(b1)
+cbuffer ObjectCBuffer : register(b2)
 {
     ObjectData Object;
     float4     Color;
@@ -91,6 +96,9 @@ VS_OUTPUT main(VS_INPUT input)
     output.position = mul(output.position, Object.transform);
 	output.position = mul(output.position, Camera.vp);
 	output.color = float4(pos / 3.0f + 0.6f, 1.0f);
+
+    output.color.x = sin(Scene.t * PI / 3.0f) + 1.0f;
+    //output.color.y = cos(Scene.t * PI / 4.0f) + 1.0f;
 
 	return output;
 }
