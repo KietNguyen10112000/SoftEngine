@@ -141,6 +141,11 @@ public:
 	Scene(Engine* engine);
 	virtual ~Scene();
 
+	void Setup();
+
+	// call me at child class destructor
+	void Dtor();
+
 private:
 	inline ID GetSceneId(bool isDynamic)
 	{

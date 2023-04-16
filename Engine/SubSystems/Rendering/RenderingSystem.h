@@ -2,6 +2,8 @@
 
 #include "SubSystems/SubSystem.h"
 
+#include "Objects/Scene/Scene.h"
+
 NAMESPACE_BEGIN
 
 class Scene;
@@ -10,6 +12,8 @@ class RenderingSystem : public SubSystem
 {
 private:
 	std::Vector<GameObject*> m_cameraObjects;
+
+	UniquePtr<SceneQuerySession> m_dynamicQuerySession;
 
 public:
 	RenderingSystem(Scene* scene);

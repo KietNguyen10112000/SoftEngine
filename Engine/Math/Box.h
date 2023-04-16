@@ -13,6 +13,12 @@ public:
 	Vec3 d2;
 	Vec3 d3;
 
+public:
+	inline static Box From(const AABox& aaBox)
+	{
+
+	}
+
 };
 
 }

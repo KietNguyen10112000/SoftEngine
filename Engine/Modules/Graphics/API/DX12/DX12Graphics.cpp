@@ -202,6 +202,8 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
     m_backBufferScissorRect.left    = 0;
     m_backBufferScissorRect.right   = WINDOW_WIDTH;
     m_backBufferScissorRect.bottom  = WINDOW_HEIGHT;
+
+    //m_swapChain->SetFullscreenState(true, nullptr);
 }
 
 void DX12Graphics::InitCommandLists()

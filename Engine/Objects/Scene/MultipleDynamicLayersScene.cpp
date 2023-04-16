@@ -20,7 +20,7 @@ MultipleDynamicLayersScene::MultipleDynamicLayersScene(Engine* engine) : Scene(e
 
 MultipleDynamicLayersScene::~MultipleDynamicLayersScene()
 {
-	
+	Scene::Dtor();
 }
 
 void MultipleDynamicLayersScene::AddDynamicObject(GameObject* obj)
@@ -89,7 +89,7 @@ UniquePtr<SceneQuerySession> MultipleDynamicLayersScene::NewDynamicQuerySession(
 
 void MultipleDynamicLayersScene::AABBDynamicQueryAABox(const AABox& aaBox, SceneQuerySession* session)
 {
-	auto ss = ((MultipleDynamicLayersSceneQuerySession*)session)->session;
+	auto& ss = ((MultipleDynamicLayersSceneQuerySession*)session)->session;
 	for (size_t i = 0; i < NUM_LAYERS; i++)
 	{
 		m_layers[i].AABBQueryAABox(aaBox, ss);
@@ -105,7 +105,7 @@ void MultipleDynamicLayersScene::AABBDynamicQueryAABox(const AABox& aaBox, Scene
 
 void MultipleDynamicLayersScene::AABBDynamicQueryFrustum(const Frustum& frustum, SceneQuerySession* session)
 {
-	auto ss = ((MultipleDynamicLayersSceneQuerySession*)session)->session;
+	auto& ss = ((MultipleDynamicLayersSceneQuerySession*)session)->session;
 	for (size_t i = 0; i < NUM_LAYERS; i++)
 	{
 		m_layers[i].AABBQueryFrustum(frustum, ss);

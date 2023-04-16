@@ -34,24 +34,44 @@ Scene::Scene(Engine* engine)
 
 	m_engine			= engine;
 	m_input				= engine->GetInput();
-	m_renderingSystem	= rheap::New<RenderingSystem>(this);
-	m_physicsSystem		= rheap::New<PhysicsSystem>(this);
-	m_scriptSystem		= rheap::New<ScriptSystem>(this);
+}
 
-	m_subSystems[Rendering::COMPONENT_ID]	= m_renderingSystem;
-	m_subSystems[Physics::COMPONENT_ID]		= m_physicsSystem;
-	m_subSystems[Script::COMPONENT_ID]		= m_scriptSystem;
+void Scene::Setup()
+{
+	m_renderingSystem = rheap::New<RenderingSystem>(this);
+	m_physicsSystem = rheap::New<PhysicsSystem>(this);
+	m_scriptSystem = rheap::New<ScriptSystem>(this);
+
+	m_subSystems[Rendering::COMPONENT_ID] = m_renderingSystem;
+	m_subSystems[Physics::COMPONENT_ID] = m_physicsSystem;
+	m_subSystems[Script::COMPONENT_ID] = m_scriptSystem;
+}
+
+void Scene::Dtor()
+{
+	if (m_renderingSystem)
+	{
+		rheap::Delete(m_renderingSystem);
+		m_renderingSystem = nullptr;
+	}
+
+	if (m_physicsSystem)
+	{
+		rheap::Delete(m_physicsSystem);
+		m_physicsSystem = nullptr;
+	}
+	
+	if (m_scriptSystem)
+	{
+		rheap::Delete(m_scriptSystem);
+		m_scriptSystem = nullptr;
+	}
 }
 
 Scene::~Scene()
 {
 	rheap::Delete(m_objectEventMgr);
 	rheap::Delete(m_staticObjsQueryStructure);
-
-
-	rheap::Delete(m_renderingSystem);
-	rheap::Delete(m_physicsSystem);
-	rheap::Delete(m_scriptSystem);
 }
 
 void Scene::AddObject(Handle<GameObject>& obj)

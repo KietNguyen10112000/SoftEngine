@@ -10,6 +10,12 @@
 
 NAMESPACE_DX12_BEGIN
 
+struct DX12DebugGraphics_ObjectCBuffer
+{
+    ObjectData Object;
+    Vec4     Color;
+};
+
 DX12DebugGraphics::DX12DebugGraphics(DX12Graphics* graphics) : m_graphics(graphics)
 {
 	m_device = graphics->m_device.Get();
@@ -99,6 +105,27 @@ void DX12DebugGraphics::InitCubeRenderer()
 
 void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
 {
+    auto center = aaBox.GetCenter();
+    auto dims = aaBox.GetDimensions();
+
+    auto pos = center - dims / 2.0f;
+
+    Mat4 transform = Mat4::Identity();
+    transform *= Mat4::Scaling(dims);
+    transform *= Mat4::Translation(pos);
+
+    {
+        // write all data for rendering
+        auto head = m_cubeParams.AllocateConstantBufferWriteHead();
+        auto objectData = (DX12DebugGraphics_ObjectCBuffer*)m_cubeParams.GetConstantBuffer(head, 2);
+        objectData->Object.transform = transform;
+        objectData->Color = color;
+    }
+
+    if (m_cubeParams.IsNeedFlush())
+    {
+        RenderCubes();
+    }
 }
 
 void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color)
@@ -127,16 +154,10 @@ void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color)
 
 void DX12DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color)
 {
-    struct ObjectCBuffer
-    {
-        ObjectData Object;
-        Vec4     Color;
-    };
-
     {
         // write all data for rendering
         auto head = m_cubeParams.AllocateConstantBufferWriteHead();
-        auto objectData = (ObjectCBuffer*)m_cubeParams.GetConstantBuffer(head, 2);
+        auto objectData = (DX12DebugGraphics_ObjectCBuffer*)m_cubeParams.GetConstantBuffer(head, 2);
         objectData->Object.transform = transform;
         objectData->Color = color;
     }

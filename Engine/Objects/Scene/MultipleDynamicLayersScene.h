@@ -13,6 +13,8 @@ struct MultipleDynamicLayersSceneQuerySession final : public SceneQuerySession
 	virtual void Clear()
 	{
 		session.Clear();
+		begin = 0;
+		end = 0;
 	}
 };
 

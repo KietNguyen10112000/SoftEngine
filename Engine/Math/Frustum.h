@@ -41,47 +41,62 @@ public:
 		auto* farPlane = &corners[4];
 
 		m_nearFace = Plane(nearPlane[0], nearPlane[1], nearPlane[2]);
+		MakeHull(m_nearFace, farPlane[0]);
 		m_farFace = Plane(farPlane[0], farPlane[1], farPlane[2]);
-		MakeHull(m_nearFace, m_farFace);
+		MakeHull(m_farFace, nearPlane[0]);
 
 		m_leftFace = Plane(nearPlane[0], nearPlane[3], farPlane[0]);
+		MakeHull(m_leftFace, nearPlane[1]);
 		m_rightFace = Plane(nearPlane[1], nearPlane[2], farPlane[1]);
-		MakeHull(m_leftFace, m_rightFace);
+		MakeHull(m_rightFace, nearPlane[0]);
 
 		m_topFace = Plane(nearPlane[0], nearPlane[1], farPlane[0]);
+		MakeHull(m_topFace, nearPlane[3]);
 		m_bottomFace = Plane(nearPlane[3], nearPlane[2], farPlane[3]);
-		MakeHull(m_topFace, m_bottomFace);
+		MakeHull(m_bottomFace, nearPlane[0]);
 	}
 
 private:
-	// make angle between plane1's normal and plane2's normal <is < PI / 2
-	inline void MakeHull(Plane& p1, Plane& p2)
+	//// make angle between plane1's normal and plane2's normal <is < PI / 2
+	//inline void MakeHull(Plane& p1, Plane& p2)
+	//{
+	//	auto n1 = p1.GetNormal();
+	//	auto n2 = p2.GetNormal();
+
+	//	auto dot = n1.Dot(n2);
+
+	//	if (dot <= 0)
+	//	{
+	//		return;
+	//	}
+
+	//	constexpr static float sign1[3] = { -1,  1, -1 };
+	//	constexpr static float sign2[3] = {  1, -1, -1 };
+
+	//	for (size_t i = 0; i < 3; i++)
+	//	{
+	//		auto tn1 = sign1[i] * n1;
+	//		auto tn2 = sign2[i] * n2;
+	//		
+	//		if (tn1.Dot(tn2) <= 0)
+	//		{
+	//			p1.normal = tn1;
+	//			p2.normal = tn2;
+	//			return;
+	//		}
+	//	}
+	//}
+
+	inline void MakeHull(Plane& p1, const Vec3& p)
 	{
 		auto n1 = p1.GetNormal();
-		auto n2 = p2.GetNormal();
 
-		auto dot = n1.Dot(n2);
-
-		if (dot >= 0)
+		if (p1.ValueAt(p) > 0)
 		{
 			return;
 		}
 
-		constexpr static float sign1[3] = { -1,  1, -1 };
-		constexpr static float sign2[3] = {  1, -1, -1 };
-
-		for (size_t i = 0; i < 3; i++)
-		{
-			auto tn1 = sign1[i] * n1;
-			auto tn2 = sign2[i] * n2;
-			
-			if (tn1.Dot(tn2) >= 0)
-			{
-				p1.normal = tn1;
-				p2.normal = tn2;
-				return;
-			}
-		}
+		p1.normal = -n1;
 	}
 
 public:
@@ -186,7 +201,9 @@ public:
 
 			// were all the points outside of plane p?
 			if (iInCount == 0)
+			{
 				return false;
+			}
 
 			// check if they were all on the right side of the plane
 			//iTotalIn += iPtIn;

@@ -84,6 +84,7 @@ void Engine::Setup()
 	DeferredBufferTracker::Get()->Reset();
 
 	auto scene = mheap::New<MultipleDynamicLayersScene>(this);
+	scene->Setup();
 	scene->m_id = 0;
 	m_scenes.Push(scene);
 
@@ -106,13 +107,21 @@ void Engine::Setup()
 	Handle<FunctionBase> fn1 = func1;
 	fn1->Invoke();*/
 
-	constexpr float rangeX = 1000;
+	/*constexpr float rangeX = 1000;
 	constexpr float rangeY = 1000;
 	constexpr float rangeZ = 1000;
 
 	constexpr float rangeDimX = 100;
 	constexpr float rangeDimY = 100;
-	constexpr float rangeDimZ = 100;
+	constexpr float rangeDimZ = 100;*/
+
+	constexpr float rangeX = 100;
+	constexpr float rangeY = 100;
+	constexpr float rangeZ = 100;
+
+	constexpr float rangeDimX = 10;
+	constexpr float rangeDimY = 10;
+	constexpr float rangeDimZ = 10;
 
 	auto mainScene = m_scenes[0].Get();
 	mainScene->BeginSetup();
@@ -276,8 +285,8 @@ void Engine::Setup()
 				if (Input()->IsCursorMoved())
 				{
 					auto& delta = Input()->GetDeltaCursorPosition();
-					m_rotateY += delta.x * dt * 2.0f;
-					m_rotateX -= delta.y * dt * 2.0f;
+					m_rotateY += delta.x * dt * m_rotationSensi;
+					m_rotateX -= delta.y * dt * m_rotationSensi;
 
 					m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 				}
@@ -292,9 +301,9 @@ void Engine::Setup()
 				Vec3(0.01f, 0.01f, 0.01f),
 		};
 
-		auto camera = object->NewComponent<Camera>(ToRadians(60), 16 / 9.0f, 0.01f, 1000.0f);
+		auto camera = object->NewComponent<Camera>(ToRadians(60), 16 / 9.0f, 0.5f, 1000.0f);
 		object->InitializeTransform(
-			Mat4::Identity().SetLookAtLH({ 0, 0, 10 }, { 0,0,0 }, Vec3::UP).Inverse()
+			Mat4::Identity().SetLookAtLH({ 10, 10, 10 }, { 0,0,0 }, Vec3::UP).Inverse()
 		);
 
 		object->NewComponent<CameraScript>();

@@ -13,6 +13,7 @@ NAMESPACE_BEGIN
 
 RenderingSystem::RenderingSystem(Scene* scene) : SubSystem(scene, Rendering::COMPONENT_ID)
 {
+	m_dynamicQuerySession = scene->NewDynamicQuerySession();
 }
 
 void RenderingSystem::PrevIteration(float dt)
@@ -21,9 +22,11 @@ void RenderingSystem::PrevIteration(float dt)
 
 void RenderingSystem::Iteration(float dt)
 {
-	static Mat4 xAxis = Mat4::Identity() * Mat4::Scaling(10000.0f, 0.05f, 0.05f);
-	static Mat4 yAxis = Mat4::Identity() * Mat4::Scaling(0.05f, 10000.0f, 0.05f);
-	static Mat4 zAxis = Mat4::Identity() * Mat4::Scaling(0.05f, 0.05f, 10000.0f);
+	constexpr float width = 0.05f;
+	static Mat4 xAxis = Mat4::Identity() * Mat4::Scaling(10000.0f, width, width);
+	static Mat4 yAxis = Mat4::Identity() * Mat4::Scaling(width, 10000.0f, width);
+	static Mat4 zAxis = Mat4::Identity() * Mat4::Scaling(width, width, 10000.0f);
+	static Mat4 rootPoint = Mat4::Identity() * Mat4::Scaling(0.1f, 0.1f, 0.1f);
 
 	GraphicsCommandList* cmdList = nullptr;
 
@@ -42,16 +45,56 @@ void RenderingSystem::Iteration(float dt)
 	if (!m_cameraObjects.empty())
 	{
 		auto mainCam = m_cameraObjects[0];
-		graphics->BeginCamera(mainCam->GetComponentRaw<Camera>());
+		auto cam = mainCam->GetComponentRaw<Camera>();
+
+		Frustum frustum = Frustum(cam->GetProj());
+
+		m_dynamicQuerySession->Clear();
+		m_scene->AABBDynamicQueryFrustum(frustum, m_dynamicQuerySession.get());
+
+		graphics->BeginCamera(cam);
 
 		dbg->DrawCube(xAxis, { 1.0f,0.0f,0.0f,1.0f });
 		dbg->DrawCube(yAxis, { 0.0f,1.0f,0.0f,1.0f });
 		dbg->DrawCube(zAxis, { 0.0f,0.0f,1.0f,1.0f });
+		dbg->DrawCube(rootPoint, { 1.0f,1.0f,1.0f,1.0f });
 
+		
+		{
+			auto it = m_scene->m_tempObjects.begin();
+			auto end = m_scene->m_tempObjects.end();
+			while (it != end)
+			{
+				auto gameObject = *it;
+				if (!frustum.IsOverlap(gameObject->GetAABB()))
+				{
+					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.0f,0.0f,1.0f });
+				}
+				/*else
+				{
+					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
+				}*/
+				it++;
+			}
+		}
+
+		{
+			auto it = m_dynamicQuerySession->begin;
+			auto end = m_dynamicQuerySession->end;
+			//auto it = m_scene->m_tempObjects.begin();
+			//auto end = m_scene->m_tempObjects.end();
+			while (it != end)
+			{
+				auto gameObject = *it;
+				dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
+				it++;
+			}
+		}
+		
 
 		//dbg->DrawCube({}, {});
 
-		graphics->EndCamera(mainCam->GetComponentRaw<Camera>());
+		graphics->EndCamera(cam);
 	}
 
 	graphics->EndFrame(&cmdList);

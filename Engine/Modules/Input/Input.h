@@ -74,11 +74,11 @@ protected:
 		cursor.offset.x = x - prevCursor.position.x;
 		cursor.offset.y = y - prevCursor.position.y;
 
-		if (cursor.offset.x != 0)
+		/*if (cursor.offset.x != 0)
 			cursor.offset.x = cursor.offset.x > 0 ? 1 : -1;
 
 		if (cursor.offset.y != 0)
-			cursor.offset.y = cursor.offset.y > 0 ? 1 : -1;
+			cursor.offset.y = cursor.offset.y > 0 ? 1 : -1;*/
 
 		cursor.position.x = x;
 		cursor.position.y = y;
@@ -102,7 +102,7 @@ public:
 
 	inline bool IsKeyDown(byte keyCode)
 	{
-		return m_curKeys[keyCode] || m_keysDownCount[keyCode] != 0;
+		return m_curKeys[keyCode];// || m_keysDownCount[keyCode] != 0;
 	}
 
 	inline bool IsKeyUp(byte keyCode)
