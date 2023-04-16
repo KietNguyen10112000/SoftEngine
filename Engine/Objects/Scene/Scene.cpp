@@ -280,11 +280,6 @@ void Scene::ProcessRecordedBranchedLists()
 
 void Scene::PrevIteration()
 {
-	m_prevTimeSinceEpoch = m_curTimeSinceEpoch;
-	m_curTimeSinceEpoch = Clock::ms::now();
-	m_dt = (m_curTimeSinceEpoch - m_prevTimeSinceEpoch) / 1'000.0f;
-	m_iterationCount++;
-
 	Task tasks[2] = {};
 
 	auto& processAddRemove = tasks[0];
@@ -310,6 +305,11 @@ void Scene::PrevIteration()
 
 void Scene::Iteration()
 {
+	m_prevTimeSinceEpoch = m_curTimeSinceEpoch;
+	m_curTimeSinceEpoch = Clock::ms::now();
+	m_dt = (m_curTimeSinceEpoch - m_prevTimeSinceEpoch) / 1'000.0f;
+	m_iterationCount++;
+
 	Task tasks[16];
 
 	// process rendering, physics, script... => 3 tasks, currently

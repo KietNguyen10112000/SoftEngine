@@ -678,4 +678,14 @@ inline Mat4 Quaternion::ToMat4() const
 using Vector3 = Vec3;
 using Matrix4x4 = Mat4;
 
+inline float ToRadians(float degrees)
+{
+    return glm::radians(degrees);
+}
+
+inline float ToDegrees(float radians)
+{
+    return glm::degrees(radians);
+}
+
 }

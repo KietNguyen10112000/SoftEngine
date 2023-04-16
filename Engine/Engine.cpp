@@ -56,10 +56,10 @@ Engine::Engine()
 	{
 		m_input = rheap::New<Input>();
 		m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
-		/*if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
+		if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
 		{
 			m_isRunning = false;
-		}*/
+		}
 	}
 }
 
@@ -190,6 +190,14 @@ void Engine::Setup()
 		class CameraScript : public Script
 		{
 		public:
+			float m_rotateX = 0;
+			float m_rotateY = 0;
+			float m_rotateZ = 0;
+			Vec3 m_position = {};
+
+			float m_speed = 10;
+			float m_rotationSensi = 0.12f;
+			
 			~CameraScript()
 			{
 				std::cout << "CameraScript::~CameraScript()\n";
@@ -197,19 +205,81 @@ void Engine::Setup()
 
 			virtual void OnStart() override
 			{
-				std::cout << "CameraScript::OnStart()\n";
+				auto transform = GetObject()->GetTransformMat4();
+
+				m_position = transform.Position();
+				Vec3 direction = transform.Forward().Normal();
+				m_rotateX = asin(direction.y);
+				m_rotateY = atan2(direction.x, direction.z);
 			}
 
 			virtual void OnUpdate(float dt) override
 			{
+				if (dt > 0.025)
+				{
+					std::cout << dt << "\n";
+				}
+
+				auto& transform = TransformMat4();
+				auto trans = Mat4::Identity();
+				trans *= Mat4::Rotation(Vec3::Y_AXIS, m_rotateY);
+
+				auto right = trans.Right().Normal();
+				trans *= Mat4::Rotation(right, -m_rotateX);
+
+				auto forward = trans.Forward().Normal();
+
+				if (m_rotateZ != 0)
+				{
+					trans *= Mat4::Rotation(forward, m_rotateZ);
+				}
+
+				trans *= Mat4::Translation(m_position);
+				transform = trans;
+
+				auto d = m_speed * dt;
 				if (Input()->IsKeyDown('W'))
 				{
-					Transform().Translation() -= Vec3::FORWARD * dt * 20;
+					m_position += forward * d;
 				}
 
 				if (Input()->IsKeyDown('S'))
 				{
-					Transform().Translation() += Vec3::FORWARD * dt * 20;
+					m_position -= forward * d;
+				}
+
+				if (Input()->IsKeyDown('A'))
+				{
+					m_position -= right * d;
+				}
+
+				if (Input()->IsKeyDown('D'))
+				{
+					m_position += right * d;
+				}
+
+				if (Input()->IsKeyPressed(KEYBOARD::ESC))
+				{
+					Input()->SetCursorLock(!Input()->GetCursorLock());
+				}
+
+				if (Input()->IsKeyPressed('U'))
+				{
+					m_rotationSensi = 0;
+				}
+
+				if (Input()->IsKeyPressed('I'))
+				{
+					m_rotationSensi = 0.12f;
+				}
+
+				if (Input()->IsCursorMoved())
+				{
+					auto& delta = Input()->GetDeltaCursorPosition();
+					m_rotateY += delta.x * dt * 2.0f;
+					m_rotateX -= delta.y * dt * 2.0f;
+
+					m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 				}
 			}
 
@@ -222,7 +292,7 @@ void Engine::Setup()
 				Vec3(0.01f, 0.01f, 0.01f),
 		};
 
-		auto camera = object->NewComponent<Camera>(PI / 3.0f, 16 / 9.0f, 0.01f, 1000.0f);
+		auto camera = object->NewComponent<Camera>(ToRadians(60), 16 / 9.0f, 0.01f, 1000.0f);
 		object->InitializeTransform(
 			Mat4::Identity().SetLookAtLH({ 0, 0, 10 }, { 0,0,0 }, Vec3::UP).Inverse()
 		);

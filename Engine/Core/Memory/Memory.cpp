@@ -33,17 +33,23 @@ void MemoryFinalize()
         g_rawHeap = 0;
     }
 
+    //std::cout << "end g_rawHeap\n";
+
     if (g_stableHeap)
     {
         DeleteMalloc(g_stableHeap);
         g_stableHeap = 0;
     }
 
+    //std::cout << "end g_stableHeap\n";
+
     if (g_gcHeap)
     {
         DeleteMalloc(g_gcHeap);
         g_gcHeap = 0;
     }
+
+    //std::cout << "end g_gcHeap\n";
 }
 
 
@@ -120,15 +126,13 @@ void rheap::internal::Reset()
     new (g_rawHeap) ManagedHeap(false);
 }
 
-int MemoryInitForNewOperator()
-{
-    soft::MemoryInitialize();
-    return 0;
-}
-
 void* rheap::internal::OperatorNew(size_t _Size)
 {
-    static int _unuse = MemoryInitForNewOperator();
+    if (!soft::g_rawHeap)
+    {
+        soft::MemoryInitialize();
+    }
+
     return soft::g_rawHeap->Allocate(_Size, 0, 0, 0)->GetUsableMemAddress();
 }
 

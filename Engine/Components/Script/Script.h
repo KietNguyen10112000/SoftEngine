@@ -21,7 +21,7 @@ protected:
 	ID m_scriptId = INVALID_ID;
 	Scene* m_scene = nullptr;
 
-	Transform* m_transform;
+	GameObject::_Transform* m_transform;
 
 private:
 	virtual void OnComponentAddedToScene() final override;
@@ -44,8 +44,8 @@ private:
 	inline void BeginUpdate()
 	{
 		auto& transform = m_object->m_transform;
-		m_transform = &transform.GetWriteHead()->transform;
-		auto read = &transform.GetReadHead()->transform;
+		m_transform = transform.GetWriteHead();
+		auto read = transform.GetReadHead();
 		*m_transform = *read;
 	}
 
@@ -56,7 +56,7 @@ private:
 
 		auto read = transform.GetReadHead();
 
-		if (::memcmp(m_transform, read, sizeof(class Transform)) != 0)
+		if (::memcmp(m_transform, read, sizeof(*m_transform)) != 0)
 		{
 			m_object->ScheduleRefresh();
 		}
@@ -79,9 +79,14 @@ public:
 		return m_scene->GetInput();
 	}
 
-	inline auto& Transform()
+	inline Transform& Transform()
 	{
-		return *m_transform;
+		return m_transform->transform;
+	}
+
+	inline Mat4& TransformMat4()
+	{
+		return m_transform->mat;
 	}
 
 };

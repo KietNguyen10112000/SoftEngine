@@ -243,16 +243,19 @@ public:
 
         cpuTable.ptr += cpuDescriptorSize * m_curBatchIdx * m_numElmPerBatch * m_numDescriptorsPerRoom;
 
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuSRVTable = cpuTable;
-        cpuSRVTable.ptr += cpuDescriptorSize * m_numCBVs;
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuSRVTable;// = cpuTable;
+        //cpuSRVTable.ptr += cpuDescriptorSize * m_numCBVs;
 
         auto num = std::min(m_curCBInBatchIdx, m_numElmPerBatch);
         for (size_t i = 0; i < num; i++)
         {
+            cpuSRVTable = cpuTable;
+            cpuSRVTable.ptr += cpuDescriptorSize * m_numCBVs;
+
             rooms->PrepareARoom(numBuiltInCBV, srcBuiltInCBVs, m_numCBVs, cpuTable, 
                 numBuiltInSRV, srcBuiltInSRVs, m_numSRVs, cpuSRVTable, cmdList);
             drawcall();
-            cpuTable.ptr += cpuDescriptorSize * DX12RenderRooms::NUM_PARAMS_PER_PSO;
+            cpuTable.ptr += cpuDescriptorSize * m_numDescriptorsPerRoom;
         }
 
         return EndRenderingBatch(graphics, commandQueue, cmdList);

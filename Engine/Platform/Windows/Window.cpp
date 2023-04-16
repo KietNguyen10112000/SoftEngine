@@ -17,6 +17,43 @@ struct WindowsWindow
 
 class PlatformInput : public Input
 {
+public:
+    friend void PlatformInput_Init(WindowsWindow* w)
+    {
+        PlatformInput* input = (PlatformInput*)w->input;
+
+        POINT point;
+        GetCursorPos(&point);
+
+        auto& cursor = input->m_curCursors[0];
+        auto& prev = input->m_prevCursors[0];
+
+        cursor.isLocked = false;
+        cursor.isActive = true;
+        cursor.offset = { 0,0 };
+        cursor.position = { point.x, point.y };
+
+        prev = cursor;
+    }
+
+    friend void PlatformInput_ProcessCursorPos(WindowsWindow* w)
+    {
+        PlatformInput* input = (PlatformInput*)w->input;
+
+        POINT point;
+        GetCursorPos(&point);
+
+        input->SetCursor(0, point.x, point.y, true);
+
+        auto& cursor = input->m_curCursors[0];
+        auto& prev = input->m_prevCursors[0];
+        if (cursor.isLocked)
+        {
+            SetCursorPos(prev.position.x, prev.position.y);
+            cursor.position = prev.position;
+        }
+    }
+
     friend LRESULT WndHandle(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         auto ptr = GetWindowLongPtr(hWnd, GWLP_USERDATA);
@@ -33,10 +70,12 @@ class PlatformInput : public Input
         {
         case WM_KEYDOWN:
             //Input::lastKeyDown = wParam;
+            //std::cout << "Key down" << wParam << "\n";
             input->DownKey(wParam);
             break;
 
         case WM_KEYUP:
+            //std::cout << "Key up" << wParam << "\n";
             input->UpKey(wParam);
             break;
 
@@ -196,6 +235,8 @@ WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int he
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)ret);
     ShowWindow(hwnd, SW_SHOWMAXIMIZED);
 
+    PlatformInput_Init(ret);
+
     return ret;
 }
 
@@ -209,6 +250,8 @@ bool ProcessPlatformMsg(WindowNative* window)
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    PlatformInput_ProcessCursorPos(w);
 
     return w->close == true;
 }

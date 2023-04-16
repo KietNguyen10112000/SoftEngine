@@ -38,6 +38,7 @@ public:
 	// Inherited via DebugGraphics
 	virtual void DrawAABox(const AABox& aaBox, const Vec4& color) override;
 	virtual void DrawCube(const Box& box, const Vec4& color) override;
+	virtual void DrawCube(const Mat4& transform, const Vec4& color) override;
 	virtual void DrawSphere(const Sphere& sphere, const Vec4& color) override;
 };
 

@@ -95,9 +95,11 @@ VS_OUTPUT main(VS_INPUT input)
     output.position = float4(pos, 1.0f);
     output.position = mul(output.position, Object.transform);
 	output.position = mul(output.position, Camera.vp);
-	output.color = float4(pos / 3.0f + 0.6f, 1.0f);
 
-    output.color.x = sin(Scene.t * PI / 3.0f) + 1.0f;
+    output.color = Color;
+
+	//output.color = float4(pos / 3.0f + 0.6f, 1.0f);
+    //output.color.x = sin(Scene.t * PI / 3.0f) + 1.0f;
     //output.color.y = cos(Scene.t * PI / 4.0f) + 1.0f;
 
 	return output;

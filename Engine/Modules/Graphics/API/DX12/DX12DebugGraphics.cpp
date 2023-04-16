@@ -125,6 +125,28 @@ void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color)
     }
 }
 
+void DX12DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color)
+{
+    struct ObjectCBuffer
+    {
+        ObjectData Object;
+        Vec4     Color;
+    };
+
+    {
+        // write all data for rendering
+        auto head = m_cubeParams.AllocateConstantBufferWriteHead();
+        auto objectData = (ObjectCBuffer*)m_cubeParams.GetConstantBuffer(head, 2);
+        objectData->Object.transform = transform;
+        objectData->Color = color;
+    }
+
+    if (m_cubeParams.IsNeedFlush())
+    {
+        RenderCubes();
+    }
+}
+
 void DX12DebugGraphics::DrawSphere(const Sphere& sphere, const Vec4& color)
 {
 }

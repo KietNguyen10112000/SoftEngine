@@ -2,6 +2,7 @@
 
 #include "Core/TypeDef.h"
 #include "Core/Time/Clock.h"
+#include "KEYBOARD.h"
 
 NAMESPACE_BEGIN
 
@@ -17,11 +18,12 @@ public:
 	struct Cursor
 	{
 		Position position;
+		Position offset;
 		bool isActive = true;
 		bool isLocked = true;
 	};
 
-private:
+protected:
 	constexpr static size_t NUM_KEYS = 256;
 	constexpr static size_t NUM_CURSORS = 2;
 
@@ -46,8 +48,8 @@ protected:
 		{
 			//m_prevKeys[keyCode] = m_curKeys[keyCode];
 			m_keysDownTime[keyCode] = m_currentTime;
-			m_curKeys[keyCode] = true;
 		}
+		m_curKeys[keyCode] = true;
 	}
 
 	inline void UpKey(byte keyCode)
@@ -62,12 +64,21 @@ protected:
 		auto& cursor = m_curCursors[id];
 		auto& prevCursor = m_prevCursors[id];
 
-		if (cursor.isLocked)
-		{
-			cursor.position.x = x - prevCursor.position.x;
-			cursor.position.y = y - prevCursor.position.y;
-			return;
-		}
+		//if (cursor.isLocked)
+		//{
+		//	cursor.offset.x = x - prevCursor.position.x;
+		//	cursor.offset.y = y - prevCursor.position.y;
+		//	//return;
+		//}
+
+		cursor.offset.x = x - prevCursor.position.x;
+		cursor.offset.y = y - prevCursor.position.y;
+
+		if (cursor.offset.x != 0)
+			cursor.offset.x = cursor.offset.x > 0 ? 1 : -1;
+
+		if (cursor.offset.y != 0)
+			cursor.offset.y = cursor.offset.y > 0 ? 1 : -1;
 
 		cursor.position.x = x;
 		cursor.position.y = y;
@@ -81,6 +92,12 @@ public:
 		::memset(m_keysUpCount, 0, sizeof(uint32_t) * NUM_KEYS);
 		//::memcpy(m_prevKeys, m_curKeys, sizeof(bool) * NUM_KEYS);
 		::memcpy(m_prevCursors, m_curCursors, sizeof(Cursor) * NUM_CURSORS);
+		
+		for (auto& c : m_curCursors)
+		{
+			c.offset = { 0,0 };
+			c.position = { 0,0 };
+		}
 	}
 
 	inline bool IsKeyDown(byte keyCode)
@@ -105,27 +122,28 @@ public:
 		return m_curCursors[id];
 	}
 
-	inline Position GetDeltaCursorPosition(int id = 0)
+	inline Position& GetDeltaCursorPosition(int id = 0)
 	{
-		auto& prev = m_prevCursors[id];
+		//auto& prev = m_prevCursors[id];
 		auto& cur = m_curCursors[id];
 
-		if (cur.isLocked)
-		{
-			return { cur.position.x, cur.position.y };
-		}
-
-		return { cur.position.x - prev.position.x, cur.position.y - prev.position.y };
+		return cur.offset;
 	}
 
-	inline void LockCursor(int id = 0)
+	inline bool IsCursorMoved(int id = 0)
 	{
-		m_curCursors[id].isLocked = true;
+		auto& cur = m_curCursors[id];
+		return cur.offset.x != 0 || cur.offset.y != 0;
 	}
 
-	inline void UnlockCursor(int id = 0)
+	inline void SetCursorLock(bool lock, int id = 0)
 	{
-		m_curCursors[id].isLocked = false;
+		m_curCursors[id].isLocked = lock;
+	}
+
+	inline bool GetCursorLock(int id = 0)
+	{
+		return m_curCursors[id].isLocked;
 	}
 };
 

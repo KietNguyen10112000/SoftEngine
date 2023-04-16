@@ -21,6 +21,10 @@ void RenderingSystem::PrevIteration(float dt)
 
 void RenderingSystem::Iteration(float dt)
 {
+	static Mat4 xAxis = Mat4::Identity() * Mat4::Scaling(10000.0f, 0.05f, 0.05f);
+	static Mat4 yAxis = Mat4::Identity() * Mat4::Scaling(0.05f, 10000.0f, 0.05f);
+	static Mat4 zAxis = Mat4::Identity() * Mat4::Scaling(0.05f, 0.05f, 10000.0f);
+
 	GraphicsCommandList* cmdList = nullptr;
 
 	auto graphics = Graphics::Get();
@@ -40,7 +44,12 @@ void RenderingSystem::Iteration(float dt)
 		auto mainCam = m_cameraObjects[0];
 		graphics->BeginCamera(mainCam->GetComponentRaw<Camera>());
 
-		dbg->DrawCube({}, {});
+		dbg->DrawCube(xAxis, { 1.0f,0.0f,0.0f,1.0f });
+		dbg->DrawCube(yAxis, { 0.0f,1.0f,0.0f,1.0f });
+		dbg->DrawCube(zAxis, { 0.0f,0.0f,1.0f,1.0f });
+
+
+		//dbg->DrawCube({}, {});
 
 		graphics->EndCamera(mainCam->GetComponentRaw<Camera>());
 	}
