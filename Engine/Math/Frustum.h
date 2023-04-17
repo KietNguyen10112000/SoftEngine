@@ -91,7 +91,7 @@ private:
 	{
 		auto n1 = p1.GetNormal();
 
-		if (p1.ValueAt(p) > 0)
+		if (p1.ValueAt(p) >= 0)
 		{
 			return;
 		}

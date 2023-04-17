@@ -110,12 +110,14 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
     swapChainDesc.SampleDesc.Quality = 0;
     swapChainDesc.OutputWindow = hwnd;
     swapChainDesc.Windowed = true;
-    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 
     ThrowIfFailed(m_dxgiFactory->CreateSwapChain(m_commandQueue.Get(), &swapChainDesc, &tempSwapChain));
     ThrowIfFailed(tempSwapChain.As(&m_swapChain));
     m_currentBackBufferId = m_swapChain->GetCurrentBackBufferIndex();
+
+    //ThrowIfFailed(m_swapChain->SetMaximumFrameLatency(1));
 
 
     // create rt for each back buffer

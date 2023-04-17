@@ -42,6 +42,8 @@ void RenderingSystem::Iteration(float dt)
 
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
 
+	size_t sumObj = 0;
+
 	if (!m_cameraObjects.empty())
 	{
 		auto mainCam = m_cameraObjects[0];
@@ -68,6 +70,7 @@ void RenderingSystem::Iteration(float dt)
 				auto gameObject = *it;
 				if (!frustum.IsOverlap(gameObject->GetAABB()))
 				{
+					sumObj++;
 					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.0f,0.0f,1.0f });
 				}
 				/*else
@@ -85,6 +88,7 @@ void RenderingSystem::Iteration(float dt)
 			//auto end = m_scene->m_tempObjects.end();
 			while (it != end)
 			{
+				sumObj++;
 				auto gameObject = *it;
 				dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
 				it++;
@@ -96,6 +100,8 @@ void RenderingSystem::Iteration(float dt)
 
 		graphics->EndCamera(cam);
 	}
+
+	assert(sumObj >= m_scene->m_tempObjects.size() - 2);
 
 	graphics->EndFrame(&cmdList);
 }

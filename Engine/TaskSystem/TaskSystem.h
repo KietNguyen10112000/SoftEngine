@@ -68,7 +68,7 @@ protected:
 
 	inline static void TryInvokeOneMoreWorker()
 	{
-		if (s_workingWorkersCount.load() != s_workersCount)
+		if (s_workingWorkersCount.load(std::memory_order_relaxed) != s_workersCount)
 		{
 			s_cv.notify_one();
 		}
@@ -76,7 +76,7 @@ protected:
 
 	inline static void TryInvokeAllWorkers()
 	{
-		if (s_workingWorkersCount.load() != s_workersCount)
+		if (s_workingWorkersCount.load(std::memory_order_relaxed) != s_workersCount)
 		{
 			s_cv.notify_all();
 		}
@@ -403,6 +403,17 @@ public:
 
 		s_queues[priority].enqueue(task);
 		TryInvokeOneMoreWorker();
+	}
+
+	inline static void SubmitForThread(TaskWaitingHandle* handle, ID threadId, const Task& task)
+	{
+		task.m_handle = handle;
+		task.m_handle->counter++;
+
+		assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
+
+		s_threadQueues[threadId].enqueue(task);
+		TryInvokeAllWorkers();
 	}
 
 public:

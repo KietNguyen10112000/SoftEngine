@@ -17,8 +17,8 @@ struct StartupConfig
 	bool isEnableScript		= true;
 	bool isEnableNetwork	= true;
 
-	uint32_t maxThreads		= -1;
-	uint32_t reservedThread = 4;
+	uint32_t maxThreads		= 4;
+	uint32_t reservedThread = 0;
 
 };
 

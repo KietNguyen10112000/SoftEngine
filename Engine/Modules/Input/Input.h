@@ -102,7 +102,7 @@ public:
 
 	inline bool IsKeyDown(byte keyCode)
 	{
-		return m_curKeys[keyCode];// || m_keysDownCount[keyCode] != 0;
+		return m_curKeys[keyCode] || m_keysDownCount[keyCode] != 0;
 	}
 
 	inline bool IsKeyUp(byte keyCode)

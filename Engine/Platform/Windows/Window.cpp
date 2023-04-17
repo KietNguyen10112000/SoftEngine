@@ -70,12 +70,10 @@ public:
         {
         case WM_KEYDOWN:
             //Input::lastKeyDown = wParam;
-            //std::cout << "Key down" << wParam << "\n";
             input->DownKey(wParam);
             break;
 
         case WM_KEYUP:
-            //std::cout << "Key up" << wParam << "\n";
             input->UpKey(wParam);
             break;
 

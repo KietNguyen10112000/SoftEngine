@@ -206,7 +206,7 @@ void Engine::Setup()
 
 			float m_speed = 10;
 			float m_rotationSensi = 0.12f;
-			
+
 			~CameraScript()
 			{
 				std::cout << "CameraScript::~CameraScript()\n";
@@ -224,10 +224,10 @@ void Engine::Setup()
 
 			virtual void OnUpdate(float dt) override
 			{
-				if (dt > 0.025)
+				/*if (dt > 0.025)
 				{
 					std::cout << dt << "\n";
-				}
+				}*/
 
 				auto& transform = TransformMat4();
 				auto trans = Mat4::Identity();
@@ -343,7 +343,10 @@ void Engine::Run()
 
 void Engine::Iteration()
 {
-	if (m_gcIsRunning.exchange(true, std::memory_order_acquire) == false)
+	static TaskWaitingHandle taskHandle = { 0, 0 };
+
+	if (m_gcIsRunning.load(std::memory_order_relaxed) == false 
+		&& m_gcIsRunning.exchange(true, std::memory_order_acquire) == false)
 	{
 		Task gcTask;
 		gcTask.Entry() = [](void* e)
@@ -365,10 +368,14 @@ void Engine::Iteration()
 
 	auto mainScene = m_scenes[0].Get();
 
-	Task tasks[16];
 
-	// process input & reconstruct scene => 2 tasks
-	auto& processInput = tasks[0];
+	// dynamic submit wait
+	TaskSystem::PrepareHandle(&taskHandle);
+
+	// process input task must execute on main thread 
+	// the thread create the Window - this is required for win32 messeges queue
+	// win32 messeges queue is attach with thread that create HWND
+	Task processInput = {};
 	processInput.Params() = this;
 	processInput.Entry() = [](void* e)
 	{
@@ -376,7 +383,10 @@ void Engine::Iteration()
 		engine->ProcessInput();
 	};
 
-	auto& reconstructScene = tasks[1];
+	// 0 is main thread id
+	TaskSystem::SubmitForThread(&taskHandle, 0, processInput);
+
+	Task reconstructScene = {};
 	reconstructScene.Params() = mainScene;
 	reconstructScene.Entry() = [](void* s)
 	{
@@ -384,7 +394,11 @@ void Engine::Iteration()
 		scene->PrevIteration();
 	};
 
-	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
+	// submit 1 task, so that if this is main thread, it can switch to process input task
+	TaskSystem::Submit(&taskHandle, reconstructScene, Task::CRITICAL);
+
+	// wait
+	TaskSystem::WaitForHandle(&taskHandle);
 
 	mainScene->Iteration();
 
@@ -419,6 +433,8 @@ void Engine::SynchronizeAllSubSystems()
 
 	//std::cout << "SynchronizeAllSubSystems()\n";
 	DeferredBufferTracker::Get()->UpdateAllThenClear();
+
+	//Graphics::Get()->Present(1, 0);
 }
 
 NAMESPACE_END
