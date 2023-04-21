@@ -65,14 +65,14 @@ public:
 
 		//1st plane, upper plane
 		output[0] = m_center + Vec3(-dx	,	dy,		-dz	);
-		output[1] = m_center + Vec3( dx	,	dy,		0	);
-		output[2] = m_center + Vec3( 0	,	dy,		dz	);
-		output[3] = m_center + Vec3( dx	,	dy,		dz	);
+		output[1] = m_center + Vec3( dx	,	dy,		-dz	);
+		output[2] = m_center + Vec3(-dx	,	dy,		 dz	);
+		output[3] = m_center + Vec3( dx	,	dy,		 dz	);
 
 		//2nd plane
 		output[4] = m_center + Vec3(-dx	,	-dy,	-dz	);
-		output[5] = m_center + Vec3( dx	,	-dy,	0	);
-		output[6] = m_center + Vec3( 0	,	-dy,	dz	);
+		output[5] = m_center + Vec3( dx	,	-dy,	-dz	);
+		output[6] = m_center + Vec3(-dx	,	-dy,	dz	);
 		output[7] = m_center + Vec3( dx	,	-dy,	dz	);
 	};
 

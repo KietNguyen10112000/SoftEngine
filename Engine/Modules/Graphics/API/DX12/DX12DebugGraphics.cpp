@@ -106,13 +106,13 @@ void DX12DebugGraphics::InitCubeRenderer()
 void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
 {
     auto center = aaBox.GetCenter();
-    auto dims = aaBox.GetDimensions();
+    auto halfDims = aaBox.GetHalfDimensions();
 
-    auto pos = center - dims / 2.0f;
+    //auto pos = center - dims / 2.0f;
 
     Mat4 transform = Mat4::Identity();
-    transform *= Mat4::Scaling(dims);
-    transform *= Mat4::Translation(pos);
+    transform *= Mat4::Scaling(halfDims);
+    transform *= Mat4::Translation(center);
 
     {
         // write all data for rendering

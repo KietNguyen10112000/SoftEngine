@@ -52,10 +52,23 @@ public:
 	};
 
 public:
+	inline Plane& Transform(const Mat4& mat)
+	{
+		auto n = Vec4(m_normal, 0.0f) * mat;
+		auto p = Vec4(GetPoint(), 1.0f) * mat;
+		p /= p.w;
+
+		m_normal = n.xyz().Normalize();
+		d = -normal.Dot(p.xyz());
+
+		return *this;
+	}
+
 	inline Plane& Inverse()
 	{
 		m_normal = -m_normal;
 		d = -d;
+		return *this;
 	}
 
 	inline bool Intersect(const Plane& plane, Line& intersectLine) const noexcept
@@ -89,9 +102,11 @@ public:
 	// get a point on Plane
 	inline Vec3 GetPoint() const
 	{
-		if (x != 0) return Vec3(-w / x, 0, 0);
+		/*if (x != 0) return Vec3(-w / x, 0, 0);
 		else if (y != 0) return Vec3(0, -w / y, 0);
-		return Vec3(0, 0, -w / z);
+		return Vec3(0, 0, -w / z);*/
+
+		return -d * m_normal;
 	};
 
 	inline auto ValueAt(const Vec3& point) const

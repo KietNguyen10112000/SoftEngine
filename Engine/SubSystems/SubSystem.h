@@ -344,8 +344,12 @@ protected:
 	}
 
 public:
+	inline virtual bool FilterSubSystemComponent(SubSystemComponent* comp) { return true; };
+
 	inline void AddSubSystemComponent(SubSystemComponent* comp, const ID COMPONENT_ID)
 	{
+		if (!FilterSubSystemComponent(comp)) return;
+
 		auto obj = comp->GetObject();
 		auto root = obj->GetRoot();
 

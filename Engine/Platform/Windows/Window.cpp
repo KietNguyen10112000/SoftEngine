@@ -68,6 +68,9 @@ public:
 
         switch (uMsg)
         {
+        /*case WM_MOUSEMOVE:
+            PlatformInput_ProcessCursorPos(w);
+            break;*/
         case WM_KEYDOWN:
             //Input::lastKeyDown = wParam;
             input->DownKey(wParam);

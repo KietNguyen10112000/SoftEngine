@@ -338,14 +338,16 @@ void DBVTQueryTree::RemoveNode(NodeId node)
     assert(Get(node).IsLeaf());
 
     auto parent = Get(node).parent;
-    auto grandParent = Get(parent).parent;
-    auto sibling = Get(parent).child1 == node ? Get(parent).child2 : Get(parent).child1;
 
     if (parent == INVALID_ID)
     {
         m_root = INVALID_ID;
-        goto Return;
+        Clear();
+        return;
     }
+
+    auto grandParent = Get(parent).parent;
+    auto sibling = Get(parent).child1 == node ? Get(parent).child2 : Get(parent).child1;
 
     if (grandParent == INVALID_ID)
     {

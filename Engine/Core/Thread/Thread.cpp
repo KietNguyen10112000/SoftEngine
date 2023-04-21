@@ -15,6 +15,11 @@ ThreadLocalStorage Thread::s_threadLocalStorage[ThreadLimit::MAX_THREADS] = {};
 
 void Thread::InitializeForThisThread()
 {
+	if (ThreadID::GetThisThreadModuleCount() != 1)
+	{
+		return;
+	}
+
 	ThreadID::InitializeForThisThreadInThisModule();
 
 	// convert thread to fiber
@@ -29,6 +34,11 @@ void Thread::InitializeForThisThread()
 
 void Thread::FinalizeForThisThread()
 {
+	if (ThreadID::GetThisThreadModuleCount() != 1)
+	{
+		return;
+	}
+
 	auto currentFiber = GetCurrentFiber();
 	if (GetCurrentFiber()->m_id != ThreadID::Get())
 	{

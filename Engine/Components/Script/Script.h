@@ -52,7 +52,7 @@ private:
 	inline void EndUpdate()
 	{
 		auto& transform = m_object->m_transform;
-		transform.UpdateReadWriteHead();
+		transform.UpdateReadWriteHead(m_scene->GetIterationCount());
 
 		auto read = transform.GetReadHead();
 

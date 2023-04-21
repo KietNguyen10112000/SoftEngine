@@ -17,7 +17,7 @@ public:
 struct DeferredBufferState
 {
 	size_t backBufferIndex = 0;
-	size_t updateTurn = 0;
+	size_t updateSign = 0;
 
 	// up to date read and write head
 	void* readHead;
@@ -25,15 +25,14 @@ struct DeferredBufferState
 
 #ifdef _DEBUG
 	bool callTracked = false;
-	bool padd[3];
+	Spinlock lock;
+	bool padd[2];
 #endif // _DEBUG
 
 
-	inline void Update(size_t turn)
+	inline void Update()
 	{
 		backBufferIndex = (backBufferIndex + 1) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER;
-		updateTurn = turn;
-
 
 #ifdef _DEBUG
 		assert(callTracked == true);
@@ -58,7 +57,7 @@ public:
 		m_turn++;
 		m_buffers.ForEach([=](DeferredBufferState* state)
 			{
-				state->Update(m_turn);
+				state->Update();
 			}
 		);
 		m_buffers.Clear();
@@ -171,8 +170,22 @@ public:
 		return (T*)m_state.readHead;
 	}
 
-	inline void UpdateReadWriteHead()
+	inline void UpdateReadWriteHead(size_t updateSign)
 	{
+#ifdef _DEBUG
+		assert(m_state.lock.try_lock() == true);
+#endif // _DEBUG
+
+		if (m_state.updateSign == updateSign)
+		{
+#ifdef _DEBUG
+			m_state.lock.unlock();
+#endif // _DEBUG
+			return;
+		}
+
+		m_state.updateSign = updateSign;
+
 		m_state.readHead = m_state.writeHead;
 		m_state.writeHead = &m_buffer[(m_state.backBufferIndex + 2) % DEFERRED_BUFFER_CONFIG::NUM_BUFFER];
 
@@ -182,6 +195,10 @@ public:
 #endif // _DEBUG
 
 		DeferredBufferTracker::Get()->Track(&m_state);
+
+#ifdef _DEBUG
+		m_state.lock.unlock();
+#endif // _DEBUG
 	}
 
 };

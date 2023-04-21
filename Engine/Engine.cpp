@@ -151,49 +151,62 @@ void Engine::Setup()
 	auto aabb = (AABox*)&dynamicObj->GetAABB();
 	*aabb = {};*/
 
+	//{
+	//	class MyScript : public Script
+	//	{
+	//	public:
+	//		~MyScript()
+	//		{
+	//			std::cout << "MyScript::~MyScript()\n";
+	//		}
+
+	//		virtual void OnStart() override
+	//		{
+	//			std::cout << "MyScript::OnStart()\n";
+	//		}
+
+	//		virtual void OnUpdate(float dt) override
+	//		{
+	//			//std::cout << dt << '\n';
+	//			if (Input()->IsKeyPressed('U'))
+	//			{
+	//				std::cout << "Pressed\n";
+	//			}
+	//		}
+
+	//	};
+
+	//	auto object = mheap::New<GameObject>();
+	//	auto aabb = (AABox*)&object->GetAABB();
+	//	*aabb = {
+	//			Vec3(5,0,0),
+	//			Vec3(1.0f, 1.0f, 1.0f),
+	//	};
+	//	auto script = object->NewComponent<MyScript>();
+	//	mainScene->AddObject(object);
+	//}
+
+	/*float X = 0;
+	float Y = 0;
+	for (size_t y = 0; y < 10; y++)
 	{
-		class MyScript : public Script
+		X = 0;
+
+		for (size_t x = 0; x < 10; x++)
 		{
-		public:
-			~MyScript()
-			{
-				std::cout << "MyScript::~MyScript()\n";
-			}
+			auto dynamicObj = mheap::New<GameObject>();
+			auto aabb = (AABox*)&dynamicObj->GetAABB();
+			*aabb = {
+					Vec3(X, Y, 0),
+					Vec3(1, 1, 1),
+			};
+			mainScene->AddObject(dynamicObj);
 
-			virtual void OnStart() override
-			{
-				std::cout << "MyScript::OnStart()\n";
-			}
+			X += 2.0f;
+		}
 
-			virtual void OnUpdate(float dt) override
-			{
-				//std::cout << dt << '\n';
-				if (Input()->IsKeyPressed('U'))
-				{
-					std::cout << "Pressed\n";
-				}
-			}
-
-		};
-
-		auto object = mheap::New<GameObject>();
-		auto aabb = (AABox*)&object->GetAABB();
-		*aabb = {
-				Vec3(
-					Random::RangeFloat(-rangeX, rangeX),
-					Random::RangeFloat(-rangeY, rangeY),
-					Random::RangeFloat(-rangeZ, rangeZ)
-				),
-
-				Vec3(
-					Random::RangeFloat(1, rangeDimX),
-					Random::RangeFloat(1, rangeDimY),
-					Random::RangeFloat(1, rangeDimZ)
-				),
-		};
-		auto script = object->NewComponent<MyScript>();
-		mainScene->AddObject(object);
-	}
+		Y += 2.0f;
+	}*/
 	
 	{
 		class CameraScript : public Script

@@ -233,7 +233,7 @@ public:
     template<typename T>                                    \
     friend Vec4 operator##opt##(T scalar, const Vec4& vec)  \
     {                                                       \
-        Vec3 ret;                                           \
+        Vec4 ret;                                           \
         ret.x = static_cast<float>(scalar) opt vec.x;       \
         ret.y = static_cast<float>(scalar) opt vec.y;       \
         ret.z = static_cast<float>(scalar) opt vec.z;       \

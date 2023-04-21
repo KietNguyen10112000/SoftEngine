@@ -42,14 +42,14 @@ void RenderingSystem::Iteration(float dt)
 
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
 
-	size_t sumObj = 0;
-
 	if (!m_cameraObjects.empty())
 	{
 		auto mainCam = m_cameraObjects[0];
 		auto cam = mainCam->GetComponentRaw<Camera>();
 
 		Frustum frustum = Frustum(cam->GetProj());
+
+		frustum.Transform(cam->GetObject()->GetTransformMat4());
 
 		m_dynamicQuerySession->Clear();
 		m_scene->AABBDynamicQueryFrustum(frustum, m_dynamicQuerySession.get());
@@ -61,47 +61,42 @@ void RenderingSystem::Iteration(float dt)
 		dbg->DrawCube(zAxis, { 0.0f,0.0f,1.0f,1.0f });
 		dbg->DrawCube(rootPoint, { 1.0f,1.0f,1.0f,1.0f });
 
-		
-		{
-			auto it = m_scene->m_tempObjects.begin();
-			auto end = m_scene->m_tempObjects.end();
-			while (it != end)
-			{
-				auto gameObject = *it;
-				if (!frustum.IsOverlap(gameObject->GetAABB()))
-				{
-					sumObj++;
-					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.0f,0.0f,1.0f });
-				}
-				/*else
-				{
-					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
-				}*/
-				it++;
-			}
-		}
+
+		//{
+		//	auto it = m_scene->m_tempObjects.begin();
+		//	auto end = m_scene->m_tempObjects.end();
+		//	while (it != end)
+		//	{
+		//		auto gameObject = *it;
+		//		if (frustum.IsOverlap(gameObject->GetAABB()))
+		//		{
+		//			dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.0f,0.0f,1.0f });
+		//		}
+		//		/*else
+		//		{
+		//			dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
+		//		}*/
+		//		it++;
+		//	}
+		//}
+
 
 		{
 			auto it = m_dynamicQuerySession->begin;
 			auto end = m_dynamicQuerySession->end;
-			//auto it = m_scene->m_tempObjects.begin();
-			//auto end = m_scene->m_tempObjects.end();
+
 			while (it != end)
 			{
-				sumObj++;
 				auto gameObject = *it;
 				dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
 				it++;
 			}
 		}
-		
 
 		//dbg->DrawCube({}, {});
 
 		graphics->EndCamera(cam);
 	}
-
-	assert(sumObj >= m_scene->m_tempObjects.size() - 2);
 
 	graphics->EndFrame(&cmdList);
 }

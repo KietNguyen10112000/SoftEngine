@@ -120,7 +120,7 @@ public:
 
 		for (int i = 0; i < 8; i++) {
 			hcorners[i] = hcorners[i] * inverseProj;
-			hcorners[i] = hcorners[i] * (1 / hcorners[i].w);
+			hcorners[i] = hcorners[i] * (1.0f / hcorners[i].w);
 
 			corners[i] = Vec3(hcorners[i].x, hcorners[i].y, hcorners[i].z);
 		}
@@ -170,6 +170,17 @@ public:
 	}
 
 public:
+	inline Frustum& Transform(const Mat4& mat)
+	{
+		for (auto& p : m_planes)
+		{
+			p.Transform(mat);
+		}
+
+		return *this;
+	}
+
+
 	// convex hull algorithm
 	inline bool IsOverlap(const AABox& aabox) const
 	{

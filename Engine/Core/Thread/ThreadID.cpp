@@ -120,4 +120,19 @@ void ThreadID::Finalize()
 	g_threadIdSpinlock.unlock();
 }
 
+size_t ThreadID::GetThisThreadModuleCount()
+{
+	assert(g_threadIdIsInitialized);
+
+	g_threadIdSpinlock.lock();
+
+	auto handle = ThreadIdGetThreadHandle();
+	auto it = g_threadHandleIdMap.find(handle);
+	assert(it != g_threadHandleIdMap.end());
+
+	g_threadIdSpinlock.unlock();
+
+	return it->second.moduleCounter;
+}
+
 NAMESPACE_END
