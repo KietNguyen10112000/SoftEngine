@@ -15,7 +15,7 @@ class GraphicsCommandList;
 class RenderingSystem;
 class Camera;
 
-class Graphics : public Singleton<Graphics>
+class API Graphics : public Singleton<Graphics>
 {
 public:
 	DebugGraphics* m_debugGraphics = nullptr;

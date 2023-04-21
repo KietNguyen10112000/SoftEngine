@@ -55,6 +55,9 @@ protected:
 	constexpr static ID TEMP_OBJECT_ID_MASK		= 0x10000000'00000000ULL;
 	constexpr static ID TEMP_OBJECT_ID_UNMASK	= 0x7FFFFFFF'FFFFFFFFULL;
 
+	constexpr static ID GHOST_OBJECT_ID_MASK	= 0x01000000'00000000ULL;
+	constexpr static ID GHOST_OBJECT_ID_UNMASK	= 0xF7FFFFFF'FFFFFFFFULL;
+
 	friend class Engine;
 	friend class DynamicLayer;
 	friend class SubSystem;
@@ -218,7 +221,7 @@ public:
 public:
 	// thread-safe method
 	// for user use
-	void AddObject(Handle<GameObject>& obj);
+	void AddObject(Handle<GameObject>& obj, bool isGhost = false);
 	void RemoveObject(Handle<GameObject>& obj);
 
 protected:
@@ -286,6 +289,11 @@ public:
 	void RefreshObject(GameObject* obj);
 
 public:
+	inline bool IsGhost(GameObject* obj)
+	{
+		return obj->m_sceneId & (~GHOST_OBJECT_ID_UNMASK);
+	}
+
 	inline auto GetRenderingSystem()
 	{
 		return m_renderingSystem;

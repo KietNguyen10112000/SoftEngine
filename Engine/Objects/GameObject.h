@@ -122,6 +122,8 @@ protected:
 
 	mutable DeferredBuffer<_Transform> m_transform = {};
 
+	String m_name;
+
 private:
 	template <typename T>
 	ComponentDtor GetDtor() const

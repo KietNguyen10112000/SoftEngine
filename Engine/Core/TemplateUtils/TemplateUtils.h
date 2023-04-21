@@ -44,12 +44,64 @@ T* MakeDummyClass(void* mem)
 	return (T*)mem;
 }
 
-template <typename Base, typename Derived, auto FUNC>
+template <class T, typename F>
+size_t VTableIndex(F f)
+{
+#define DEFINE_INDEX(n) virtual size_t Get##n() { return n;}
+#define DEFINE_INDEX_10(n)	\
+	DEFINE_INDEX(n##0);		\
+	DEFINE_INDEX(n##1);		\
+	DEFINE_INDEX(n##2);		\
+	DEFINE_INDEX(n##3);		\
+	DEFINE_INDEX(n##4);		\
+	DEFINE_INDEX(n##5);		\
+	DEFINE_INDEX(n##6);		\
+	DEFINE_INDEX(n##7);		\
+	DEFINE_INDEX(n##8);		\
+	DEFINE_INDEX(n##9);	
+	
+
+	struct VTableCounter
+	{
+		DEFINE_INDEX(0);
+		DEFINE_INDEX(1);
+		DEFINE_INDEX(2);
+		DEFINE_INDEX(3);
+		DEFINE_INDEX(4);
+		DEFINE_INDEX(5);
+		DEFINE_INDEX(6);
+		DEFINE_INDEX(7);
+		DEFINE_INDEX(8);
+		DEFINE_INDEX(9);
+
+		DEFINE_INDEX_10(1);
+		DEFINE_INDEX_10(2);
+		DEFINE_INDEX_10(3);
+		DEFINE_INDEX_10(4);
+		DEFINE_INDEX_10(5);
+		DEFINE_INDEX_10(6);
+		DEFINE_INDEX_10(7);
+		DEFINE_INDEX_10(8);
+		DEFINE_INDEX_10(9);
+		// ... more ...
+	} vt;
+
+#undef DEFINE_INDEX_10
+#undef DEFINE_INDEX
+
+	T* t = reinterpret_cast<T*>(&vt);
+
+	typedef int (T::* GetIndex)();
+	GetIndex getIndex = (GetIndex)f;
+	return (t->*getIndex)();
+}
+
+template <auto FUNC, typename Base, typename Derived>
 inline bool IsOverridden(Base* baseInstance, Derived* derivedInstance)
 {
 	using vtable = size_t;
 
-	auto offset = VtbOffsetOf(FUNC);
+	auto offset = VTableIndex<Base>(FUNC);
 
 	auto baseVtb = (vtable*)*(size_t*)(baseInstance);
 	auto derivedVtb = (vtable*)*(size_t*)(derivedInstance);

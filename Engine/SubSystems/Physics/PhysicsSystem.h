@@ -18,6 +18,16 @@ public:
 
 	virtual void PostIteration(float dt) override;
 
+	inline virtual bool FilterAddSubSystemComponent(SubSystemComponent* comp) override 
+	{ 
+		return !m_scene->IsGhost(comp->GetObject());
+	};
+
+	inline virtual bool FilterRemoveSubSystemComponent(SubSystemComponent* comp) override
+	{
+		return !m_scene->IsGhost(comp->GetObject());
+	};
+
 };
 
 NAMESPACE_END

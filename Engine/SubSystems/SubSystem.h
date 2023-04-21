@@ -344,11 +344,12 @@ protected:
 	}
 
 public:
-	inline virtual bool FilterSubSystemComponent(SubSystemComponent* comp) { return true; };
+	inline virtual bool FilterAddSubSystemComponent(SubSystemComponent* comp) { return true; };
+	inline virtual bool FilterRemoveSubSystemComponent(SubSystemComponent* comp) { return true; };
 
 	inline void AddSubSystemComponent(SubSystemComponent* comp, const ID COMPONENT_ID)
 	{
-		if (!FilterSubSystemComponent(comp)) return;
+		if (!FilterAddSubSystemComponent(comp)) return;
 
 		auto obj = comp->GetObject();
 		auto root = obj->GetRoot();
@@ -364,6 +365,8 @@ public:
 
 	inline void RemoveSubSystemComponent(SubSystemComponent* comp, const ID COMPONENT_ID)
 	{
+		if (!FilterRemoveSubSystemComponent(comp)) return;
+
 		auto obj = comp->GetObject();
 		auto root = obj->GetRoot();
 

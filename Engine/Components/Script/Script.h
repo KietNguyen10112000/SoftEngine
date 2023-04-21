@@ -9,16 +9,20 @@
 
 NAMESPACE_BEGIN
 
-class Script : public SubSystemComponent
+class API Script : public SubSystemComponent
 {
 public:
 	constexpr static size_t COMPONENT_ID = SubSystemComponentId::SCRIPT_SUBSYSTEM_COMPONENT_ID;
 
-protected:
+
 	friend class ScriptSystem;
 	friend class GameObject;
 
-	ID m_scriptId = INVALID_ID;
+private:
+	ID m_scriptId	= INVALID_ID;
+	ID m_onGUIId	= INVALID_ID;
+
+protected:
 	Scene* m_scene = nullptr;
 
 	GameObject::_Transform* m_transform;
@@ -70,8 +74,9 @@ private:
 	}
 
 public:
-	virtual void OnStart() = 0;
-	virtual void OnUpdate(float dt) = 0;
+	virtual void OnStart() {};
+	virtual void OnUpdate(float dt) {};
+	virtual void OnGUI() {};
 
 public:
 	inline auto Input()

@@ -74,8 +74,15 @@ Scene::~Scene()
 	rheap::Delete(m_staticObjsQueryStructure);
 }
 
-void Scene::AddObject(Handle<GameObject>& obj)
+void Scene::AddObject(Handle<GameObject>& obj, bool isGhost)
 {
+	if (isGhost)
+	{
+		m_waitForAdd.Add(obj);
+		obj->m_sceneId = GHOST_OBJECT_ID_MASK;
+		return;
+	}
+
 	m_waitForAdd.Add(obj);
 
 	auto physicsComp = obj->GetComponentRaw<Physics>();
@@ -268,7 +275,14 @@ void Scene::ProcessAddLists()
 				objs = &m_tempObjects;
 			}
 
+			auto isGhost = obj->m_sceneId == GHOST_OBJECT_ID_MASK;
 			obj->m_sceneId = GetSceneId(objs == &m_tempObjects);
+
+			if (isGhost)
+			{
+				obj->m_sceneId |= GHOST_OBJECT_ID_MASK;
+			}
+
 			objs->Push(obj);
 
 			obj->InvokeOnComponentAddedToScene();

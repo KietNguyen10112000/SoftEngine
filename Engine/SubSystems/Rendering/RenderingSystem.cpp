@@ -4,6 +4,8 @@
 
 #include "Components/Rendering/Rendering.h"
 #include "Components/Rendering/Camera.h"
+#include "Components/Script/Script.h"
+#include "SubSystems/Script/ScriptSystem.h"
 
 #include "Graphics/Graphics.h"
 #include "Graphics/GraphicsCommandList.h"
@@ -41,6 +43,13 @@ void RenderingSystem::Iteration(float dt)
 	graphics->BeginFrame(&cmdList);
 
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
+
+	m_scene->GetScriptSystem()->ForEachOnGUIScripts(
+		[](Script* script)
+		{
+			script->OnGUI();
+		}
+	);
 
 	if (!m_cameraObjects.empty())
 	{
@@ -88,7 +97,17 @@ void RenderingSystem::Iteration(float dt)
 			while (it != end)
 			{
 				auto gameObject = *it;
-				dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
+
+				auto script = gameObject->GetComponentRaw<Script>();
+				if (gameObject->GetComponentRaw<Script>())
+				{
+					dbg->DrawAABox(gameObject->GetAABB(), { 0.0f,1.0f,0.0f,1.0f });
+				}
+				else
+				{
+					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
+				}
+				
 				it++;
 			}
 		}

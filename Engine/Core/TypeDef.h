@@ -19,6 +19,8 @@
 #endif
 
 #define IMPORT __declspec(dllimport)
+#define EXPORT __declspec(dllexport)
+#define EXTERN_C extern "C"
 
 #ifdef STATIC_BUILD
 #ifdef API

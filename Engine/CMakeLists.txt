@@ -69,6 +69,9 @@ file(
     "Modules/FileSystem/*.h"
     "Modules/FileSystem/*.cpp"
 
+    "Modules/Plugins/*.h"
+    "Modules/Plugins/*.cpp"
+
     "Engine.h"
     "Engine.cpp"
     "StartupConfig.h"
@@ -106,4 +109,5 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     set(GT "/GT")
 endif()
 
-SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GT}")
+#SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GT}")
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}")

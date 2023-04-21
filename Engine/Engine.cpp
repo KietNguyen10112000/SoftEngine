@@ -23,8 +23,14 @@
 
 #include "Input/Input.h"
 #include "Graphics/Graphics.h"
+#include "Graphics/DebugGraphics.h"
 #include "Network/Network.h"
+
+#include "Plugins/Plugin.h"
+#include "Plugins/PluginLoader.h"
+
 #include "StartupConfig.h"
+#include "ENGINE_EVENT.h"
 
 NAMESPACE_BEGIN
 
@@ -45,13 +51,23 @@ void Engine::Finalize()
 	gc::Run(-1);
 }
 
-Engine::Engine()
+Engine::Engine() : EventDispatcher(ENGINE_EVENT::COUNT)
 {
-	if (StartupConfig::Get().isEnableNetwork)
-	{
-		Network::Initialize();
-	}
+	m_eventArgv[0] = this;
+	InitNetwork();
+	InitGraphics();
+	InitPlugins();
+}
 
+Engine::~Engine()
+{
+	FinalPlugins();
+	FinalGraphics();
+	FinalNetwork();
+}
+
+void Engine::InitGraphics()
+{
 	if (StartupConfig::Get().isEnableRendering)
 	{
 		m_input = rheap::New<Input>();
@@ -63,7 +79,7 @@ Engine::Engine()
 	}
 }
 
-Engine::~Engine()
+void Engine::FinalGraphics()
 {
 	if (StartupConfig::Get().isEnableRendering)
 	{
@@ -71,12 +87,57 @@ Engine::~Engine()
 		platform::DeleteWindow(m_window);
 		rheap::Delete(m_input);
 	}
+}
 
+void Engine::InitNetwork()
+{
+	if (StartupConfig::Get().isEnableNetwork)
+	{
+		Network::Initialize();
+	}
+}
+
+void Engine::FinalNetwork()
+{
 	if (StartupConfig::Get().isEnableNetwork)
 	{
 		Network::Finalize();
 	}
 }
+
+void Engine::InitPlugins()
+{
+	if (StartupConfig::Get().pluginsPath)
+	{
+		if (PluginLoader::LoadAll(this, StartupConfig::Get().pluginsPath, m_plugins) == false)
+		{
+			m_isRunning = false;
+		}
+		else
+		{
+			PLUGIN_DESC desc;
+			for (auto& plugin : m_plugins)
+			{
+				plugin->GetDesc(&desc);
+				switch (desc.type)
+				{
+				case PLUGIN_TYPE::INTERVAL:
+					m_intevalPlugins.push_back(plugin);
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+	}
+}
+
+void Engine::FinalPlugins()
+{
+	PluginLoader::UnloadAll(this, m_plugins);
+}
+
 
 void Engine::Setup()
 {
@@ -87,6 +148,8 @@ void Engine::Setup()
 	scene->Setup();
 	scene->m_id = 0;
 	m_scenes.Push(scene);
+
+	Dispatch(ENGINE_EVENT::SCENE_ON_INITIALIZE, this, scene.Get());
 
 	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
 		std::cout << "Func called --- " << number << "\n";
@@ -125,7 +188,10 @@ void Engine::Setup()
 
 	auto mainScene = m_scenes[0].Get();
 	mainScene->BeginSetup();
+	Dispatch(ENGINE_EVENT::SCENE_ON_SETUP, this, scene.Get());
 	mainScene->EndSetup();
+
+	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
 	for (size_t i = 0; i < 200; i++)
 	{
@@ -303,6 +369,12 @@ void Engine::Setup()
 
 					m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 				}
+			}
+
+			virtual void OnGUI() override
+			{
+				auto dbg = Graphics::Get()->GetDebugGraphics();
+				dbg->DrawCube(Mat4::Scaling(2, 2, 2) * Mat4::Translation(0, 10, 0), { 0, 1, 1, 1 });
 			}
 
 		};

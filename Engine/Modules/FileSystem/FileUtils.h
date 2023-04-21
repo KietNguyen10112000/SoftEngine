@@ -6,6 +6,12 @@
 #include "Core/Structures/String.h"
 
 #include <stdio.h>
+#include <filesystem>
+
+namespace std 
+{
+	namespace fs = filesystem;
+}
 
 NAMESPACE_FILE_SYSTEM_BEGIN
 
@@ -43,6 +49,24 @@ inline void FreeBuffer(byte*& buffer)
 {
 	rheap::Delete(buffer);
 	buffer = nullptr;
+}
+
+// no recursive
+template <typename Func>
+inline void ForEachFiles(String path, Func callback)
+{
+	for (const auto& entry : std::fs::directory_iterator(path.c_str()))
+	{
+		if (entry.is_regular_file())
+		{
+			callback(entry.path().c_str());
+		}
+	}
+}
+
+inline bool IsExist(const char* path)
+{
+	return std::fs::exists(path);
 }
 
 }
