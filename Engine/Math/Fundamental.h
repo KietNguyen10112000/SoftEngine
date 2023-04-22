@@ -7,6 +7,7 @@
 #include "glm/gtc/quaternion.hpp"
 #include "glm/gtx/matrix_decompose.hpp"
 //#include <glm/gtx/quaternion.hpp>
+#include "glm/gtx/quaternion.hpp"
 
 namespace math
 {
@@ -18,6 +19,7 @@ class Vec3 : glm::vec3
 private:
     friend class Mat4;
     friend class Vec4;
+    friend class Quaternion;
     using Base = glm::vec3;
 
 public:
@@ -38,6 +40,11 @@ public:
     const static Vec3 RIGHT;
 
 private:
+    inline Vec3(const glm::vec3& v)
+    {
+        GLMVec() = v;
+    }
+
     inline glm::vec3& GLMVec()
     {
         return reinterpret_cast<glm::vec3&>(*this);
@@ -335,11 +342,11 @@ public:
 
 class Mat4;
 
-class Quaternion : Vec4
+class Quaternion : glm::quat
 {
 private:
     friend class Mat4;
-    using Base = Vec4;
+    using Base = glm::quat;
 
     inline glm::quat& GLMQuat()
     {
@@ -352,8 +359,28 @@ private:
     }
 
 public:
+    using Base::operator[];
+    using Base::x;
+    using Base::y;
+    using Base::z;
+    using Base::w;
+
+    Quaternion() 
+    {
+        x = 0, y = 0, z = 0, w = 1;
+    };
+
+    Quaternion(const Vec3& eulerAngles) 
+    {
+        GLMQuat() = glm::quat(eulerAngles.GLMVecConst());
+    };
+
     inline Mat4 ToMat4() const;
 
+    inline Vec3 ToEulerAngles() const
+    {
+        return glm::eulerAngles(GLMQuatConst());
+    }
 
     inline friend bool operator==(const Quaternion& v1, const Quaternion& v2)
     {
@@ -471,7 +498,7 @@ public:
 
     inline Mat4& SetRotation(const Quaternion& quaternion)
     {
-        GLMMat() = glm::mat4_cast(quaternion.GLMQuatConst());
+        GLMMat() = glm::toMat4(quaternion.GLMQuatConst());
         return *this;
     }
 

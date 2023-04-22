@@ -2,6 +2,7 @@
 
 #include "TypeDef.h"
 #include "ManagedHandle.h"
+#include "ManagedPool.h"
 
 #include "Core/Thread/Spinlock.h"
 
@@ -92,7 +93,7 @@ public:
     constexpr static size_t INVALID_ID = -1;
     constexpr static size_t EXTERNAL_SIZE = sizeof(ManagedHandle) + sizeof(AllocatedBlock);
 
-    constexpr static size_t MEMORY_THRESHOLD_TO_PERFORM_GC = 0.7f;
+    constexpr static float MEMORY_THRESHOLD_TO_PERFORM_GC = 0.7f;
 
 public:
     struct ThreadContext

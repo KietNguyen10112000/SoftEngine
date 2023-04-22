@@ -16,6 +16,8 @@ public:
 	constexpr static size_t NUM_GRAPHICS_COMMAND_LISTS	= 128;
 	constexpr static size_t NUM_GRAPHICS_BACK_BUFFERS	= 3;
 
+	constexpr static DXGI_FORMAT	BACK_BUFFER_FORMAT			= DXGI_FORMAT_R8G8B8A8_UNORM;
+
 	//constexpr static size_t GPU_DESCRIPTOR_HEAP_SIZE	= 64*KB;
 
 	constexpr static size_t NUM_RENDER_ROOMS			= 30*KB;
@@ -56,6 +58,10 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE				m_builtInSRVs[2] = {};
 
 
+	// for imgui
+	ComPtr<ID3D12DescriptorHeap>			m_ImGuiSrvDescHeap;
+
+
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
 	ComPtr<ID3D12Device2>                   m_device;
 	ComPtr<IDXGIFactory4>                   m_dxgiFactory;
@@ -75,10 +81,15 @@ private:
 
 	void InitBuiltInParams();
 
+	void InitImGui(void* hwnd);
+
 public:
 	// Inherited via Graphics
 	virtual void BeginFrame(GraphicsCommandList** cmdList) override;
 	virtual void EndFrame(GraphicsCommandList** cmdList) override;
+
+	virtual void BeginGUI() override;
+	virtual void EndGUI() override;
 
 	virtual void BeginCamera(Camera* camera) override;
 	virtual void EndCamera(Camera* camera) override;

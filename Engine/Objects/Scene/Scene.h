@@ -46,7 +46,7 @@ struct SceneStaticQuerySession final : public SceneQuerySession
 	}
 };
 
-class Scene : Traceable<Scene>
+class API Scene : Traceable<Scene>
 {
 protected:
 	constexpr static byte SCENE_MEM_STABLE_VALUE1	= 1;

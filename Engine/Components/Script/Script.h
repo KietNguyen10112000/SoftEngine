@@ -6,10 +6,11 @@
 #include "Objects/Scene/Scene.h"
 
 #include "Objects/GameObject.h"
+#include "Objects/Async/AsyncTaskRunner.h"
 
 NAMESPACE_BEGIN
 
-class API Script : public SubSystemComponent
+class API Script : Traceable<Script>, public SubSystemComponent, public AsyncTaskRunner
 {
 public:
 	constexpr static size_t COMPONENT_ID = SubSystemComponentId::SCRIPT_SUBSYSTEM_COMPONENT_ID;
@@ -26,6 +27,13 @@ protected:
 	Scene* m_scene = nullptr;
 
 	GameObject::_Transform* m_transform;
+
+protected:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		AsyncTaskRunner::Trace(tracer);
+	}
 
 private:
 	virtual void OnComponentAddedToScene() final override;
@@ -45,12 +53,18 @@ private:
 
 	virtual bool IsNewBranch() override;
 
-	inline void BeginUpdate()
+	inline void UpdateTransform()
 	{
 		auto& transform = m_object->m_transform;
 		m_transform = transform.GetWriteHead();
 		auto read = transform.GetReadHead();
 		*m_transform = *read;
+	}
+
+	inline void BeginUpdate()
+	{
+		UpdateTransform();
+		AsyncTaskRunner::Flush();
 	}
 
 	inline void EndUpdate()

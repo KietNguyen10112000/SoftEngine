@@ -71,6 +71,7 @@ file(
 
     "Modules/Plugins/*.h"
     "Modules/Plugins/*.cpp"
+    "Modules/Plugins/Bridge/*.cpp"
 
     "Engine.h"
     "Engine.cpp"
@@ -78,10 +79,28 @@ file(
     "StartupConfig.cpp"
 )
 
+
+
+IF (WIN32)
+    # for imgui
+    file(
+        GLOB
+        IMGUI_SRC
+
+        "../Libraries/imgui/*.cpp"
+        "../Libraries/imgui/backends/imgui_impl_win32.cpp"
+        "../Libraries/imgui/backends/imgui_impl_dx12.cpp"
+    )
+ELSE()
+    message( FATAL_ERROR "unsupported, yet!" )
+ENDIF()
+
 add_executable (
     ${BINARY} 
     "main.cpp"
     ${SRC}
+
+    ${IMGUI_SRC}
 )
 
 add_library (
@@ -95,8 +114,9 @@ include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}/Modules"
      "${CMAKE_SOURCE_DIR}"
 
-
+     "${CMAKE_SOURCE_DIR}/Libraries"
      "${CMAKE_SOURCE_DIR}/Libraries/glm"
+     "${CMAKE_SOURCE_DIR}/Libraries/imgui"
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

@@ -33,6 +33,9 @@ public:
 	virtual void BeginFrame(GraphicsCommandList** cmdList) = 0;
 	virtual void EndFrame(GraphicsCommandList** cmdList) = 0;
 
+	virtual void BeginGUI() = 0;
+	virtual void EndGUI() = 0;
+
 	virtual void BeginCamera(Camera* camera) = 0;
 	virtual void EndCamera(Camera* camera) = 0;
 

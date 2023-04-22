@@ -286,6 +286,8 @@ void Engine::Setup()
 			float m_speed = 10;
 			float m_rotationSensi = 0.12f;
 
+			Mat4 m_mat = Mat4::Identity();
+
 			~CameraScript()
 			{
 				std::cout << "CameraScript::~CameraScript()\n";
@@ -373,8 +375,9 @@ void Engine::Setup()
 
 			virtual void OnGUI() override
 			{
+				m_mat *= Mat4::Rotation(Vec3::UP, 0.016f * PI / 3.0f);
 				auto dbg = Graphics::Get()->GetDebugGraphics();
-				dbg->DrawCube(Mat4::Scaling(2, 2, 2) * Mat4::Translation(0, 10, 0), { 0, 1, 1, 1 });
+				dbg->DrawCube(Mat4::Scaling(2, 2, 2) * m_mat * Mat4::Translation(0, 10, 0), { 0, 1, 1, 1 });
 			}
 
 		};
@@ -440,6 +443,7 @@ void Engine::Iteration()
 			auto heap = mheap::internal::Get();
 			if (heap->IsNeedGC())
 			{
+				std::cout << "GC running...\n";
 				gc::Run(-1);
 				heap->EndGC();
 			}

@@ -51,7 +51,7 @@ public:
 	template <typename ...Args>
 	inline void Dispatch(ID evtCode, Args&&... args)
 	{
-		void* pointers[sizeof...(Args)] = { (void*)&args...};
+		void* pointers[sizeof...(Args)] = { (void*)args...};
 		Dispatch(evtCode, (int)(sizeof...(Args)), (void**)pointers);
 	}
 

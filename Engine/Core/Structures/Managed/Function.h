@@ -376,18 +376,18 @@ auto MakeAsyncMemberFunction(T* obj, void (T::* fn)(Args...), Args&&... args)
 
 // to capture variable, using args
 template <typename Fn, typename... Args>
-auto MakeAsyncFunction(Fn fn, Args... args)
+auto MakeAsyncFunction(Fn fn, Args&&... args)
 {
     using return_type = std::invoke_result_t<Fn, Args...>;
-    return_type (*_fn)(Args...) = fn;
+    //return_type (*_fn)(Args...) = fn;
 
     if constexpr (std::is_same_v<return_type, void>)
     {
-        return mheap::New<AsyncFunctionVoidReturn<Fn, Args...>>(_fn, std::forward<Args>(args)...);
+        return mheap::New<AsyncFunctionVoidReturn<Fn, Args...>>(fn, std::forward<Args>(args)...);
     }
     else
     {
-        return mheap::New<AsyncFunction<Fn, return_type, Args...>>(_fn, std::forward<Args>(args)...);
+        return mheap::New<AsyncFunction<Fn, return_type, Args...>>(fn, std::forward<Args>(args)...);
     }
 }
 

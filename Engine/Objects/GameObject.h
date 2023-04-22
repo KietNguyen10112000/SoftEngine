@@ -106,16 +106,18 @@ protected:
 	{
 		union
 		{
-			Mat4 mat = Mat4::Identity();
+			//Mat4 mat = Mat4::Identity();
 
 			struct
 			{
 				float padd[4];
 				Transform transform;
 			};
+
+			Mat4 mat;
 		};
 
-		_Transform() = default;
+		_Transform() : transform({}) {};
 		_Transform(const Mat4& mat) : mat(mat) {};
 		_Transform(const Transform& transform) : transform(transform) {};
 	};

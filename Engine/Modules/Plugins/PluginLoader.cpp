@@ -2,6 +2,8 @@
 
 #include "Core/Structures/String.h"
 
+#include "TaskSystem/TaskSystem.h"
+
 #include "FileSystem/FileUtils.h"
 
 #include "Plugin.h"
@@ -9,7 +11,7 @@
 #ifdef WIN32
 #include <Windows.h>
 #endif // WIN32
-
+#undef Yield
 
 NAMESPACE_BEGIN
 
@@ -34,7 +36,15 @@ Plugin* PluginLoader_LoadPluginNative(Engine* engine, const wchar_t* path, void*
 	}
 
 	auto ctor = (PluginCtor)GetProcAddress(handle, PLUGIN_CTOR_NAME);
-	return ctor(engine);
+	
+	auto ret = ctor(engine);
+
+	ret->m_initFunc = (decltype(ret->m_initFunc))GetProcAddress(handle, PLUGIN_INITIALIZE_PER_THREAD_NAME);
+	ret->m_finalFunc = (decltype(ret->m_finalFunc))GetProcAddress(handle, PLUGIN_FINALIZE_PER_THREAD_NAME);
+
+	outputHandle = handle;
+
+	return ret;
 }
 
 void PluginLoader_UnloadPluginNative(void* nativeHandle)
@@ -49,6 +59,10 @@ bool PluginLoader::LoadAll(Engine* engine, const char* path, std::Vector<Plugin*
 #ifdef WIN32
 	const static auto ENDING = L".dll";
 #endif // WIN32
+
+	static TaskWaitingHandle taskHandle = { 0,0 };
+
+	TaskSystem::PrepareHandle(&taskHandle);
 
 	std::wstring_view ending = ENDING;
 
@@ -86,6 +100,28 @@ bool PluginLoader::LoadAll(Engine* engine, const char* path, std::Vector<Plugin*
 				plugin->m_nativeHandle = handle;
 				g_pluginData.loadedPlugins.push_back(plugin);
 
+				auto count = TaskSystem::GetWorkerCount();
+				for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
+				{
+					Task task;
+					task.Params() = plugin;
+					task.Entry() = [](void* p)
+					{
+						auto plugin = (Plugin*)p;
+						plugin->m_initFunc(0);
+					};
+
+					TaskSystem::SubmitForThread(&taskHandle, i, task);
+				}
+
+				plugin->m_initFunc(0);
+				while (taskHandle.counter.load(std::memory_order_relaxed) != 1)
+				{
+					Thread::Sleep(5);
+				}
+				//TaskSystem::WaitForHandle(&taskHandle);
+				taskHandle.counter--;
+
 				plugin->Initialize(engine);
 			}
 			else
@@ -99,8 +135,12 @@ bool PluginLoader::LoadAll(Engine* engine, const char* path, std::Vector<Plugin*
 	return ret;
 }
 
-void PluginLoader::Unload(Engine* engine, Plugin* input)
+void PluginLoader::Unload(Engine* engine, Plugin* input, bool freeLib)
 {
+	static TaskWaitingHandle taskHandle = { 0,0 };
+
+	TaskSystem::PrepareHandle(&taskHandle);
+
 	assert(input != nullptr);
 
 	auto& plugin = g_pluginData.loadedPlugins[input->m_id];
@@ -111,15 +151,41 @@ void PluginLoader::Unload(Engine* engine, Plugin* input)
 
 	auto handle = input->m_nativeHandle;
 	input->Finalize(engine);
+
+	for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
+	{
+		Task task;
+		task.Params() = input;
+		task.Entry() = [](void* p)
+		{
+			auto plugin = (Plugin*)p;
+			plugin->m_finalFunc(0);
+		};
+
+		TaskSystem::SubmitForThread(&taskHandle, i, task);
+	}
+
+	input->m_finalFunc(0);
+	while (taskHandle.counter.load(std::memory_order_relaxed) != 1)
+	{
+		Thread::Sleep(5);
+	}
+	taskHandle.counter--;
+	//TaskSystem::WaitForHandle(&taskHandle);
+
 	DELETE_PLUGIN(input);
-	PluginLoader_UnloadPluginNative(handle);
+
+	if (freeLib)
+	{
+		PluginLoader_UnloadPluginNative(handle);
+	}
 }
 
-void PluginLoader::UnloadAll(Engine* engine, std::Vector<Plugin*>& input)
+void PluginLoader::UnloadAll(Engine* engine, std::Vector<Plugin*>& input, bool freeLib)
 {
 	for (auto& plugin : input)
 	{
-		Unload(engine, plugin);
+		Unload(engine, plugin, freeLib);
 	}
 }
 

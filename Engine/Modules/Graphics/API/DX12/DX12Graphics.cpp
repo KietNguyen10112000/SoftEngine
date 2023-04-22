@@ -5,6 +5,10 @@
 
 #include "DX12DebugGraphics.h"
 
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_win32.h"
+#include "imgui/backends/imgui_impl_dx12.h"
+
 #define CPP
 #include "Shaders/TypeDef.hlsli"
 
@@ -17,12 +21,18 @@ DX12Graphics::DX12Graphics(void* _hwnd)
     InitCommandLists();
     InitRenderRooms();
     InitBuiltInParams();
+    InitImGui(_hwnd);
 }
 
 DX12Graphics::~DX12Graphics()
 {
     m_renderRooms.Destroy();
     m_graphicsCommandList.Destroy();
+
+    // ImGui Cleanup
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 
     m_sceneParams.Destroy();
     m_cameraParams.Destroy();
@@ -103,7 +113,7 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
     DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
     swapChainDesc.BufferCount = NUM_GRAPHICS_BACK_BUFFERS;
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.BufferDesc.Format = BACK_BUFFER_FORMAT;
     swapChainDesc.BufferDesc.Width = WINDOW_WIDTH;
     swapChainDesc.BufferDesc.Height = WINDOW_HEIGHT;
     swapChainDesc.SampleDesc.Count = 1;
@@ -246,6 +256,32 @@ void DX12Graphics::InitBuiltInParams()
     }
 }
 
+void DX12Graphics::InitImGui(void* hwnd)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+    desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    desc.NumDescriptors = 1;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_ImGuiSrvDescHeap)));
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX12_Init(m_device.Get(), NUM_GRAPHICS_BACK_BUFFERS,
+        BACK_BUFFER_FORMAT, m_ImGuiSrvDescHeap.Get(),
+        m_ImGuiSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
+        m_ImGuiSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
+}
+
 void DX12Graphics::BeginCommandList()
 {
     m_currentBackBufferId = m_swapChain->GetCurrentBackBufferIndex();
@@ -338,6 +374,29 @@ void DX12Graphics::EndCamera(Camera* camera)
 {
     ((DX12DebugGraphics*)m_debugGraphics)->EndCamera();
     m_cameraParams.EndRenderingAsBuiltInParam(m_commandQueue.Get());
+}
+
+void DX12Graphics::BeginGUI()
+{
+    // Start the Dear ImGui frame
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+}
+
+void DX12Graphics::EndGUI()
+{
+    auto dx12CmdList = m_commandList;
+
+    // Rendering
+    ImGui::Render();
+
+    ID3D12DescriptorHeap* heaps[] = { m_ImGuiSrvDescHeap.Get() };
+    m_commandList->SetDescriptorHeaps(1, heaps);
+    ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dx12CmdList);
+
+    EndCommandList();
+    BeginCommandList();
 }
 
 NAMESPACE_DX12_END

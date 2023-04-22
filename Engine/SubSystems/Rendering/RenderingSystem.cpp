@@ -11,6 +11,8 @@
 #include "Graphics/GraphicsCommandList.h"
 #include "Graphics/DebugGraphics.h"
 
+#include "imgui/imgui.h"
+
 NAMESPACE_BEGIN
 
 RenderingSystem::RenderingSystem(Scene* scene) : SubSystem(scene, Rendering::COMPONENT_ID)
@@ -43,13 +45,6 @@ void RenderingSystem::Iteration(float dt)
 	graphics->BeginFrame(&cmdList);
 
 	cmdList->ClearScreen({ 0.0f, 0.2f, 0.4f, 1.0f });
-
-	m_scene->GetScriptSystem()->ForEachOnGUIScripts(
-		[](Script* script)
-		{
-			script->OnGUI();
-		}
-	);
 
 	if (!m_cameraObjects.empty())
 	{
@@ -116,6 +111,17 @@ void RenderingSystem::Iteration(float dt)
 
 		graphics->EndCamera(cam);
 	}
+
+	bool show_demo_window = true;
+	graphics->BeginGUI();
+	ImGui::ShowDemoWindow(&show_demo_window);
+	m_scene->GetScriptSystem()->ForEachOnGUIScripts(
+		[](Script* script)
+		{
+			script->OnGUI();
+		}
+	);
+	graphics->EndGUI();
 
 	graphics->EndFrame(&cmdList);
 }

@@ -4,3 +4,6 @@
 [submodule "Libraries/glm"]
 	path = Libraries/glm
 	url = git@github.com:g-truc/glm.git
+[submodule "Libraries/imgui"]
+	path = Libraries/imgui
+	url = git@github.com:ocornut/imgui.git

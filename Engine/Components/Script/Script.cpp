@@ -8,7 +8,10 @@ void Script::OnComponentAddedToScene()
 {
 	auto scene = m_object->GetScene();
 	m_scene = scene;
+
+	UpdateTransform();
 	OnStart();
+	//EndUpdate();
 }
 
 void Script::OnComponentAdded()
