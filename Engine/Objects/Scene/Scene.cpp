@@ -76,6 +76,8 @@ Scene::~Scene()
 
 void Scene::AddObject(Handle<GameObject>& obj, bool isGhost)
 {
+	obj->RecalculateAABB();
+
 	if (isGhost)
 	{
 		m_waitForAdd.Add(obj);
@@ -137,45 +139,7 @@ void Scene::RefreshObject(GameObject* obj)
 	AABox oriAABB = obj->m_aabb;
 #endif // _DEBUG
 
-	GameObject::PostTraversal(obj, 
-		[](GameObject* object)
-		{
-			bool first = false;
-			AABox localAABB;
-			object->ForEachSubSystemComponents(
-				[&](Handle<SubSystemComponent>& comp) 
-				{
-					if (first)
-					{
-						localAABB = comp->GetLocalAABB();
-						return;
-					}
-
-					auto aabb = comp->GetLocalAABB();
-					localAABB.Joint(aabb);
-				}
-			);
-
-			auto& globalAABB = localAABB;
-			object->ForEachChildren(
-				[&](GameObject* child)
-				{
-					globalAABB.Joint(child->m_aabb);
-				}
-			);
-
-			object->m_aabb = globalAABB;
-
-			if (object->IsTransformMat4())
-			{
-				object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->mat);
-			}
-			else
-			{
-				object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->transform.ToTransformMatrix());
-			}
-		}
-	);
+	obj->RecalculateAABB();
 
 	if (IsDynamicObject(obj))
 	{

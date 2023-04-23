@@ -375,6 +375,8 @@ public:
         GLMQuat() = glm::quat(eulerAngles.GLMVecConst());
     };
 
+    Quaternion(const Mat4& mat4);
+
     inline Mat4 ToMat4() const;
 
     inline Vec3 ToEulerAngles() const
@@ -700,6 +702,11 @@ public:
 inline Mat4 Quaternion::ToMat4() const
 {
     return Mat4().SetRotation(*this);
+}
+
+inline Quaternion::Quaternion(const Mat4& mat4)
+{
+    GLMQuat() = glm::quat(mat4.GLMMatConst());
 }
 
 using Vector3 = Vec3;

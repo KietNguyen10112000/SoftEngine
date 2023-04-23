@@ -17,7 +17,10 @@ public:
 	ID3D12Device2* m_device;
 
 	DX12RenderParams m_cubeParams;
+	DX12RenderParams m_cubeWireframeParams;
+
 	ComPtr<ID3D12PipelineState> m_cubePSO;
+	ComPtr<ID3D12PipelineState> m_cubeWireframePSO;
 
 public:
 	DX12DebugGraphics(DX12Graphics* graphics);
@@ -32,14 +35,14 @@ private:
 	void BeginCamera();
 	void EndCamera();
 
-	void RenderCubes();
+	void RenderCubes(DX12RenderParams& params, ID3D12PipelineState* state);
 
 public:
 	// Inherited via DebugGraphics
-	virtual void DrawAABox(const AABox& aaBox, const Vec4& color) override;
-	virtual void DrawCube(const Box& box, const Vec4& color) override;
-	virtual void DrawCube(const Mat4& transform, const Vec4& color) override;
-	virtual void DrawSphere(const Sphere& sphere, const Vec4& color) override;
+	virtual void DrawAABox(const AABox& aaBox, const Vec4& color, bool wireframe) override;
+	virtual void DrawCube(const Box& box, const Vec4& color, bool wireframe) override;
+	virtual void DrawCube(const Mat4& transform, const Vec4& color, bool wireframe) override;
+	virtual void DrawSphere(const Sphere& sphere, const Vec4& color, bool wireframe) override;
 };
 
 

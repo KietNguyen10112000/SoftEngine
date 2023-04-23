@@ -19,7 +19,9 @@
 
 
 #include "Components/Script/Script.h"
+#include "Components/Script/Camera/FPPCameraScript.h"
 #include "Components/Rendering/Camera.h"
+#include "Components/Rendering/Renderers/CubeRenderer.h"
 
 #include "Input/Input.h"
 #include "Graphics/Graphics.h"
@@ -193,23 +195,85 @@ void Engine::Setup()
 
 	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
+	class MyScript : public Script
+	{
+	public:
+		float m_selfRotationSpeed = 0;
+		Vec3 m_selfRotationAxis = {};
+		float m_rotationSpeed = 0;
+		Vec3 m_rotationAxis = {};
+
+		/*~MyScript()
+		{
+			std::cout << "MyScript::~MyScript()\n";
+		}*/
+
+		virtual void OnStart() override
+		{
+			m_selfRotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+			int rand = Random::RangeInt32(0, 2);
+			m_selfRotationAxis = { 0,0,0 };
+			m_selfRotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_selfRotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_selfRotationAxis[rand] = 1;
+
+			m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+
+			rand = Random::RangeInt32(0, 2);
+			m_rotationAxis = { 0,0,0 };
+			m_rotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_rotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_rotationAxis[rand] = 1;
+		}
+
+		virtual void OnUpdate(float dt) override
+		{
+			auto& pos = Transform().Translation();
+			pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
+
+			auto rot = Transform().Rotation().ToEulerAngles();
+			rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
+			Transform().Rotation() = rot;
+		}
+
+	};
+
 	for (size_t i = 0; i < 200; i++)
 	{
-		auto dynamicObj = mheap::New<GameObject>();
-		auto aabb = (AABox*)&dynamicObj->GetAABB();
-		*aabb = {
-				Vec3(
-					Random::RangeFloat(-rangeX, rangeX),
-					Random::RangeFloat(-rangeY, rangeY),
-					Random::RangeFloat(-rangeZ, rangeZ)
-				),
+		Transform transform = {};
+		transform.Translation() = Vec3(
+			Random::RangeFloat(-rangeX, rangeX),
+			Random::RangeFloat(-rangeY, rangeY),
+			Random::RangeFloat(-rangeZ, rangeZ)
+		);
 
-				Vec3(
-					Random::RangeFloat(1, rangeDimX),
-					Random::RangeFloat(1, rangeDimY),
-					Random::RangeFloat(1, rangeDimZ)
-				),
-		};
+		transform.Rotation() = Vec3(
+			Random::RangeFloat(0, 2 * PI),
+			Random::RangeFloat(0, 2 * PI),
+			Random::RangeFloat(0, 2 * PI)
+		);
+
+		auto dynamicObj = mheap::New<GameObject>();
+		dynamicObj->NewComponent<CubeRenderer>(
+			Vec3(
+				Random::RangeFloat(1, rangeDimX),
+				Random::RangeFloat(1, rangeDimY),
+				Random::RangeFloat(1, rangeDimZ)
+			),
+			Vec3(
+				Random::RangeFloat(0, 1.0f),
+				Random::RangeFloat(0, 1.0f),
+				Random::RangeFloat(0, 1.0f)
+			)
+		);
+
+		dynamicObj->InitializeTransform(transform);
+
+		dynamicObj->NewComponent<MyScript>();
 		mainScene->AddObject(dynamicObj);
 	}
 
@@ -275,113 +339,6 @@ void Engine::Setup()
 	}*/
 	
 	{
-		class CameraScript : public Script
-		{
-		public:
-			float m_rotateX = 0;
-			float m_rotateY = 0;
-			float m_rotateZ = 0;
-			Vec3 m_position = {};
-
-			float m_speed = 10;
-			float m_rotationSensi = 0.12f;
-
-			Mat4 m_mat = Mat4::Identity();
-
-			~CameraScript()
-			{
-				std::cout << "CameraScript::~CameraScript()\n";
-			}
-
-			virtual void OnStart() override
-			{
-				auto transform = GetObject()->GetTransformMat4();
-
-				m_position = transform.Position();
-				Vec3 direction = transform.Forward().Normal();
-				m_rotateX = asin(direction.y);
-				m_rotateY = atan2(direction.x, direction.z);
-			}
-
-			virtual void OnUpdate(float dt) override
-			{
-				/*if (dt > 0.025)
-				{
-					std::cout << dt << "\n";
-				}*/
-
-				auto& transform = TransformMat4();
-				auto trans = Mat4::Identity();
-				trans *= Mat4::Rotation(Vec3::Y_AXIS, m_rotateY);
-
-				auto right = trans.Right().Normal();
-				trans *= Mat4::Rotation(right, -m_rotateX);
-
-				auto forward = trans.Forward().Normal();
-
-				if (m_rotateZ != 0)
-				{
-					trans *= Mat4::Rotation(forward, m_rotateZ);
-				}
-
-				trans *= Mat4::Translation(m_position);
-				transform = trans;
-
-				auto d = m_speed * dt;
-				if (Input()->IsKeyDown('W'))
-				{
-					m_position += forward * d;
-				}
-
-				if (Input()->IsKeyDown('S'))
-				{
-					m_position -= forward * d;
-				}
-
-				if (Input()->IsKeyDown('A'))
-				{
-					m_position -= right * d;
-				}
-
-				if (Input()->IsKeyDown('D'))
-				{
-					m_position += right * d;
-				}
-
-				if (Input()->IsKeyPressed(KEYBOARD::ESC))
-				{
-					Input()->SetCursorLock(!Input()->GetCursorLock());
-				}
-
-				if (Input()->IsKeyPressed('U'))
-				{
-					m_rotationSensi = 0;
-				}
-
-				if (Input()->IsKeyPressed('I'))
-				{
-					m_rotationSensi = 0.12f;
-				}
-
-				if (Input()->IsCursorMoved())
-				{
-					auto& delta = Input()->GetDeltaCursorPosition();
-					m_rotateY += delta.x * dt * m_rotationSensi;
-					m_rotateX -= delta.y * dt * m_rotationSensi;
-
-					m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
-				}
-			}
-
-			virtual void OnGUI() override
-			{
-				m_mat *= Mat4::Rotation(Vec3::UP, 0.016f * PI / 3.0f);
-				auto dbg = Graphics::Get()->GetDebugGraphics();
-				dbg->DrawCube(Mat4::Scaling(2, 2, 2) * m_mat * Mat4::Translation(0, 10, 0), { 0, 1, 1, 1 });
-			}
-
-		};
-
 		auto object = mheap::New<GameObject>();
 		auto aabb = (AABox*)&object->GetAABB();
 		*aabb = {
@@ -394,8 +351,7 @@ void Engine::Setup()
 			Mat4::Identity().SetLookAtLH({ 10, 10, 10 }, { 0,0,0 }, Vec3::UP).Inverse()
 		);
 
-		object->NewComponent<CameraScript>();
-
+		object->NewComponent<FPPCameraScript>();
 		mainScene->AddObject(object);
 	}
 

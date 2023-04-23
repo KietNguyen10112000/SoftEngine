@@ -60,10 +60,10 @@ void RenderingSystem::Iteration(float dt)
 
 		graphics->BeginCamera(cam);
 
-		dbg->DrawCube(xAxis, { 1.0f,0.0f,0.0f,1.0f });
-		dbg->DrawCube(yAxis, { 0.0f,1.0f,0.0f,1.0f });
-		dbg->DrawCube(zAxis, { 0.0f,0.0f,1.0f,1.0f });
-		dbg->DrawCube(rootPoint, { 1.0f,1.0f,1.0f,1.0f });
+		dbg->DrawCube(xAxis, { 1.0f,0.0f,0.0f,0.0f });
+		dbg->DrawCube(yAxis, { 0.0f,1.0f,0.0f,0.0f });
+		dbg->DrawCube(zAxis, { 0.0f,0.0f,1.0f,0.0f });
+		dbg->DrawCube(rootPoint, { 1.0f,1.0f,1.0f,0.0f });
 
 
 		//{
@@ -89,19 +89,32 @@ void RenderingSystem::Iteration(float dt)
 			auto it = m_dynamicQuerySession->begin;
 			auto end = m_dynamicQuerySession->end;
 
+			cam->NumRenderObjects() = (end - it);
+
 			while (it != end)
 			{
 				auto gameObject = *it;
 
 				auto script = gameObject->GetComponentRaw<Script>();
-				if (gameObject->GetComponentRaw<Script>())
+				/*if (script)
 				{
-					dbg->DrawAABox(gameObject->GetAABB(), { 0.0f,1.0f,0.0f,1.0f });
+					dbg->DrawAABox(gameObject->GetAABB(), { 1.0f,0.0f,0.0f,1.0f }, true);
 				}
 				else
 				{
-					dbg->DrawAABox(gameObject->GetAABB(), { 0.5f,0.5f,0.5f,1.0f });
+					dbg->DrawAABox(gameObject->GetAABB(), { 0.0f,1.0f,0.0f,1.0f }, true);
+				}*/
+
+				auto rendering = gameObject->GetComponentRaw<Rendering>();
+				if (rendering)
+				{
+					rendering->Render(this);
 				}
+
+				/*if (rendering != cam && gameObject->IsTransformMat4())
+				{
+					int x = 3;
+				}*/
 				
 				it++;
 			}

@@ -2,13 +2,14 @@
 
 #include "Core/Structures/Managed/Function.h"
 #include "Core/Structures/Managed/Array.h"
+#include "Core/Structures/Managed/ConcurrentList.h"
 
 NAMESPACE_BEGIN
 
 class AsyncTaskRunner : Traceable<AsyncTaskRunner>
 {
 public:
-	Array<Handle<FunctionBase>> m_functions;
+	ConcurrentList<Handle<FunctionBase>> m_functions;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -19,19 +20,17 @@ protected:
 
 	inline void Flush()
 	{
-		for (auto& func : m_functions)
-		{
-			func->Invoke();
-		}
+		m_functions.ForEach([](Handle<FunctionBase>& func) { func->Invoke(); });
 		m_functions.Clear();
 	}
 
 public:
+	// thread-safe, use this function to do scripts communication
 	template <typename Fn, typename... Args>
 	inline auto RunAsync(Fn fn, Args&&... args)
 	{
 		auto ret = MakeAsyncFunction(fn, std::forward<Args>(args)...);
-		m_functions.Push(ret);
+		m_functions.Add(ret);
 		return ret;
 	}
 

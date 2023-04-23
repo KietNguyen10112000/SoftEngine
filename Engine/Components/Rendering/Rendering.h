@@ -14,6 +14,11 @@ public:
 	inline Rendering() {};
 	inline virtual ~Rendering() {};
 
+public:
+	// write data for render
+	// and call render call
+	virtual void Render(RenderingSystem* rdr) = 0;
+
 };
 
 NAMESPACE_END

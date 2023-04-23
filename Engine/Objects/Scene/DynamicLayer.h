@@ -34,6 +34,8 @@ struct DynamicLayerQuerySession
 class DynamicLayer
 {
 protected:
+	friend class MultipleDynamicLayersScene;
+
 	constexpr static size_t ADD_BALANCE_PARAM = 5;
 
 	constexpr static size_t REFRESH_BALANCE_PARAM = 3;

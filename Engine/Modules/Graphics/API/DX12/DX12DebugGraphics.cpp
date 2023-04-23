@@ -25,6 +25,7 @@ DX12DebugGraphics::DX12DebugGraphics(DX12Graphics* graphics) : m_graphics(graphi
 DX12DebugGraphics::~DX12DebugGraphics()
 {
     m_cubeParams.Destroy();
+    m_cubeWireframeParams.Destroy();
 }
 
 void DX12DebugGraphics::InitCubeRenderer()
@@ -33,8 +34,8 @@ void DX12DebugGraphics::InitCubeRenderer()
         byte* vsBytes, * psBytes;
         size_t vsSize, psSize;
 
-        FileUtils::ReadFile("Shaders/DebugGraphics/Cube.vs.cso", vsBytes, vsSize);
-        FileUtils::ReadFile("Shaders/DebugGraphics/Cube.ps.cso", psBytes, psSize);
+        FileUtils::ReadFile("Shaders/DebugGraphics/CubeLight.vs.cso", vsBytes, vsSize);
+        FileUtils::ReadFile("Shaders/DebugGraphics/CubeLight.ps.cso", psBytes, psSize);
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
@@ -91,6 +92,17 @@ void DX12DebugGraphics::InitCubeRenderer()
 
         FileUtils::FreeBuffer(vsBytes);
         FileUtils::FreeBuffer(psBytes);
+
+        psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+        FileUtils::ReadFile("Shaders/DebugGraphics/Cube.vs.cso", vsBytes, vsSize);
+        FileUtils::ReadFile("Shaders/DebugGraphics/Cube.ps.cso", psBytes, psSize);
+        psoDesc.VS.pShaderBytecode = vsBytes;
+        psoDesc.VS.BytecodeLength = vsSize;
+        psoDesc.PS.pShaderBytecode = psBytes;
+        psoDesc.PS.BytecodeLength = psSize;
+        ThrowIfFailed(m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_cubeWireframePSO)));
+        FileUtils::FreeBuffer(vsBytes);
+        FileUtils::FreeBuffer(psBytes);
     }
 
     {
@@ -99,11 +111,12 @@ void DX12DebugGraphics::InitCubeRenderer()
         };
 
         m_cubeParams.Init(m_device, 32, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
+        m_cubeWireframeParams.Init(m_device, 32, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
     }
 
 }
 
-void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
+void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color, bool wireframe)
 {
     auto center = aaBox.GetCenter();
     auto halfDims = aaBox.GetHalfDimensions();
@@ -114,29 +127,35 @@ void DX12DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
     transform *= Mat4::Scaling(halfDims);
     transform *= Mat4::Translation(center);
 
+    auto& params = wireframe ? m_cubeWireframeParams : m_cubeParams;
+    auto& pso = wireframe ? m_cubeWireframePSO : m_cubePSO;
+
     {
         // write all data for rendering
-        auto head = m_cubeParams.AllocateConstantBufferWriteHead();
-        auto objectData = (DX12DebugGraphics_ObjectCBuffer*)m_cubeParams.GetConstantBuffer(head, 2);
+        auto head = params.AllocateConstantBufferWriteHead();
+        auto objectData = (DX12DebugGraphics_ObjectCBuffer*)params.GetConstantBuffer(head, 2);
         objectData->Object.transform = transform;
         objectData->Color = color;
     }
 
-    if (m_cubeParams.IsNeedFlush())
+    if (params.IsNeedFlush())
     {
-        RenderCubes();
+        RenderCubes(params, pso.Get());
     }
 }
 
-void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color)
+void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color, bool wireframe)
 {
+    auto& params = wireframe ? m_cubeWireframeParams : m_cubeParams;
+    auto& pso = wireframe ? m_cubeWireframePSO : m_cubePSO;
+
     auto dt = m_graphics->GetRenderingSystem()->GetScene()->Dt();
     {
         static auto transform = Mat4::Identity();
 
         // write all data for rendering
-        auto head = m_cubeParams.AllocateConstantBufferWriteHead();
-        auto objectData = (ObjectData*)m_cubeParams.GetConstantBuffer(head, 2);
+        auto head = params.AllocateConstantBufferWriteHead();
+        auto objectData = (ObjectData*)params.GetConstantBuffer(head, 2);
 
         transform *= 
               Mat4::Rotation(Vec3::LEFT,    dt * PI / 5.0f)
@@ -146,29 +165,32 @@ void DX12DebugGraphics::DrawCube(const Box& box, const Vec4& color)
         objectData->transform = transform;
     }
 
-    if (m_cubeParams.IsNeedFlush())
+    if (params.IsNeedFlush())
     {
-        RenderCubes();
+        RenderCubes(params, pso.Get());
     }
 }
 
-void DX12DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color)
+void DX12DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color, bool wireframe)
 {
+    auto& params = wireframe ? m_cubeWireframeParams : m_cubeParams;
+    auto& pso = wireframe ? m_cubeWireframePSO : m_cubePSO;
+
     {
         // write all data for rendering
-        auto head = m_cubeParams.AllocateConstantBufferWriteHead();
-        auto objectData = (DX12DebugGraphics_ObjectCBuffer*)m_cubeParams.GetConstantBuffer(head, 2);
+        auto head = params.AllocateConstantBufferWriteHead();
+        auto objectData = (DX12DebugGraphics_ObjectCBuffer*)params.GetConstantBuffer(head, 2);
         objectData->Object.transform = transform;
         objectData->Color = color;
     }
 
-    if (m_cubeParams.IsNeedFlush())
+    if (params.IsNeedFlush())
     {
-        RenderCubes();
+        RenderCubes(params, pso.Get());
     }
 }
 
-void DX12DebugGraphics::DrawSphere(const Sphere& sphere, const Vec4& color)
+void DX12DebugGraphics::DrawSphere(const Sphere& sphere, const Vec4& color, bool wireframe)
 {
 }
 
@@ -189,22 +211,27 @@ void DX12DebugGraphics::EndCamera()
 {
     while (m_cubeParams.IsRemainBatch())
     {
-        RenderCubes();
+        RenderCubes(m_cubeParams, m_cubePSO.Get());
+    }
+
+    while (m_cubeWireframeParams.IsRemainBatch())
+    {
+        RenderCubes(m_cubeWireframeParams, m_cubeWireframePSO.Get());
     }
 }
 
-void DX12DebugGraphics::RenderCubes()
+void DX12DebugGraphics::RenderCubes(DX12RenderParams& params, ID3D12PipelineState* state)
 {
     // render
     auto cmdList = m_graphics->m_commandList;
-    cmdList->SetPipelineState(m_cubePSO.Get());
+    cmdList->SetPipelineState(state);
     cmdList->IASetPrimitiveTopology(D3D12_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     //m_sceneParams.BeginRenderingAsBuiltInParam(cmdList, m_builtInCBVs, m_builtInSRVs);
     //m_cameraParams.BeginRenderingAsBuiltInParam(cmdList, m_builtInCBVs + 1, m_builtInSRVs + 1);
 
     auto& builtInCBVs = m_graphics->m_builtInCBVs;
-    m_cubeParams.RenderBatch(
+    params.RenderBatch(
         m_graphics,
         m_device,
         m_graphics->m_commandQueue.Get(),

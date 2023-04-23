@@ -70,6 +70,13 @@ void MultipleDynamicLayersScene::ReConstruct()
 		tasks[i].Params() = &m_layers[i];
 	}
 
+	/*size_t size = 0;
+	for (auto& l : m_layers)
+	{
+		size += l.m_objects[0].size();
+		size += l.m_objects[1].size();
+	}
+	std::cout << "Num objects " << size << "\n";*/
 	//auto start = Clock::ns::now();
 	TaskSystem::SubmitAndWait(tasks, NUM_LAYERS, Task::CRITICAL);
 	//auto dt = (Clock::ns::now() - start) / 1000000;

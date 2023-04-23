@@ -14,6 +14,7 @@ class Camera : public Rendering
 {
 protected:
 	Mat4 m_proj;
+	size_t m_numRenderObjects = 0;
 
 public:
 	inline Camera(float fovY, float aspectRatio, float dNear, float dFar)
@@ -41,6 +42,8 @@ public:
 
 	virtual bool IsNewBranch() override { return false; }
 
+	virtual void Render(RenderingSystem* rdr) override {};
+
 public:
 	inline Mat4 GetView()
 	{
@@ -50,6 +53,11 @@ public:
 	inline auto& GetProj() const
 	{
 		return m_proj;
+	}
+
+	inline size_t& NumRenderObjects()
+	{
+		return m_numRenderObjects;
 	}
 
 };
