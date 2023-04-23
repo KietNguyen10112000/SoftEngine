@@ -324,6 +324,12 @@ inline void name()																\
 		}
 	);
 
+	DEF_INVOKE_FUNC(
+		InvokeOnObjectRefresh,
+		OnObjectRefresh,
+		(void)(0)
+	);
+
 #undef DEF_INVOKE_FUNC
 
 	inline bool IsRootObject()

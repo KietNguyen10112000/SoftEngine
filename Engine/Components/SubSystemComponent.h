@@ -31,6 +31,9 @@ public:
 	// called when object contains this component removed from scene
 	virtual void OnComponentRemovedFromScene() = 0;
 
+	// called when object contains this component refresh
+	virtual void OnObjectRefresh() = 0;
+
 	// main component is allowed to modify GameObject's properties
 	virtual void SetAsMain() = 0;
 

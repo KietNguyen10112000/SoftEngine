@@ -180,9 +180,9 @@ void Engine::Setup()
 	constexpr float rangeDimY = 100;
 	constexpr float rangeDimZ = 100;*/
 
-	constexpr float rangeX = 100;
-	constexpr float rangeY = 100;
-	constexpr float rangeZ = 100;
+	constexpr float rangeX = 300;
+	constexpr float rangeY = 300;
+	constexpr float rangeZ = 300;
 
 	constexpr float rangeDimX = 10;
 	constexpr float rangeDimY = 10;
@@ -235,14 +235,18 @@ void Engine::Setup()
 			auto& pos = Transform().Translation();
 			pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
 
-			auto rot = Transform().Rotation().ToEulerAngles();
+			/*auto rot = Transform().Rotation().ToEulerAngles();
 			rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
-			Transform().Rotation() = rot;
+			Transform().Rotation() = rot;*/
+
+			auto rot = Transform().Rotation().ToMat4();
+			rot *= Mat4::Rotation(m_selfRotationAxis, m_selfRotationSpeed * dt);
+			Transform().Rotation() = Quaternion(rot);
 		}
 
 	};
 
-	for (size_t i = 0; i < 200; i++)
+	for (size_t i = 0; i < 10000; i++)
 	{
 		Transform transform = {};
 		transform.Translation() = Vec3(
@@ -399,8 +403,9 @@ void Engine::Iteration()
 			auto heap = mheap::internal::Get();
 			if (heap->IsNeedGC())
 			{
-				std::cout << "GC running...\n";
+				std::cout << "GC started...\n";
 				gc::Run(-1);
+				std::cout << "GC end...\n";
 				heap->EndGC();
 			}
 			engine->m_gcIsRunning.exchange(false, std::memory_order_release);

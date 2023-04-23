@@ -155,6 +155,8 @@ void Scene::RefreshObject(GameObject* obj)
 		assert(memcmp(&aabb, &oriAABB, sizeof(AABox)) == 0);
 	}
 #endif // _DEBUG
+
+	obj->InvokeOnObjectRefresh();
 }
 
 void Scene::ProcessRemoveLists()

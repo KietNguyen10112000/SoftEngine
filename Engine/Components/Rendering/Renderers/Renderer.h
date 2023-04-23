@@ -22,6 +22,8 @@ public:
 
 	virtual bool IsNewBranch() final override { return false; }
 
+	virtual void OnObjectRefresh() override {};
+
 };
 
 NAMESPACE_END

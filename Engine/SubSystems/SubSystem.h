@@ -195,7 +195,7 @@ public:
 	inline SubSystem(Scene* scene, ID subSystemID) : m_scene(scene), COMPONENT_ID(subSystemID) 
 	{
 		// allocator of SubSystemMergingUnit allocate large block memory, so dynamic initialize it
-		m_numMergingUnits = std::max(1ull, TaskSystem::GetWorkerCount() / SubSystemInfo::GetNumAvailabelIndexedSubSystemCount());
+		m_numMergingUnits = std::max(1ull, TaskSystem::GetWorkerCount() / 2); /// SubSystemInfo::GetNumAvailabelIndexedSubSystemCount());
 		/*for (size_t i = 0; i < m_numMergingUnits; i++)
 		{
 			m_mergingUnits[i] = (SubSystemMergingUnit*)&m_buffer[i * sizeof(SubSystemMergingUnit)];
@@ -235,7 +235,7 @@ protected:
 			auto size = subSystem->m_rootObjectCount;
 			auto& processedCount = subSystem->m_processedObjectCount;
 
-			auto endId = startIdx == 0 ? size : startIdx - 1;
+			//auto endId = startIdx == 0 ? (size - 1) : (startIdx - 1);
 			auto id = startIdx;
 
 			auto scene = subSystem->m_scene;
@@ -248,8 +248,6 @@ protected:
 			//mergingUnit->MergeBegin();
 			while (processedCount.load(std::memory_order_relaxed) != size)
 			{
-				processedCount++;
-
 				auto obj = objects[id];
 				auto& lock = obj->m_subSystemProcessCount[COMPONENT_ID];
 				if (lock.load(std::memory_order_relaxed) == iterationCount
@@ -257,6 +255,8 @@ protected:
 				{
 					goto Next;
 				}
+
+				processedCount++;
 
 				assert(scene == obj->m_scene);
 				assert(obj->IsRootObject());
@@ -293,12 +293,13 @@ protected:
 				}
 				
 			Next:
-				if (id == endId)
+				id = (id + 1) % size;
+
+				if (id == startIdx)
 				{
 					break;
 				}
 
-				id = (id + 1) % size;
 			}
 		};
 
@@ -331,7 +332,7 @@ protected:
 
 		auto numTasks = m_numMergingUnits;
 		auto numPerTask = m_rootObjectCount / numTasks;
-		auto start = 0;
+		size_t start = 0;
 		for (size_t i = 0; i < m_numMergingUnits; i++)
 		{
 			auto& param = m_processParams[i];

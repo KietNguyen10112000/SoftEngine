@@ -384,6 +384,19 @@ public:
         return glm::eulerAngles(GLMQuatConst());
     }
 
+    inline auto& Normalize()
+    {
+        GLMQuat() = glm::normalize(GLMQuat());
+        return *this;
+    }
+
+    inline auto Normal()
+    {
+        Quaternion ret;
+        ret.GLMQuat() = glm::normalize(GLMQuat());
+        return ret;
+    }
+
     inline friend bool operator==(const Quaternion& v1, const Quaternion& v2)
     {
         return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
@@ -707,6 +720,7 @@ inline Mat4 Quaternion::ToMat4() const
 inline Quaternion::Quaternion(const Mat4& mat4)
 {
     GLMQuat() = glm::quat(mat4.GLMMatConst());
+    Normalize();
 }
 
 using Vector3 = Vec3;

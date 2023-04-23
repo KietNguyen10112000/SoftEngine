@@ -110,8 +110,8 @@ void DX12DebugGraphics::InitCubeRenderer()
             MemoryUtils::Align<256>(sizeof(ObjectData)),
         };
 
-        m_cubeParams.Init(m_device, 32, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
-        m_cubeWireframeParams.Init(m_device, 32, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
+        m_cubeParams.Init(m_device, 512, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
+        m_cubeWireframeParams.Init(m_device, 512, 32, 2, 1, constBufSizes, 0, 0, 0, &m_graphics->m_synchObject);
     }
 
 }

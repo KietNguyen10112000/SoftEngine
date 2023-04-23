@@ -34,6 +34,8 @@ public:
 
 	virtual void OnComponentRemovedFromScene() override {}
 
+	virtual void OnObjectRefresh() override {};
+
 	virtual void SetAsMain() override {}
 
 	virtual void SetAsExtra() override {}
