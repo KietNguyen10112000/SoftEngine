@@ -358,7 +358,7 @@ inline void name()																\
 		}
 
 		m_numBranchCount.store(0, std::memory_order_relaxed);
-		m_isBranched.store(false, std::memory_order_relaxed);
+		//m_isBranched.store(false, std::memory_order_relaxed);
 	}
 
 	template <typename Func>

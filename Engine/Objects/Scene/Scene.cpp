@@ -11,6 +11,7 @@
 #include "Event/EventManager.h"
 
 #include "TaskSystem/TaskSystem.h"
+#include "TaskSystem/TaskUtils.h"
 
 #include "Objects/QueryStructures/AABBQueryStructure.h"
 #include "Objects/QueryStructures/DBVTQueryTree.h"
@@ -260,9 +261,10 @@ void Scene::ProcessAddLists()
 
 void Scene::ProcessRecordedBranchedLists()
 {
-	m_branchedObjects.ForEach(
+	/*m_branchedObjects.ForEach(
 		[&](GameObject* obj)
 		{
+			obj->m_isBranched.store(false, std::memory_order_relaxed);
 			if (obj->m_numBranchCount.load(std::memory_order_relaxed) != obj->m_numBranch.load(std::memory_order_relaxed))
 			{
 				obj->MergeSubSystemComponentsData();
@@ -274,7 +276,28 @@ void Scene::ProcessRecordedBranchedLists()
 				}
 			}
 		}
+	);*/
+
+	TaskUtils::ForEachConcurrentList(
+		m_branchedObjects,
+		[&](GameObject* obj)
+		{
+			auto ret = obj->m_isBranched.exchange(false);
+			if (ret == true && obj->m_numBranchCount.load(std::memory_order_relaxed) != obj->m_numBranch.load(std::memory_order_relaxed))
+			{
+				obj->MergeSubSystemComponentsData();
+
+				if (obj->m_isNeedRefresh)
+				{
+					RefreshObject(obj);
+					obj->m_isNeedRefresh = false;
+				}
+			}
+			return ret == true;
+		}, 
+		TaskSystem::GetWorkerCount() / 2
 	);
+
 	m_branchedObjects.Clear();
 }
 

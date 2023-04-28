@@ -1,0 +1,123 @@
+#pragma once
+
+#include "Core/TypeDef.h"
+
+#include "Scene.h"
+
+NAMESPACE_BEGIN
+
+class AABBQueryStructure;
+class AABBQuerySession;
+class GameObject;
+
+struct DynamicLayerQuerySession
+{
+	AABBQueryStructure* queryStructure;
+	AABBQuerySession* querySession;
+
+	inline void Clear()
+	{
+		querySession->ClearPrevQueryResult();
+	}
+
+	~DynamicLayerQuerySession()
+	{
+		if (queryStructure)
+		{
+			queryStructure->DeleteSession(querySession);
+			querySession = nullptr;
+			queryStructure = nullptr;
+		}
+	}
+};
+
+class DynamicLayer
+{
+protected:
+	friend class MultipleDynamicLayersScene;
+
+	constexpr static size_t ADD_BALANCE_PARAM = 5;
+
+	constexpr static size_t REFRESH_BALANCE_PARAM = 3;
+
+	constexpr static size_t REBALANCE_BATCH_SIZE = 128;
+
+	constexpr static size_t LIMIT_RECONSTRUCT_TIME_NS = 3 * 1000000; // 3 ms
+
+	struct AABBQueryID
+	{
+		// id refer to each AABBQueryStructure
+		/*ID id[2] = { 0, 0 };
+
+		ID ulistId[2] = { 0, 0 };*/
+
+		struct
+		{
+			ID id = INVALID_ID;
+			ID ulistId = INVALID_ID;
+		} m[2] = {};
+	};
+
+	AABBQueryStructure* m_queryStructures[2] = { nullptr, nullptr };
+	//size_t m_queryStructuresSizes[2] = { 0, 0 };
+
+	raw::UnorderedList<GameObject*, 1024> m_objects[2] = {};
+
+	// wait list for each aabb query structure
+	raw::ConcurrentList<GameObject*> m_waitForAddObj;
+	raw::ConcurrentList<GameObject*> m_waitForRemoveObjs[2];
+
+	raw::ConcurrentList<GameObject*> m_waitForRefreshObjs[2];
+
+	raw::ConcurrentList<AABBQueryID*> m_freeIds;
+	raw::ConcurrentList<AABBQueryID*> m_allocatedIds;
+
+	AABBQueryID** m_freeIdsChunk = nullptr;
+	std::atomic<intmax_t> m_freeIdsChunkNumElm = { 0 };
+
+	size_t m_isFreeIdsAvaiable[2] = { false, false };
+
+	GameObject** m_splitAddList[2][32] = { {}, {} };
+	GameObject** m_splitRemoveList[2][32] = { {}, {} };
+
+protected:
+	inline size_t GetAABBQueryStructureIdOf(GameObject* obj)
+	{
+		auto id = Scene::GetObjectAABBQueryId(obj);
+		return ((AABBQueryID*)id)->m[0].id == INVALID_ID ? 1 : 0;
+	}
+
+	void BeginAllocateID();
+	AABBQueryID* AllocateID(size_t);
+	void EndAllocateID();
+
+	void ProcessRemoveLists();
+	void ProcessAddLists();
+	void ProcessRefreshLists();
+	void IncrementalBalance(size_t remainNS);
+
+	void RefreshAll();
+
+public:
+	DynamicLayer();
+	~DynamicLayer();
+
+public:
+	void AddDynamicObject(GameObject* obj);
+
+	void RemoveDynamicObject(GameObject* obj);
+
+	void RefreshDynamicObject(GameObject* obj);
+
+	void ReConstruct();
+
+public:
+	void InitSession(DynamicLayerQuerySession& session);
+
+	// thread-safe method
+	void AABBQueryAABox(const AABox& aaBox, DynamicLayerQuerySession& session);
+	void AABBQueryFrustum(const Frustum& frustum, DynamicLayerQuerySession& session);
+
+};
+
+NAMESPACE_END

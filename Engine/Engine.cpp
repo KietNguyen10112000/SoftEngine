@@ -246,7 +246,7 @@ void Engine::Setup()
 
 	};
 
-	for (size_t i = 0; i < 10000; i++)
+	for (size_t i = 0; i < 200; i++)
 	{
 		Transform transform = {};
 		transform.Translation() = Vec3(
