@@ -11,6 +11,8 @@ protected:
 	Vec3 m_dimensions;
 
 public:
+	BoxCollider(const Vec3& dims) : m_dimensions(dims) {};
+
 	virtual void Collide(const Sphere& sphere, Manifold* output) override {}
 
 	virtual void Collide(const Box& box, Manifold* output) override 
@@ -22,7 +24,7 @@ public:
 
 	virtual AABox GetLocalAABB() override
 	{
-		return 0;
+		return AABox({ 0,0,0 }, m_dimensions);
 	}
 
 };

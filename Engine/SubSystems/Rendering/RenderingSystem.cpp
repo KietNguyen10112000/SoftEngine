@@ -95,15 +95,11 @@ void RenderingSystem::Iteration(float dt)
 			{
 				auto gameObject = *it;
 
-				auto script = gameObject->GetComponentRaw<Script>();
-				/*if (script)
+				auto physics = gameObject->GetComponentRaw<Physics>();
+				if (physics)
 				{
-					dbg->DrawAABox(gameObject->GetAABB(), { 1.0f,0.0f,0.0f,1.0f }, true);
+					dbg->DrawAABox(gameObject->GetAABB(), { physics->m_debugColor,1.0f }, true);
 				}
-				else
-				{
-					dbg->DrawAABox(gameObject->GetAABB(), { 0.0f,1.0f,0.0f,1.0f }, true);
-				}*/
 
 				auto rendering = gameObject->GetComponentRaw<Rendering>();
 				if (rendering)

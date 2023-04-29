@@ -22,6 +22,9 @@
 #include "Components/Script/Camera/FPPCameraScript.h"
 #include "Components/Rendering/Camera.h"
 #include "Components/Rendering/Renderers/CubeRenderer.h"
+#include "Components/Physics/Bodies/RigidBody.h"
+
+#include "Objects/Physics/Colliders/BoxCollider.h"
 
 #include "Input/Input.h"
 #include "Graphics/Graphics.h"
@@ -180,9 +183,9 @@ void Engine::Setup()
 	constexpr float rangeDimY = 100;
 	constexpr float rangeDimZ = 100;*/
 
-	constexpr float rangeX = 300;
-	constexpr float rangeY = 300;
-	constexpr float rangeZ = 300;
+	constexpr float rangeX = 100;
+	constexpr float rangeY = 100;
+	constexpr float rangeZ = 100;
 
 	constexpr float rangeDimX = 10;
 	constexpr float rangeDimY = 10;
@@ -195,56 +198,56 @@ void Engine::Setup()
 
 	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
-	class MyScript : public Script
-	{
-	public:
-		float m_selfRotationSpeed = 0;
-		Vec3 m_selfRotationAxis = {};
-		float m_rotationSpeed = 0;
-		Vec3 m_rotationAxis = {};
+	//class MyScript : public Script
+	//{
+	//public:
+	//	float m_selfRotationSpeed = 0;
+	//	Vec3 m_selfRotationAxis = {};
+	//	float m_rotationSpeed = 0;
+	//	Vec3 m_rotationAxis = {};
 
-		/*~MyScript()
-		{
-			std::cout << "MyScript::~MyScript()\n";
-		}*/
+	//	/*~MyScript()
+	//	{
+	//		std::cout << "MyScript::~MyScript()\n";
+	//	}*/
 
-		virtual void OnStart() override
-		{
-			m_selfRotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
-			int rand = Random::RangeInt32(0, 2);
-			m_selfRotationAxis = { 0,0,0 };
-			m_selfRotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_selfRotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_selfRotationAxis[rand] = 1;
+	//	virtual void OnStart() override
+	//	{
+	//		m_selfRotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+	//		int rand = Random::RangeInt32(0, 2);
+	//		m_selfRotationAxis = { 0,0,0 };
+	//		m_selfRotationAxis[rand] = 1;
+	//		rand = Random::RangeInt32(0, 2);
+	//		m_selfRotationAxis[rand] = 1;
+	//		rand = Random::RangeInt32(0, 2);
+	//		m_selfRotationAxis[rand] = 1;
 
-			m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+	//		m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
 
-			rand = Random::RangeInt32(0, 2);
-			m_rotationAxis = { 0,0,0 };
-			m_rotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_rotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_rotationAxis[rand] = 1;
-		}
+	//		rand = Random::RangeInt32(0, 2);
+	//		m_rotationAxis = { 0,0,0 };
+	//		m_rotationAxis[rand] = 1;
+	//		rand = Random::RangeInt32(0, 2);
+	//		m_rotationAxis[rand] = 1;
+	//		rand = Random::RangeInt32(0, 2);
+	//		m_rotationAxis[rand] = 1;
+	//	}
 
-		virtual void OnUpdate(float dt) override
-		{
-			auto& pos = Transform().Translation();
-			pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
+	//	virtual void OnUpdate(float dt) override
+	//	{
+	//		auto& pos = Transform().Translation();
+	//		pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
 
-			/*auto rot = Transform().Rotation().ToEulerAngles();
-			rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
-			Transform().Rotation() = rot;*/
+	//		/*auto rot = Transform().Rotation().ToEulerAngles();
+	//		rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
+	//		Transform().Rotation() = rot;*/
 
-			auto rot = Transform().Rotation().ToMat4();
-			rot *= Mat4::Rotation(m_selfRotationAxis, m_selfRotationSpeed * dt);
-			Transform().Rotation() = Quaternion(rot);
-		}
+	//		auto rot = Transform().Rotation().ToMat4();
+	//		rot *= Mat4::Rotation(m_selfRotationAxis, m_selfRotationSpeed * dt);
+	//		Transform().Rotation() = Quaternion(rot);
+	//	}
 
-	};
+	//};
 
 	for (size_t i = 0; i < 200; i++)
 	{
@@ -261,13 +264,14 @@ void Engine::Setup()
 			Random::RangeFloat(0, 2 * PI)
 		);
 
+		auto dims = Vec3(
+			Random::RangeFloat(1, rangeDimX),
+			Random::RangeFloat(1, rangeDimY),
+			Random::RangeFloat(1, rangeDimZ)
+		);
 		auto dynamicObj = mheap::New<GameObject>();
 		dynamicObj->NewComponent<CubeRenderer>(
-			Vec3(
-				Random::RangeFloat(1, rangeDimX),
-				Random::RangeFloat(1, rangeDimY),
-				Random::RangeFloat(1, rangeDimZ)
-			),
+			dims,
 			Vec3(
 				Random::RangeFloat(0, 1.0f),
 				Random::RangeFloat(0, 1.0f),
@@ -277,7 +281,8 @@ void Engine::Setup()
 
 		dynamicObj->InitializeTransform(transform);
 
-		dynamicObj->NewComponent<MyScript>();
+		//dynamicObj->NewComponent<MyScript>();
+		dynamicObj->NewComponent<RigidBody>(Physics::DYNAMIC, MakeShared<BoxCollider>(dims));
 		mainScene->AddObject(dynamicObj);
 	}
 
@@ -341,6 +346,22 @@ void Engine::Setup()
 
 		Y += 2.0f;
 	}*/
+
+	{
+		auto ground = mheap::New<GameObject>();
+		ground->NewComponent<RigidBody>(Physics::DYNAMIC, MakeShared<BoxCollider>(Vec3(1000, 1, 1000)));
+		
+		Transform transform = {};
+		transform.Translation() = Vec3(0, -5, 0);
+
+		ground->InitializeTransform(transform);
+		ground->NewComponent<CubeRenderer>(
+			Vec3(1000, 1, 1000),
+			Vec3(0.1, 0.5, 0.5)
+		);
+
+		mainScene->AddObject(ground);
+	}
 	
 	{
 		auto object = mheap::New<GameObject>();

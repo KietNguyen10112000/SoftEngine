@@ -121,6 +121,8 @@ private:
 	ConcurrentList<Handle<GameObject>> m_waitForRemoves[2];
 	ConcurrentList<Handle<GameObject>>* m_waitForRemove = &m_waitForRemoves[0];
 
+	raw::ConcurrentList<GameObject*> m_waitForRefresh;
+
 	ID m_oldStableValue = 0;
 	ID m_id = 0;
 	ID m_idMask = 0;
@@ -163,6 +165,7 @@ private:
 
 	void ProcessRemoveLists();
 	void ProcessAddLists();
+	void ProcessRefreshLists();
 	void ProcessRecordedBranchedLists();
 
 	inline void RecordBranchedObject(GameObject* obj)

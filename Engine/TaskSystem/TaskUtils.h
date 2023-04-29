@@ -11,31 +11,32 @@ NAMESPACE_BEGIN
 namespace TaskUtils
 {
 
-template <typename ConcurrentList, typename Fn, size_t MAX_THREADS = 128, size_t EFFECTIVE_MT_SIZE = 512>
-inline void ForEachConcurrentList(ConcurrentList& list, Fn callback, 
+template <class CList, typename Fn, size_t MAX_THREADS = 128, size_t EFFECTIVE_MT_SIZE = 1024>
+inline void ForEachConcurrentList(CList& list, Fn callback,
 	const size_t N_THREADS, Task::PRIORITY priority = Task::CRITICAL)
 {
-	using Iteration = ConcurrentList::RingIteration;
+	using Iteration = CList::RingIteration;
 	struct Param
 	{
 		Fn*						cb;
 		Iteration				it;
 
 		std::atomic<intmax_t>*	count;
+		ID						dispatchId;
 	};
 
 	intmax_t size = list.size();
 
-	/*if (size < N_THREADS * EFFECTIVE_MT_SIZE)
+	if (size < N_THREADS * EFFECTIVE_MT_SIZE)
 	{
-		list.ForEach(callback);
-		return;
-	}*/
-
-	if (size == 0)
-	{
+		list.ForEach([&](auto elm) { callback(elm, 0); });
 		return;
 	}
+
+	/*if (size == 0)
+	{
+		return;
+	}*/
 
 
 	Task	tasks	[MAX_THREADS];
@@ -54,11 +55,12 @@ inline void ForEachConcurrentList(ConcurrentList& list, Fn callback,
 		param.cb = &callback;
 		param.it = it;
 		param.count = &count;
+		param.dispatchId = i;
 
 		task.Params() = &param;
 		task.Entry() = [](void* p) 
 		{
-			TASK_SYSTEM_UNPACK_PARAM_3(Param, p, cb, it, count);
+			TASK_SYSTEM_UNPACK_PARAM_4(Param, p, cb, it, count, dispatchId);
 			
 			auto& remain = *count;
 
@@ -68,7 +70,7 @@ inline void ForEachConcurrentList(ConcurrentList& list, Fn callback,
 			{
 				auto& elm = *it;
 
-				if (call(elm))
+				if (call(elm, dispatchId))
 				{
 					--remain;
 				}

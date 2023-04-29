@@ -157,7 +157,7 @@ void Scene::RefreshObject(GameObject* obj)
 	}
 #endif // _DEBUG
 
-	obj->InvokeOnObjectRefresh();
+	m_waitForRefresh.Add(obj);
 }
 
 void Scene::ProcessRemoveLists()
@@ -259,6 +259,14 @@ void Scene::ProcessAddLists()
 	m_waitForAdd.Clear();
 }
 
+void Scene::ProcessRefreshLists()
+{
+	m_waitForRefresh.ForEach([](GameObject* obj) {
+			obj->InvokeOnObjectRefresh();
+		}
+	);
+}
+
 void Scene::ProcessRecordedBranchedLists()
 {
 	/*m_branchedObjects.ForEach(
@@ -280,7 +288,7 @@ void Scene::ProcessRecordedBranchedLists()
 
 	TaskUtils::ForEachConcurrentList(
 		m_branchedObjects,
-		[&](GameObject* obj)
+		[&](GameObject* obj,ID)
 		{
 			auto ret = obj->m_isBranched.exchange(false);
 			if (ret == true && obj->m_numBranchCount.load(std::memory_order_relaxed) != obj->m_numBranch.load(std::memory_order_relaxed))
@@ -303,7 +311,7 @@ void Scene::ProcessRecordedBranchedLists()
 
 void Scene::PrevIteration()
 {
-	Task tasks[2] = {};
+	Task tasks[4] = {};
 
 	auto& processAddRemove = tasks[0];
 	processAddRemove.Entry() = [](void* s) 
@@ -314,7 +322,15 @@ void Scene::PrevIteration()
 	};
 	processAddRemove.Params() = this;
 
-	auto& reconstruct = tasks[1];
+	auto& processRefresh = tasks[1];
+	processRefresh.Entry() = [](void* s)
+	{
+		Scene* scene = (Scene*)s;
+		scene->ProcessRefreshLists();
+	};
+	processRefresh.Params() = this;
+
+	auto& reconstruct = tasks[2];
 	reconstruct.Entry() = [](void* s)
 	{
 		Scene* scene = (Scene*)s;
@@ -323,7 +339,19 @@ void Scene::PrevIteration()
 	};
 	reconstruct.Params() = this;
 
-	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
+	auto& subSysPrevIteration = tasks[3];
+	subSysPrevIteration.Entry() = [](void* s)
+	{
+		Scene* scene = (Scene*)s;
+		for (auto& s : scene->m_subSystems)
+		{
+			if (s)
+				s->PrevIteration(scene->Dt());
+		}
+	};
+	subSysPrevIteration.Params() = this;
+
+	TaskSystem::SubmitAndWait(tasks, 4, Task::CRITICAL);
 }
 
 void Scene::Iteration()

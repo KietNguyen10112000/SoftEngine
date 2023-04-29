@@ -13,7 +13,7 @@ NAMESPACE_BEGIN
 
 class CubeRenderer : public Renderer
 {
-protected:
+public:
 	Vec3 m_dimensions;
 	Vec3 m_color;
 	

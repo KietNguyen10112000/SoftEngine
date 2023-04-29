@@ -9,7 +9,7 @@ class Collider;
 class RigidBody : public Physics
 {
 public:
-
+	RigidBody(TYPE type, const SharedPtr<Collider>& collider) : Physics(type, collider) {};
 
 };
 

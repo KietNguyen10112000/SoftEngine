@@ -222,6 +222,38 @@ public:
 	virtual void PostIteration(float dt) = 0;
 
 protected:
+	inline void MergeObjectBranches(GameObject* obj)
+	{
+		bool refresh = false;
+		if (obj->m_numBranch != 1)
+		{
+			if (GameObjectDirectAccessor::BranchMerge(obj))
+			{
+				obj->MergeSubSystemComponentsData();
+				refresh = true;
+			}
+			else
+			{
+				// record
+				if (obj->m_isBranched.load(std::memory_order_relaxed) == false
+					&& obj->m_isBranched.exchange(true) == false)
+				{
+					m_scene->RecordBranchedObject(obj);
+				}
+			}
+		}
+		else
+		{
+			refresh = true;
+		}
+
+		if (refresh && obj->m_isNeedRefresh)
+		{
+			m_scene->RefreshObject(obj);
+			obj->m_isNeedRefresh = false;
+		}
+	}
+
 	template <auto FN>
 	void InitForEachRootObjects()
 	{
@@ -243,7 +275,7 @@ protected:
 
 			const auto COMPONENT_ID = subSystem->COMPONENT_ID;
 
-			bool refresh = false;
+			//bool refresh = false;
 
 			//mergingUnit->MergeBegin();
 			while (processedCount.load(std::memory_order_relaxed) != size)
@@ -263,34 +295,7 @@ protected:
 
 				FN(dispatchId, subSystem, obj, userPtr);
 
-				refresh = false;
-				if (obj->m_numBranch != 1)
-				{
-					if (GameObjectDirectAccessor::BranchMerge(obj))
-					{
-						obj->MergeSubSystemComponentsData();
-						refresh = true;
-					}
-					else 
-					{
-						// record
-						if (obj->m_isBranched.load(std::memory_order_relaxed) == false 
-							&& obj->m_isBranched.exchange(true) == false)
-						{
-							scene->RecordBranchedObject(obj);
-						}
-					}
-				}
-				else
-				{
-					refresh = true;
-				}
-
-				if (refresh && obj->m_isNeedRefresh)
-				{
-					scene->RefreshObject(obj);
-					obj->m_isNeedRefresh = false;
-				}
+				subSystem->MergeObjectBranches(obj);
 				
 			Next:
 				id = (id + 1) % size;
