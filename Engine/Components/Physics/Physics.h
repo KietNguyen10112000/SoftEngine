@@ -9,6 +9,8 @@
 #include "Objects/Scene/Scene.h"
 #include "Objects/Physics/Colliders/Collider.h"
 
+#include "SubSystems/Physics/PhysicsSystem.h"
+
 NAMESPACE_BEGIN
 
 class Manifold;
@@ -37,9 +39,12 @@ protected:
 	std::atomic<size_t> m_numAcquiredBoardPhase = { 0 };
 	std::atomic<size_t> m_numFilterDuplBoardPhase = { 0 };
 	std::atomic<size_t> m_numBeginSetup = { 0 };
+	size_t m_numClearManifold = 0;
+	size_t m_processedBoardPhaseDispatchId = INVALID_ID;
 
+	Spinlock m_clearManifoldLock;
 	bool m_isRefreshed = false;
-	bool m_padd[3];
+	bool m_padd[2];
 
 	DeferredBuffer<raw::ConcurrentArrayList<Manifold*>> m_manifolds;
 
@@ -47,6 +52,7 @@ protected:
 
 public:
 	Vec3 m_debugColor = { 0,1,0 };
+	size_t m_debugIteration = 0;
 
 public:
 	inline Physics(TYPE type, const SharedPtr<Collider>& collider) : m_TYPE(type), m_collider(collider) {};
@@ -67,13 +73,14 @@ public:
 	virtual void ResolveBranch() {};
 	virtual bool IsNewBranch()
 	{
-		return true;
+		return false;
 	}
 
 	virtual void OnObjectRefresh() override
 	{
 		m_aabb = m_collider->GetLocalAABB();
 		m_aabb.Transform(GetObject()->GetTransformMat4());
+		GetObject()->GetScene()->GetPhysicsSystem()->AddToBeginBoardPhase(GetObject());
 	}
 
 	virtual math::AABox GetLocalAABB() override

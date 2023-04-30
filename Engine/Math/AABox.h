@@ -108,6 +108,11 @@ public:
 		return ret;
 	}
 
+	inline bool operator==(const AABox& right) const
+	{
+		return m_center == right.m_center && m_halfDimensions == right.m_halfDimensions;
+	}
+
 public:
 	inline void Transform(const Mat4& mat)
 	{

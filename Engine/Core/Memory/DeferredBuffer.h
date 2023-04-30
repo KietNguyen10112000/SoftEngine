@@ -63,6 +63,16 @@ public:
 		m_buffers.Clear();
 	}
 
+	inline void UpdateCustomBegin()
+	{
+		m_turn++;
+	}
+
+	inline void UpdateCustomEnd()
+	{
+		m_buffers.Clear();
+	}
+
 	inline void Track(DeferredBufferState* state)
 	{
 		m_buffers.Add(state);

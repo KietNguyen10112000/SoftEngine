@@ -10,6 +10,7 @@ class Manifold
 {
 public:
 	ID m_id = INVALID_ID;
+	std::atomic<intmax_t> m_refCount = { 0 };
 
 	Physics* m_A;
 	Physics* m_B;

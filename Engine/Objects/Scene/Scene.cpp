@@ -26,6 +26,8 @@
 
 NAMESPACE_BEGIN
 
+size_t g_debugRefresh = 0;
+
 Scene::Scene(Engine* engine)
 {
 	m_objectEventMgr = rheap::New<BuiltinEventManager>(this);
@@ -140,11 +142,12 @@ void Scene::RefreshObject(GameObject* obj)
 	AABox oriAABB = obj->m_aabb;
 #endif // _DEBUG
 
-	obj->RecalculateAABB();
+	auto aabbChanged = obj->RecalculateAABB();
 
-	if (IsDynamicObject(obj))
+	if (aabbChanged && IsDynamicObject(obj))
 	{
 		RefreshDynamicObject(obj);
+		g_debugRefresh++;
 	}
 
 #ifdef _DEBUG
@@ -265,6 +268,7 @@ void Scene::ProcessRefreshLists()
 			obj->InvokeOnObjectRefresh();
 		}
 	);
+	m_waitForRefresh.Clear();
 }
 
 void Scene::ProcessRecordedBranchedLists()
@@ -286,7 +290,7 @@ void Scene::ProcessRecordedBranchedLists()
 		}
 	);*/
 
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		m_branchedObjects,
 		[&](GameObject* obj,ID)
 		{
@@ -311,6 +315,7 @@ void Scene::ProcessRecordedBranchedLists()
 
 void Scene::PrevIteration()
 {
+	g_debugRefresh = 0;
 	Task tasks[4] = {};
 
 	auto& processAddRemove = tasks[0];
@@ -422,6 +427,32 @@ void Scene::AABBStaticQueryFrustum(const Frustum& frustum, SceneStaticQuerySessi
 		session->begin = (GameObject**)&ss->m_result[0];
 		session->end = session->begin + ss->m_result.size();
 	}
+}
+
+bool Scene::IsDynamicObject(GameObject* obj)
+{
+	auto physicsComp = obj->GetComponentRaw<Physics>();
+	if (physicsComp)
+	{
+		auto type = physicsComp->Type();
+
+		switch (type)
+		{
+		case soft::Physics::STATIC:
+			return false;
+		case soft::Physics::DYNAMIC:
+		case soft::Physics::KINEMATIC:
+			return true;
+			break;
+		}
+	}
+
+	if (m_idMask == 0)
+	{
+		return false;
+	}
+
+	return true;
 }
 
 NAMESPACE_END

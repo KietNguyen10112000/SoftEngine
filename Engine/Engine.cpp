@@ -11,6 +11,7 @@
 
 #include "TaskSystem/TaskSystem.h"
 #include "TaskSystem/TaskWorker.h"
+#include "TaskSystem/TaskUtils.h"
 
 #include "Objects/Scene/Scene.h"
 #include "Objects/Scene/MultipleDynamicLayersScene.h"
@@ -183,9 +184,9 @@ void Engine::Setup()
 	constexpr float rangeDimY = 100;
 	constexpr float rangeDimZ = 100;*/
 
-	constexpr float rangeX = 100;
-	constexpr float rangeY = 100;
-	constexpr float rangeZ = 100;
+	constexpr float rangeX = 300;
+	constexpr float rangeY = 300;
+	constexpr float rangeZ = 300;
 
 	constexpr float rangeDimX = 10;
 	constexpr float rangeDimY = 10;
@@ -198,58 +199,59 @@ void Engine::Setup()
 
 	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
-	//class MyScript : public Script
-	//{
-	//public:
-	//	float m_selfRotationSpeed = 0;
-	//	Vec3 m_selfRotationAxis = {};
-	//	float m_rotationSpeed = 0;
-	//	Vec3 m_rotationAxis = {};
+	class MyScript : public Script
+	{
+	public:
+		float m_selfRotationSpeed = 0;
+		Vec3 m_selfRotationAxis = {};
+		float m_rotationSpeed = 0;
+		Vec3 m_rotationAxis = {};
 
-	//	/*~MyScript()
-	//	{
-	//		std::cout << "MyScript::~MyScript()\n";
-	//	}*/
+		/*~MyScript()
+		{
+			std::cout << "MyScript::~MyScript()\n";
+		}*/
 
-	//	virtual void OnStart() override
-	//	{
-	//		m_selfRotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
-	//		int rand = Random::RangeInt32(0, 2);
-	//		m_selfRotationAxis = { 0,0,0 };
-	//		m_selfRotationAxis[rand] = 1;
-	//		rand = Random::RangeInt32(0, 2);
-	//		m_selfRotationAxis[rand] = 1;
-	//		rand = Random::RangeInt32(0, 2);
-	//		m_selfRotationAxis[rand] = 1;
+		virtual void OnStart() override
+		{
+			m_selfRotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+			int rand = Random::RangeInt32(0, 2);
+			m_selfRotationAxis = { 0,0,0 };
+			m_selfRotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_selfRotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_selfRotationAxis[rand] = 1;
 
-	//		m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+			//m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+			m_rotationSpeed = Random::RangeFloat(PI / 16.0f, PI / 10.0f);
 
-	//		rand = Random::RangeInt32(0, 2);
-	//		m_rotationAxis = { 0,0,0 };
-	//		m_rotationAxis[rand] = 1;
-	//		rand = Random::RangeInt32(0, 2);
-	//		m_rotationAxis[rand] = 1;
-	//		rand = Random::RangeInt32(0, 2);
-	//		m_rotationAxis[rand] = 1;
-	//	}
+			rand = Random::RangeInt32(0, 2);
+			m_rotationAxis = { 0,0,0 };
+			m_rotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_rotationAxis[rand] = 1;
+			rand = Random::RangeInt32(0, 2);
+			m_rotationAxis[rand] = 1;
+		}
 
-	//	virtual void OnUpdate(float dt) override
-	//	{
-	//		auto& pos = Transform().Translation();
-	//		pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
+		virtual void OnUpdate(float dt) override
+		{
+			auto& pos = Transform().Translation();
+			pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
 
-	//		/*auto rot = Transform().Rotation().ToEulerAngles();
-	//		rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
-	//		Transform().Rotation() = rot;*/
+			/*auto rot = Transform().Rotation().ToEulerAngles();
+			rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
+			Transform().Rotation() = rot;*/
 
-	//		auto rot = Transform().Rotation().ToMat4();
-	//		rot *= Mat4::Rotation(m_selfRotationAxis, m_selfRotationSpeed * dt);
-	//		Transform().Rotation() = Quaternion(rot);
-	//	}
+			auto rot = Transform().Rotation().ToMat4();
+			rot *= Mat4::Rotation(m_selfRotationAxis, m_selfRotationSpeed * dt);
+			Transform().Rotation() = Quaternion(rot);
+		}
 
-	//};
+	};
 
-	for (size_t i = 0; i < 200; i++)
+	for (size_t i = 0; i < 2000; i++)
 	{
 		Transform transform = {};
 		transform.Translation() = Vec3(
@@ -281,7 +283,7 @@ void Engine::Setup()
 
 		dynamicObj->InitializeTransform(transform);
 
-		//dynamicObj->NewComponent<MyScript>();
+		dynamicObj->NewComponent<MyScript>();
 		dynamicObj->NewComponent<RigidBody>(Physics::DYNAMIC, MakeShared<BoxCollider>(dims));
 		mainScene->AddObject(dynamicObj);
 	}
@@ -503,9 +505,21 @@ void Engine::SynchronizeAllSubSystems()
 	mainScene->PostIteration();
 
 	//std::cout << "SynchronizeAllSubSystems()\n";
-	DeferredBufferTracker::Get()->UpdateAllThenClear();
+	//DeferredBufferTracker::Get()->UpdateAllThenClear();
 
 	//Graphics::Get()->Present(1, 0);
+
+	auto tracker = DeferredBufferTracker::Get();
+	tracker->UpdateCustomBegin();
+	TaskUtils::ForEachConcurrentList(
+		tracker->m_buffers, 
+		[](DeferredBufferState* state, ID) 
+		{
+			state->Update();
+		}, 
+		TaskSystem::GetWorkerCount()
+	);
+	tracker->UpdateCustomEnd();
 }
 
 NAMESPACE_END

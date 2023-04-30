@@ -5,6 +5,7 @@
 #include "Components/Rendering/Rendering.h"
 #include "Components/Rendering/Camera.h"
 #include "Components/Script/Script.h"
+#include "Components/Physics/Physics.h"
 #include "SubSystems/Script/ScriptSystem.h"
 
 #include "Graphics/Graphics.h"

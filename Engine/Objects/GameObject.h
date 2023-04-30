@@ -5,6 +5,7 @@
 #include "Core/Memory/DeferredBuffer.h"
 #include "Core/Structures/Structures.h"
 #include "Core/TemplateUtils/TemplateUtils.h"
+#include "Core/Random/Random.h"
 
 #include "Math/Math.h"
 
@@ -86,7 +87,9 @@ private:
 	ID m_aabbQueryId = INVALID_ID;
 
 	// global aabb, this aabb bound this object and its children
+	// looser aabb from m_tiedAABB
 	AABox m_aabb = {};
+	AABox m_tiedAABB = {};
 	// <<< scene's control members 
 
 	// num components flush data to this obj in 1 iteration
@@ -517,8 +520,10 @@ public:
 		func(obj);
 	}
 
-	inline void RecalculateAABB()
+	// return true if aabb changed
+	inline bool RecalculateAABB()
 	{
+		auto oriLooserAABB = m_aabb;
 		GameObject::PostTraversal(this, 
 			[](GameObject* object)
 			{
@@ -560,6 +565,23 @@ public:
 			}
 		);
 
+		m_tiedAABB = m_aabb;
+
+		if (oriLooserAABB.MakeJointed(m_aabb) == m_aabb)
+		{
+			m_aabb = oriLooserAABB;
+			return false;
+		}
+
+		// make looser aabb
+		auto dims = m_aabb.GetDimensions();
+		auto l = dims.Length();
+		auto d = dims / l;
+
+		// looser random from 15% to 20% of diagonal
+		//l = l * (1 + Random::RangeFloat(5 / 100.0f, 60 / 100.0f));
+		m_aabb = AABox(m_aabb.GetCenter(), dims + Vec3(l,l,l) * 0.1f);
+		return true;
 	}
 
 public:

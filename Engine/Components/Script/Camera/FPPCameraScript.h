@@ -10,6 +10,8 @@
 
 NAMESPACE_BEGIN
 
+extern size_t g_debugRefresh;
+
 class FPPCameraScript : public Script
 {
 public:
@@ -102,6 +104,7 @@ public:
 		ImGui::Begin("FPPCamera");
 		ImGui::Text("Press ESC to use camera");
 		ImGui::Text("Num draw calls: %d", GetObject()->GetComponentRaw<Camera>()->NumRenderObjects());
+		ImGui::Text("Num scene changed AABB: %d", g_debugRefresh);
 		ImGui::DragFloat("Rotation sensity", &m_rotationSensi, 0.01f, 0, FLT_MAX);
 		ImGui::DragFloat("Moving speed", &m_speed, 0.01f, 0, FLT_MAX);
 		ImGui::End();

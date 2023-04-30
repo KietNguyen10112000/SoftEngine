@@ -27,8 +27,7 @@ private:
 
 	std::atomic<ID> m_manifoldIDCount = { 0 };
 	raw::ConcurrentArrayList<Manifold*> m_allocatedManifolds;
-	raw::ConcurrentArrayList<Manifold*> m_freeManifolds;
-	raw::ConcurrentArrayList<Manifold*>::ConsumeHead m_freeManifoldsHead;
+	ConcurrentQueue<Manifold*> m_freeManifolds;
 
 	UniquePtr<SceneQuerySession> m_querySessions[ThreadLimit::MAX_THREADS];
 
@@ -50,59 +49,38 @@ public:
 
 	virtual void PostIteration(float dt) override;
 
-	inline virtual bool FilterAddSubSystemComponent(SubSystemComponent* comp) override 
-	{ 
-		if (m_scene->IsGhost(comp->GetObject()))
-		{
-			return false;
-		}
-		
-		auto physics = (Physics*)comp;
-		if (physics->m_TYPE == Physics::DYNAMIC || physics->m_TYPE == Physics::KINEMATIC)
-		{
-			AddToBeginBoardPhase(comp->GetObject());
-			return true;
-		}
+	virtual bool FilterAddSubSystemComponent(SubSystemComponent* comp) override;
 
-		return false;
-	};
-
-	inline virtual bool FilterRemoveSubSystemComponent(SubSystemComponent* comp) override
-	{
-		if (m_scene->IsGhost(comp->GetObject()))
-		{
-			return false;
-		}
-
-		auto physics = (Physics*)comp;
-		if (physics->m_TYPE == Physics::DYNAMIC || physics->m_TYPE == Physics::KINEMATIC)
-		{
-			return true;
-		}
-
-		return false;
-	};
+	virtual bool FilterRemoveSubSystemComponent(SubSystemComponent* comp) override;
 
 private:
-	inline Manifold* AllocateManifold()
+	inline Manifold* AllocateManifold(Physics* A, Physics* B)
 	{
 		Manifold* ret;
-		if (m_freeManifoldsHead.TryTake(ret))
+		if (m_freeManifolds.try_dequeue(ret))
 		{
-			ret->refManifold = nullptr;
-			return ret;
+			goto Return;
 		}
 
 		ret = rheap::New<Manifold>();
 		m_allocatedManifolds.Add(ret);
 		ret->m_id = ++m_manifoldIDCount;
+
+	Return:
+		ret->m_A = A;
+		ret->m_B = B;
+		ret->m_refCount.store(2, std::memory_order_relaxed);
 		ret->refManifold = nullptr;
 		return ret;
 	}
 
 	inline void DeallocateManifold(Manifold* m)
 	{
-		m_freeManifolds.Add(m);
+		assert(m->m_refCount.load(std::memory_order_relaxed) >= 1);
+		if ((--(m->m_refCount)) == 0)
+		{
+			m_freeManifolds.enqueue(m);
+		}
 	}
 
 	inline auto& GetCurEntriesBoardPhase()
@@ -132,7 +110,7 @@ private:
 	void NarrowPhase();
 	void EndPhysicsIteration();
 
-	void BoardPhaseProcessCtx(BoardPhaseCtx& ctx, SceneQuerySession* querySession);
+	void BoardPhaseProcessCtx(ID dispatchId, BoardPhaseCtx& ctx, SceneQuerySession* querySession);
 	void BoardPhaseFilterDuplicateManifolds();
 	void BoardPhaseFilterDuplicateManifoldsProcessObject(GameObject* obj, ID dispatchId);
 
@@ -142,6 +120,11 @@ public:
 	{
 		auto& entries = GetNextEntriesBoardPhase();
 		entries.Add(obj);
+
+		/*if (entries.size() > 101)
+		{
+			int x = 3;
+		}*/
 	}
 
 };

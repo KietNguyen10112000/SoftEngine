@@ -6,6 +6,8 @@
 
 #include "TaskSystem/TaskUtils.h"
 
+#define Acquire(lock, value) lock.load(std::memory_order_relaxed) != value && lock.exchange(value) != value
+
 NAMESPACE_BEGIN
 
 PhysicsSystem::PhysicsSystem(Scene* scene) : SubSystem(scene, Physics::COMPONENT_ID)
@@ -34,13 +36,11 @@ void PhysicsSystem::PrevIteration(float dt)
 	m_boardPhaseDuplicateManifoldObjs.Clear();
 	m_boardPhaseManifolds.Clear();
 
-	auto& entries = GetCurEntriesBoardPhase();
+	/*auto& entries = GetCurEntriesBoardPhase();
 	for (auto& obj : m_rootObjects)
 	{
 		entries.Add(obj);
-	}
-
-	m_freeManifoldsHead = m_freeManifolds.GetComsumeHead();
+	}*/
 }
 
 void PhysicsSystem::Iteration(float dt)
@@ -65,6 +65,7 @@ void PhysicsSystem::NewPhysicsIterationProcessObject(GameObject* obj, ID dispatc
 		}
 	);
 	write->Clear();
+	physics->m_numClearManifold = m_iterationCount;
 
 	auto refreshed = physics->m_isRefreshed;
 
@@ -83,6 +84,7 @@ void PhysicsSystem::NewPhysicsIterationProcessObject(GameObject* obj, ID dispatc
 			if (!another->m_isRefreshed)
 			{
 				// if another object in collision pair still not moving, keep it as cache
+				++(manifold->m_refCount);
 				write->Add(manifold);
 			}
 		}
@@ -92,7 +94,7 @@ void PhysicsSystem::NewPhysicsIterationProcessObject(GameObject* obj, ID dispatc
 void PhysicsSystem::NewPhysicsIteration()
 {
 	auto iteration = m_iterationCount;
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		GetPrevBoardPhaseOutputObjs(),
 		[&](GameObject* obj, ID dispatchId)
 		{
@@ -111,7 +113,7 @@ void PhysicsSystem::NewPhysicsIteration()
 		TaskSystem::GetWorkerCount()
 	);
 
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		GetPrevBoardPhaseOutputObjs(),
 		[&](GameObject* obj, ID dispatchId)
 		{
@@ -128,7 +130,21 @@ void PhysicsSystem::NewPhysicsIteration()
 	);
 }
 
-void PhysicsSystem::BoardPhaseProcessCtx(BoardPhaseCtx& ctx, SceneQuerySession* querySession)
+#define ClearManifoldFirstTime(physics, value)								\
+if (physics->m_numClearManifold != value)									\
+{																			\
+	physics->m_clearManifoldLock.lock();									\
+	if (physics->m_numClearManifold != value)								\
+	{																		\
+		auto head = physics->m_manifolds.GetWriteHead();					\
+		head->ForEach([&](Manifold* m) { DeallocateManifold(m); });			\
+		head->Clear();														\
+		physics->m_numClearManifold = value;								\
+	}																		\
+	physics->m_clearManifoldLock.unlock();									\
+}
+
+void PhysicsSystem::BoardPhaseProcessCtx(ID dispatchId, BoardPhaseCtx& ctx, SceneQuerySession* querySession)
 {
 	auto& curOutput = GetCurBoardPhaseOutputObjs();
 	auto& stack = ctx.stack;
@@ -138,8 +154,11 @@ void PhysicsSystem::BoardPhaseProcessCtx(BoardPhaseCtx& ctx, SceneQuerySession* 
 		curOutput.Add(physics->GetObject());
 		stack.pop_back();
 
+		ClearManifoldFirstTime(physics, m_iterationCount);
+
 		auto& manifolds = *physics->m_manifolds.GetWriteHead();
 
+		querySession->Clear();
 		m_scene->AABBDynamicQueryAABox(physics->GetBoardPhaseAABB(), querySession);
 
 		auto it = querySession->begin;
@@ -149,23 +168,22 @@ void PhysicsSystem::BoardPhaseProcessCtx(BoardPhaseCtx& ctx, SceneQuerySession* 
 			auto gameObject = *it;
 
 			auto anotherPhysics = gameObject->GetComponentRaw<Physics>();
-			if (anotherPhysics)
+			if (anotherPhysics && anotherPhysics != physics)
 			{
 				bool push = true;
-				if (physics->m_numAcquiredBoardPhase.load(std::memory_order_relaxed) != m_iterationCount
-					&& physics->m_numAcquiredBoardPhase.exchange(m_iterationCount) != m_iterationCount)
+				if (Acquire(anotherPhysics->m_numAcquiredBoardPhase, m_iterationCount))
 				{
+					anotherPhysics->m_processedBoardPhaseDispatchId = dispatchId;
 					stack.push_back(anotherPhysics);
 				}
 				else
 				{
-					if (physics->m_numProcessedBoardPhase.load(std::memory_order_relaxed) != m_iterationCount
-						&& physics->m_numProcessedBoardPhase.exchange(m_iterationCount) != m_iterationCount)
+					if (anotherPhysics->m_numProcessedBoardPhase.load(std::memory_order_relaxed) == m_iterationCount)
 					{
 						push = false;
 					}
-					else if (physics->m_numFilterDuplBoardPhase.load(std::memory_order_relaxed) != m_iterationCount
-						&& physics->m_numFilterDuplBoardPhase.exchange(m_iterationCount) != m_iterationCount)
+					else if (dispatchId != anotherPhysics->m_processedBoardPhaseDispatchId 
+						&& Acquire(anotherPhysics->m_numFilterDuplBoardPhase, m_iterationCount))
 					{
 						m_boardPhaseDuplicateManifoldObjs.Add(anotherPhysics->GetObject());
 					}
@@ -173,11 +191,12 @@ void PhysicsSystem::BoardPhaseProcessCtx(BoardPhaseCtx& ctx, SceneQuerySession* 
 
 				if (push)
 				{
-					auto m = AllocateManifold();
-					m->m_A = physics;
-					m->m_B = anotherPhysics;
+					auto m = AllocateManifold(physics, anotherPhysics);
 					manifolds.Add(m);
+
+					ClearManifoldFirstTime(anotherPhysics, m_iterationCount);
 					anotherPhysics->m_manifolds.GetWriteHead()->Add(m);
+
 					m_boardPhaseManifolds.Add(m);
 				}
 			}
@@ -202,7 +221,8 @@ void PhysicsSystem::BoardPhaseProcessObject(GameObject* obj, ID dispatchId)
 	auto& ctx = m_boardPhaseCtxs[dispatchId];
 	auto querySession = m_querySessions[dispatchId].get();
 	ctx.stack.push_back(physics);
-	BoardPhaseProcessCtx(ctx, querySession);
+	physics->m_processedBoardPhaseDispatchId = m_iterationCount + dispatchId;
+	BoardPhaseProcessCtx(m_iterationCount + dispatchId, ctx, querySession);
 }
 
 void PhysicsSystem::BoardPhaseFilterDuplicateManifoldsProcessObject(GameObject* obj, ID dispatchId)
@@ -215,10 +235,6 @@ void PhysicsSystem::BoardPhaseFilterDuplicateManifoldsProcessObject(GameObject* 
 	std::sort(begin, end,
 		[](Manifold* m1, Manifold* m2)
 		{
-			if (m1->m_id > m2->m_id && m1->m_id < m2->m_id)
-			{
-				int x = 3;
-			}
 			return m1->m_id > m2->m_id;
 		}
 	);
@@ -246,14 +262,12 @@ void PhysicsSystem::BoardPhaseFilterDuplicateManifoldsProcessObject(GameObject* 
 void PhysicsSystem::BoardPhaseFilterDuplicateManifolds()
 {
 	auto iteration = m_iterationCount;
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		m_boardPhaseDuplicateManifoldObjs, 
 		[&](GameObject* obj, ID dispatchId) 
 		{
 			auto physics = obj->GetComponentRaw<Physics>();
-			bool isNotProcessed =
-				physics->m_numFilterDuplBoardPhase.load(std::memory_order_relaxed) != iteration
-				&& physics->m_numFilterDuplBoardPhase.exchange(iteration) != iteration;
+			bool isNotProcessed = Acquire(physics->m_numFilterDuplBoardPhase, iteration);
 
 			if (isNotProcessed)
 			{
@@ -270,14 +284,12 @@ void PhysicsSystem::BoardPhase()
 {
 	auto iteration = m_iterationCount;
 	auto& entries = GetCurEntriesBoardPhase();
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		entries, 
 		[&](GameObject* obj, ID dispatchId) 
 		{
 			auto physics = obj->GetComponentRaw<Physics>();
-			bool isNotProcessed =
-				physics->m_numBoardPhase.load(std::memory_order_relaxed) != iteration
-				&& physics->m_numBoardPhase.exchange(iteration) != iteration;
+			bool isNotProcessed = Acquire(physics->m_numBoardPhase, iteration);
 
 			if (isNotProcessed)
 			{
@@ -289,25 +301,43 @@ void PhysicsSystem::BoardPhase()
 		TaskSystem::GetWorkerCount()
 	);
 
+	//int x = 3;
 	BoardPhaseFilterDuplicateManifolds();
 }
 
 void PhysicsSystem::NarrowPhase()
 {
+	m_boardPhaseManifolds.ForEach(
+		[&](Manifold* manifold) 
+		{
+			if (manifold->refManifold)
+			{
+				return;
+			}
 
+			manifold->m_A->m_debugColor = Vec3(1, 0, 0);
+			manifold->m_A->m_debugIteration = m_iterationCount;
+			manifold->m_B->m_debugColor = Vec3(1, 0, 0);
+			manifold->m_B->m_debugIteration = m_iterationCount;
+		}
+	);
+
+	for (auto& obj : m_rootObjects)
+	{
+		auto physics = obj->GetComponentRaw<Physics>();
+		if (physics->m_debugIteration != m_iterationCount)
+			physics->m_debugColor = { 0,1,0 };
+	}
 }
 
 void PhysicsSystem::EndPhysicsIteration()
 {
-	m_freeManifolds.UpdateFromConsumeHead(m_freeManifoldsHead);
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		GetPrevBoardPhaseOutputObjs(),
 		[&](GameObject* obj, ID dispatchId)
 		{
 			auto physics = obj->GetComponentRaw<Physics>();
-			bool isNotProcessed =
-				physics->m_numBeginSetup.load(std::memory_order_relaxed) != -1
-				&& physics->m_numBeginSetup.exchange(-1) != -1;
+			bool isNotProcessed = Acquire(physics->m_numBeginSetup, -1);
 
 			if (isNotProcessed)
 			{
@@ -319,14 +349,12 @@ void PhysicsSystem::EndPhysicsIteration()
 		TaskSystem::GetWorkerCount()
 	);
 
-	TaskUtils::ForEachConcurrentList(
+	TaskUtils::ForEachConcurrentListAsRingBuffer(
 		GetCurBoardPhaseOutputObjs(),
 		[&](GameObject* obj, ID dispatchId)
 		{
 			auto physics = obj->GetComponentRaw<Physics>();
-			bool isNotProcessed =
-				physics->m_numBeginSetup.load(std::memory_order_relaxed) != -1
-				&& physics->m_numBeginSetup.exchange(-1) != -1;
+			bool isNotProcessed = Acquire(physics->m_numBeginSetup, -1);
 
 			if (isNotProcessed)
 			{
@@ -338,5 +366,38 @@ void PhysicsSystem::EndPhysicsIteration()
 		TaskSystem::GetWorkerCount()
 	);
 }
+
+bool PhysicsSystem::FilterAddSubSystemComponent(SubSystemComponent* comp)
+{
+	if (m_scene->IsGhost(comp->GetObject()))
+	{
+		return false;
+	}
+
+	auto physics = (Physics*)comp;
+	if (physics->m_TYPE == Physics::DYNAMIC || physics->m_TYPE == Physics::KINEMATIC)
+	{
+		AddToBeginBoardPhase(comp->GetObject());
+		return true;
+	}
+
+	return false;
+};
+
+bool PhysicsSystem::FilterRemoveSubSystemComponent(SubSystemComponent* comp)
+{
+	if (m_scene->IsGhost(comp->GetObject()))
+	{
+		return false;
+	}
+
+	auto physics = (Physics*)comp;
+	if (physics->m_TYPE == Physics::DYNAMIC || physics->m_TYPE == Physics::KINEMATIC)
+	{
+		return true;
+	}
+
+	return false;
+};
 
 NAMESPACE_END

@@ -10,8 +10,6 @@
 #include "Objects/QueryStructures/AABBQuerySession.h"
 #include "Objects/QueryStructures/AABBQueryStructure.h"
 
-#include "Components/Physics/Physics.h"
-
 #include "SceneQuerySession.h"
 
 
@@ -174,31 +172,7 @@ private:
 		m_branchedObjects.Add(obj);
 	}
 
-	inline bool IsDynamicObject(GameObject* obj)
-	{
-		auto physicsComp = obj->GetComponentRaw<Physics>();
-		if (physicsComp)
-		{
-			auto type = physicsComp->Type();
-
-			switch (type)
-			{
-			case soft::Physics::STATIC:
-				return false;
-			case soft::Physics::DYNAMIC:
-			case soft::Physics::KINEMATIC:
-				return true;
-				break;
-			}
-		}
-
-		if (m_idMask == 0)
-		{
-			return false;
-		}
-
-		return true;
-	}
+	bool IsDynamicObject(GameObject* obj);
 
 public:
 	inline void BeginSetup()
