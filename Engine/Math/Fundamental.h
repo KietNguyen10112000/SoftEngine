@@ -127,12 +127,12 @@ public:
 
     inline friend bool operator==(const Vec3& v1, const Vec3& v2)
     {
-        return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z;
+        return v1.x == v2.x && v1.y == v2.y && v1.z == v2.z;
     }
 
     inline friend bool operator!=(const Vec3& v1, const Vec3& v2)
     {
-        return v1.x != v2.z || v1.y != v2.y || v1.z != v2.z;
+        return v1.x != v2.x || v1.y != v2.y || v1.z != v2.z;
     }
 
 public:
@@ -287,12 +287,12 @@ public:
 
     inline friend bool operator==(const Vec4& v1, const Vec4& v2)
     {
-        return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
+        return v1.x == v2.x && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
     }
 
     inline friend bool operator!=(const Vec4& v1, const Vec4& v2)
     {
-        return v1.x != v2.z || v1.y != v2.y || v1.z != v2.z || v1.w != v2.w;
+        return v1.x != v2.x || v1.y != v2.y || v1.z != v2.z || v1.w != v2.w;
     }
 
 public:

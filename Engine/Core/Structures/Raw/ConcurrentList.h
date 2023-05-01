@@ -367,7 +367,7 @@ public:
 		}
 	};
 
-private:
+public:
 	std::Vector<T>		m_buffer;
 	std::atomic<size_t> m_size		= { 0 };
 	std::atomic<size_t> m_numWriter	= { 0 };
@@ -413,7 +413,7 @@ private:
 
 public:
 	template <bool AVOID_THREAD_COLLIDE = false>
-	inline void Add(const T& v)
+	inline ID Add(const T& v)
 	{
 		auto id = m_size++;
 
@@ -422,6 +422,14 @@ public:
 			TryGrowthCapacity(id);
 		}
 		
+		++m_numWriter;
+		m_buffer[id] = v;
+		--m_numWriter;
+		return id;
+	}
+
+	inline void Set(ID index, const T& v)
+	{
 		++m_numWriter;
 		m_buffer[id] = v;
 		--m_numWriter;

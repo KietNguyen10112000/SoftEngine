@@ -214,7 +214,7 @@ void Engine::Setup()
 
 		virtual void OnStart() override
 		{
-			m_selfRotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
+			m_selfRotationSpeed = Random::RangeFloat(PI / 32.0f, PI / 16.0f);
 			int rand = Random::RangeInt32(0, 2);
 			m_selfRotationAxis = { 0,0,0 };
 			m_selfRotationAxis[rand] = 1;
@@ -224,7 +224,7 @@ void Engine::Setup()
 			m_selfRotationAxis[rand] = 1;
 
 			//m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
-			m_rotationSpeed = Random::RangeFloat(PI / 16.0f, PI / 10.0f);
+			m_rotationSpeed = Random::RangeFloat(PI / 32.0f, PI / 16.0f);
 
 			rand = Random::RangeInt32(0, 2);
 			m_rotationAxis = { 0,0,0 };
@@ -237,6 +237,8 @@ void Engine::Setup()
 
 		virtual void OnUpdate(float dt) override
 		{
+			if (!DebugVar::Get().movingObject) return;
+
 			auto& pos = Transform().Translation();
 			pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
 

@@ -6,12 +6,15 @@
 
 #include "TaskSystem/TaskUtils.h"
 
+#include "Engine/DebugVar.h"
+
 #define Acquire(lock, value) lock.load(std::memory_order_relaxed) != value && lock.exchange(value) != value
 
 NAMESPACE_BEGIN
 
 PhysicsSystem::PhysicsSystem(Scene* scene) : SubSystem(scene, Physics::COMPONENT_ID)
 {
+	TaskSystem::PrepareHandle(&m_filterAliveManifoldsHandle);
 	auto count = TaskSystem::GetWorkerCount();
 	for (size_t i = 0; i < count; i++)
 	{
@@ -45,6 +48,7 @@ void PhysicsSystem::PrevIteration(float dt)
 
 void PhysicsSystem::Iteration(float dt)
 {
+	TaskSystem::WaitForHandle(&m_filterAliveManifoldsHandle);
 	NewPhysicsIteration();
 	BoardPhase();
 	NarrowPhase();
@@ -74,7 +78,7 @@ void PhysicsSystem::NewPhysicsIterationProcessObject(GameObject* obj, ID dispatc
 		return;
 	}
 
-	auto read = physics->m_manifolds.GetWriteHead();
+	auto read = physics->m_manifolds.GetReadHead();
 
 	auto aabb = physics->GetBoardPhaseAABB();
 	read->ForEach(
@@ -197,7 +201,7 @@ void PhysicsSystem::BoardPhaseProcessCtx(ID dispatchId, BoardPhaseCtx& ctx, Scen
 					ClearManifoldFirstTime(anotherPhysics, m_iterationCount);
 					anotherPhysics->m_manifolds.GetWriteHead()->Add(m);
 
-					m_boardPhaseManifolds.Add(m);
+					//m_boardPhaseManifolds.Add(m);
 				}
 			}
 
@@ -280,6 +284,56 @@ void PhysicsSystem::BoardPhaseFilterDuplicateManifolds()
 	);
 }
 
+void PhysicsSystem::BoardPhaseFilterAliveManifolds()
+{
+	TaskUtils::ForEachConcurrentList(
+		m_aliveManifolds, 
+		[&](Manifold* m, ID) 
+		{
+			if (m->m_refCount.load(std::memory_order_relaxed) != 0)
+			{
+				m_boardPhaseManifolds.Add(m);
+			}
+		}, 
+		TaskSystem::GetWorkerCount()
+	);
+
+	DebugVar::Get().debugVar1 = m_aliveManifolds.size();
+
+	// filter all alive manifolds
+	Task task;
+	task.Params() = this;
+	task.Entry() = [](void* p)
+	{
+		auto physicsSystem = (PhysicsSystem*)p;
+		auto& list = physicsSystem->m_aliveManifolds;
+		auto& buffer = list.m_buffer;
+
+		auto size = list.m_size.load(std::memory_order_relaxed);
+		for (size_t i = 0; i < size; i++)
+		{
+			auto& m = buffer[i];
+			if (m->m_refCount.load(std::memory_order_relaxed) == 0)
+			{
+				if (size == 1)
+				{
+					size = 0;
+					break;
+				}
+				size--;
+				m = buffer[size];
+				i--;
+				continue;
+			}
+		}
+
+		list.m_size = size;
+	};
+
+	TaskSystem::PrepareHandle(&m_filterAliveManifoldsHandle);
+	TaskSystem::Submit(&m_filterAliveManifoldsHandle, task, Task::CRITICAL);
+}
+
 void PhysicsSystem::BoardPhase()
 {
 	auto iteration = m_iterationCount;
@@ -303,6 +357,7 @@ void PhysicsSystem::BoardPhase()
 
 	//int x = 3;
 	BoardPhaseFilterDuplicateManifolds();
+	BoardPhaseFilterAliveManifolds();
 }
 
 void PhysicsSystem::NarrowPhase()

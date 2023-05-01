@@ -5,12 +5,11 @@
 #include "Input/Input.h"
 
 #include "Components/Rendering/Camera.h"
+#include "Engine/DebugVar.h"
 
 #include "imgui/imgui.h"
 
 NAMESPACE_BEGIN
-
-extern size_t g_debugRefresh;
 
 class FPPCameraScript : public Script
 {
@@ -103,8 +102,18 @@ public:
 
 		ImGui::Begin("FPPCamera");
 		ImGui::Text("Press ESC to use camera");
+		ImGui::Text("Fps: %d", DebugVar::Get().fps);
 		ImGui::Text("Num draw calls: %d", GetObject()->GetComponentRaw<Camera>()->NumRenderObjects());
-		ImGui::Text("Num scene changed AABB: %d", g_debugRefresh);
+		ImGui::Text("Num scene changed AABB: %d", DebugVar::Get().refreshedAABBCount);
+		ImGui::Text("Alive manifold: %d", DebugVar::Get().debugVar1);
+
+		auto v = DebugVar::Get().movingObject;
+		if (ImGui::Checkbox("Moving object", &v))
+		{
+			DebugVar::Get().movingObject = v;
+		}
+
+
 		ImGui::DragFloat("Rotation sensity", &m_rotationSensi, 0.01f, 0, FLT_MAX);
 		ImGui::DragFloat("Moving speed", &m_speed, 0.01f, 0, FLT_MAX);
 		ImGui::End();

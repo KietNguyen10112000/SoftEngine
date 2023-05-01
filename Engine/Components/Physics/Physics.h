@@ -78,8 +78,10 @@ public:
 
 	virtual void OnObjectRefresh() override
 	{
-		m_aabb = m_collider->GetLocalAABB();
-		m_aabb.Transform(GetObject()->GetTransformMat4());
+		//m_aabb = m_collider->GetLocalAABB();
+		//m_aabb.Transform(GetObject()->GetTransformMat4());
+		m_isRefreshed = true;
+		m_aabb = GetObject()->GetAABB();
 		GetObject()->GetScene()->GetPhysicsSystem()->AddToBeginBoardPhase(GetObject());
 	}
 

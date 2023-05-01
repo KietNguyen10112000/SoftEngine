@@ -509,6 +509,12 @@ public:
 		InvokeEvent(this, type);
 	}
 
+	size_t m_minChangeAABB = 5;
+	size_t m_maxChangeAABB = 10;
+	size_t m_lastChangeAABB = 0;
+	float m_aabbGap = 0;
+	float m_aabbDGap = 0.1f;
+
 	template <typename Func>
 	inline static void PostTraversal(GameObject* obj, Func func)
 	{
@@ -521,68 +527,7 @@ public:
 	}
 
 	// return true if aabb changed
-	inline bool RecalculateAABB()
-	{
-		auto oriLooserAABB = m_aabb;
-		GameObject::PostTraversal(this, 
-			[](GameObject* object)
-			{
-				bool first = true;
-				AABox localAABB;
-				object->ForEachSubSystemComponents(
-					[&](Handle<SubSystemComponent>& comp) 
-					{
-						if (first)
-						{
-							localAABB = comp->GetLocalAABB();
-							first = false;
-							return;
-						}
-
-						auto aabb = comp->GetLocalAABB();
-						localAABB.Joint(aabb);
-					}
-				);
-
-				auto& globalAABB = localAABB;
-				object->ForEachChildren(
-					[&](GameObject* child)
-					{
-						globalAABB.Joint(child->m_aabb);
-					}
-				);
-
-				object->m_aabb = globalAABB;
-
-				if (object->IsTransformMat4())
-				{
-					object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->mat);
-				}
-				else
-				{
-					object->m_aabb.Transform(object->m_transform.GetUpToDateReadHead()->transform.ToTransformMatrix());
-				}
-			}
-		);
-
-		m_tiedAABB = m_aabb;
-
-		if (oriLooserAABB.MakeJointed(m_aabb) == m_aabb)
-		{
-			m_aabb = oriLooserAABB;
-			return false;
-		}
-
-		// make looser aabb
-		auto dims = m_aabb.GetDimensions();
-		auto l = dims.Length();
-		auto d = dims / l;
-
-		// looser random from 15% to 20% of diagonal
-		//l = l * (1 + Random::RangeFloat(5 / 100.0f, 60 / 100.0f));
-		m_aabb = AABox(m_aabb.GetCenter(), dims + Vec3(l,l,l) * 0.1f);
-		return true;
-	}
+	bool RecalculateAABB();
 
 public:
 	inline const auto& GetAABB() const

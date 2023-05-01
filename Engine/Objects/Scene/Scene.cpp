@@ -23,10 +23,11 @@
 #include "Components/Dummy.h"
 
 #include "Engine.h"
+#include "Engine/DebugVar.h"
 
 NAMESPACE_BEGIN
 
-size_t g_debugRefresh = 0;
+std::atomic<size_t> g_debugRefresh = 0;
 
 Scene::Scene(Engine* engine)
 {
@@ -79,6 +80,7 @@ Scene::~Scene()
 
 void Scene::AddObject(Handle<GameObject>& obj, bool isGhost)
 {
+	obj->m_scene = this;
 	obj->RecalculateAABB();
 
 	if (isGhost)
@@ -148,6 +150,7 @@ void Scene::RefreshObject(GameObject* obj)
 	{
 		RefreshDynamicObject(obj);
 		g_debugRefresh++;
+		m_waitForRefresh.Add(obj);
 	}
 
 #ifdef _DEBUG
@@ -159,8 +162,6 @@ void Scene::RefreshObject(GameObject* obj)
 		assert(memcmp(&aabb, &oriAABB, sizeof(AABox)) == 0);
 	}
 #endif // _DEBUG
-
-	m_waitForRefresh.Add(obj);
 }
 
 void Scene::ProcessRemoveLists()
@@ -315,6 +316,7 @@ void Scene::ProcessRecordedBranchedLists()
 
 void Scene::PrevIteration()
 {
+	DebugVar::Get().refreshedAABBCount = g_debugRefresh;
 	g_debugRefresh = 0;
 	Task tasks[4] = {};
 
@@ -365,6 +367,23 @@ void Scene::Iteration()
 	m_curTimeSinceEpoch = Clock::ms::now();
 	m_dt = (m_curTimeSinceEpoch - m_prevTimeSinceEpoch) / 1'000.0f;
 	m_iterationCount++;
+
+	static size_t snap = 0;
+	static size_t frameCount = 0;
+	if (snap == 0)
+	{
+		snap = m_curTimeSinceEpoch;
+	}
+	else
+	{
+		if (m_curTimeSinceEpoch - snap > 1'000)
+		{
+			DebugVar::Get().fps = (frameCount / (float)(m_curTimeSinceEpoch - snap)) * 1000.0f;
+			snap = m_curTimeSinceEpoch;
+			frameCount = 0;
+		}
+		frameCount++;
+	}
 
 	Task tasks[16];
 

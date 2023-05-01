@@ -21,6 +21,9 @@ private:
 
 	// all collision pairs of board phase, narrow phase will resolve all these manifold
 	raw::ConcurrentArrayList<Manifold*> m_boardPhaseManifolds;
+	raw::ConcurrentArrayList<Manifold*> m_aliveManifolds;
+
+	TaskWaitingHandle m_filterAliveManifoldsHandle = { 0,0 };
 
 	// when multithreaded traserval over scene struct, 2 thread can touch same object
 	raw::ConcurrentArrayList<GameObject*> m_boardPhaseDuplicateManifoldObjs;
@@ -71,6 +74,8 @@ private:
 		ret->m_B = B;
 		ret->m_refCount.store(2, std::memory_order_relaxed);
 		ret->refManifold = nullptr;
+
+		m_aliveManifolds.Add(ret);
 		return ret;
 	}
 
@@ -109,6 +114,8 @@ private:
 	void BoardPhaseProcessObject(GameObject* obj, ID dispatchId);
 	void NarrowPhase();
 	void EndPhysicsIteration();
+
+	void BoardPhaseFilterAliveManifolds();
 
 	void BoardPhaseProcessCtx(ID dispatchId, BoardPhaseCtx& ctx, SceneQuerySession* querySession);
 	void BoardPhaseFilterDuplicateManifolds();
