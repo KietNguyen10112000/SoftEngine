@@ -11,4 +11,9 @@
 #include "Line.h"
 #include "Line.inl"
 
+#include "AARect.h"
+#include "Rect.h"
+
+#include "Utils.h"
+
 using namespace math;

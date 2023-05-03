@@ -21,7 +21,7 @@ struct StartupConfig
 	const char* resourcesPath		= "Resources/";
 	const char* compiledShadersPath = "Shaders/";
 
-	uint32_t maxThreads		= 8;
+	uint32_t maxThreads		= 2;
 	uint32_t reservedThread = 0;
 
 };

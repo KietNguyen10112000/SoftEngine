@@ -30,22 +30,22 @@ file(
     "Math/*.h"
     "Math/*.natvis"
 
-    "Objects/*.h"
-    "Objects/*.cpp"
-    "Objects/**/*.h"
-    "Objects/**/*.cpp"
-    "Objects/**/**/*.h"
-    "Objects/**/**/*.cpp"
+    "Objects2D/*.h"
+    "Objects2D/*.cpp"
+    "Objects2D/**/*.h"
+    "Objects2D/**/*.cpp"
+    "Objects2D/**/**/*.h"
+    "Objects2D/**/**/*.cpp"
 
-    "Components/**/*.h"
-    "Components/**/*.cpp"
-    "Components/*.h"
-    "Components/*.cpp"
+    "Components2D/**/*.h"
+    "Components2D/**/*.cpp"
+    "Components2D/*.h"
+    "Components2D/*.cpp"
 
-    "SubSystems/**/*.h"
-    "SubSystems/**/*.cpp"
-    "SubSystems/*.h"
-    "SubSystems/*.cpp"
+    "SubSystems2D/**/*.h"
+    "SubSystems2D/**/*.cpp"
+    "SubSystems2D/*.h"
+    "SubSystems2D/*.cpp"
 
 
     "TaskSystem/*.h"
@@ -56,10 +56,8 @@ file(
     "Platform/*.cpp"
 
 
-    "Modules/Graphics/*.h"
-    "Modules/Graphics/*.cpp"
-    "Modules/Graphics/API/API.h"
-    "Modules/Graphics/API/API.cpp"
+    "Modules/Graphics2D/*.h"
+    "Modules/Graphics2D/*.cpp"
 
     "Modules/Network/*.h"
     "Modules/Network/*.cpp"
@@ -103,12 +101,6 @@ add_executable (
     ${IMGUI_SRC}
 )
 
-add_library (
-    ${LIB_ENGINE} SHARED 
-    "main.cpp"
-    ${SRC}
-)
-
 include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}"
      "${CMAKE_CURRENT_SOURCE_DIR}/Modules"
@@ -117,6 +109,87 @@ include_directories(PUBLIC
      "${CMAKE_SOURCE_DIR}/Libraries"
      "${CMAKE_SOURCE_DIR}/Libraries/glm"
      "${CMAKE_SOURCE_DIR}/Libraries/imgui"
+
+     "${CMAKE_SOURCE_DIR}/Libraries/SFML/SFML-2.5.1/include"
+)
+
+target_link_directories(
+    ${BINARY} PUBLIC 
+    "${CMAKE_SOURCE_DIR}/Libraries/SFML/SFML-2.5.1/lib"
+)
+
+set(
+    SFML_LIBS_RELEASE
+    "flac.lib"
+    "freetype.lib"
+    "ogg.lib"
+    "openal32.lib"
+    "sfml-audio.lib"
+    #"sfml-audio-d.lib"
+    #"sfml-audio-s.lib"
+    #"sfml-audio-s-d.lib"
+    "sfml-graphics.lib"
+    #"sfml-graphics-d.lib"
+    #"sfml-graphics-s.lib"
+    #"sfml-graphics-s-d.lib"
+    "sfml-main.lib"
+    #"sfml-main-d.lib"
+    "sfml-network.lib"
+    #"sfml-network-d.lib"
+    #"sfml-network-s.lib"
+    #"sfml-network-s-d.lib"
+    "sfml-system.lib"
+    #"sfml-system-d.lib"
+    #"sfml-system-s.lib"
+    #"sfml-system-s-d.lib"
+    "sfml-window.lib"
+    #"sfml-window-d.lib"
+    #"sfml-window-s.lib"
+    #"sfml-window-s-d.lib"
+    #"vorbis.lib"
+    #"vorbisenc.lib"
+    #"vorbisfile.lib"
+)
+
+set(
+    SFML_LIBS_DEBUG
+    "flac.lib"
+    "freetype.lib"
+    "ogg.lib"
+    "openal32.lib"
+    #"sfml-audio.lib"
+    "sfml-audio-d.lib"
+    #"sfml-audio-s.lib"
+    #"sfml-audio-s-d.lib"
+    #"sfml-graphics.lib"
+    "sfml-graphics-d.lib"
+    #"sfml-graphics-s.lib"
+    #"sfml-graphics-s-d.lib"
+    #"sfml-main.lib"
+    "sfml-main-d.lib"
+    #"sfml-network.lib"
+    "sfml-network-d.lib"
+    #"sfml-network-s.lib"
+    #"sfml-network-s-d.lib"
+    #"sfml-system.lib"
+    "sfml-system-d.lib"
+    #"sfml-system-s.lib"
+    #"sfml-system-s-d.lib"
+    #"sfml-window.lib"
+    "sfml-window-d.lib"
+    #"sfml-window-s.lib"
+    #"sfml-window-s-d.lib"
+    #"vorbis.lib"
+    #"vorbisenc.lib"
+    #"vorbisfile.lib"
+)
+
+target_link_libraries(
+    ${BINARY} 
+    
+
+    $<$<CONFIG:Debug>:${SFML_LIBS_DEBUG}>
+    $<$<CONFIG:Release>:${SFML_LIBS_RELEASE}>
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

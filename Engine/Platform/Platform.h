@@ -34,6 +34,8 @@ void DeleteWindow(WindowNative* window);
 bool ProcessPlatformMsg(WindowNative* window);
 void* GetWindowNativeHandle(WindowNative* window);
 
+void BindInput(::soft::Input* input, void* nativeHandle);
+
 
 String GetExecutablePath();
 

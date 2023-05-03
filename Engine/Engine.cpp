@@ -13,23 +13,8 @@
 #include "TaskSystem/TaskWorker.h"
 #include "TaskSystem/TaskUtils.h"
 
-#include "Objects/Scene/Scene.h"
-#include "Objects/Scene/MultipleDynamicLayersScene.h"
-#include "Objects/Scene/Event/BuiltinEventManager.h"
-#include "Objects/Scene/Event/EventManager.h"
-
-
-#include "Components/Script/Script.h"
-#include "Components/Script/Camera/FPPCameraScript.h"
-#include "Components/Rendering/Camera.h"
-#include "Components/Rendering/Renderers/CubeRenderer.h"
-#include "Components/Physics/Bodies/RigidBody.h"
-
-#include "Objects/Physics/Colliders/BoxCollider.h"
-
 #include "Input/Input.h"
-#include "Graphics/Graphics.h"
-#include "Graphics/DebugGraphics.h"
+#include "Graphics2D/Graphics2D.h"
 #include "Network/Network.h"
 
 #include "Plugins/Plugin.h"
@@ -37,6 +22,13 @@
 
 #include "StartupConfig.h"
 #include "ENGINE_EVENT.h"
+
+#include "Components2D/Script/Script2D.h"
+#include "Components2D/Rendering/Sprite.h"
+#include "Components2D/Rendering/Camera2D.h"
+
+#include "Objects2D/Scene2D/UniqueGridScene2D.h"
+#include "Objects2D/GameObject2D.h"
 
 NAMESPACE_BEGIN
 
@@ -53,7 +45,6 @@ Handle<Engine> Engine::Initialize()
 void Engine::Finalize()
 {
 	mheap::internal::FreeStableObjects(Engine::STABLE_VALUE, 0, 0);
-	EventManager::Finalize();
 	gc::Run(-1);
 }
 
@@ -77,11 +68,12 @@ void Engine::InitGraphics()
 	if (StartupConfig::Get().isEnableRendering)
 	{
 		m_input = rheap::New<Input>();
-		m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
-		if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
+		//m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
+		if (Graphics2D::Initilize(m_window, 960, 720) != 0)
 		{
 			m_isRunning = false;
 		}
+		platform::BindInput(m_input, m_window->getSystemHandle());
 	}
 }
 
@@ -89,7 +81,7 @@ void Engine::FinalGraphics()
 {
 	if (StartupConfig::Get().isEnableRendering)
 	{
-		Graphics::Finalize();
+		Graphics2D::Finalize();
 		platform::DeleteWindow(m_window);
 		rheap::Delete(m_input);
 	}
@@ -147,50 +139,14 @@ void Engine::FinalPlugins()
 
 void Engine::Setup()
 {
-	EventManager::Initialize();
 	DeferredBufferTracker::Get()->Reset();
 
-	auto scene = mheap::New<MultipleDynamicLayersScene>(this);
+	auto scene = mheap::New<UniqueGridScene2D>(this, 128, 128, 60, 60);
 	scene->Setup();
 	scene->m_id = 0;
 	m_scenes.Push(scene);
 
 	Dispatch(ENGINE_EVENT::SCENE_ON_INITIALIZE, this, scene.Get());
-
-	/*void (*fn)(Handle<Scene>, size_t) = [](Handle<Scene> scene, size_t number) {
-		std::cout << "Func called --- " << number << "\n";
-	};
-
-	auto func = MakeAsyncFunction(fn, m_scenes[0], 100ull);
-	func->Invoke();
-
-	
-	auto func1 = MakeAsyncFunction(fn, m_scenes[0], 1000ull)->Then(
-		[]()
-		{
-			std::cout << "Post func called\n";
-		}
-	);
-	func1->Invoke();
-
-	Handle<FunctionBase> fn1 = func1;
-	fn1->Invoke();*/
-
-	/*constexpr float rangeX = 1000;
-	constexpr float rangeY = 1000;
-	constexpr float rangeZ = 1000;
-
-	constexpr float rangeDimX = 100;
-	constexpr float rangeDimY = 100;
-	constexpr float rangeDimZ = 100;*/
-
-	constexpr float rangeX = 300;
-	constexpr float rangeY = 300;
-	constexpr float rangeZ = 300;
-
-	constexpr float rangeDimX = 10;
-	constexpr float rangeDimY = 10;
-	constexpr float rangeDimZ = 10;
 
 	auto mainScene = m_scenes[0].Get();
 	mainScene->BeginSetup();
@@ -199,189 +155,72 @@ void Engine::Setup()
 
 	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
-	class MyScript : public Script
+	class CameraScript : public Script2D
 	{
 	public:
-		float m_selfRotationSpeed = 0;
-		Vec3 m_selfRotationAxis = {};
-		float m_rotationSpeed = 0;
-		Vec3 m_rotationAxis = {};
-
-		/*~MyScript()
-		{
-			std::cout << "MyScript::~MyScript()\n";
-		}*/
-
-		virtual void OnStart() override
-		{
-			m_selfRotationSpeed = Random::RangeFloat(PI / 32.0f, PI / 16.0f);
-			int rand = Random::RangeInt32(0, 2);
-			m_selfRotationAxis = { 0,0,0 };
-			m_selfRotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_selfRotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_selfRotationAxis[rand] = 1;
-
-			//m_rotationSpeed = Random::RangeFloat(PI / 6.0f, PI / 2.0f);
-			m_rotationSpeed = Random::RangeFloat(PI / 32.0f, PI / 16.0f);
-
-			rand = Random::RangeInt32(0, 2);
-			m_rotationAxis = { 0,0,0 };
-			m_rotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_rotationAxis[rand] = 1;
-			rand = Random::RangeInt32(0, 2);
-			m_rotationAxis[rand] = 1;
-		}
+		float m_speed = 100;
 
 		virtual void OnUpdate(float dt) override
 		{
-			if (!DebugVar::Get().movingObject) return;
+			if (Input()->IsKeyDown('W'))
+			{
+				Position().y += m_speed * dt;
+			}
 
-			auto& pos = Transform().Translation();
-			pos = (Mat4::Translation(pos) * Mat4::Rotation(m_rotationAxis, m_rotationSpeed * dt)).Position();
+			if (Input()->IsKeyDown('S'))
+			{
+				Position().y -= m_speed * dt;
+			}
 
-			/*auto rot = Transform().Rotation().ToEulerAngles();
-			rot += m_selfRotationAxis * m_selfRotationSpeed * dt;
-			Transform().Rotation() = rot;*/
+			if (Input()->IsKeyDown('A'))
+			{
+				Position().x += m_speed * dt;
+			}
 
-			auto rot = Transform().Rotation().ToMat4();
-			rot *= Mat4::Rotation(m_selfRotationAxis, m_selfRotationSpeed * dt);
-			Transform().Rotation() = Quaternion(rot);
+			if (Input()->IsKeyDown('D'))
+			{
+				Position().x -= m_speed * dt;
+			}
 		}
 
 	};
 
-	for (size_t i = 0; i < 2000; i++)
 	{
-		Transform transform = {};
-		transform.Translation() = Vec3(
-			Random::RangeFloat(-rangeX, rangeX),
-			Random::RangeFloat(-rangeY, rangeY),
-			Random::RangeFloat(-rangeZ, rangeZ)
-		);
+		auto object = mheap::New<GameObject2D>();
+		object->NewComponent<Camera2D>(AARect({ 0,0 }, { 960, 720 }));
+		object->NewComponent<CameraScript>();
+		object->SetType(GameObject2D::DYNAMIC);
 
-		transform.Rotation() = Vec3(
-			Random::RangeFloat(0, 2 * PI),
-			Random::RangeFloat(0, 2 * PI),
-			Random::RangeFloat(0, 2 * PI)
-		);
+		object->Position() = { 800 / 2, 600 / 2 };
 
-		auto dims = Vec3(
-			Random::RangeFloat(1, rangeDimX),
-			Random::RangeFloat(1, rangeDimY),
-			Random::RangeFloat(1, rangeDimZ)
-		);
-		auto dynamicObj = mheap::New<GameObject>();
-		dynamicObj->NewComponent<CubeRenderer>(
-			dims,
-			Vec3(
-				Random::RangeFloat(0, 1.0f),
-				Random::RangeFloat(0, 1.0f),
-				Random::RangeFloat(0, 1.0f)
-			)
-		);
-
-		dynamicObj->InitializeTransform(transform);
-
-		dynamicObj->NewComponent<MyScript>();
-		dynamicObj->NewComponent<RigidBody>(Physics::DYNAMIC, MakeShared<BoxCollider>(dims));
-		mainScene->AddObject(dynamicObj);
+		mainScene->AddObject(object);
 	}
 
-	/*auto dynamicObj = mheap::New<GameObject>();
-	auto aabb = (AABox*)&dynamicObj->GetAABB();
-	*aabb = {};*/
-
-	//{
-	//	class MyScript : public Script
-	//	{
-	//	public:
-	//		~MyScript()
-	//		{
-	//			std::cout << "MyScript::~MyScript()\n";
-	//		}
-
-	//		virtual void OnStart() override
-	//		{
-	//			std::cout << "MyScript::OnStart()\n";
-	//		}
-
-	//		virtual void OnUpdate(float dt) override
-	//		{
-	//			//std::cout << dt << '\n';
-	//			if (Input()->IsKeyPressed('U'))
-	//			{
-	//				std::cout << "Pressed\n";
-	//			}
-	//		}
-
-	//	};
-
-	//	auto object = mheap::New<GameObject>();
-	//	auto aabb = (AABox*)&object->GetAABB();
-	//	*aabb = {
-	//			Vec3(5,0,0),
-	//			Vec3(1.0f, 1.0f, 1.0f),
-	//	};
-	//	auto script = object->NewComponent<MyScript>();
-	//	mainScene->AddObject(object);
-	//}
-
-	/*float X = 0;
-	float Y = 0;
-	for (size_t y = 0; y < 10; y++)
 	{
-		X = 0;
+		constexpr static std::array<std::array<size_t, 6>, 6> mapValue = {{
+			{ 1, 1, 1, 1, 1, 1 },
+			{ 1, 0, 0, 0, 0, 1 },
+			{ 1, 0, 0, 0, 0, 1 },
+			{ 1, 0, 0, 0, 0, 1 },
+			{ 1, 0, 0, 0, 0, 1 },
+			{ 1, 1, 1, 1, 1, 1 }
+		}};
 
-		for (size_t x = 0; x < 10; x++)
+		for (size_t y = 0; y < mapValue.size(); y++)
 		{
-			auto dynamicObj = mheap::New<GameObject>();
-			auto aabb = (AABox*)&dynamicObj->GetAABB();
-			*aabb = {
-					Vec3(X, Y, 0),
-					Vec3(1, 1, 1),
-			};
-			mainScene->AddObject(dynamicObj);
+			auto& row = mapValue[y];
+			for (size_t x = 0; x < row.size(); x++)
+			{
+				auto object = mheap::New<GameObject2D>();
+				object->NewComponent<Sprite>(String::Format("Resources/{}.png", row[x]).c_str(), AARect({ 0, 0 }, { 50, 50 }));
+				object->SetType(GameObject2D::STATIC);
 
-			X += 2.0f;
+				object->Position() = { x * 50, y * 50 };
+
+				mainScene->AddObject(object);
+			}
 		}
 
-		Y += 2.0f;
-	}*/
-
-	{
-		auto ground = mheap::New<GameObject>();
-		ground->NewComponent<RigidBody>(Physics::DYNAMIC, MakeShared<BoxCollider>(Vec3(1000, 1, 1000)));
-		
-		Transform transform = {};
-		transform.Translation() = Vec3(0, -5, 0);
-
-		ground->InitializeTransform(transform);
-		ground->NewComponent<CubeRenderer>(
-			Vec3(1000, 1, 1000),
-			Vec3(0.1, 0.5, 0.5)
-		);
-
-		mainScene->AddObject(ground);
-	}
-	
-	{
-		auto object = mheap::New<GameObject>();
-		auto aabb = (AABox*)&object->GetAABB();
-		*aabb = {
-				Vec3(0,0,0),
-				Vec3(0.01f, 0.01f, 0.01f),
-		};
-
-		auto camera = object->NewComponent<Camera>(ToRadians(60), 16 / 9.0f, 0.5f, 1000.0f);
-		object->InitializeTransform(
-			Mat4::Identity().SetLookAtLH({ 10, 10, 10 }, { 0,0,0 }, Vec3::UP).Inverse()
-		);
-
-		object->NewComponent<FPPCameraScript>();
-		mainScene->AddObject(object);
 	}
 
 }
@@ -393,22 +232,8 @@ void Engine::Run()
 	auto mainScene = m_scenes[0].Get();
 
 	while (m_isRunning)
-	//for (size_t i = 0; i < 100; i++)
 	{
 		Iteration();
-
-		//auto& dynamicObjs = mainScene->m_tempObjects;
-		//size_t count = 0;
-		//for (size_t j = 0; j < dynamicObjs.size(); j++)
-		//{
-		//	//if (Random::RangeInt64(0, 1) == 0)
-		//	{
-		//		mainScene->RefreshDynamicObject(dynamicObjs[j].Get());
-		//		count++;
-		//	}
-		//}
-
-		//std::cout << "Refresh: " << count << " objects\n";
 	}
 
 	TaskWorker::Get()->IsRunning() = false;
@@ -439,42 +264,11 @@ void Engine::Iteration()
 
 		TaskSystem::Submit(gcTask, Task::HIGH);
 	}
-	
 
 	auto mainScene = m_scenes[0].Get();
 
-
-	// dynamic submit wait
-	TaskSystem::PrepareHandle(&taskHandle);
-
-	// process input task must execute on main thread 
-	// the thread create the Window - this is required for win32 messeges queue
-	// win32 messeges queue is attach with thread that create HWND
-	Task processInput = {};
-	processInput.Params() = this;
-	processInput.Entry() = [](void* e)
-	{
-		auto engine = (Engine*)e;
-		engine->ProcessInput();
-	};
-
-	// 0 is main thread id
-	TaskSystem::SubmitForThread(&taskHandle, 0, processInput);
-
-	Task reconstructScene = {};
-	reconstructScene.Params() = mainScene;
-	reconstructScene.Entry() = [](void* s)
-	{
-		auto scene = (Scene*)s;
-		scene->PrevIteration();
-	};
-
-	// submit 1 task, so that if this is main thread, it can switch to process input task
-	TaskSystem::Submit(&taskHandle, reconstructScene, Task::CRITICAL);
-
-	// wait
-	TaskSystem::WaitForHandle(&taskHandle);
-
+	ProcessInput();
+	mainScene->PrevIteration();
 	mainScene->Iteration();
 
 	// SynchronizeAllSubSystems
@@ -483,9 +277,18 @@ void Engine::Iteration()
 
 void Engine::ProcessInput()
 {
-	//std::cout << "ProcessInput()\n";
 	m_input->RollEvent();
-	m_isRunning = !platform::ProcessPlatformMsg(m_window);
+
+	auto& window = *m_window;
+	sf::Event event;
+	while (window.pollEvent(event))
+	{
+		// "close requested" event: we close the window
+		if (event.type == sf::Event::Closed)
+			window.close();
+	}
+	
+	m_isRunning = (!platform::ProcessPlatformMsg(m_window)) && (window.isOpen());
 }
 
 void Engine::SynchronizeAllSubSystems()

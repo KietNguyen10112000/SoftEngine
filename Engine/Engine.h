@@ -7,9 +7,11 @@
 
 #include "Objects/Event/EventDispatcher.h"
 
+#include "SFML/Graphics.hpp"
+
 NAMESPACE_BEGIN
 
-class Scene;
+class Scene2D;
 class Input;
 class Plugin;
 
@@ -20,7 +22,7 @@ public:
 	constexpr static byte NUM_ARGS		= 128;
 
 private:
-	Array<Handle<Scene>> m_scenes;
+	Array<Handle<Scene2D>> m_scenes;
 
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
@@ -29,7 +31,7 @@ private:
 	}
 
 	Input* m_input = nullptr;
-	void* m_window = nullptr;
+	sf::Window* m_window;
 
 	bool m_isRunning = true;
 

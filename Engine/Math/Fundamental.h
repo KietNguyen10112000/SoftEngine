@@ -9,14 +9,184 @@
 //#include <glm/gtx/quaternion.hpp>
 #include "glm/gtx/quaternion.hpp"
 
+#include "glm/gtx/matrix_transform_2d.hpp"
+
 namespace math
 {
 
 constexpr float PI = 3.14159265359f;
 
+class Vec2 : glm::vec2
+{
+private:
+    friend class Mat3;
+    friend class Vec3;
+    friend class Quaternion;
+    using Base = glm::vec2;
+
+public:
+    // Vec2(1, 0)
+    const static Vec2 X_AXIS;
+    // Vec2(0, 1)
+    const static Vec2 Y_AXIS;
+
+    const static Vec2 UP;
+    const static Vec2 DOWN;
+
+    const static Vec2 LEFT;
+    const static Vec2 RIGHT;
+
+private:
+    inline Vec2(const glm::vec2& v)
+    {
+        GLMVec() = v;
+    }
+
+    inline glm::vec2& GLMVec()
+    {
+        return reinterpret_cast<glm::vec2&>(*this);
+    }
+
+    inline const glm::vec2& GLMVecConst() const
+    {
+        return reinterpret_cast<const glm::vec2&>(*this);
+    }
+
+public:
+    using Base::Base;
+    using Base::operator[];
+    using Base::x;
+    using Base::y;
+
+#define Vec2ScalarOperator(opt)                             \
+    template <typename T>                                   \
+    inline Vec2& operator##opt##=(T scalar)                 \
+    {                                                       \
+        x opt##= static_cast<float>(scalar);                \
+        y opt##= static_cast<float>(scalar);                \
+        return *this;                                       \
+    }                                                       \
+    template <typename T>                                   \
+    inline Vec2 operator##opt##(T scalar) const             \
+    {                                                       \
+        Vec2 ret;                                           \
+        ret.x = x opt static_cast<float>(scalar);           \
+        ret.y = y opt static_cast<float>(scalar);           \
+        return ret;                                         \
+    }                                                       \
+    template<typename T>                                    \
+    friend Vec2 operator##opt##(T scalar, const Vec2& vec)  \
+    {                                                       \
+        Vec2 ret;                                           \
+        ret.x = static_cast<float>(scalar) opt vec.x;       \
+        ret.y = static_cast<float>(scalar) opt vec.y;       \
+        return ret;                                         \
+    }
+
+#define Vec2Vec2Operator(opt)                           \
+    inline Vec2& operator##opt##=(const Vec2& v)        \
+    {                                                   \
+        x opt##= v.x;                                   \
+        y opt##= v.y;                                   \
+        return *this;                                   \
+    }                                                   \
+    inline Vec2 operator##opt##(const Vec2& v) const    \
+    {                                                   \
+        Vec2 ret;                                       \
+        ret.x = x opt v.x;                              \
+        ret.y = y opt v.y;                              \
+        return ret;                                     \
+    }
+
+    Vec2ScalarOperator(+);
+    Vec2ScalarOperator(-);
+    Vec2ScalarOperator(*);
+    Vec2ScalarOperator(/ );
+
+    Vec2Vec2Operator(+);
+    Vec2Vec2Operator(-);
+    Vec2Vec2Operator(*);
+    Vec2Vec2Operator(/ );
+
+#undef Vec2ScalarOperator
+#undef Vec2Vec2Operator
+
+    inline friend Vec2 operator-(const Vec2& v)
+    {
+        return { -v.x, -v.y };
+    }
+
+    inline friend bool operator==(const Vec2& v1, const Vec2& v2)
+    {
+        return v1.x == v2.x && v1.y == v2.y;
+    }
+
+    inline friend bool operator!=(const Vec2& v1, const Vec2& v2)
+    {
+        return v1.x != v2.x || v1.y != v2.y;
+    }
+
+public:
+    inline float Length() const
+    {
+        return glm::length(GLMVecConst());
+    }
+
+    inline float Length2() const
+    {
+        return x * x + y * y;
+    }
+
+    inline Vec2& Normalize()
+    {
+        GLMVec() = glm::normalize(GLMVecConst());
+        return *this;
+    }
+
+    inline Vec2 Normal() const
+    {
+        Vec2 ret;
+        ret.GLMVec() = glm::normalize(GLMVecConst());
+        return ret;
+    }
+
+    // dot product
+    inline float Dot(const Vec2& v) const
+    {
+        return glm::dot(GLMVecConst(), v);
+    }
+};
+
+inline constexpr const Vec2 Vec2::X_AXIS    = Vec2(1, 0);
+inline constexpr const Vec2 Vec2::Y_AXIS    = Vec2(0, 1);
+
+inline constexpr const Vec2 Vec2::UP        = Vec2(0, 1);
+inline constexpr const Vec2 Vec2::DOWN      = Vec2(0, -1);
+
+inline constexpr const Vec2 Vec2::LEFT      = Vec2(-1, 0);
+inline constexpr const Vec2 Vec2::RIGHT     = Vec2(1, 0);
+
+
+// check p insides p0-p1-p2
+inline bool Point2DInTriangle(const Vec2& p, const Vec2& p0, const Vec2& p1, const Vec2& p2)
+{
+    auto s = (p0.x - p2.x) * (p.y - p2.y) - (p0.y - p2.y) * (p.x - p2.x);
+    auto t = (p1.x - p0.x) * (p.y - p0.y) - (p1.y - p0.y) * (p.x - p0.x);
+
+    if ((s < 0) != (t < 0) && s != 0 && t != 0)
+        return false;
+
+    auto d = (p2.x - p1.x) * (p.y - p1.y) - (p2.y - p1.y) * (p.x - p1.x);
+
+    return d == 0 || (d < 0) == (s + t <= 0);
+}
+
+
 class Vec3 : glm::vec3
 {
 private:
+    friend class Mat3;
+    friend class Vec2;
     friend class Mat4;
     friend class Vec4;
     friend class Quaternion;
@@ -57,6 +227,9 @@ private:
 
 public:
     using Base::Base;
+
+    Vec3(const Vec2& v, float w) : Base(v, w) {}
+
     using Base::operator[];
     using Base::x;
     using Base::y;
@@ -171,6 +344,12 @@ public:
         Vec3 ret;
         ret.GLMVec() = glm::cross(GLMVecConst(), v);
         return ret;
+    }
+
+    // take xy component as Vec2
+    inline Vec2& xy() const
+    {
+        return *((Vec2*)this);
     }
 
 };
@@ -401,6 +580,198 @@ public:
     {
         return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
     }
+};
+
+class Mat3 : glm::mat3
+{
+private:
+    friend class Quaternion;
+    friend class Vec3;
+
+    using Base = glm::mat3;
+
+    /*constexpr operator glm::mat4&()
+    {
+        return reinterpret_cast<glm::mat4&>(*this);
+    }*/
+
+    inline glm::mat3& GLMMat()
+    {
+        return reinterpret_cast<glm::mat3&>(*this);
+    }
+
+    inline const glm::mat3& GLMMatConst() const
+    {
+        return reinterpret_cast<const glm::mat3&>(*this);
+    }
+
+    inline void operator=(const glm::mat3& mat)
+    {
+        reinterpret_cast<glm::mat3&>(*this) = mat;
+    }
+
+public:
+    using Base::Base;
+
+    inline Vec3& operator[](size_t rowId) const
+    {
+        return *((Vec3*)this + rowId);
+    }
+
+    // row-major *=
+    inline Mat3& operator*=(const Mat3& mat)
+    {
+        GLMMat() = mat.GLMMatConst() * GLMMat();
+        return *this;
+    }
+
+    inline Mat3 operator*(const Mat3& mat) const
+    {
+        Mat3 ret;
+        ret.GLMMat() = mat.GLMMatConst() * GLMMatConst();
+        return ret;
+    }
+
+    /*inline Vec4 operator*(const Vec4& vec)
+    {
+        Vec4 ret;
+        ret.GLMVec() = GLMMatConst() * vec;
+        return ret;
+    }*/
+
+    inline friend Vec3 operator*(const Vec3& vec, const Mat3& mat)
+    {
+        auto& m = mat.GLMMatConst();
+        auto& v = vec;
+
+        Vec3 ret = {
+            m[0][0] * v[0] + m[1][0] * v[1] + m[2][0] * v[2],
+            m[0][1] * v[0] + m[1][1] * v[1] + m[2][1] * v[2],
+            m[0][2] * v[0] + m[1][2] * v[1] + m[2][2] * v[2],
+        };
+
+        return ret;
+    }
+
+public:
+    inline Mat3& SetIdentity()
+    {
+        GLMMat() = glm::identity<glm::mat3>();
+        return *this;
+    }
+
+    inline Mat3& SetTranslation(const Vec2& vec)
+    {
+        SetIdentity();
+        (*this)[2] = Vec3(vec, 1.0f);
+        return *this;
+    }
+
+    inline Mat3& SetTranslation(float x, float y)
+    {
+        SetTranslation({ x,y });
+        return *this;
+    }
+
+    inline Mat3& SetPosition(const Vec2& vec)
+    {
+        auto& self = GLMMat();
+        self[2][0] = vec.x;
+        self[2][1] = vec.y;
+        return *this;
+    }
+
+    inline Mat3& SetPosition(float x, float y)
+    {
+        auto& self = GLMMat();
+        self[2][0] = x;
+        self[2][1] = y;
+        return *this;
+    }
+
+    inline Mat3& SetRotation(float angle)
+    {
+        GLMMat() = glm::rotate(glm::identity<glm::mat3>(), angle);
+        return *this;
+    }
+
+    inline Mat3& SetScale(const Vec2& vec)
+    {
+        GLMMat() = glm::scale(glm::identity<glm::mat3>(), vec);
+        return *this;
+    }
+
+    inline Mat3& SetScale(float x, float y)
+    {
+        GLMMat() = glm::scale(glm::identity<glm::mat3>(), { x, y });
+        return *this;
+    }
+
+    inline Mat3& Transpose()
+    {
+        GLMMat() = glm::transpose(GLMMat());
+        return *this;
+    }
+
+    inline Mat3 GetTranspose() const
+    {
+        Mat3 ret = *this;
+        return ret.Transpose();
+    }
+
+    inline Mat3& Inverse()
+    {
+        GLMMat() = glm::inverse(GLMMat());
+        return *this;
+    }
+
+    inline Mat3 GetInverse() const
+    {
+        Mat3 ret = *this;
+        return ret.Inverse();
+    }
+
+public:
+    inline static Mat3 Identity()
+    {
+        return Mat3().SetIdentity();
+    }
+
+    inline static Mat3 Transpose(const Mat3& mat)
+    {
+        return mat.GetTranspose();
+    }
+
+    inline static Mat3 Inverse(const Mat3& mat)
+    {
+        return mat.GetInverse();
+    }
+
+    inline static Mat3 Scaling(const Vec2& v)
+    {
+        return Mat3().SetScale(v);
+    }
+
+    inline static Mat3 Scaling(float x, float y)
+    {
+        return Mat3().SetScale(x, y);
+    }
+
+    inline static Mat3 Rotation(float angle)
+    {
+        return Mat3().SetRotation(angle);
+    }
+
+    inline static Mat3 Translation(const Vec2& v)
+    {
+        return Mat3().SetTranslation(v);
+    }
+
+    inline static Mat3 Translation(float x, float y, float z)
+    {
+        return Mat3().SetTranslation(x, y);
+    }
+
 };
 
 class Mat4 : glm::mat4
