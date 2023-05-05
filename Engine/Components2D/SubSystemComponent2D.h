@@ -19,7 +19,7 @@ protected:
 	// the script component belong to
 	GameObject2D* m_object = nullptr;
 
-public:
+protected:
 	// called when this component is added to object
 	virtual void OnComponentAdded() = 0;
 

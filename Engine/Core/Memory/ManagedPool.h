@@ -136,6 +136,11 @@ public:
 				{
 					//CONSOLE_WARN() << "[" << (void*)handle->GetUsableMemAddress() << "]: " << handle->TotalSize() << " bytes\n";
 					remainDeleteCalls++;
+
+			#ifdef _DEBUG
+					if (handle->traceTable)
+						CONSOLE_WARN() << "Missing delete call \'" << handle->traceTable->className << "\'\n";
+			#endif // _DEBUG
 				}
 			);
 			CONSOLE_WARN() << "Missing: " << remainDeleteCalls << " delete calls\n";

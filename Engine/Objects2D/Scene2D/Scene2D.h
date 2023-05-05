@@ -138,7 +138,9 @@ public:
 
 	inline void EndSetup()
 	{
+		auto value = mheap::internal::GetStableValue();
 		mheap::internal::SetStableValue((byte)m_oldStableValue);
+		m_oldStableValue = value;
 		//m_objsAccessor = &m_tempObjects;
 		m_idMask = TEMP_OBJECT_ID_MASK;
 		m_prevTimeSinceEpoch = m_curTimeSinceEpoch;

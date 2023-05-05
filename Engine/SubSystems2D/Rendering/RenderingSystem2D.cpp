@@ -15,6 +15,7 @@ NAMESPACE_BEGIN
 
 RenderingSystem2D::RenderingSystem2D(Scene2D* scene) : SubSystem2D(scene, Script2D::COMPONENT_ID)
 {
+	m_renderList.reserve(64 * KB);
 	m_querySession = scene->NewQuerySession();
 }
 
@@ -27,10 +28,45 @@ void RenderingSystem2D::PrevIteration(float dt)
 {
 }
 
+//#define RENDER_OBJECT(obj)										\
+//GameObject2D::PostTraversal(obj, [&](GameObject2D* o)			\
+//{																\
+//	auto r = o->GetComponentRaw<Rendering2D>();					\
+//	if (r)														\
+//	{															\
+//		r->Render(this);										\
+//	}															\
+//});
+//
+//#define Z_ORDER(obj) (obj)->GetComponentRaw<Rendering2D>()->m_zOrder
+
 void RenderingSystem2D::Iteration(float dt)
 {
+	Vec2 temp[4];
+
+	if (m_refreshGhostObject)
+	{
+		std::sort(m_ghostObjects.begin(), m_ghostObjects.end(),
+			[](GameObject2D* o1, GameObject2D* o2)
+			{
+				return o1->GetComponentRaw<Rendering2D>()->m_zOrder 
+					< o2->GetComponentRaw<Rendering2D>()->m_zOrder;
+			}
+		);
+
+		m_refreshGhostObject = false;
+	}
+	
+	m_renderList.clear();
+	for (auto& obj : m_ghostObjects)
+	{
+		m_renderList.push_back(obj->GetComponentRaw<Rendering2D>());
+	}
+
 	auto& window = Graphics2D::Get()->m_window;
-	window.clear(sf::Color::Black);
+	window.clear();
+
+	m_bindedWindow = &window;
 
 	if (m_cameraObjects.size() != 0)
 	{
@@ -38,18 +74,49 @@ void RenderingSystem2D::Iteration(float dt)
 		auto cam = m_cameraObjects[0]->GetComponentRaw<Camera2D>();
 		auto& rect = cam->Rect();
 
+		m_bindedCamera = cam;
+
 		sf::View view1;
-		view1.setCenter(reinterpret_cast<sf::Vector2f&>(camObj->Position()));
+		auto pos = camObj->GlobalTransform().GetTranslation();
+		//pos.Round();
+
+		AARect view = AARect(pos - cam->Rect().GetDimensions() / 2.0f, cam->Rect().GetDimensions());
+		view.GetPoints(temp);
+
+		view1.setCenter(reinterpret_cast<sf::Vector2f&>(pos));
 		view1.setSize(reinterpret_cast<sf::Vector2f&>(rect.GetDimensions()));
 		window.setView(view1);
 
 		m_querySession->Clear();
-		m_scene->AABBStaticQueryAARect(rect, m_querySession);
-		m_scene->AABBDynamicQueryAARect(rect, m_querySession);
-		for (auto obj : *m_querySession)
+		m_scene->AABBStaticQueryAARect(view, m_querySession);
+		m_scene->AABBDynamicQueryAARect(view, m_querySession);
+		
+		for (auto& obj : *m_querySession)
 		{
-			obj->GetComponentRaw<Rendering2D>()->Render(this);
+			GameObject2D::PostTraversal(obj, 
+				[&](GameObject2D* o) 
+				{
+					auto r = o->GetComponentRaw<Rendering2D>();
+					if (r)
+					{
+						m_renderList.push_back(r);
+					}
+				}
+			);
 		}
+		
+	}
+
+	std::sort(m_renderList.begin(), m_renderList.end(),
+		[](Rendering2D* r1, Rendering2D* r2)
+		{
+			return r1->m_zOrder < r2->m_zOrder;
+		}
+	);
+
+	for (auto& r : m_renderList)
+	{
+		r->Render(this);
 	}
 
 	window.display();
@@ -61,12 +128,27 @@ void RenderingSystem2D::PostIteration(float dt)
 
 void RenderingSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 {
-	
+	auto rd = (Rendering2D*)comp;
+	auto obj = comp->GetObject();
+	if (obj->m_type == GameObject2D::GHOST && obj->IsRoot())
+	{
+		rd->m_id = m_ghostObjects.size();
+		m_ghostObjects.push_back(obj);
+
+		m_refreshGhostObject = true;
+	}
 }
 
 void RenderingSystem2D::RemoveSubSystemComponent(SubSystemComponent2D* comp)
 {
+	auto rd = (Rendering2D*)comp;
+	auto obj = comp->GetObject();
+	if (obj->m_type == GameObject2D::GHOST && obj->IsRoot())
+	{
+		STD_VECTOR_ROLL_TO_FILL_BLANK(m_ghostObjects, rd->m_id, back->GetComponentRaw<Rendering2D>()->m_id);
 
+		m_refreshGhostObject = true;
+	}
 }
 
 void RenderingSystem2D::AddCamera(Camera2D* cam)

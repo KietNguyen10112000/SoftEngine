@@ -29,6 +29,7 @@ void MemoryFinalize()
 
     if (g_rawHeap)
     {
+        std::cout << "MemoryFinalize Raw Heap\n";
         DeleteMalloc(g_rawHeap);
         g_rawHeap = 0;
     }
@@ -37,6 +38,7 @@ void MemoryFinalize()
 
     if (g_stableHeap)
     {
+        std::cout << "MemoryFinalize Stable Heap\n";
         DeleteMalloc(g_stableHeap);
         g_stableHeap = 0;
     }
@@ -45,6 +47,7 @@ void MemoryFinalize()
 
     if (g_gcHeap)
     {
+        std::cout << "MemoryFinalize GC Heap\n";
         DeleteMalloc(g_gcHeap);
         g_gcHeap = 0;
     }

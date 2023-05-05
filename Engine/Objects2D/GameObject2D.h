@@ -67,9 +67,8 @@ private:
 	AARect m_aabb = {};
 	//AARect m_cacheAABB = {};
 	// 
-	Vec2						m_cacheScale = { 1,1 };
-	Vec2						m_cachePosition = { 0,0 };
-	float						m_cacheRotation = 0;
+	Transform2D					m_cachedTransform;
+	Transform2D					m_globalTransform;
 	int							m_queried = 0;
 	// <<< scene's control members 
 
@@ -78,6 +77,7 @@ protected:
 	//Handle<Rendering2D>			m_rendering;
 
 	Handle<SubSystemComponent2D>	m_subSystemComponents[SubSystemInfo2D::INDEXED_SUBSYSTEMS_COUNT] = {};
+	ID								m_subSystemID[SubSystemInfo2D::INDEXED_SUBSYSTEMS_COUNT];
 	Array<ComponentSlot>			m_components = {};
 
 	Handle<GameObject2D>			m_parent = nullptr;
@@ -86,10 +86,7 @@ protected:
 	TYPE							m_type = TYPE::DYNAMIC;
 	Rect2D							m_colliderRect = {};
 
-	Vec2							m_scale = { 1,1 };
-	Vec2							m_position = { 0,0 };
-	float							m_rotation = 0;
-
+	Transform2D						m_transform;
 	String							m_name;
 
 private:
@@ -182,10 +179,20 @@ protected:
 
 	inline bool IsMoved()
 	{
-		return 
-			m_cachePosition != m_position ||
-			m_cacheRotation != m_rotation ||
-			m_cacheScale	!= m_scale;
+		return m_transform != m_cachedTransform;
+	}
+
+	inline bool IsMovedRecursive()
+	{
+		for (auto& child : m_children)
+		{
+			if (child->IsMovedRecursive())
+			{
+				return true;
+			}
+		}
+
+		return IsMoved();
 	}
 
 	template <typename Func>
@@ -200,10 +207,13 @@ protected:
 	inline void RecalculateAABB()
 	{
 		Vec2 temp[4];
-		PostTraversal(
-			this, 
-			[&](GameObject2D* obj) 
+		PostTraversalRoundedPositionTransform(
+			this,
+			[](GameObject2D* obj, const Transform2D& globalTransform)
 			{
+				obj->m_globalTransform = globalTransform;
+				obj->m_globalTransform.Translation().Round();
+
 				bool first = true;
 				AARect localAABB;
 				obj->ForEachSubSystemComponents(
@@ -221,12 +231,18 @@ protected:
 					}
 				);
 
-				localAABB.Transform(Mat3::Scaling(obj->Scale()) * Mat3::Rotation(obj->Rotation()) * Mat3::Translation(obj->Position()));
+				obj->ForEachChildren(
+					[&](GameObject2D* child)
+					{
+						localAABB.Joint(child->m_aabb);
+					}
+				);
+
+				localAABB.Transform(obj->Transform().ToTransformMatrix());
 				obj->m_aabb = localAABB;
 
-				m_cachePosition = m_position;
-				m_cacheRotation = m_rotation;
-				m_cacheScale = m_scale;
+				//obj->Transform().Translation().Round();
+				obj->m_cachedTransform = obj->m_transform;
 			}
 		);
 	}
@@ -284,6 +300,15 @@ protected:
 	}
 
 public:
+	GameObject2D(const TYPE& type)
+	{
+		m_type = type;
+		for (auto& v : m_subSystemID)
+		{
+			v = INVALID_ID;
+		}
+	}
+
 	/*inline void SetScript(const Handle<Script2D>& script)
 	{
 		m_script = script;
@@ -303,10 +328,10 @@ public:
 		m_colliderRect = rect;
 	}
 
-	inline void SetType(const TYPE& type)
+	/*inline void SetType(const TYPE& type)
 	{
 		m_type = type;
-	}
+	}*/
 
 	// return null if object has one component has same type
 	template <typename Comp>
@@ -386,7 +411,48 @@ public:
 		func(obj);
 	}
 
+private:
+	// transform includes obj transform
+	template <typename Func>
+	inline static void PostTraversalRoundedPositionTransformImpl(const Transform2D& transform, GameObject2D* obj, Func&& func)
+	{
+		Transform2D temp;
+		for (auto& child : obj->m_children)
+		{
+			//child->Transform().Translation().Round();
+			Transform2D::Joint(transform, child->Transform(), temp);
+			PostTraversalRoundedPositionTransformImpl(temp, child.Get(), func);
+		}
+
+		func(obj, transform);
+	}
+
 public:
+	template <typename Func>
+	inline static void PostTraversalRoundedPositionTransform(GameObject2D* obj, Func&& func)
+	{
+		//obj->Transform().Translation().Round();
+		PostTraversalRoundedPositionTransformImpl(obj->Transform(), obj, func);
+	}
+
+public:
+	inline auto AddChild(const Handle<GameObject2D>& obj)
+	{
+		assert(obj->IsRoot());
+		m_children.Push(obj);
+		obj->m_parent = this;
+	}
+
+	inline auto& Child(size_t index)
+	{
+		return m_children[index];
+	}
+
+	inline auto& Children()
+	{
+		return m_children;
+	}
+
 	inline bool IsRoot()
 	{
 		return m_parent.IsNull();
@@ -415,19 +481,29 @@ public:
 		assert(0);
 	}
 
+	inline Transform2D& Transform()
+	{
+		return m_transform;
+	}
+
+	inline const Transform2D& GlobalTransform() const
+	{
+		return m_globalTransform;
+	}
+
 	inline Vec2& Scale()
 	{
-		return m_scale;
+		return m_transform.Scale();
 	}
 
 	inline Vec2& Position()
 	{
-		return m_position;
+		return m_transform.Translation();
 	}
 
 	inline float& Rotation()
 	{
-		return m_rotation;
+		return m_transform.Rotation();
 	}
 	
 };

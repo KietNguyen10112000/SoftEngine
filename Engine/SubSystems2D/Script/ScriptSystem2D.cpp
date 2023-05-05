@@ -23,10 +23,10 @@ void ScriptSystem2D::PrevIteration(float dt)
 
 void ScriptSystem2D::Iteration(float dt)
 {
-	for (auto& script : m_onUpdate)
+	for (auto& obj : m_onUpdate)
 	{
 		GameObject2D::PostTraversal(
-			script->GetObject(), 
+			obj,
 			[=](GameObject2D* obj) 
 			{
 				auto script = obj->GetComponentRaw<Script2D>();
@@ -45,10 +45,7 @@ void ScriptSystem2D::PostIteration(float dt)
 
 void ScriptSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 {
-	if (!comp->GetObject()->IsRoot())
-	{
-		return;
-	}
+	auto root = comp->GetObject()->GetRoot();
 
 	auto script = (Script2D*)comp;
 	if (IsOverridden<&Script2D::OnGUI>(&g_ScriptSystem2DDummy, script))
@@ -59,8 +56,11 @@ void ScriptSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 
 	if (IsOverridden<&Script2D::OnUpdate>(&g_ScriptSystem2DDummy, script))
 	{
-		script->m_onUpdateId = m_onUpdate.size();
-		m_onUpdate.push_back(script);
+		if (root->m_subSystemID[COMPONENT_ID] != INVALID_ID)
+		{
+			root->m_subSystemID[COMPONENT_ID] = m_onUpdate.size();
+		}
+		m_onUpdate.push_back(root);
 	}
 }
 

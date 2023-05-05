@@ -26,4 +26,16 @@ namespace std
 	using String = std::basic_string<char, std::char_traits<char>, STDAllocator<char>>;
 }
 
+
+#define STD_VECTOR_ROLL_TO_FILL_BLANK(v, blankId, backID)	\
+if (v.size() == 0)											\
+{															\
+	v.clear();												\
+} else {													\
+auto& blank = v[blankId];									\
+auto& back = v.back();										\
+backID = blankId;											\
+blank = back;												\
+v.pop_back(); }
+
 //NAMESPACE_END

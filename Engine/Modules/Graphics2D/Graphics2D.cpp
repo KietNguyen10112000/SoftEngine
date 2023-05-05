@@ -8,6 +8,8 @@
 
 #include "Network/TCPConnector.h"
 
+#include "Engine/StartupConfig.h"
+
 NAMESPACE_BEGIN
 
 int Graphics2D::Initilize(sf::Window*& output, int width, int height)
@@ -17,9 +19,9 @@ int Graphics2D::Initilize(sf::Window*& output, int width, int height)
 
 	output = &graphics->m_window;
 
-	output->create(sf::VideoMode(width, height), "SoftEngine");
+	output->create(sf::VideoMode(width, height), StartupConfig::Get().windowTitle);
 
-	output->setVerticalSyncEnabled(true);
+	//output->setVerticalSyncEnabled(true);
 
 	return 0;
 }

@@ -18,6 +18,9 @@ Scene2D::Scene2D(Engine* engine)
 {
 	m_engine = engine;
 	m_input = engine->GetInput();
+
+	m_stableObjects.Resize(1*MB);
+	m_stableObjects.Resize(0);
 }
 
 Scene2D::~Scene2D()
@@ -38,6 +41,12 @@ void Scene2D::Setup()
 
 void Scene2D::Dtor()
 {
+	if (m_oldStableValue != -1)
+	{
+		mheap::internal::FreeStableObjects((byte)m_oldStableValue, nullptr, nullptr);
+		m_oldStableValue = -1;
+	}
+
 	if (m_renderingSystem)
 	{
 		rheap::Delete(m_renderingSystem);
@@ -63,6 +72,7 @@ void Scene2D::PrevIteration()
 	//m_physicsSystem->PrevIteration(Dt());
 	//m_renderingSystem->PrevIteration(Dt());
 	m_trash.clear();
+	m_iterationCount++;
 	ReConstruct();
 }
 
@@ -75,8 +85,6 @@ void Scene2D::Iteration()
 		m_dt = (m_curTimeSinceEpoch - m_prevTimeSinceEpoch) / 1'000.0f;
 	}
 
-	m_iterationCount++;
-
 	m_scriptSystem->Iteration(Dt());
 	m_physicsSystem->Iteration(Dt());
 	m_renderingSystem->Iteration(Dt());
@@ -88,7 +96,11 @@ void Scene2D::PostIteration()
 
 void Scene2D::AddObject(Handle<GameObject2D>& obj, bool isGhost)
 {
-	obj->m_scene = this;
+	GameObject2D::PostTraversal(obj.Get(),
+		[&](GameObject2D* o) {
+			o->m_scene = this;
+		}
+	);
 
 	obj->RecalculateAABB();
 

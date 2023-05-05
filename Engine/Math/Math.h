@@ -15,5 +15,6 @@
 #include "Rect.h"
 
 #include "Utils.h"
+#include "Transform2D.h"
 
 using namespace math;

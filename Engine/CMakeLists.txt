@@ -71,6 +71,9 @@ file(
     "Modules/Plugins/*.cpp"
     "Modules/Plugins/Bridge/*.cpp"
 
+    "Modules/Resources/*.h"
+    "Modules/Resources/*.cpp"
+
     "Engine.h"
     "Engine.cpp"
     "StartupConfig.h"

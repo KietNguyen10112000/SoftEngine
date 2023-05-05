@@ -155,6 +155,34 @@ public:
     {
         return glm::dot(GLMVecConst(), v);
     }
+
+    inline Vec2& Integerize()
+    {
+        x = (int)x;
+        y = (int)y;
+        return *this;
+    }
+
+    inline Vec2& Floor()
+    {
+        x = std::floor(x);
+        y = std::floor(y);
+        return *this;
+    }
+
+    inline Vec2& Round()
+    {
+        x = std::round(x);
+        y = std::round(y);
+        return *this;
+    }
+
+    inline Vec2& Ceil()
+    {
+        x = std::ceil(x);
+        y = std::ceil(y);
+        return *this;
+    }
 };
 
 inline constexpr const Vec2 Vec2::X_AXIS    = Vec2(1, 0);

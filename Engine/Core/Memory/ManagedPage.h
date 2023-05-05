@@ -58,6 +58,11 @@ public:
 				{
 					//CONSOLE_WARN() << "[" << buffer << "]: " << bufferSize - sizeof(Handle) << " bytes\n";
 					remainDeleteCalls++;
+			#ifdef _DEBUG
+					auto handle = (ManagedHandle*)buffer;
+					if (handle->traceTable)
+						CONSOLE_WARN() << "Missing delete call \'" << handle->traceTable->className << "\'\n";
+			#endif // _DEBUG
 				}
 			);
 			CONSOLE_WARN() << "Missing: " << remainDeleteCalls << " delete calls\n";

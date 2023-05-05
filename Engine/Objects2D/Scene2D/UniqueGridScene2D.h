@@ -30,6 +30,12 @@ public:
 		std::Vector<GameObject2D*> dynamicObjects;
 	};
 
+	struct StaticObjectCells
+	{
+		StaticObjectCells* prev;
+		StaticObjectCells* next;
+	};
+
 	Vec2 m_cellDimensions = {};
 	size_t m_width;
 	size_t m_height;
@@ -39,6 +45,8 @@ public:
 	std::Vector<GameObject2D*> m_outsideDynamicObjects;
 
 	std::Vector<GameObject2D*> m_dynamicObjects;
+
+	StaticObjectCells* m_staticObjsCells = nullptr;
 
 public:
 	UniqueGridScene2D(Engine* engine, size_t width, size_t height, float cellWidth, float cellHeight);

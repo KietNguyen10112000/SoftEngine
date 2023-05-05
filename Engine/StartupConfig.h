@@ -21,6 +21,10 @@ struct StartupConfig
 	const char* resourcesPath		= "Resources/";
 	const char* compiledShadersPath = "Shaders/";
 
+	const char* windowTitle = "SoftEngine";
+	int windowWidth = 960;
+	int windowHeight = 720;
+
 	uint32_t maxThreads		= 2;
 	uint32_t reservedThread = 0;
 

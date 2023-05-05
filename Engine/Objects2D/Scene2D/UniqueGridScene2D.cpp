@@ -34,6 +34,14 @@ UniqueGridScene2D::UniqueGridScene2D(Engine* engine, size_t width, size_t height
 UniqueGridScene2D::~UniqueGridScene2D()
 {
 	Dtor();
+
+	auto it = m_staticObjsCells;
+	while (it)
+	{
+		auto next = it->next;
+		rheap::Delete((size_t*)it);
+		it = next;
+	}
 }
 
 void UniqueGridScene2D::AddStaticObject(GameObject2D* obj)
@@ -56,12 +64,20 @@ void UniqueGridScene2D::AddStaticObject(GameObject2D* obj)
 		return;
 	}
 
-	auto list = rheap::NewArray<size_t>((endX - beginX) * (endY - beginY) * 2 + 2);
+	auto list = rheap::NewArray<size_t>(
+			sizeof(StaticObjectCells) / sizeof(size_t) + (endX - beginX) * (endY - beginY) * 2 + 2
+		);
+
 	obj->m_aabbQueryId = STATIC_INSIDE;
 	obj->m_sceneDynamicId = (ID)list;
 
 	size_t i = 0;
 
+	auto sCells = (StaticObjectCells*)list;
+	sCells->prev = nullptr;
+	sCells->next = m_staticObjsCells;
+	m_staticObjsCells = sCells;
+	list += 2;
 	for (size_t y = beginY; y < endY; y++)
 	{
 		for (size_t x = beginX; x < endX; x++)
@@ -97,7 +113,26 @@ void UniqueGridScene2D::RemoveStaticObject(GameObject2D* obj)
 	if (obj->m_aabbQueryId == STATIC_INSIDE)
 	{
 		auto list = (size_t*)obj->m_sceneDynamicId;
-		
+
+		auto sCells = (StaticObjectCells*)list;
+		auto prev = sCells->prev;
+		auto next = sCells->next;
+
+		if (prev)
+		{
+			prev->next = next;
+		}
+		else
+		{
+			m_staticObjsCells = sCells;
+		}
+
+		if (next)
+		{
+			next->prev = prev;
+		}
+
+		list += 2;
 		size_t i = 0;
 		while (list[i] != -1)
 		{
@@ -116,6 +151,7 @@ void UniqueGridScene2D::RemoveStaticObject(GameObject2D* obj)
 
 			size_t backI = 0;
 			auto backList = (size_t*)back->m_sceneDynamicId;
+			backList += 2;
 			while (backList[backI] != -1)
 			{
 				auto& backCellIdx = backList[backI++];
@@ -160,7 +196,7 @@ void UniqueGridScene2D::ReConstruct()
 	Vec2 temp[4];
 	for (auto& obj : m_dynamicObjects)
 	{
-		if (obj->IsMoved())
+		if (obj->IsMovedRecursive())
 		{
 			obj->RecalculateAABB();
 		}
@@ -177,7 +213,7 @@ void UniqueGridScene2D::ReConstruct()
 		if (beginX < 0 || endX > m_width || beginY < 0 || endY > m_height)
 		{
 			m_outsideDynamicObjects.push_back(obj);
-			return;
+			continue;
 		}
 
 		for (size_t y = beginY; y < endY; y++)

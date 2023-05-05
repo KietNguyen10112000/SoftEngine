@@ -104,7 +104,7 @@ public:
 	inline void Transform(const Mat3& mat)
 	{
 		auto& dimensions = m_dimensions;
-		Vec2 pos = m_topLeft - dimensions;
+		Vec2 pos = m_topLeft;
 		Vec2 v1 = Vec2(dimensions.x, 0);
 		Vec2 v2 = Vec2(0, dimensions.y);
 

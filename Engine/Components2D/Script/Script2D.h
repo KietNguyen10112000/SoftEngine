@@ -21,9 +21,7 @@ public:
 	friend class Scene2D;
 
 private:
-	ID m_onUpdateId		= INVALID_ID;
 	ID m_onGUIId		= INVALID_ID;
-	ID m_onCollideId	= INVALID_ID;
 
 protected:
 	Scene2D* m_scene = nullptr;
@@ -84,17 +82,17 @@ public:
 
 	inline auto& Position()
 	{
-		return m_object->Position();
+		return m_object->Transform().Translation();
 	}
 
 	inline auto& Rotation()
 	{
-		return m_object->Rotation();
+		return m_object->Transform().Rotation();
 	}
 
 	inline auto& Scale()
 	{
-		return m_object->Scale();
+		return m_object->Transform().Scale();
 	}
 
 };

@@ -671,6 +671,10 @@ void ManagedHeap::Deallocate(ManagedHandle* handle)
 {
 	if (m_isGCActivated) return;
 
+#ifdef _DEBUG
+	::memset(handle->GetUsableMemAddress(), -2, handle->UsableSize());
+#endif // _DEBUG
+
 	if (!handle->IsLargeObject())
 	{
 		auto pools = &m_tinyObjectPools[0];
