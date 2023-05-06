@@ -24,6 +24,7 @@ struct StartupConfig
 	const char* windowTitle = "SoftEngine";
 	int windowWidth = 960;
 	int windowHeight = 720;
+	float fixedDt = 0.016f;
 
 	uint32_t maxThreads		= 2;
 	uint32_t reservedThread = 0;

@@ -11,6 +11,7 @@
 
 #include "Components2D/Script/Script2D.h"
 #include "Components2D/Rendering/Sprite.h"
+#include "Components2D/Physics/Physics2D.h"
 
 NAMESPACE_BEGIN
 
@@ -18,9 +19,6 @@ Scene2D::Scene2D(Engine* engine)
 {
 	m_engine = engine;
 	m_input = engine->GetInput();
-
-	m_stableObjects.Resize(1*MB);
-	m_stableObjects.Resize(0);
 }
 
 Scene2D::~Scene2D()
@@ -35,8 +33,11 @@ void Scene2D::Setup()
 	m_scriptSystem		= rheap::New<ScriptSystem2D>(this);
 
 	m_subSystems[Rendering2D::COMPONENT_ID]		= m_renderingSystem;
-	//m_subSystems[Physics2D::COMPONENT_ID] = m_physicsSystem;
+	m_subSystems[Physics2D::COMPONENT_ID]		= m_physicsSystem;
 	m_subSystems[Script2D::COMPONENT_ID]		= m_scriptSystem;
+
+	m_stableObjects.Resize(1 * MB);
+	m_stableObjects.Resize(0);
 }
 
 void Scene2D::Dtor()
@@ -87,11 +88,11 @@ void Scene2D::Iteration()
 
 	m_scriptSystem->Iteration(Dt());
 	m_physicsSystem->Iteration(Dt());
-	m_renderingSystem->Iteration(Dt());
 }
 
 void Scene2D::PostIteration()
 {
+	m_renderingSystem->Iteration(Dt());
 }
 
 void Scene2D::AddObject(Handle<GameObject2D>& obj, bool isGhost)

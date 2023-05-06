@@ -42,8 +42,6 @@ void RenderingSystem2D::PrevIteration(float dt)
 
 void RenderingSystem2D::Iteration(float dt)
 {
-	Vec2 temp[4];
-
 	if (m_refreshGhostObject)
 	{
 		std::sort(m_ghostObjects.begin(), m_ghostObjects.end(),
@@ -77,14 +75,11 @@ void RenderingSystem2D::Iteration(float dt)
 		m_bindedCamera = cam;
 
 		sf::View view1;
-		auto pos = camObj->GlobalTransform().GetTranslation();
-		//pos.Round();
-
-		AARect view = AARect(pos - cam->Rect().GetDimensions() / 2.0f, cam->Rect().GetDimensions());
-		view.GetPoints(temp);
+		auto pos = cam->GetCenter();
+		AARect view = cam->GetView();
 
 		view1.setCenter(reinterpret_cast<sf::Vector2f&>(pos));
-		view1.setSize(reinterpret_cast<sf::Vector2f&>(rect.GetDimensions()));
+		view1.setSize(reinterpret_cast<const sf::Vector2f&>(rect.GetDimensions()));
 		window.setView(view1);
 
 		m_querySession->Clear();

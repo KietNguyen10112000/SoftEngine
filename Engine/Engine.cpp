@@ -27,11 +27,33 @@
 #include "Components2D/Script/Script2D.h"
 #include "Components2D/Rendering/Sprite.h"
 #include "Components2D/Rendering/Camera2D.h"
+#include "Components2D/Rendering/Sprites.h"
+#include "Components2D/Physics/Physics2D.h"
+
+#include "Objects2D/Physics/Bodies/RigidBody2D.h"
+#include "Objects2D/Physics/Colliders/AARectCollider.h"
 
 #include "Objects2D/Scene2D/UniqueGridScene2D.h"
 #include "Objects2D/GameObject2D.h"
 
 NAMESPACE_BEGIN
+
+struct Timer
+{
+	size_t prevTimeSinceEpoch;
+	size_t curTimeSinceEpoch;
+	float dt;
+
+	inline auto Update()
+	{
+		prevTimeSinceEpoch = curTimeSinceEpoch;
+		curTimeSinceEpoch = Clock::ms::now();
+		dt = (curTimeSinceEpoch - prevTimeSinceEpoch) / 1'000.0f;
+	}
+};
+
+Timer g_timer;
+float g_sumDt = 0;
 
 Handle<Engine> Engine::Initialize()
 {
@@ -142,10 +164,13 @@ void Engine::FinalPlugins()
 
 void Engine::Setup()
 {
+	g_timer.Update();
+	g_timer.Update();
+
 	DeferredBufferTracker::Get()->Reset();
 
 	auto scene = mheap::New<UniqueGridScene2D>(this, 128, 128, 60, 60);
-	scene->Setup();
+	scene->LockDt(StartupConfig::Get().fixedDt);
 	scene->m_id = 0;
 	m_scenes.Push(scene);
 
@@ -153,33 +178,38 @@ void Engine::Setup()
 
 	auto mainScene = m_scenes[0].Get();
 	mainScene->BeginSetup();
+	scene->Setup();
 	Dispatch(ENGINE_EVENT::SCENE_ON_SETUP, this, scene.Get());
 
-	/*{
-		constexpr static std::array<std::array<size_t, 6>, 6> mapValue = { {
-			{ 1, 1, 1, 1, 1, 1 },
-			{ 1, 0, 0, 0, 0, 1 },
-			{ 1, 0, 0, 0, 0, 1 },
-			{ 1, 0, 0, 0, 0, 1 },
-			{ 1, 0, 0, 0, 0, 1 },
-			{ 1, 1, 1, 1, 1, 1 }
-		} };
+	std::array<std::array<size_t, 32>, 32> mapValues = {};
 
-		for (size_t y = 0; y < mapValue.size(); y++)
+	{
+		auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 60,60 }));
+		for (size_t y = 0; y < mapValues.size(); y++)
 		{
-			auto& row = mapValue[y];
+			auto& row = mapValues[y];
 			for (size_t x = 0; x < row.size(); x++)
 			{
-				auto object = mheap::New<GameObject2D>(GameObject2D::STATIC);
-				object->NewComponent<Sprite>(String::Format("{}.png", row[x]), AARect(), Vec2(50, 50));
+				row[x] = 1;// Random::RangeInt64(1, 2);
 
-				object->Position() = { x * 50, y * 50 };
+				auto v = Random::RangeInt64(1, 10);
 
-				mainScene->AddObject(object);
+				if (y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1 || v == 10)
+				{
+					row[x] = 0;
+					auto object = mheap::New<GameObject2D>(GameObject2D::STATIC);
+					object->NewComponent<Physics2D>(cellCollider, nullptr);
+					object->Position() = { x * 60, y * 60 };
+					mainScene->AddObject(object);
+				}
+
+				if (v == 10 && !(y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1))
+				{
+					row[x] = 2;
+				}
 			}
 		}
-
-	}*/
+	}
 
 	mainScene->EndSetup();
 
@@ -194,61 +224,69 @@ void Engine::Setup()
 			void Trace(Tracer* tracer)
 			{
 				Base::Trace(tracer);
-				tracer->Trace(m_cameraObj);
+				tracer->Trace(m_renderer);
 			}
 
-			Handle<GameObject2D> m_cameraObj;
-
-			Vec2 cameraMin;
-			Vec2 cameraMax;
+			Handle<Sprites> m_renderer;
 
 		public:
 			float m_speed = 200;
 
 			virtual void OnStart() override
 			{
-				m_cameraObj = GetObject()->Child(0);
-				cameraMin = { 6 * 60 - 960 / 2.0f,6 * 60 - 720 / 2.0f };
-				cameraMax = { 6 * 60 - 960 / 2.0f,6 * 60 - 720 / 2.0f };
+				m_renderer = GetObject()->GetComponent<Sprites>();
 			}
 
 			virtual void OnUpdate(float dt) override
 			{
+				m_renderer->SetSprite(0);
+
 				if (Input()->IsKeyDown('W'))
 				{
 					Position().y -= m_speed * dt;
+					m_renderer->SetSprite(1);
 				}
 
 				if (Input()->IsKeyDown('S'))
 				{
 					Position().y += m_speed * dt;
+					m_renderer->SetSprite(2);
 				}
 
 				if (Input()->IsKeyDown('A'))
 				{
 					Position().x -= m_speed * dt;
+					m_renderer->SetSprite(3);
 				}
 
 				if (Input()->IsKeyDown('D'))
 				{
 					Position().x += m_speed * dt;
+					m_renderer->SetSprite(4);
 				}
-
-				//Position().Round();
-
-
 			}
 
 		};
 
 		auto player = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		player->Position() = { 800 / 2, 600 / 2 };
-		player->NewComponent<Sprite>("Player.png", AARect(), Vec2(50, 50));
+		player->Position() = { 800 / 2, mapValues.size() * 60 - 100 };
+		auto sprites = player->NewComponent<Sprites>();
+		sprites->SetSprite(sprites->Load("Player.png", AARect(), Vec2(50, 50)));
+		sprites->Load("PlayerUP.png", AARect(), Vec2(50, 50));
+		sprites->Load("PlayerDOWN.png", AARect(), Vec2(50, 50));
+		sprites->Load("PlayerLEFT.png", AARect(), Vec2(50, 50));
+		sprites->Load("PlayerRIGHT.png", AARect(), Vec2(50, 50));
 		player->NewComponent<PlayerScript>();
 
-		auto cam = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		cam->NewComponent<Camera2D>(AARect({ 0,0 }, { 960, 720 }));
-		player->AddChild(cam);
+		auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 50,50 }), Vec2(5, 5));
+		auto rigidBody = MakeShared<RigidBody2D>(RigidBody2D::KINEMATIC);
+		player->NewComponent<Physics2D>(cellCollider, rigidBody);
+
+		Vec2 camViewSize = { 960 * 1.2f, 720 * 1.2f };
+		auto camObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+		auto cam = camObj->NewComponent<Camera2D>(AARect({ 0,0 }, camViewSize));
+		cam->SetClamp(camViewSize / 2.0f, Vec2(mapValues[0].size() * 60) - camViewSize / 2.0f);
+		player->AddChild(camObj);
 
 		mainScene->AddObject(player);
 	}
@@ -298,8 +336,7 @@ void Engine::Setup()
 			{
 				Vec2 temp[4];
 				auto cam = rdr->GetCurrentCamera();
-				auto& pos = cam->GetObject()->GlobalTransform().GetTranslation();
-				AARect view = AARect(pos - cam->Rect().GetDimensions() / 2.0f, cam->Rect().GetDimensions());
+				AARect view = cam->GetView();
 				view.GetPoints(temp);
 
 				auto beginX		= (intmax_t)std::floor(temp[0].x / m_cellSize.x);
@@ -325,8 +362,6 @@ void Engine::Setup()
 			}
 
 		};
-
-		std::array<std::array<size_t, 128>, 128> mapValues = {};
 		
 		auto map = mheap::New<GameObject2D>(GameObject2D::GHOST);
 		auto mapRenderer = map->NewComponent<MapRenderer>(mapValues[0].size(), mapValues.size(), Vec2(60, 60), 10);
@@ -336,16 +371,6 @@ void Engine::Setup()
 			auto& row = mapValues[y];
 			for (size_t x = 0; x < row.size(); x++)
 			{
-				/*if (y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1)
-				{
-					row[x] = 1;
-				}
-				else
-				{
-					row[x] = 0;
-				}*/
-				row[x] = Random::RangeInt64(0, 1);
-
 				mapRenderer->LoadCell(row[x], String::Format("{}.png", row[x]), {});
 				mapRenderer->SetCellValue(x, y, row[x]);
 			}
@@ -399,11 +424,24 @@ void Engine::Iteration()
 	auto mainScene = m_scenes[0].Get();
 
 	ProcessInput();
-	mainScene->PrevIteration();
-	mainScene->Iteration();
+
+	g_timer.Update();
+
+	g_sumDt += g_timer.dt;
+
+	auto fixedDt = StartupConfig::Get().fixedDt;
+
+	while (g_sumDt > fixedDt)
+	{
+		mainScene->PrevIteration();
+		mainScene->Iteration();
+		g_sumDt -= fixedDt;
+	}
+	
+	mainScene->PostIteration();
 
 	// SynchronizeAllSubSystems
-	SynchronizeAllSubSystems();
+	//SynchronizeAllSubSystems();
 }
 
 void Engine::ProcessInput()

@@ -64,9 +64,12 @@ private:
 	ID m_sceneDynamicId = INVALID_ID;
 	ID m_aabbQueryId = INVALID_ID;
 
-	AARect m_aabb = {};
-	//AARect m_cacheAABB = {};
-	// 
+	// local aabb, with root object m_aabb == m_globalAABB
+	AARect						 m_aabb = {};
+
+	// global aabb
+	AARect						m_globalAABB = {};
+
 	Transform2D					m_cachedTransform;
 	Transform2D					m_globalTransform;
 	int							m_queried = 0;
@@ -84,7 +87,6 @@ protected:
 	Array<Handle<GameObject2D>>		m_children;
 
 	TYPE							m_type = TYPE::DYNAMIC;
-	Rect2D							m_colliderRect = {};
 
 	Transform2D						m_transform;
 	String							m_name;
@@ -211,9 +213,6 @@ protected:
 			this,
 			[](GameObject2D* obj, const Transform2D& globalTransform)
 			{
-				obj->m_globalTransform = globalTransform;
-				obj->m_globalTransform.Translation().Round();
-
 				bool first = true;
 				AARect localAABB;
 				obj->ForEachSubSystemComponents(
@@ -238,8 +237,14 @@ protected:
 					}
 				);
 
+				obj->m_globalAABB = localAABB;
+				obj->m_globalAABB.Transform(globalTransform.ToTransformMatrix());
+
 				localAABB.Transform(obj->Transform().ToTransformMatrix());
 				obj->m_aabb = localAABB;
+
+				obj->m_globalTransform = globalTransform;
+				obj->m_globalTransform.Translation().Round();
 
 				//obj->Transform().Translation().Round();
 				obj->m_cachedTransform = obj->m_transform;
@@ -323,11 +328,6 @@ public:
 		comp->m_object = this;
 	}*/
 
-	inline void SetCollider(const Rect2D& rect)
-	{
-		m_colliderRect = rect;
-	}
-
 	/*inline void SetType(const TYPE& type)
 	{
 		m_type = type;
@@ -364,7 +364,7 @@ public:
 	{
 		if constexpr (std::is_base_of_v<SubSystemComponent2D, Comp>)
 		{
-			return StaticCast<Comp>(m_subSystemComponents[Comp::COMPONENT_ID]);
+			return DynamicCast<Comp>(m_subSystemComponents[Comp::COMPONENT_ID]);
 		}
 		else
 		{
@@ -373,7 +373,7 @@ public:
 
 			if (it != m_components.end())
 			{
-				return StaticCast<Comp>(it->ptr);
+				return DynamicCast<Comp>(it->ptr);
 			}
 			return nullptr;
 		}
@@ -504,6 +504,11 @@ public:
 	inline float& Rotation()
 	{
 		return m_transform.Rotation();
+	}
+
+	inline const auto& GetCachedTransform() const
+	{
+		return m_cachedTransform;
 	}
 	
 };

@@ -21,6 +21,9 @@ protected:
 	AARect m_viewPort;
 	size_t m_numRenderObjects = 0;
 
+	Vec2 m_posMin = { -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max() };
+	Vec2 m_posMax = {  std::numeric_limits<float>::max(),  std::numeric_limits<float>::max() };
+
 public:
 	inline Camera2D(const AARect& rect) : m_rect(rect) {};
 
@@ -62,6 +65,29 @@ public:
 	inline auto& ViewPort()
 	{
 		return m_viewPort;
+	}
+
+	inline auto GetView()
+	{
+		auto& pos = GetObject()->GlobalTransform().GetTranslation();
+		Vec2 lastPos = { clamp(pos.x, m_posMin.x, m_posMax.x), clamp(pos.y, m_posMin.y, m_posMax.y) };
+		lastPos.Round();
+		AARect view = AARect(lastPos - Rect().GetDimensions() / 2.0f, Rect().GetDimensions());
+		return view;
+	}
+
+	inline auto GetCenter()
+	{
+		auto& pos = GetObject()->GlobalTransform().GetTranslation();
+		Vec2 lastPos = { clamp(pos.x, m_posMin.x, m_posMax.x), clamp(pos.y, m_posMin.y, m_posMax.y) };
+		lastPos.Round();
+		return lastPos;
+	}
+
+	inline auto SetClamp(const Vec2& posMin, const Vec2& posMax)
+	{
+		m_posMin = posMin;
+		m_posMax = posMax;
 	}
 
 };
