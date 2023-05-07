@@ -5,7 +5,6 @@
 #include "Components2D/Script/Script2D.h"
 
 #include "Components2D/Physics/Physics2D.h"
-#include "Objects2D/Physics/Bodies/Body2D.h"
 
 #include <iostream>
 
@@ -47,7 +46,7 @@ void PhysicsSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 	assert(physics->m_collider != nullptr);
 
 	// no body means static object
-	if (physics->m_body.get())
+	if (physics->m_TYPE != Physics2D::STATIC)
 	{
 		assert(physics->GetObject()->m_type != GameObject2D::STATIC);
 
@@ -142,7 +141,7 @@ void PhysicsSystem2D::NarrowPhase()
 	{
 		if (!physics->CollisionPairs().empty())
 		{
-			physics->m_body->ReactFor(physics);
+			physics->ReactCollisionPairs();
 		}
 	}
 }

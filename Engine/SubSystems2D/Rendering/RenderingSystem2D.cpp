@@ -88,7 +88,7 @@ void RenderingSystem2D::Iteration(float dt)
 		
 		for (auto& obj : *m_querySession)
 		{
-			GameObject2D::PostTraversal(obj, 
+			GameObject2D::PrevTraversal(obj,
 				[&](GameObject2D* o) 
 				{
 					auto r = o->GetComponentRaw<Rendering2D>();

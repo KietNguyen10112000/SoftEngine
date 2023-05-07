@@ -84,6 +84,20 @@ public:
 		return lastPos;
 	}
 
+	inline auto GetWorldPosition(const Vec2& screenPosition, int screenWidth, int screenHeight)
+	{
+		auto view = GetView();
+		auto px = screenPosition.x / (float)screenWidth;
+		auto py = screenPosition.y / (float)screenHeight;
+		return Vec2(px * view.GetDimensions().x, py * view.GetDimensions().y) + view.GetTopLeft();
+	}
+
+	inline auto GetScreenPosition(const Vec2& worldPosition, int screenWidth, int screenHeight)
+	{
+		auto view = GetView();
+		return worldPosition - view.GetTopLeft();
+	}
+
 	inline auto SetClamp(const Vec2& posMin, const Vec2& posMax)
 	{
 		m_posMin = posMin;

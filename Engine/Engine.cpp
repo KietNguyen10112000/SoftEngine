@@ -29,8 +29,8 @@
 #include "Components2D/Rendering/Camera2D.h"
 #include "Components2D/Rendering/Sprites.h"
 #include "Components2D/Physics/Physics2D.h"
+#include "Components2D/Physics/RigidBody2D.h"
 
-#include "Objects2D/Physics/Bodies/RigidBody2D.h"
 #include "Objects2D/Physics/Colliders/AARectCollider.h"
 
 #include "Objects2D/Scene2D/UniqueGridScene2D.h"
@@ -198,7 +198,7 @@ void Engine::Setup()
 				{
 					row[x] = 0;
 					auto object = mheap::New<GameObject2D>(GameObject2D::STATIC);
-					object->NewComponent<Physics2D>(cellCollider, nullptr);
+					object->NewComponent<Physics2D>(cellCollider);
 					object->Position() = { x * 60, y * 60 };
 					mainScene->AddObject(object);
 				}
@@ -225,44 +225,88 @@ void Engine::Setup()
 			{
 				Base::Trace(tracer);
 				tracer->Trace(m_renderer);
+				tracer->Trace(m_cam);
+				tracer->Trace(m_gun);
+				tracer->Trace(m_redLine);
 			}
 
-			Handle<Sprites> m_renderer;
+			Handle<Sprites>			m_renderer;
+			Handle<Camera2D>		m_cam;
+			Handle<GameObject2D>	m_gun;
+			Handle<GameObject2D>	m_redLine;
+			Handle<GameObject2D>	m_crossHair;
 
 		public:
-			float m_speed = 200;
+			float m_speed = 300;
+			float m_rotationSpeed = 100;
+			bool m_enableMouse = false;
 
 			virtual void OnStart() override
 			{
-				m_renderer = GetObject()->GetComponent<Sprites>();
+				m_renderer	= GetObject()->GetComponent<Sprites>();
+				m_cam		= GetObject()->Child(0)->GetComponent<Camera2D>();
+				m_gun		= GetObject()->Child(2);
+				m_redLine	= GetObject()->Child(1);
+				m_crossHair = GetObject()->Child(3);
+
+				Input()->SetClampCursorInsideWindow(m_enableMouse);
 			}
 
 			virtual void OnUpdate(float dt) override
 			{
+				Vec2 motion = { 0,0 };
 				m_renderer->SetSprite(0);
 
 				if (Input()->IsKeyDown('W'))
 				{
-					Position().y -= m_speed * dt;
+					motion.y -= 1;
 					m_renderer->SetSprite(1);
 				}
 
 				if (Input()->IsKeyDown('S'))
 				{
-					Position().y += m_speed * dt;
+					motion.y += 1;
 					m_renderer->SetSprite(2);
 				}
 
 				if (Input()->IsKeyDown('A'))
 				{
-					Position().x -= m_speed * dt;
+					motion.x -= 1;
 					m_renderer->SetSprite(3);
 				}
 
 				if (Input()->IsKeyDown('D'))
 				{
-					Position().x += m_speed * dt;
+					motion.x += 1;
 					m_renderer->SetSprite(4);
+				}
+
+				if (motion != Vec2::ZERO)
+				{
+					Position() += motion.Normalize() * m_speed * dt;
+				}
+
+				if (Input()->IsKeyPressed(KEYBOARD::ESC))
+				{
+					m_enableMouse = !m_enableMouse;
+					Input()->SetClampCursorInsideWindow(m_enableMouse);
+				}
+
+				{
+					auto& cursorPos = Input()->GetCursor().position;
+					auto center = m_cam->GetWorldPosition(Vec2(cursorPos.x, cursorPos.y), 
+						Input()->GetWindowWidth(), Input()->GetWindowHeight());
+					auto& position = Position();
+					Vec2 d = { center.x - position.x - 25,  center.y - position.y - 40  };
+					auto len = d.Length();
+					d.Normalize();
+
+					m_gun->Rotation() = (d.y / std::abs(d.y)) * std::acos(d.Dot(Vec2::X_AXIS));
+
+					m_redLine->Rotation() = m_gun->Rotation();
+					m_redLine->Scale().x = len;
+
+					m_crossHair->Position() = center - position;
 				}
 			}
 
@@ -279,14 +323,35 @@ void Engine::Setup()
 		player->NewComponent<PlayerScript>();
 
 		auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 50,50 }), Vec2(5, 5));
-		auto rigidBody = MakeShared<RigidBody2D>(RigidBody2D::KINEMATIC);
-		player->NewComponent<Physics2D>(cellCollider, rigidBody);
+		player->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, cellCollider);
 
 		Vec2 camViewSize = { 960 * 1.2f, 720 * 1.2f };
 		auto camObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
 		auto cam = camObj->NewComponent<Camera2D>(AARect({ 0,0 }, camViewSize));
 		cam->SetClamp(camViewSize / 2.0f, Vec2(mapValues[0].size() * 60) - camViewSize / 2.0f);
 		player->AddChild(camObj);
+
+		// red line
+		auto line = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+		auto lineRdr = line->NewComponent<Sprite>("red.png", AARect(), Vec2(1, 5));
+		lineRdr->SetOpacity(128);
+		lineRdr->ClearAABB();
+		line->Position() = { 50 / 2.0f, 40 };
+		player->AddChild(line);
+
+		// gun
+		auto gunObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+		gunObj->NewComponent<Sprite>("smg2.png", Vec2(0.3f), AARect(), Vec2(100, 40))->ClearAABB();
+		gunObj->Position() = { 50 / 2.0f, 40 };
+		player->AddChild(gunObj);
+
+		// crosshair
+		auto crossHair = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+		auto crossHairRdr = crossHair->NewComponent<Sprite>("CrosshairsRed.png", AARect(), 
+			Vec2(80, 80), Vec2(256,256));
+		crossHairRdr->SetOpacity(128);
+		crossHairRdr->ClearAABB();
+		player->AddChild(crossHair);
 
 		mainScene->AddObject(player);
 	}

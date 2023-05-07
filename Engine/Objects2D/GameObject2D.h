@@ -411,6 +411,16 @@ public:
 		func(obj);
 	}
 
+	template <typename Func>
+	inline static void PrevTraversal(GameObject2D* obj, Func func)
+	{
+		func(obj);
+		for (auto& child : obj->m_children)
+		{
+			PrevTraversal(child.Get(), func);
+		}
+	}
+
 private:
 	// transform includes obj transform
 	template <typename Func>

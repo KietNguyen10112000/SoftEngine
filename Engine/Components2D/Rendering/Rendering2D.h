@@ -51,6 +51,11 @@ public:
 	// and call render call
 	virtual void Render(RenderingSystem2D* rdr) = 0;
 
+	inline auto& ZOrder()
+	{
+		return m_zOrder;
+	}
+
 };
 
 NAMESPACE_END

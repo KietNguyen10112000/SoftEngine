@@ -42,7 +42,7 @@ protected:
 	inline void RenderSpriteWithObject(RenderingSystem2D* rdr, sf::Sprite& sprite, const Vec2& originScale = { 1,1 })
 	{
 		sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(m_object->GlobalTransform().GetTranslation()));
-		sprite.setRotation(m_object->GlobalTransform().GetRotation());
+		sprite.setRotation(ToDegrees(m_object->GlobalTransform().GetRotation()));
 		sprite.setScale(reinterpret_cast<sf::Vector2f&>(m_object->GlobalTransform().GetScale() * originScale));
 		rdr->DrawSprite(sprite);
 	};
@@ -56,7 +56,7 @@ protected:
 		const Vec2& scale, float rotation, const Vec2& position)
 	{
 		sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(position));
-		sprite.setRotation(rotation);
+		sprite.setRotation(ToDegrees(rotation));
 		sprite.setScale(reinterpret_cast<const sf::Vector2f&>(scale));
 		rdr->DrawSprite(sprite);
 	};
@@ -65,7 +65,7 @@ protected:
 		float rotation, const Vec2& position)
 	{
 		sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(position));
-		sprite.setRotation(rotation);
+		sprite.setRotation(ToDegrees(rotation));
 		rdr->DrawSprite(sprite);
 	};
 

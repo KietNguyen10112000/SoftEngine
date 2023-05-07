@@ -17,11 +17,13 @@ protected:
 	Vec2 m_size = {};
 
 public:
-	inline Sprite(String path, const AARect& rect = {}, const Vec2& size = { 0,0 })
+	inline Sprite(String path, const AARect& rect = {}, 
+		const Vec2& size = { 0,0 }, const Vec2& anchorPoint = { 0,0 })
 	{
 		m_texture = resource::Load<Texture2D>(path);
 
 		m_sprite.setTexture(m_texture->GetSFTexture());
+		m_sprite.setOrigin(reinterpret_cast<const sf::Vector2f&>(anchorPoint));
 
 		SetSpriteTextureRect(m_sprite, rect);
 
@@ -37,6 +39,32 @@ public:
 			m_size = size;
 		}
 	};
+
+	inline Sprite(String path, const Vec2& scale = { 1, 1 }, const AARect& rect = {}, const Vec2& anchorPoint = { 0,0 })
+	{
+		m_texture = resource::Load<Texture2D>(path);
+		m_sprite.setTexture(m_texture->GetSFTexture());
+		SetSpriteTextureRect(m_sprite, rect);
+		m_originScale = scale;
+		m_sprite.setOrigin(reinterpret_cast<const sf::Vector2f&>(anchorPoint));
+	}
+
+	// [0, 255]
+	inline void SetOpacity(byte opacity)
+	{
+		m_sprite.setColor(sf::Color(255, 255, 255, opacity));
+	}
+
+	inline void SetAABBSize(const Vec2& size)
+	{
+		m_size = size;
+	}
+
+	// =)))
+	inline void ClearAABB()
+	{
+		m_size = { 0,0 };
+	}
 
 public:
 	virtual void Render(RenderingSystem2D* rdr) override 

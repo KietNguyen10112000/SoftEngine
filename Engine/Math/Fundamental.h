@@ -25,6 +25,8 @@ private:
     using Base = glm::vec2;
 
 public:
+    const static Vec2 ZERO;
+
     // Vec2(1, 0)
     const static Vec2 X_AXIS;
     // Vec2(0, 1)
@@ -184,6 +186,8 @@ public:
         return *this;
     }
 };
+
+inline constexpr const Vec2 Vec2::ZERO      = Vec2(0, 0);
 
 inline constexpr const Vec2 Vec2::X_AXIS    = Vec2(1, 0);
 inline constexpr const Vec2 Vec2::Y_AXIS    = Vec2(0, 1);

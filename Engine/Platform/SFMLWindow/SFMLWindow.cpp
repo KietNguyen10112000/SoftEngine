@@ -27,6 +27,9 @@ struct WindowsWindow
 
 WindowsWindow* g_WindowsWindow;
 
+int g_windowTitleHeight = 0;
+size_t g_clipedCursorCount = 0;
+
 class PlatformInput : public Input
 {
 public:
@@ -34,8 +37,19 @@ public:
     {
         PlatformInput* input = (PlatformInput*)w->input;
 
+        RECT rect1;
+        GetWindowRect(w->hwnd, &rect1);
+        RECT rect2;
+        GetClientRect(w->hwnd, &rect2);
+        g_windowTitleHeight = (rect1.bottom - rect1.top) - (rect2.bottom - rect2.top);
+
+        input->m_windowWidth = rect2.right - rect2.left;
+        input->m_windowHeight = rect2.bottom - rect2.top;
+
         POINT point;
         GetCursorPos(&point);
+        ScreenToClient(w->hwnd, &point);
+        //point.y -= g_windowTitleHeight;
 
         auto& cursor = input->m_curCursors[0];
         auto& prev = input->m_prevCursors[0];
@@ -54,6 +68,8 @@ public:
 
         POINT point;
         GetCursorPos(&point);
+        ScreenToClient(w->hwnd, &point);
+        //point.y -= g_windowTitleHeight;
 
         input->SetCursor(0, point.x, point.y, true);
 
@@ -63,6 +79,51 @@ public:
         {
             SetCursorPos(prev.position.x, prev.position.y);
             cursor.position = prev.position;
+        }
+        else
+        {
+            /*point.x = cursor.position.x;
+            point.y = cursor.position.y;
+            ClientToScreen(w->hwnd, &point);
+            SetCursorPos(point.x, point.y);*/
+
+            /*if (point.x != cursor.position.x || point.y != cursor.position.y)
+            {
+                RECT rect1;
+                GetWindowRect(w->hwnd, &rect1);
+                rect1.top += g_windowTitleHeight;
+
+                rect1.right = rect1.left + cursor.maxPos.x;
+                rect1.left += cursor.minPos.x;
+                rect1.bottom = rect1.top + cursor.maxPos.y;
+                rect1.top += cursor.minPos.y;
+
+                ClipCursor(&rect1);
+                g_clipedCursor = true;
+            }
+            else
+            {
+                if (g_clipedCursor)
+                {
+                    ClipCursor(NULL);
+                    g_clipedCursor = false;
+                }
+            }*/
+
+            if (g_clipedCursorCount != cursor.numClampPos)
+            {
+                RECT rect1;
+                GetWindowRect(w->hwnd, &rect1);
+                rect1.top += g_windowTitleHeight;
+
+                rect1.right = rect1.left + cursor.maxPos.x;
+                rect1.left += cursor.minPos.x;
+                rect1.bottom = rect1.top + cursor.maxPos.y;
+                rect1.top += cursor.minPos.y;
+
+                ClipCursor(&rect1);
+                g_clipedCursorCount = cursor.numClampPos;
+            }
         }
     }
 

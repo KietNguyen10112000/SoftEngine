@@ -21,6 +21,10 @@ public:
 		Position offset;
 		bool isActive = true;
 		bool isLocked = true;
+
+		Position minPos = { -INT_MAX, INT_MAX };
+		Position maxPos = { -INT_MAX, INT_MAX };
+		size_t numClampPos = 0;
 	};
 
 protected:
@@ -39,6 +43,9 @@ protected:
 
 	Cursor m_prevCursors[NUM_CURSORS] = {};
 	Cursor m_curCursors[NUM_CURSORS] = {};
+
+	int m_windowWidth = 0;
+	int m_windowHeight = 0;
 
 protected:
 	inline void DownKey(byte keyCode)
@@ -63,6 +70,9 @@ protected:
 	{
 		auto& cursor = m_curCursors[id];
 		auto& prevCursor = m_prevCursors[id];
+
+		x = std::max(std::min(x, cursor.maxPos.x), cursor.minPos.x);
+		y = std::max(std::min(y, cursor.maxPos.y), cursor.minPos.y);
 
 		//if (cursor.isLocked)
 		//{
@@ -144,6 +154,38 @@ public:
 	inline bool GetCursorLock(int id = 0)
 	{
 		return m_curCursors[id].isLocked;
+	}
+
+	inline void ClampCursor(int minX, int maxX, int minY, int maxY, int id = 0)
+	{
+		auto& cur = m_curCursors[id];
+		cur.minPos.x = minX;
+		cur.minPos.y = minY;
+		cur.maxPos.x = maxX;
+		cur.maxPos.y = maxY;
+		cur.numClampPos++;
+	}
+
+	inline void SetClampCursorInsideWindow(bool clamp, int gapX = 30, int gapY = 30, int id = 0)
+	{
+		if (clamp)
+		{
+			ClampCursor(gapX, GetWindowWidth() - gapX, gapY, GetWindowHeight() - gapY, id);
+		}
+		else
+		{
+			ClampCursor(-INT_MAX, INT_MAX, -INT_MAX, INT_MAX, id);
+		}
+	}
+
+	inline int GetWindowWidth()
+	{
+		return m_windowWidth;
+	}
+
+	inline int GetWindowHeight()
+	{
+		return m_windowHeight;
 	}
 };
 

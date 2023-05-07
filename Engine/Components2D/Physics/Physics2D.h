@@ -21,29 +21,36 @@ class Physics2D : public SubSystemComponent2D
 public:
 	constexpr static size_t COMPONENT_ID = SubSystemComponentId2D::PHYSICS_SUBSYSTEM_COMPONENT_ID;
 
-	/*enum TYPE
+	enum TYPE
 	{
 		STATIC,
-		DYNAMIC,
-		KINEMATIC
-	};*/
+		DYNAMIC_BODY,
+		SENSOR,
+		FIELD
+	};
 
-protected:
+
 	friend class PhysicsSystem2D;
 
+private:
 	ID m_id = INVALID_ID;
+	const TYPE m_TYPE;
 
+protected:
 	SharedPtr<Collider2D> m_collider;
-	SharedPtr<Body2D> m_body;
 
 	size_t m_lastBoardPhaseIterationCount = 0;
 	std::Vector<Collision2DPair*> m_collisionPairs;
 
+protected:
+	inline Physics2D(TYPE type,
+		const SharedPtr<Collider2D>& collider
+	) : m_TYPE(type), m_collider(collider) {};
+
 public:
 	inline Physics2D(
-		const SharedPtr<Collider2D>& collider, 
-		const SharedPtr<Body2D>& body
-	) : m_collider(collider), m_body(body) {};
+		const SharedPtr<Collider2D>& collider
+	) : m_TYPE(TYPE::STATIC), m_collider(collider) {};
 
 	inline virtual ~Physics2D() {};
 
@@ -75,6 +82,10 @@ public:
 	}
 
 public:
+	virtual void ReactCollisionPairs() {};
+	virtual void ContributeTo(Body2D* body) {};
+
+public:
 	inline auto& CollisionPairs()
 	{
 		return m_collisionPairs;
@@ -85,11 +96,10 @@ public:
 		return m_collider;
 	}
 
-	inline auto& Body()
+	inline auto Type() const
 	{
-		return m_body;
+		return m_TYPE;
 	}
-
 };
 
 NAMESPACE_END
