@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/TypeDef.h"
 
+#include "Core/Structures/STD/STDContainers.h"
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/Managed/ConcurrentList.h"
 #include "Core/Memory/SmartPointers.h"
@@ -87,6 +88,8 @@ protected:
 	// for defer delete
 	Array<Handle<GameObject2D>> m_trash;
 
+	std::Vector<GameObject2D*> m_removes;
+
 private:
 	ID m_oldStableValue = 0;
 	ID m_id = 0;
@@ -150,7 +153,7 @@ public:
 public:
 	// for user use
 	void AddObject(Handle<GameObject2D>& obj, bool isGhost = false);
-	void RemoveObject(Handle<GameObject2D>& obj);
+	void RemoveObject(const Handle<GameObject2D>& obj);
 
 protected:
 	virtual void AddStaticObject(GameObject2D* obj) = 0;
@@ -159,6 +162,9 @@ protected:
 	// call whenever a dynamic object need to add, or remove
 	virtual void AddDynamicObject(GameObject2D* obj) = 0;
 	virtual void RemoveDynamicObject(GameObject2D* obj) = 0;
+
+	void RemoveObjectImpl(GameObject2D* obj);
+	void ProcessRemoveList();
 
 public:
 	void PrevIteration();

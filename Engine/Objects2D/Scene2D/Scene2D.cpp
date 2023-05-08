@@ -88,6 +88,8 @@ void Scene2D::Iteration()
 
 	m_scriptSystem->Iteration(Dt());
 	m_physicsSystem->Iteration(Dt());
+
+	ProcessRemoveList();
 }
 
 void Scene2D::PostIteration()
@@ -137,13 +139,18 @@ back->idName = objName->idName;								\
 blank = back;												\
 v.Pop();
 
-void Scene2D::RemoveObject(Handle<GameObject2D>& obj)
+void Scene2D::RemoveObject(const Handle<GameObject2D>& obj)
+{
+	m_removes.push_back(obj.Get());
+}
+
+void Scene2D::RemoveObjectImpl(GameObject2D* obj)
 {
 	obj->m_scene = this;
 
 	if (obj->m_type == GameObject2D::STATIC)
 	{
-		RemoveStaticObject(obj.Get());
+		RemoveStaticObject(obj);
 
 		ROLL_TO_FILL_BLANK(m_stableObjects, obj, m_sceneId);
 
@@ -152,7 +159,7 @@ void Scene2D::RemoveObject(Handle<GameObject2D>& obj)
 
 	if (obj->m_type != GameObject2D::GHOST)
 	{
-		RemoveDynamicObject(obj.Get());
+		RemoveDynamicObject(obj);
 	}
 
 	m_trash.Push(obj);
@@ -160,6 +167,15 @@ void Scene2D::RemoveObject(Handle<GameObject2D>& obj)
 
 Return:
 	obj->InvokeOnComponentRemovedFromScene();
+}
+
+void Scene2D::ProcessRemoveList()
+{
+	for (auto& obj : m_removes)
+	{
+		RemoveObjectImpl(obj);
+	}
+	m_removes.clear();
 }
 
 NAMESPACE_END

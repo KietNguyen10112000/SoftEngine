@@ -57,7 +57,26 @@ void PhysicsSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 
 void PhysicsSystem2D::RemoveSubSystemComponent(SubSystemComponent2D* comp)
 {
-	assert(0);
+	auto physics = (Physics2D*)comp;
+	for (auto& pairs : physics->m_collisionPairs)
+	{
+		for (auto& p : pairs)
+		{
+			if (p->A == physics)
+			{
+				p->A = 0;
+			}
+			else
+			{
+				p->B = 0;
+			}
+			p->result.penetration = 0;
+		}
+		FreeCollisionPairs(pairs);
+	}
+	
+
+	STD_VECTOR_ROLL_TO_FILL_BLANK(m_boardPhaseEntries, physics->m_id, back->m_id);
 }
 
 void PhysicsSystem2D::BoardPhase()
@@ -65,7 +84,8 @@ void PhysicsSystem2D::BoardPhase()
 	// free all things
 	for (auto& physics : m_boardPhaseEntries)
 	{
-		FreeCollisionPairs(physics->m_collisionPairs);
+		physics->m_collisionPairsId = (physics->m_collisionPairsId + 1) % 2;
+		FreeCollisionPairs(physics->CollisionPairs());
 	}
 	m_narrowPhaseEntries.clear();
 	m_iterationCount++;
@@ -79,23 +99,24 @@ void PhysicsSystem2D::BoardPhase()
 		}
 
 		m_boardPhaseStack.push_back(physics);
+		physics->m_lastBoardPhaseIterationCount = m_iterationCount;
 		while (!m_boardPhaseStack.empty())
 		{
 			auto top = m_boardPhaseStack.back();
 
-			assert(top->m_lastBoardPhaseIterationCount != m_iterationCount);
-			top->m_lastBoardPhaseIterationCount = m_iterationCount;
+			assert(top->m_lastBoardPhaseIterationCount == m_iterationCount);
+			//top->m_lastBoardPhaseIterationCount = m_iterationCount;
 
 			m_boardPhaseStack.pop_back();
 
-			auto& pairs = top->m_collisionPairs;
+			auto& pairs = top->CollisionPairs();
 
 			m_querySession->Clear();
 			m_scene->AABBStaticQueryAARect(top->GetObject()->m_globalAABB, m_querySession);
 			for (auto& obj : *m_querySession)
 			{
 				auto another = obj->GetComponentRaw<Physics2D>();
-				pairs.push_back(AllocateCollisionPair(top, another));
+				pairs.push_back(AllocateCollisionPair(top, another, 1));
 			}
 
 			m_querySession->Clear();
@@ -104,14 +125,17 @@ void PhysicsSystem2D::BoardPhase()
 			{
 				auto another = obj->GetComponentRaw<Physics2D>();
 
+				//if (another == top) continue;
+
 				if (another->m_lastBoardPhaseIterationCount == m_iterationCount)
 				{
 					continue;
 				}
+				another->m_lastBoardPhaseIterationCount = m_iterationCount;
 
-				auto pair = AllocateCollisionPair(top, another);
+				auto pair = AllocateCollisionPair(top, another, 2);
 				pairs.push_back(pair);
-				another->m_collisionPairs.push_back(pair);
+				another->CollisionPairs().push_back(pair);
 				m_boardPhaseStack.push_back(another);
 			}
 		}

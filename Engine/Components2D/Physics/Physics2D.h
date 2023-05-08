@@ -40,7 +40,8 @@ protected:
 	SharedPtr<Collider2D> m_collider;
 
 	size_t m_lastBoardPhaseIterationCount = 0;
-	std::Vector<Collision2DPair*> m_collisionPairs;
+	std::Vector<Collision2DPair*> m_collisionPairs[2];
+	size_t m_collisionPairsId = 0;
 
 protected:
 	inline Physics2D(TYPE type,
@@ -88,7 +89,7 @@ public:
 public:
 	inline auto& CollisionPairs()
 	{
-		return m_collisionPairs;
+		return m_collisionPairs[m_collisionPairsId];
 	}
 
 	inline auto& Collider()

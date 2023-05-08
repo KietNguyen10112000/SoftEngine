@@ -42,7 +42,7 @@ protected:
 		pairs.clear();
 	}
 
-	inline auto AllocateCollisionPair(Physics2D* A, Physics2D* B)
+	inline auto AllocateCollisionPair(Physics2D* A, Physics2D* B, size_t refCount)
 	{
 		Collision2DPair* ret;
 		if (!m_freePairs.empty())
@@ -59,7 +59,7 @@ protected:
 	Return:
 		ret->A = A;
 		ret->B = B;
-		ret->refCount = 1;
+		ret->refCount = refCount;
 		ret->result.penetration = 0;
 
 		m_narrowPhaseEntries.push_back(ret);

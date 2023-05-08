@@ -7,6 +7,7 @@
 
 #include "Objects2D/GameObject2D.h"
 #include "Objects/Async/AsyncTaskRunner.h"
+#include "Objects2D/Physics/Collision/Collision2DPair.h"
 
 NAMESPACE_BEGIN
 
@@ -21,7 +22,16 @@ public:
 	friend class Scene2D;
 
 private:
+	enum PROCESS_FLAG
+	{
+		ON_COLLISION_ENTER,
+		ON_COLLIDE,
+		ON_COLLISION_EXIT
+	};
+
 	ID m_onGUIId		= INVALID_ID;
+
+	ID m_onCollideId	= INVALID_ID;
 
 protected:
 	Scene2D* m_scene = nullptr;
@@ -72,6 +82,9 @@ private:
 public:
 	virtual void OnStart() {};
 	virtual void OnUpdate(float dt) {};
+	virtual void OnCollide(GameObject2D* another, const Collision2DPair& pair) {};
+	virtual void OnCollisionEnter(GameObject2D* another, const Collision2DPair& pair) {};
+	virtual void OnCollisionExit(GameObject2D* another, const Collision2DPair& pair) {};
 	virtual void OnGUI() {};
 
 public:

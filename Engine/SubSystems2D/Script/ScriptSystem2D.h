@@ -13,7 +13,9 @@ class ScriptSystem2D : public SubSystem2D
 private:
 	std::Vector<Script2D*> m_onGUI;
 
-	std::Vector<GameObject2D*> m_onCollide;
+	std::Vector<Script2D*> m_onCollide;
+	std::Vector<Script2D*> m_onCollisionEnter;
+	std::Vector<Script2D*> m_onCollisionExit;
 
 	std::Vector<GameObject2D*> m_onUpdate;
 

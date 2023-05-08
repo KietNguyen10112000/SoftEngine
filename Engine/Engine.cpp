@@ -216,6 +216,40 @@ void Engine::Setup()
 	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
 	{
+		class BulletScript : Traceable<BulletScript>, public Script2D
+		{
+		protected:
+			using Base = Script2D;
+			TRACEABLE_FRIEND();
+			void Trace(Tracer* tracer)
+			{
+				Base::Trace(tracer);
+				tracer->Trace(m_from);
+			}
+
+			Handle<GameObject2D> m_from;
+
+		public:
+			virtual void OnUpdate(float dt) override
+			{
+				Position().x += dt * 500;
+			}
+
+			virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
+			{
+				if (obj != m_from.Get())
+				{
+					m_scene->RemoveObject(GetObject());
+					std::cout << "Bullet removed\n";
+				}
+			}
+
+			inline void SetFrom(const Handle<GameObject2D>& obj)
+			{
+				m_from = obj;
+			}
+		};
+
 		class PlayerScript : Traceable<PlayerScript>, public Script2D
 		{
 		protected:
@@ -236,6 +270,8 @@ void Engine::Setup()
 			Handle<GameObject2D>	m_redLine;
 			Handle<GameObject2D>	m_crossHair;
 
+			SharedPtr<AARectCollider> m_bulletCollider;
+
 		public:
 			float m_speed = 300;
 			float m_rotationSpeed = 100;
@@ -250,6 +286,8 @@ void Engine::Setup()
 				m_crossHair = GetObject()->Child(3);
 
 				Input()->SetClampCursorInsideWindow(m_enableMouse);
+
+				m_bulletCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 5,5 }));
 			}
 
 			virtual void OnUpdate(float dt) override
@@ -292,6 +330,16 @@ void Engine::Setup()
 					Input()->SetClampCursorInsideWindow(m_enableMouse);
 				}
 
+				if (Input()->IsKeyPressed(KEYBOARD::SPACE))
+				{
+					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+					bullet->NewComponent<Sprite>("medium_bullet2.png", Vec2(0.5, 0.5));
+					bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
+					bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
+					bullet->Position() = Position();
+					m_scene->AddObject(bullet);
+				}
+
 				{
 					auto& cursorPos = Input()->GetCursor().position;
 					auto center = m_cam->GetWorldPosition(Vec2(cursorPos.x, cursorPos.y), 
@@ -310,7 +358,13 @@ void Engine::Setup()
 				}
 			}
 
+			/*virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
+			{
+				std::cout << "Collide " << m_count++ <<"\n";
+			}*/
 		};
+
+
 
 		auto player = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
 		player->Position() = { 800 / 2, mapValues.size() * 60 - 100 };

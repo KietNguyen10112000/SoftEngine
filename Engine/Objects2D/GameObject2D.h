@@ -218,14 +218,17 @@ protected:
 				obj->ForEachSubSystemComponents(
 					[&](Handle<SubSystemComponent2D>& comp)
 					{
+						auto aabb = comp->GetLocalAABB();
+
+						if (!aabb.IsValid()) return;
+
 						if (first)
 						{
-							localAABB = comp->GetLocalAABB();
+							localAABB = aabb;
 							first = false;
 							return;
 						}
-
-						auto aabb = comp->GetLocalAABB();
+						
 						localAABB.Joint(aabb);
 					}
 				);
@@ -233,7 +236,8 @@ protected:
 				obj->ForEachChildren(
 					[&](GameObject2D* child)
 					{
-						localAABB.Joint(child->m_aabb);
+						if (child->m_aabb.IsValid())
+							localAABB.Joint(child->m_aabb);
 					}
 				);
 
