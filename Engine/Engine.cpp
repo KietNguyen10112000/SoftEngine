@@ -57,6 +57,7 @@ float g_sumDt = 0;
 
 Handle<Engine> Engine::Initialize()
 {
+	resource::internal::Initialize();
 	auto old = mheap::internal::GetStableValue();
 	mheap::internal::SetStableValue(Engine::STABLE_VALUE);
 	auto ret = mheap::New<Engine>();
@@ -69,6 +70,7 @@ void Engine::Finalize()
 {
 	mheap::internal::FreeStableObjects(Engine::STABLE_VALUE, 0, 0);
 	gc::Run(-1);
+	resource::internal::Finalize();
 }
 
 Engine::Engine() : EventDispatcher(ENGINE_EVENT::COUNT)
@@ -77,12 +79,10 @@ Engine::Engine() : EventDispatcher(ENGINE_EVENT::COUNT)
 	InitNetwork();
 	InitGraphics();
 	InitPlugins();
-	resource::internal::Initialize();
 }
 
 Engine::~Engine()
 {
-	resource::internal::Finalize();
 	FinalPlugins();
 	FinalGraphics();
 	FinalNetwork();

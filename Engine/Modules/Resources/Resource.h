@@ -88,7 +88,7 @@ private:
 	}
 
 public:
-	Resource() = default;
+	Resource() {};
 
 	template <typename _T>
 	Resource(const Resource<_T>& rc)
@@ -98,21 +98,29 @@ public:
 
 	~Resource()
 	{
+		Reset();
+	}
+
+	inline void Reset()
+	{
 		if (m_rc && (--(m_rc->m_refCount)) == 0)
 		{
 			resource::internal::Release(m_rc);
+			m_rc = 0;
 		}
 	}
 
 	template <typename _T>
 	inline void operator=(const Resource<_T>& rc)
 	{
+		Reset();
 		m_rc = rc.m_rc;
 		m_rc->m_refCount++;
 	}
 
 	inline void operator=(const Resource<T>& rc)
 	{
+		Reset();
 		m_rc = rc.m_rc;
 		m_rc->m_refCount++;
 	}

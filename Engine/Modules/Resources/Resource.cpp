@@ -73,9 +73,11 @@ void Initialize()
 
 void Finalize()
 {
+	auto& rcMap = GetRcMap();
 	for (auto& [key, value] : GetRcMap())
 	{
-		rheap::Delete(value);
+		//rheap::Delete(value);
+		std::cout << "Resource leaks: " << key << "\n";
 	}
 	GetRcMap().clear();
 	FreeGcMap(GetRcMap());
