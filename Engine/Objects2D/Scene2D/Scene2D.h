@@ -90,6 +90,8 @@ protected:
 
 	std::Vector<GameObject2D*> m_removes;
 
+	std::Vector<GameObject2D*> m_adds;
+
 private:
 	ID m_oldStableValue = 0;
 	ID m_id = 0;
@@ -165,6 +167,9 @@ protected:
 
 	void RemoveObjectImpl(GameObject2D* obj);
 	void ProcessRemoveList();
+
+	void AddObjectImpl(GameObject2D* obj);
+	void ProcessAddList();
 
 public:
 	void PrevIteration();

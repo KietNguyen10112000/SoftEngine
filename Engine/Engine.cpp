@@ -228,19 +228,21 @@ void Engine::Setup()
 			}
 
 			Handle<GameObject2D> m_from;
+			bool m_removed = false;
 
 		public:
 			virtual void OnUpdate(float dt) override
 			{
-				Position().x += dt * 500;
+				Position().x += dt * 1000;
 			}
 
 			virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
 			{
-				if (obj != m_from.Get())
+				if (obj != m_from.Get() && m_removed == false)
 				{
 					m_scene->RemoveObject(GetObject());
 					std::cout << "Bullet removed\n";
+					m_removed = true;
 				}
 			}
 
@@ -287,7 +289,7 @@ void Engine::Setup()
 
 				Input()->SetClampCursorInsideWindow(m_enableMouse);
 
-				m_bulletCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 5,5 }));
+				m_bulletCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 7,33 }));
 			}
 
 			virtual void OnUpdate(float dt) override
@@ -330,13 +332,14 @@ void Engine::Setup()
 					Input()->SetClampCursorInsideWindow(m_enableMouse);
 				}
 
-				if (Input()->IsKeyPressed(KEYBOARD::SPACE))
+				if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
 				{
 					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
 					bullet->NewComponent<Sprite>("medium_bullet2.png", Vec2(0.5, 0.5));
 					bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
 					bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
 					bullet->Position() = Position();
+					//bullet->Rotation() = PI / 2.0f;
 					m_scene->AddObject(bullet);
 				}
 

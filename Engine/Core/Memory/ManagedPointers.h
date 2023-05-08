@@ -83,7 +83,7 @@ protected:
 	size_t m_offsetToSelf = -1;
 
 public:
-	ManagedPointer() 
+	ManagedPointer()
 	{
 		OnConstructor();
 	}
@@ -101,7 +101,7 @@ public:
 		*this = r;
 	}
 
-	ManagedPointer(nullptr_t) 
+	ManagedPointer(nullptr_t)
 	{
 		OnConstructor();
 	}
@@ -262,6 +262,16 @@ public:
 			void* p = dynamic_cast<void*>(ptr);
 			Set((byte*)p, ptr);
 		}
+	}
+
+	inline operator T*()
+	{
+		return Get();
+	}
+
+	inline operator const T* () const
+	{
+		return Get();
 	}
 
 	/*operator ManagedPointer<byte>() const

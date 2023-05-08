@@ -64,6 +64,11 @@ private:
 	ID m_sceneDynamicId = INVALID_ID;
 	ID m_aabbQueryId = INVALID_ID;
 
+#ifdef _DEBUG
+	ID m_sceneDebugVar1 = INVALID_ID;
+#endif // _DEBUG
+
+
 	// local aabb, with root object m_aabb == m_globalAABB
 	AARect						 m_aabb = {};
 

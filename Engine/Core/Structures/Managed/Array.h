@@ -191,6 +191,13 @@ public:
 		_Resize(newSize);
 	}
 
+	inline void Reserve(size_t size)
+	{
+		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
+		_Resize(size);
+		_Resize(0);
+	}
+
 	inline void Clear()
 	{
 		::memset(m_buffer.Get(), 0, sizeof(T) * m_size);

@@ -28,7 +28,7 @@ namespace std
 
 
 #define STD_VECTOR_ROLL_TO_FILL_BLANK(v, blankId, backID)	\
-if (v.size() == 0)											\
+if (v.size() == 1)											\
 {															\
 	v.clear();												\
 } else {													\

@@ -97,7 +97,7 @@ void UniqueGridScene2D::AddStaticObject(GameObject2D* obj)
 }
 
 #define ROLL_TO_FILL_BLANK(v, objName, idName)				\
-if (v.size() == 0)											\
+if (v.size() == 1)											\
 {															\
 	v.clear();												\
 	return;													\

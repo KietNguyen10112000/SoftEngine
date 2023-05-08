@@ -65,12 +65,14 @@ void ScriptSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 
 	if (IsOverridden<&Script2D::OnGUI>(&g_ScriptSystem2DDummy, script))
 	{
+		assert(script->m_onGUIId == INVALID_ID && "script added twices");
 		script->m_onGUIId = m_onGUI.size();
 		m_onGUI.push_back(script);
 	}
 
 	if (IsOverridden<&Script2D::OnCollide>(&g_ScriptSystem2DDummy, script))
 	{
+		assert(script->m_onCollideId == INVALID_ID && "script added twices");
 		script->m_onCollideId = m_onCollide.size();
 		m_onCollide.push_back(script);
 	}
