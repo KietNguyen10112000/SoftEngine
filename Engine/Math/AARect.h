@@ -101,7 +101,7 @@ public:
 	}
 
 public:
-	inline void Transform(const Mat3& mat)
+	inline auto& Transform(const Mat3& mat)
 	{
 		auto& dimensions = m_dimensions;
 		Vec2 pos = m_topLeft;
@@ -120,6 +120,8 @@ public:
 		points[3] = pos + v1 + v2;
 
 		FromPoints(points, 4);
+
+		return *this;
 	};
 
 	inline bool IsValid() const

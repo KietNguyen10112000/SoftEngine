@@ -8,9 +8,9 @@ namespace math
 class Transform2D
 {
 public:
-	float m_rotation;
+	float m_rotation = 0;
 	Vec2  m_scale = { 1,1 };
-	Vec2  m_translation;
+	Vec2  m_translation = { 0,0 };
 
 public:
 	inline Mat3 ToTransformMatrix() const

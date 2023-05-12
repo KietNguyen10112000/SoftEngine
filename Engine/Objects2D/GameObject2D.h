@@ -172,6 +172,11 @@ inline void name()																\
 		}
 	}
 
+	inline bool IsFloating()
+	{
+		return m_uid == INVALID_ID;
+	}
+
 protected:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)

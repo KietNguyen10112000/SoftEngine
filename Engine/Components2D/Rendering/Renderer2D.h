@@ -5,6 +5,7 @@
 #include "Math/Math.h"
 
 #include "Objects2D/GameObject2D.h"
+#include "Objects2D/Rendering/Sprite.h"
 
 #include "Graphics2D/Graphics2D.h"
 
@@ -39,12 +40,19 @@ protected:
 		}
 	}
 
-	inline void RenderSpriteWithObject(RenderingSystem2D* rdr, sf::Sprite& sprite, const Vec2& originScale = { 1,1 })
+	inline void RenderSpriteWithObject(RenderingSystem2D* rdr, Sprite& sprite)
 	{
-		sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(m_object->GlobalTransform().GetTranslation()));
-		sprite.setRotation(ToDegrees(m_object->GlobalTransform().GetRotation()));
-		sprite.setScale(reinterpret_cast<sf::Vector2f&>(m_object->GlobalTransform().GetScale() * originScale));
-		rdr->DrawSprite(sprite);
+		auto& originTransform = sprite.Transform();
+
+		auto scale			= originTransform.GetScale() * m_object->GlobalTransform().GetScale();
+		auto rotation		= originTransform.GetRotation() + m_object->GlobalTransform().GetRotation();
+		auto translation	= originTransform.GetTranslation() + m_object->GlobalTransform().GetTranslation();
+
+		auto& sfSprite = sprite.SFSprite();
+		sfSprite.setPosition(reinterpret_cast<const sf::Vector2f&>(translation));
+		sfSprite.setRotation(ToDegrees(rotation));
+		sfSprite.setScale(reinterpret_cast<sf::Vector2f&>(scale));
+		rdr->DrawSprite(sfSprite);
 	};
 
 	inline void RenderSprite(RenderingSystem2D* rdr, sf::Sprite& sprite)

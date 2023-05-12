@@ -92,6 +92,8 @@ protected:
 
 	std::Vector<GameObject2D*> m_adds;
 
+	size_t m_uidCount = 0;
+
 private:
 	ID m_oldStableValue = 0;
 	ID m_id = 0;

@@ -149,5 +149,6 @@ public:
 
 };
 
+using Rect = Rect2D;
 
 }

@@ -34,12 +34,21 @@ void ScriptSystem2D::Iteration(float dt)
 			if (another && pair->result.HasCollision())
 			{
 				script->OnCollide(another->GetObject(), *pair);
+
+				if (script->GetObject()->IsFloating())
+				{
+					break;
+				}
 			}
 		}
 	}
 
 	for (auto& obj : m_onUpdate)
 	{
+		if (obj->IsFloating())
+		{
+			continue;
+		}
 		GameObject2D::PostTraversal(
 			obj,
 			[=](GameObject2D* obj) 

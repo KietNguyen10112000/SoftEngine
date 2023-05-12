@@ -25,9 +25,9 @@
 #include "ENGINE_EVENT.h"
 
 #include "Components2D/Script/Script2D.h"
-#include "Components2D/Rendering/Sprite.h"
+#include "Components2D/Rendering/SpriteRenderer.h"
 #include "Components2D/Rendering/Camera2D.h"
-#include "Components2D/Rendering/Sprites.h"
+#include "Components2D/Rendering/SpritesRenderer.h"
 #include "Components2D/Physics/Physics2D.h"
 #include "Components2D/Physics/RigidBody2D.h"
 
@@ -228,7 +228,6 @@ void Engine::Setup()
 			}
 
 			Handle<GameObject2D> m_from;
-			bool m_removed = false;
 
 		public:
 			virtual void OnUpdate(float dt) override
@@ -238,11 +237,10 @@ void Engine::Setup()
 
 			virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
 			{
-				if (obj != m_from.Get() && m_removed == false)
+				if (obj != m_from.Get())
 				{
 					m_scene->RemoveObject(GetObject());
 					std::cout << "Bullet removed\n";
-					m_removed = true;
 				}
 			}
 
@@ -266,13 +264,13 @@ void Engine::Setup()
 				tracer->Trace(m_redLine);
 			}
 
-			Handle<Sprites>			m_renderer;
-			Handle<Camera2D>		m_cam;
-			Handle<GameObject2D>	m_gun;
-			Handle<GameObject2D>	m_redLine;
-			Handle<GameObject2D>	m_crossHair;
+			Handle<SpritesRenderer>			m_renderer;
+			Handle<Camera2D>				m_cam;
+			Handle<GameObject2D>			m_gun;
+			Handle<GameObject2D>			m_redLine;
+			Handle<GameObject2D>			m_crossHair;
 
-			SharedPtr<AARectCollider> m_bulletCollider;
+			SharedPtr<AARectCollider>		m_bulletCollider;
 
 		public:
 			float m_speed = 300;
@@ -281,7 +279,7 @@ void Engine::Setup()
 
 			virtual void OnStart() override
 			{
-				m_renderer	= GetObject()->GetComponent<Sprites>();
+				m_renderer	= GetObject()->GetComponent<SpritesRenderer>();
 				m_cam		= GetObject()->Child(0)->GetComponent<Camera2D>();
 				m_gun		= GetObject()->Child(2);
 				m_redLine	= GetObject()->Child(1);
@@ -335,7 +333,8 @@ void Engine::Setup()
 				if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
 				{
 					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-					bullet->NewComponent<Sprite>("medium_bullet2.png", Vec2(0.5, 0.5));
+					bullet->NewComponent<SpriteRenderer>("medium_bullet2.png")
+						->Sprite().Transform().Scale() = { 0.5f,0.5f };
 					bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
 					bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
 					bullet->Position() = Position();
@@ -367,11 +366,11 @@ void Engine::Setup()
 			}*/
 		};
 
-
+		Transform2D originTranform = {};
 
 		auto player = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
 		player->Position() = { 800 / 2, mapValues.size() * 60 - 100 };
-		auto sprites = player->NewComponent<Sprites>();
+		auto sprites = player->NewComponent<SpritesRenderer>();
 		sprites->SetSprite(sprites->Load("Player.png", AARect(), Vec2(50, 50)));
 		sprites->Load("PlayerUP.png", AARect(), Vec2(50, 50));
 		sprites->Load("PlayerDOWN.png", AARect(), Vec2(50, 50));
@@ -390,23 +389,28 @@ void Engine::Setup()
 
 		// red line
 		auto line = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		auto lineRdr = line->NewComponent<Sprite>("red.png", AARect(), Vec2(1, 5));
-		lineRdr->SetOpacity(128);
+		auto lineRdr = line->NewComponent<SpriteRenderer>("red.png");
+		lineRdr->Sprite().FitTextureSize(Vec2(1, 5));
+		lineRdr->Sprite().SetOpacity(128);
 		lineRdr->ClearAABB();
 		line->Position() = { 50 / 2.0f, 40 };
 		player->AddChild(line);
 
 		// gun
 		auto gunObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		gunObj->NewComponent<Sprite>("smg2.png", Vec2(0.3f), AARect(), Vec2(100, 40))->ClearAABB();
+		auto gunRdr = gunObj->NewComponent<SpriteRenderer>("smg2.png");
+		gunRdr->Sprite().SetAnchorPoint(Vec2(100 / 331.0f, 40 / 120.0f));
+		gunRdr->Sprite().Transform().Scale() = Vec2(0.3f);
+		gunRdr->ClearAABB();
 		gunObj->Position() = { 50 / 2.0f, 40 };
 		player->AddChild(gunObj);
 
 		// crosshair
 		auto crossHair = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		auto crossHairRdr = crossHair->NewComponent<Sprite>("CrosshairsRed.png", AARect(), 
-			Vec2(80, 80), Vec2(256,256));
-		crossHairRdr->SetOpacity(128);
+		auto crossHairRdr = crossHair->NewComponent<SpriteRenderer>("CrosshairsRed.png");
+		crossHairRdr->Sprite().FitTextureSize({ 80, 80 });
+		crossHairRdr->Sprite().SetAnchorPoint({ 0.5f,0.5f });
+		crossHairRdr->Sprite().SetOpacity(128);
 		crossHairRdr->ClearAABB();
 		player->AddChild(crossHair);
 

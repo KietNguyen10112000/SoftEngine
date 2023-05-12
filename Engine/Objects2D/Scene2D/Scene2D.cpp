@@ -10,7 +10,7 @@
 #include "Objects2D/GameObject2D.h"
 
 #include "Components2D/Script/Script2D.h"
-#include "Components2D/Rendering/Sprite.h"
+#include "Components2D/Rendering/Rendering2D.h"
 #include "Components2D/Physics/Physics2D.h"
 
 NAMESPACE_BEGIN
@@ -102,6 +102,8 @@ void Scene2D::PostIteration()
 
 void Scene2D::AddObject(Handle<GameObject2D>& obj, bool isGhost)
 {
+	obj->m_uid = m_uidCount++;
+
 	GameObject2D::PostTraversal(obj.Get(),
 		[&](GameObject2D* o) {
 			o->m_scene = this;
@@ -144,11 +146,19 @@ v.Pop();}
 
 void Scene2D::RemoveObject(const Handle<GameObject2D>& obj)
 {
+	assert(obj->IsRoot());
+	if (obj->m_uid == INVALID_ID)
+	{
+		return;
+	}
+
 #ifdef _DEBUG
 	assert((obj->m_sceneDebugVar1 == INVALID_ID) && "object removed twices");
 	obj->m_sceneDebugVar1 = 0;
 #endif // _DEBUG
-	
+
+	obj->m_uid = INVALID_ID;
+
 	m_removes.push_back(obj.Get());
 }
 
