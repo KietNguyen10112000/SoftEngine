@@ -39,16 +39,16 @@ private:
 protected:
 	SharedPtr<Collider2D> m_collider;
 
+	size_t m_collisionMask = 1;
 	size_t m_lastBoardPhaseIterationCount = 0;
 	std::Vector<Collision2DPair*> m_collisionPairs[2];
 	size_t m_collisionPairsId = 0;
 
-protected:
+public:
 	inline Physics2D(TYPE type,
 		const SharedPtr<Collider2D>& collider
 	) : m_TYPE(type), m_collider(collider) {};
 
-public:
 	inline Physics2D(
 		const SharedPtr<Collider2D>& collider
 	) : m_TYPE(TYPE::STATIC), m_collider(collider) {};
@@ -100,6 +100,11 @@ public:
 	inline auto Type() const
 	{
 		return m_TYPE;
+	}
+
+	inline auto& CollisionMask()
+	{
+		return m_collisionMask;
 	}
 };
 

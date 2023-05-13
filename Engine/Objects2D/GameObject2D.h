@@ -219,7 +219,7 @@ protected:
 
 	inline void RecalculateAABB()
 	{
-		Vec2 temp[4];
+		//Vec2 temp[4];
 		PostTraversalRoundedPositionTransform(
 			this,
 			[](GameObject2D* obj, const Transform2D& globalTransform)

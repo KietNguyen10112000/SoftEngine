@@ -61,6 +61,8 @@ inline void FindMinMaxProjection(const Vec2& axis, Vec2* vertices,
 
 inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& result)
 {
+#define SWAP_IF_GREATER(a, b) if (a > b) { std::swap(a, b); }
+
 	auto centerA = A.Center();
 	auto centerB = B.Center();
 	Vec2 temp[4];
@@ -71,8 +73,8 @@ inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& r
 	{
 		// B projects over A axises
 
-		auto& axisA1 = A.m_vec1;
-		auto& axisA2 = A.m_vec2;
+		auto axisA1 = A.m_vec1.Normal();
+		auto axisA2 = A.m_vec2.Normal();
 
 		B.GetPoints(temp);
 
@@ -81,6 +83,9 @@ inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& r
 		float maxA1 = axisA1.Dot(A.m_point + A.m_vec1);
 		float minA2 = axisA2.Dot(A.m_point);
 		float maxA2 = axisA2.Dot(A.m_point + A.m_vec2);
+
+		SWAP_IF_GREATER(minA1, maxA1);
+		SWAP_IF_GREATER(minA2, maxA2);
 
 		//float centerB1 = axisA1.Dot(centerB);
 
@@ -95,23 +100,27 @@ inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& r
 		auto aCenter1 = (maxA1 + minA1) / 2.0f;
 		auto bExtent1 = (max1 - min1) / 2.0f;
 		auto bCenter1 = (max1 + min1) / 2.0f;
+		assert(aExtent1 > 0 && bExtent1 > 0);
+
 		overlapA1 = aExtent1 + bExtent1 - std::abs(aCenter1 - bCenter1);
-		nA1 = axisA1.Normal();
+		nA1 = axisA1;
 
 		// overlap over axis 2
 		auto aExtent2 = (maxA2 - minA2) / 2.0f;
 		auto aCenter2 = (maxA2 + minA2) / 2.0f;
 		auto bExtent2 = (max2 - min2) / 2.0f;
 		auto bCenter2 = (max2 + min2) / 2.0f;
+		assert(aExtent2 > 0 && bExtent2 > 0);
+
 		overlapA2 = aExtent2 + bExtent2 - std::abs(aCenter2 - bCenter2);
-		nA2 = axisA2.Normal();
+		nA2 = axisA2;
 	}
 
 	{
 		// A projects over B axises
 
-		auto& axisB1 = B.m_vec1;
-		auto& axisB2 = B.m_vec2;
+		auto axisB1 = B.m_vec1.Normal();
+		auto axisB2 = B.m_vec2.Normal();
 
 		A.GetPoints(temp);
 
@@ -119,6 +128,9 @@ inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& r
 		float maxB1 = axisB1.Dot(B.m_point + B.m_vec1);
 		float minB2 = axisB2.Dot(B.m_point);
 		float maxB2 = axisB2.Dot(B.m_point + B.m_vec2);
+
+		SWAP_IF_GREATER(minB1, maxB1);
+		SWAP_IF_GREATER(minB2, maxB2);
 
 		int min1Idx; float min1; int max1Idx; float max1;
 		FindMinMaxProjection<4>(axisB1, temp, min1Idx, min1, max1Idx, max1);
@@ -130,19 +142,25 @@ inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& r
 		auto bCenter1 = (maxB1 + minB1) / 2.0f;
 		auto aExtent1 = (max1 - min1) / 2.0f;
 		auto aCenter1 = (max1 + min1) / 2.0f;
+		assert(aExtent1 > 0 && bExtent1 > 0);
+
 		overlapB1 = aExtent1 + bExtent1 - std::abs(aCenter1 - bCenter1);
-		nB1 = axisB1.Normal();
+		nB1 = axisB1;
 
 		auto bExtent2 = (maxB2 - minB2) / 2.0f;
 		auto bCenter2 = (maxB2 + minB2) / 2.0f;
 		auto aExtent2 = (max2 - min2) / 2.0f;
 		auto aCenter2 = (max2 + min2) / 2.0f;
+		assert(aExtent2 > 0 && bExtent2 > 0);
+
 		overlapB2 = aExtent2 + bExtent2 - std::abs(aCenter2 - bCenter2);
-		nB2 = axisB2.Normal();
+		nB2 = axisB2;
 	}
 	
 	auto overlapMin = std::min(overlapA1, std::min(overlapA2, std::min(overlapB1, overlapB2)));
 	result.penetration = overlapMin;
+
+	//std::cout << result.penetration << "\n";
 
 	if (overlapMin < 0)
 	{

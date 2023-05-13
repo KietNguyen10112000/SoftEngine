@@ -199,7 +199,8 @@ void Engine::Setup()
 				{
 					row[x] = 0;
 					auto object = mheap::New<GameObject2D>(GameObject2D::STATIC);
-					object->NewComponent<Physics2D>(cellCollider);
+					object->NewComponent<Physics2D>(cellCollider)
+						->CollisionMask() = 1ull | (1ull << 2) | (1ull << 3);
 					object->Position() = { x * 60, y * 60 };
 					mainScene->AddObject(object);
 				}
@@ -240,10 +241,14 @@ void Engine::Setup()
 
 			virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
 			{
-				if (obj != m_from.Get())
+				//m_scene->RemoveObject(GetObject());
+				//std::cout << "Bullet removed\n";
+				m_speed = 0;
+
+				//if (obj->GetComponentRaw<Physics2D>()->CollisionMask() 
+				//	== GetObject()->GetComponentRaw<Physics2D>()->CollisionMask())
 				{
 					m_scene->RemoveObject(GetObject());
-					std::cout << "Bullet removed\n";
 				}
 			}
 
@@ -281,7 +286,10 @@ void Engine::Setup()
 			float m_speed = 300;
 			float m_rotationSpeed = 100;
 			float m_recoil = 0;
-			float m_recoilDefault = 0.2f;
+			float m_recoilMax = 0.1f;
+			Vec2 m_gunRecoilBegin;
+			Vec2 m_gunRecoilEnd;
+			float m_gunRecoilLen = 15;
 			bool m_enableMouse = false;
 
 			virtual void OnStart() override
@@ -294,7 +302,9 @@ void Engine::Setup()
 
 				Input()->SetClampCursorInsideWindow(m_enableMouse);
 
-				m_bulletCollider = MakeShared<RectCollider>(Rect(0, 0, 25, 25));
+				m_bulletCollider = MakeShared<RectCollider>(Rect(-30, -5, 60, 10));
+
+				m_gunRecoilEnd = m_gun->Position();
 			}
 
 			virtual void OnUpdate(float dt) override
@@ -346,13 +356,25 @@ void Engine::Setup()
 					auto len = d.Length();
 					d.Normalize();
 
+					auto rotation = (d.y / std::abs(d.y)) * std::acos(d.Dot(Vec2::X_AXIS));
+
 					m_recoil = std::max(m_recoil - dt, 0.0f);
-					if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
+
+					if (m_recoil > 0)
 					{
-						Shoot(d);
+						m_gun->Position() = Lerp(m_gunRecoilBegin, m_gunRecoilEnd, (m_recoilMax - m_recoil) / m_recoilMax);
+					}
+					else
+					{
+						m_gun->Position() = m_gunRecoilEnd;
 					}
 
-					m_gun->Rotation() = (d.y / std::abs(d.y)) * std::acos(d.Dot(Vec2::X_AXIS));
+					if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
+					{
+						Shoot(d, rotation);
+					}
+
+					m_gun->Rotation() = rotation;
 
 					m_redLine->Rotation() = m_gun->Rotation();
 					m_redLine->Scale().x = len;
@@ -366,7 +388,7 @@ void Engine::Setup()
 				std::cout << "Collide " << m_count++ <<"\n";
 			}*/
 
-			inline void Shoot(const Vec2& dir)
+			inline void Shoot(const Vec2& dir, float rotation)
 			{
 				//auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
 				//bullet->NewComponent<SpriteRenderer>("medium_bullet2.png")
@@ -380,15 +402,26 @@ void Engine::Setup()
 				if (m_recoil <= 0.0f)
 				{
 					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-					bullet->NewComponent<SpriteRenderer>("red.png")
-						->Sprite().FitTextureSize({ 25, 25 });
-					bullet->NewComponent<BulletScript>()->Setup(GetObject(), dir, 1000.0f);
-					bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
+					auto bulletRdr = bullet->NewComponent<SpriteRenderer>("red.png");
+					bulletRdr->Sprite().FitTextureSize({ 60, 10 });
+					bulletRdr->Sprite().SetAnchorPoint({ 0.5f, 0.5f });
+					bullet->NewComponent<BulletScript>()->Setup(GetObject(), dir, 3000.0f);
+					bullet->NewComponent<Physics2D>(Physics2D::SENSOR, m_bulletCollider)
+						->CollisionMask() = (1ull << 3);
 					bullet->Position() = Position();
-					bullet->Position().x += 60;
+					bullet->Position().x += 25;
+					bullet->Position().y += 40;
+
+					bullet->Position() += dir * 50;
+
+					bullet->Rotation() = rotation;
 					m_scene->AddObject(bullet);
 
-					m_recoil = m_recoilDefault;
+					m_gunRecoilEnd = m_gun->Position();
+					m_gunRecoilBegin = m_gun->Position() - dir * m_gunRecoilLen;
+					m_gun->Position() = m_gunRecoilBegin;
+
+					m_recoil = m_recoilMax;
 				}
 			}
 		};
@@ -406,7 +439,8 @@ void Engine::Setup()
 		player->NewComponent<PlayerScript>();
 
 		auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 50,50 }), Vec2(5, 5));
-		player->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, cellCollider);
+		player->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, cellCollider)
+			->CollisionMask() = (1ull << 2);
 
 		Vec2 camViewSize = { 960 * 1.2f, 720 * 1.2f };
 		auto camObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
@@ -418,7 +452,7 @@ void Engine::Setup()
 		auto line = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
 		auto lineRdr = line->NewComponent<SpriteRenderer>("red.png");
 		lineRdr->Sprite().FitTextureSize(Vec2(1, 5));
-		lineRdr->Sprite().SetOpacity(128);
+		lineRdr->Sprite().SetOpacity(64);
 		lineRdr->ClearAABB();
 		line->Position() = { 50 / 2.0f, 40 };
 		player->AddChild(line);

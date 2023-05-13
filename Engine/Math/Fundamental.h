@@ -1139,4 +1139,11 @@ inline float ToDegrees(float radians)
     return glm::degrees(radians);
 }
 
+
+template <typename T, typename _Scala>
+inline T Lerp(const T& v1, const T& v2, _Scala t)
+{
+    return v1 + (v2 - v1) * t;
+}
+
 }

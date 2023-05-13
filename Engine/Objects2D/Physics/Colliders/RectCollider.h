@@ -50,6 +50,9 @@ public:
 		B.Transform(rectTransform);
 
 		RectRectCollision(A, B, output);
+
+		//if (output.penetration > 0)
+		//	std::cout << output.penetration << "\n";
 	}
 
 
