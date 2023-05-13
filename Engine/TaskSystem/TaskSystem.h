@@ -417,6 +417,11 @@ public:
 	}
 
 public:
+	inline static void InvokeAllWaitWorkers()
+	{
+		TryInvokeAllWorkers();
+	}
+
 	inline static auto GetWorkerCount()
 	{
 		return s_workersCount;

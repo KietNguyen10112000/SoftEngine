@@ -77,6 +77,7 @@ private:
 
 	Transform2D					m_cachedTransform;
 	Transform2D					m_globalTransform;
+	Mat3						m_globalTransformMat;
 	int							m_queried = 0;
 	// <<< scene's control members 
 
@@ -258,6 +259,7 @@ protected:
 				obj->m_aabb = localAABB;
 
 				obj->m_globalTransform = globalTransform;
+				obj->m_globalTransformMat = globalTransform.ToTransformMatrix();
 				obj->m_globalTransform.Translation().Round();
 
 				//obj->Transform().Translation().Round();
@@ -513,6 +515,11 @@ public:
 	inline const Transform2D& GlobalTransform() const
 	{
 		return m_globalTransform;
+	}
+
+	inline const Mat3& GlobalTransformMatrix() const
+	{
+		return m_globalTransformMat;
 	}
 
 	inline Vec2& Scale()

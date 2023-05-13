@@ -17,25 +17,25 @@ public:
 
 	// this collider is A, and the another is B
 	virtual void Collide(
-		const Transform2D& selfTransform, 
+		const Mat3& selfTransform, 
 		const AARect& rect, 
-		const Transform2D& rectTransform, 
+		const Mat3& rectTransform, 
 		Collision2DResult& output
 	) = 0;
 
 	virtual void Collide(
-		const Transform2D& selfTransform,
+		const Mat3& selfTransform,
 		const Rect2D& rect, 
-		const Transform2D& rectTransform, 
+		const Mat3& rectTransform,
 		Collision2DResult& output
 	) = 0;
 
 
 	// another will be A
 	virtual void Collide(
-		const Transform2D& selfTransform, 
+		const Mat3& selfTransform,
 		Collider2D* another, 
-		const Transform2D& anotherTransform,
+		const Mat3& anotherTransform,
 		Collision2DResult& output
 	) = 0;
 
@@ -59,8 +59,9 @@ public:
 	// modify selfTransform
 	virtual void AdjustSelf(
 		Transform2D& selfTransform,
+		const Mat3& selfTransformMat,
 		Collider2D* another,
-		const Transform2D& anotherTransform
+		const Mat3& anotherTransform
 	) = 0;
 
 };

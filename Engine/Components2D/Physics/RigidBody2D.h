@@ -34,6 +34,7 @@ public:
 
 		
 		auto& collisionPairs = CollisionPairs();
+		//auto transMat = obj->Transform().ToTransformMatrix();
 		for (auto& pair : collisionPairs)
 		{
 			auto another = pair->GetAnotherOf(this);
@@ -45,10 +46,24 @@ public:
 			}
 
 			Collider()->AdjustSelf(
-				obj->Transform(), 
+				obj->Transform(),
+				obj->Transform().ToTransformMatrix(),
 				another->Collider().get(), 
-				another->GetObject()->Transform()
+				another->GetObject()->GlobalTransformMatrix()
 			);
+		}
+	}
+
+	inline void ReactDynamic()
+	{
+		auto obj = GetObject();
+
+		auto& cachedTransform = obj->GetCachedTransform();
+		auto& prevPosition = cachedTransform.GetTranslation();
+		if (prevPosition == obj->Position())
+		{
+			// object doesn't move, nothing happend
+			return;
 		}
 	}
 
@@ -57,7 +72,7 @@ public:
 		switch (m_BODY_TYPE)
 		{
 		case DYNAMIC:
-			assert(0); // =)))
+			ReactDynamic();
 			break;
 		case KINEMATIC:
 			ReactKinematic();

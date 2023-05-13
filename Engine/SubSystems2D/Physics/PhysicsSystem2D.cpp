@@ -149,9 +149,9 @@ void PhysicsSystem2D::SolveAllCollisionPairs()
 		auto A = pair->A;
 		auto B = pair->B;
 		B->m_collider->Collide(
-			B->GetObject()->GlobalTransform(),
+			B->GetObject()->GlobalTransformMatrix(),
 			A->m_collider.get(),
-			A->GetObject()->GlobalTransform(), 
+			A->GetObject()->GlobalTransformMatrix(),
 			pair->result
 		);
 	}

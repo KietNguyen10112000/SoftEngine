@@ -32,6 +32,7 @@
 #include "Components2D/Physics/RigidBody2D.h"
 
 #include "Objects2D/Physics/Colliders/AARectCollider.h"
+#include "Objects2D/Physics/Colliders/RectCollider.h"
 
 #include "Objects2D/Scene2D/UniqueGridScene2D.h"
 #include "Objects2D/GameObject2D.h"
@@ -227,12 +228,14 @@ void Engine::Setup()
 				tracer->Trace(m_from);
 			}
 
-			Handle<GameObject2D> m_from;
+			Handle<GameObject2D>	m_from;
+			Vec2					m_dir;
+			float					m_speed;
 
 		public:
 			virtual void OnUpdate(float dt) override
 			{
-				Position().x += dt * 1000;
+				Position() += m_dir * m_speed * dt;
 			}
 
 			virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
@@ -244,9 +247,11 @@ void Engine::Setup()
 				}
 			}
 
-			inline void SetFrom(const Handle<GameObject2D>& obj)
+			inline void Setup(const Handle<GameObject2D>& obj, const Vec2& dir, float speed)
 			{
 				m_from = obj;
+				m_dir = dir;
+				m_speed = speed;
 			}
 		};
 
@@ -270,11 +275,13 @@ void Engine::Setup()
 			Handle<GameObject2D>			m_redLine;
 			Handle<GameObject2D>			m_crossHair;
 
-			SharedPtr<AARectCollider>		m_bulletCollider;
+			SharedPtr<RectCollider>			m_bulletCollider;
 
 		public:
 			float m_speed = 300;
 			float m_rotationSpeed = 100;
+			float m_recoil = 0;
+			float m_recoilDefault = 0.2f;
 			bool m_enableMouse = false;
 
 			virtual void OnStart() override
@@ -287,7 +294,7 @@ void Engine::Setup()
 
 				Input()->SetClampCursorInsideWindow(m_enableMouse);
 
-				m_bulletCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 7,33 }));
+				m_bulletCollider = MakeShared<RectCollider>(Rect(0, 0, 25, 25));
 			}
 
 			virtual void OnUpdate(float dt) override
@@ -330,18 +337,6 @@ void Engine::Setup()
 					Input()->SetClampCursorInsideWindow(m_enableMouse);
 				}
 
-				if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
-				{
-					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-					bullet->NewComponent<SpriteRenderer>("medium_bullet2.png")
-						->Sprite().Transform().Scale() = { 0.5f,0.5f };
-					bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
-					bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
-					bullet->Position() = Position();
-					//bullet->Rotation() = PI / 2.0f;
-					m_scene->AddObject(bullet);
-				}
-
 				{
 					auto& cursorPos = Input()->GetCursor().position;
 					auto center = m_cam->GetWorldPosition(Vec2(cursorPos.x, cursorPos.y), 
@@ -350,6 +345,12 @@ void Engine::Setup()
 					Vec2 d = { center.x - position.x - 25,  center.y - position.y - 40  };
 					auto len = d.Length();
 					d.Normalize();
+
+					m_recoil = std::max(m_recoil - dt, 0.0f);
+					if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
+					{
+						Shoot(d);
+					}
 
 					m_gun->Rotation() = (d.y / std::abs(d.y)) * std::acos(d.Dot(Vec2::X_AXIS));
 
@@ -364,6 +365,32 @@ void Engine::Setup()
 			{
 				std::cout << "Collide " << m_count++ <<"\n";
 			}*/
+
+			inline void Shoot(const Vec2& dir)
+			{
+				//auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+				//bullet->NewComponent<SpriteRenderer>("medium_bullet2.png")
+				//	->Sprite().Transform().Scale() = { 0.5f,0.5f };
+				//bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
+				//bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
+				//bullet->Position() = Position();
+				////bullet->Rotation() = PI / 2.0f;
+				//m_scene->AddObject(bullet);
+
+				if (m_recoil <= 0.0f)
+				{
+					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+					bullet->NewComponent<SpriteRenderer>("red.png")
+						->Sprite().FitTextureSize({ 25, 25 });
+					bullet->NewComponent<BulletScript>()->Setup(GetObject(), dir, 1000.0f);
+					bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
+					bullet->Position() = Position();
+					bullet->Position().x += 60;
+					m_scene->AddObject(bullet);
+
+					m_recoil = m_recoilDefault;
+				}
+			}
 		};
 
 		Transform2D originTranform = {};
@@ -525,6 +552,7 @@ void Engine::Iteration()
 {
 	static TaskWaitingHandle taskHandle = { 0, 0 };
 
+	TaskSystem::InvokeAllWaitWorkers();
 	if (m_gcIsRunning.load(std::memory_order_relaxed) == false 
 		&& m_gcIsRunning.exchange(true, std::memory_order_acquire) == false)
 	{

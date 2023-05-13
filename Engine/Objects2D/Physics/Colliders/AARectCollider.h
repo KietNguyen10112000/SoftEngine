@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Collider2D.h"
+#include "Collider2DUtils.h"
 
 NAMESPACE_BEGIN
 
@@ -22,19 +23,19 @@ public:
 
 	// this collider is A, and the another is B
 	virtual void Collide(
-		const Transform2D& selfTransform,
+		const Mat3& selfTransform,
 		const AARect& rect,
-		const Transform2D& rectTransform,
+		const Mat3& rectTransform,
 		Collision2DResult& output
 	) override {
-		assert(selfTransform.GetRotation() == 0);
-		assert(rectTransform.GetRotation() == 0);
+		//assert(selfTransform.GetRotation() == 0);
+		//assert(rectTransform.GetRotation() == 0);
 
 		auto aRect = m_rect;
-		aRect.Transform(selfTransform.ToTransformMatrix());
+		aRect.Transform(selfTransform);
 
 		auto bRect = rect;
-		bRect.Transform(rectTransform.ToTransformMatrix());
+		bRect.Transform(rectTransform);
 
 		auto n = bRect.GetCenter() - aRect.GetCenter();
 		Vec2 absN = { std::abs(n.x), std::abs(n.y) };
@@ -75,20 +76,26 @@ public:
 	}
 
 	virtual void Collide(
-		const Transform2D& selfTransform,
+		const Mat3& selfTransform,
 		const Rect2D& rect,
-		const Transform2D& rectTransform,
+		const Mat3& rectTransform,
 		Collision2DResult& output
 	) override {
+		auto A = AARectToRect(m_rect);
+		A.Transform(selfTransform);
 
+		auto B = rect;
+		B.Transform(rectTransform);
+
+		RectRectCollision(A, B, output);
 	}
 
 
 	// another will be A
 	virtual void Collide(
-		const Transform2D& selfTransform,
+		const Mat3& selfTransform,
 		Collider2D* another,
-		const Transform2D& anotherTransform,
+		const Mat3& anotherTransform,
 		Collision2DResult& output
 	) override {
 		another->Collide(anotherTransform, m_rect, selfTransform, output);
@@ -96,11 +103,12 @@ public:
 
 	virtual void AdjustSelf(
 		Transform2D& selfTransform,
+		const Mat3& selfTransformMat,
 		Collider2D* another,
-		const Transform2D& anotherTransform
+		const Mat3& anotherTransform
 	) override {
 		Collision2DResult collision = {};
-		another->Collide(anotherTransform, m_rect, selfTransform, collision);
+		another->Collide(anotherTransform, m_rect, selfTransformMat, collision);
 
 		if (collision.HasCollision())
 		{

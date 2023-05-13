@@ -34,6 +34,11 @@ public:
 		m_vec2 = { 0, h };
 	}
 
+	inline Rect2D(const Vec2& point, const Vec2& v1, const Vec2& v2)
+		: m_point(point), m_vec1(v1), m_vec2(v2)
+	{
+	}
+
 public:
 	inline auto Width() const { return m_vec1.Length(); }
 	inline auto Height() const { return m_vec2.Length(); }
@@ -145,6 +150,36 @@ public:
 		output[1] = m_point + m_vec1;
 		output[2] = m_point + m_vec2;
 		output[3] = m_point + m_vec1 + m_vec2;
+	}
+
+	inline Rect2D GetLooser(const Vec2& gap)
+	{
+		auto l1 = m_vec1.Length();
+		auto v1 = m_vec1 / l1;
+		auto l2 = m_vec2.Length();
+		auto v2 = m_vec2 / l2;
+
+		Rect2D ret;
+		ret.m_point = m_point - (v1 * gap.x + v2 * gap.y) / 2.0f;
+		ret.m_vec1 = v1 * (gap.x + l1);
+		ret.m_vec2 = v2 * (gap.y + l2);
+
+		return ret;
+	}
+
+	inline auto& Transform(const Mat3& mat)
+	{
+		auto temp = Vec3(m_point, 1.0f) * mat;
+		m_point = temp.xy() / temp.z;
+		m_vec1 = (Vec3(m_vec1, 0.0f) * mat).xy();
+		m_vec2 = (Vec3(m_vec2, 0.0f) * mat).xy();
+
+		/*if (m_vec1.Dot(Vec2::X_AXIS) < 0)
+		{
+			m_vec1 = -m_vec1;
+		}*/
+
+		return *this;
 	}
 
 };
