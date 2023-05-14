@@ -22,9 +22,53 @@ namespace soft
 	}
 }
 
-int main()
+
+//
+// example:
+// --NThread=4 --RcPath=<path> --PlgPath=<path>
+// 
+inline void ProcessArgs(int argc, const char** argv)
 {
 	using namespace soft;
+
+	size_t id = -1;
+	for (int i = 1; i < argc; i++)
+	{
+		std::string_view str = argv[i];
+
+		if ((id = str.find("--NThread=")) != std::string_view::npos)
+		{
+			StartupConfig::Get().maxThreads = std::stoi(str.substr(id + 10).data());
+			continue;
+		}
+
+		if ((id = str.find("--RcPath=")) != std::string_view::npos)
+		{
+			StartupConfig::Get().resourcesPath = str.substr(id + 9).data();
+			continue;
+		}
+
+		if ((id = str.find("--PlgPath=")) != std::string_view::npos)
+		{
+			StartupConfig::Get().pluginsPath = str.substr(id + 10).data();
+			continue;
+		}
+
+		if ((id = str.find("--NoRendering")) != std::string_view::npos)
+		{
+			StartupConfig::Get().isEnableRendering = false;
+			continue;
+		}
+	}
+}
+
+int main(int argc, const char** argv)
+{
+	using namespace soft;
+
+	ManagedLocalScope::ClearStack();
+
+	ProcessArgs(argc, argv);
 
 	MemoryInitialize();
 	Random::Initialize();

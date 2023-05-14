@@ -61,6 +61,8 @@ void RenderingSystem2D::Iteration(float dt)
 		m_renderList.push_back(obj->GetComponentRaw<Rendering2D>());
 	}
 
+	if (!Graphics2D::Get()) return;
+
 	auto& window = Graphics2D::Get()->m_window;
 	window.clear();
 

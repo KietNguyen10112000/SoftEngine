@@ -147,6 +147,45 @@ int Connect(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer)
     return 0;
 }
 
+int Bind(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer)
+{
+    int ercode;
+    int& addrLen = *(int*)&buffer[sizeofBuffer - 4];
+    if ((ercode = bind((SOCKET)handle, (SOCKADDR*)buffer, addrLen)) != 0)
+    {
+        return TranslateErrorCode(ercode);
+    }
+
+    return 0;
+}
+
+int Listen(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient)
+{
+    int ercode;
+    if ((ercode = listen((SOCKET)handle, maxClient)) != 0)
+    {
+        return TranslateErrorCode(ercode);
+    }
+
+    return 0;
+}
+
+int Accept(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient, SOCKET_HANDLE& output, byte* outputBuffer, int sizeofOutputBuffer)
+{
+    int ercode;
+    int& addrLen = *(int*)&outputBuffer[sizeofOutputBuffer - 4];
+    addrLen = 28;
+    output = (SOCKET_HANDLE)accept((SOCKET)handle, (SOCKADDR*)outputBuffer, &addrLen);
+
+    if ((size_t)output == INVALID_SOCKET)
+    {
+        ercode = WSAGetLastError();
+        Throw();
+    }
+
+    return 0;
+}
+
 bool IsReadyRead(SOCKET_HANDLE sock, long sec, long usec)
 {
     fd_set fds;

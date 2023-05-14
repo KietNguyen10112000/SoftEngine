@@ -12,7 +12,7 @@ protected:
 	friend class RenderingSystem2D;
 
 	std::Vector<Sprite> m_sprites;
-	size_t m_currentId = -INVALID_ID;
+	size_t m_currentId = INVALID_ID;
 
 public:
 	inline SpritesRenderer(size_t capacity = 16)

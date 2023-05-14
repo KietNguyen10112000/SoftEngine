@@ -11,7 +11,7 @@
 
 NAMESPACE_BEGIN
 
-class Camera2D : public Rendering2D
+class API Camera2D : public Rendering2D
 {
 protected:
 	friend class RenderingSystem2D;

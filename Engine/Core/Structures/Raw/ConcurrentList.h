@@ -431,7 +431,7 @@ public:
 	inline void Set(ID index, const T& v)
 	{
 		++m_numWriter;
-		m_buffer[id] = v;
+		m_buffer[index] = v;
 		--m_numWriter;
 	}
 

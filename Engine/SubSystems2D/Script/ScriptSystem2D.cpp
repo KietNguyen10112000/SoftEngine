@@ -7,15 +7,21 @@
 
 #include "Objects2D/GameObject2D.h"
 
+#include "Engine/Engine.h"
+
 #include <iostream>
 
 NAMESPACE_BEGIN
 
-Script2D g_ScriptSystem2DDummy;
+void* g_originScriptVTable = 0;
 
 ScriptSystem2D::ScriptSystem2D(Scene2D* scene) : SubSystem2D(scene, Script2D::COMPONENT_ID)
 {
-	
+	if (g_originScriptVTable == nullptr)
+	{
+		auto dummy = mheap::New<Script2D>();
+		g_originScriptVTable = GetVTable(dummy.Get());
+	}
 }
 
 void ScriptSystem2D::PrevIteration(float dt)
@@ -72,21 +78,21 @@ void ScriptSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 	auto root = comp->GetObject()->GetRoot();
 	auto script = (Script2D*)comp;
 
-	if (IsOverridden<&Script2D::OnGUI>(&g_ScriptSystem2DDummy, script))
+	if (IsOverridden<&Script2D::OnGUI, Script2D>(g_originScriptVTable, script))
 	{
 		assert(script->m_onGUIId == INVALID_ID && "script added twices");
 		script->m_onGUIId = m_onGUI.size();
 		m_onGUI.push_back(script);
 	}
 
-	if (IsOverridden<&Script2D::OnCollide>(&g_ScriptSystem2DDummy, script))
+	if (IsOverridden<&Script2D::OnCollide, Script2D>(g_originScriptVTable, script))
 	{
 		assert(script->m_onCollideId == INVALID_ID && "script added twices");
 		script->m_onCollideId = m_onCollide.size();
 		m_onCollide.push_back(script);
 	}
 
-	if (IsOverridden<&Script2D::OnUpdate>(&g_ScriptSystem2DDummy, script))
+	if (IsOverridden<&Script2D::OnUpdate, Script2D>(g_originScriptVTable, script))
 	{
 		if (root->m_subSystemID[COMPONENT_ID] != INVALID_ID)
 		{

@@ -37,6 +37,9 @@
 #include "Objects2D/Scene2D/UniqueGridScene2D.h"
 #include "Objects2D/GameObject2D.h"
 
+//#include "Network/TCPAcceptor.h"
+//#include "Network/TCPConnector.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -182,389 +185,389 @@ void Engine::Setup()
 	scene->Setup();
 	Dispatch(ENGINE_EVENT::SCENE_ON_SETUP, this, scene.Get());
 
-	std::array<std::array<size_t, 32>, 32> mapValues = {};
+	//std::array<std::array<size_t, 32>, 32> mapValues = {};
 
-	{
-		auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 60,60 }));
-		for (size_t y = 0; y < mapValues.size(); y++)
-		{
-			auto& row = mapValues[y];
-			for (size_t x = 0; x < row.size(); x++)
-			{
-				row[x] = 1;// Random::RangeInt64(1, 2);
+	//{
+	//	auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 60,60 }));
+	//	for (size_t y = 0; y < mapValues.size(); y++)
+	//	{
+	//		auto& row = mapValues[y];
+	//		for (size_t x = 0; x < row.size(); x++)
+	//		{
+	//			row[x] = 1;// Random::RangeInt64(1, 2);
 
-				auto v = Random::RangeInt64(1, 10);
+	//			auto v = Random::RangeInt64(1, 10);
 
-				if (y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1 || v == 10)
-				{
-					row[x] = 0;
-					auto object = mheap::New<GameObject2D>(GameObject2D::STATIC);
-					object->NewComponent<Physics2D>(cellCollider)
-						->CollisionMask() = 1ull | (1ull << 2) | (1ull << 3);
-					object->Position() = { x * 60, y * 60 };
-					mainScene->AddObject(object);
-				}
+	//			if (y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1 || v == 10)
+	//			{
+	//				row[x] = 0;
+	//				auto object = mheap::New<GameObject2D>(GameObject2D::STATIC);
+	//				object->NewComponent<Physics2D>(cellCollider)
+	//					->CollisionMask() = 1ull | (1ull << 2) | (1ull << 3);
+	//				object->Position() = { x * 60, y * 60 };
+	//				mainScene->AddObject(object);
+	//			}
 
-				if (v == 10 && !(y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1))
-				{
-					row[x] = 2;
-				}
-			}
-		}
-	}
+	//			if (v == 10 && !(y == 0 || y == mapValues.size() - 1 || x == 0 || x == row.size() - 1))
+	//			{
+	//				row[x] = 2;
+	//			}
+	//		}
+	//	}
+	//}
 
 	mainScene->EndSetup();
 
 	Dispatch(ENGINE_EVENT::SCENE_ON_START, this, scene.Get());
 
-	{
-		class BulletScript : Traceable<BulletScript>, public Script2D
-		{
-		protected:
-			using Base = Script2D;
-			TRACEABLE_FRIEND();
-			void Trace(Tracer* tracer)
-			{
-				Base::Trace(tracer);
-				tracer->Trace(m_from);
-			}
+	//{
+	//	class BulletScript : Traceable<BulletScript>, public Script2D
+	//	{
+	//	protected:
+	//		using Base = Script2D;
+	//		TRACEABLE_FRIEND();
+	//		void Trace(Tracer* tracer)
+	//		{
+	//			Base::Trace(tracer);
+	//			tracer->Trace(m_from);
+	//		}
 
-			Handle<GameObject2D>	m_from;
-			Vec2					m_dir;
-			float					m_speed;
+	//		Handle<GameObject2D>	m_from;
+	//		Vec2					m_dir;
+	//		float					m_speed;
 
-		public:
-			virtual void OnUpdate(float dt) override
-			{
-				Position() += m_dir * m_speed * dt;
-			}
+	//	public:
+	//		virtual void OnUpdate(float dt) override
+	//		{
+	//			Position() += m_dir * m_speed * dt;
+	//		}
 
-			virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
-			{
-				//m_scene->RemoveObject(GetObject());
-				//std::cout << "Bullet removed\n";
-				m_speed = 0;
+	//		virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
+	//		{
+	//			//m_scene->RemoveObject(GetObject());
+	//			//std::cout << "Bullet removed\n";
+	//			m_speed = 0;
 
-				//if (obj->GetComponentRaw<Physics2D>()->CollisionMask() 
-				//	== GetObject()->GetComponentRaw<Physics2D>()->CollisionMask())
-				{
-					m_scene->RemoveObject(GetObject());
-				}
-			}
+	//			//if (obj->GetComponentRaw<Physics2D>()->CollisionMask() 
+	//			//	== GetObject()->GetComponentRaw<Physics2D>()->CollisionMask())
+	//			{
+	//				m_scene->RemoveObject(GetObject());
+	//			}
+	//		}
 
-			inline void Setup(const Handle<GameObject2D>& obj, const Vec2& dir, float speed)
-			{
-				m_from = obj;
-				m_dir = dir;
-				m_speed = speed;
-			}
-		};
+	//		inline void Setup(const Handle<GameObject2D>& obj, const Vec2& dir, float speed)
+	//		{
+	//			m_from = obj;
+	//			m_dir = dir;
+	//			m_speed = speed;
+	//		}
+	//	};
 
-		class PlayerScript : Traceable<PlayerScript>, public Script2D
-		{
-		protected:
-			using Base = Script2D;
-			TRACEABLE_FRIEND();
-			void Trace(Tracer* tracer)
-			{
-				Base::Trace(tracer);
-				tracer->Trace(m_renderer);
-				tracer->Trace(m_cam);
-				tracer->Trace(m_gun);
-				tracer->Trace(m_redLine);
-			}
+	//	class PlayerScript : Traceable<PlayerScript>, public Script2D
+	//	{
+	//	protected:
+	//		using Base = Script2D;
+	//		TRACEABLE_FRIEND();
+	//		void Trace(Tracer* tracer)
+	//		{
+	//			Base::Trace(tracer);
+	//			tracer->Trace(m_renderer);
+	//			tracer->Trace(m_cam);
+	//			tracer->Trace(m_gun);
+	//			tracer->Trace(m_redLine);
+	//		}
 
-			Handle<SpritesRenderer>			m_renderer;
-			Handle<Camera2D>				m_cam;
-			Handle<GameObject2D>			m_gun;
-			Handle<GameObject2D>			m_redLine;
-			Handle<GameObject2D>			m_crossHair;
+	//		Handle<SpritesRenderer>			m_renderer;
+	//		Handle<Camera2D>				m_cam;
+	//		Handle<GameObject2D>			m_gun;
+	//		Handle<GameObject2D>			m_redLine;
+	//		Handle<GameObject2D>			m_crossHair;
 
-			SharedPtr<RectCollider>			m_bulletCollider;
+	//		SharedPtr<RectCollider>			m_bulletCollider;
 
-		public:
-			float m_speed = 300;
-			float m_rotationSpeed = 100;
-			float m_recoil = 0;
-			float m_recoilMax = 0.1f;
-			Vec2 m_gunRecoilBegin;
-			Vec2 m_gunRecoilEnd;
-			float m_gunRecoilLen = 15;
-			bool m_enableMouse = false;
+	//	public:
+	//		float m_speed = 300;
+	//		float m_rotationSpeed = 100;
+	//		float m_recoil = 0;
+	//		float m_recoilMax = 0.1f;
+	//		Vec2 m_gunRecoilBegin;
+	//		Vec2 m_gunRecoilEnd;
+	//		float m_gunRecoilLen = 15;
+	//		bool m_enableMouse = false;
 
-			virtual void OnStart() override
-			{
-				m_renderer	= GetObject()->GetComponent<SpritesRenderer>();
-				m_cam		= GetObject()->Child(0)->GetComponent<Camera2D>();
-				m_gun		= GetObject()->Child(2);
-				m_redLine	= GetObject()->Child(1);
-				m_crossHair = GetObject()->Child(3);
+	//		virtual void OnStart() override
+	//		{
+	//			m_renderer	= GetObject()->GetComponent<SpritesRenderer>();
+	//			m_cam		= GetObject()->Child(0)->GetComponent<Camera2D>();
+	//			m_gun		= GetObject()->Child(2);
+	//			m_redLine	= GetObject()->Child(1);
+	//			m_crossHair = GetObject()->Child(3);
 
-				Input()->SetClampCursorInsideWindow(m_enableMouse);
+	//			Input()->SetClampCursorInsideWindow(m_enableMouse);
 
-				m_bulletCollider = MakeShared<RectCollider>(Rect(-30, -5, 60, 10));
+	//			m_bulletCollider = MakeShared<RectCollider>(Rect(-30, -5, 60, 10));
 
-				m_gunRecoilEnd = m_gun->Position();
-			}
+	//			m_gunRecoilEnd = m_gun->Position();
+	//		}
 
-			virtual void OnUpdate(float dt) override
-			{
-				Vec2 motion = { 0,0 };
-				m_renderer->SetSprite(0);
+	//		virtual void OnUpdate(float dt) override
+	//		{
+	//			Vec2 motion = { 0,0 };
+	//			m_renderer->SetSprite(0);
 
-				if (Input()->IsKeyDown('W'))
-				{
-					motion.y -= 1;
-					m_renderer->SetSprite(1);
-				}
+	//			if (Input()->IsKeyDown('W'))
+	//			{
+	//				motion.y -= 1;
+	//				m_renderer->SetSprite(1);
+	//			}
 
-				if (Input()->IsKeyDown('S'))
-				{
-					motion.y += 1;
-					m_renderer->SetSprite(2);
-				}
+	//			if (Input()->IsKeyDown('S'))
+	//			{
+	//				motion.y += 1;
+	//				m_renderer->SetSprite(2);
+	//			}
 
-				if (Input()->IsKeyDown('A'))
-				{
-					motion.x -= 1;
-					m_renderer->SetSprite(3);
-				}
+	//			if (Input()->IsKeyDown('A'))
+	//			{
+	//				motion.x -= 1;
+	//				m_renderer->SetSprite(3);
+	//			}
 
-				if (Input()->IsKeyDown('D'))
-				{
-					motion.x += 1;
-					m_renderer->SetSprite(4);
-				}
+	//			if (Input()->IsKeyDown('D'))
+	//			{
+	//				motion.x += 1;
+	//				m_renderer->SetSprite(4);
+	//			}
 
-				if (motion != Vec2::ZERO)
-				{
-					Position() += motion.Normalize() * m_speed * dt;
-				}
+	//			if (motion != Vec2::ZERO)
+	//			{
+	//				Position() += motion.Normalize() * m_speed * dt;
+	//			}
 
-				if (Input()->IsKeyPressed(KEYBOARD::ESC))
-				{
-					m_enableMouse = !m_enableMouse;
-					Input()->SetClampCursorInsideWindow(m_enableMouse);
-				}
+	//			if (Input()->IsKeyPressed(KEYBOARD::ESC))
+	//			{
+	//				m_enableMouse = !m_enableMouse;
+	//				Input()->SetClampCursorInsideWindow(m_enableMouse);
+	//			}
 
-				{
-					auto& cursorPos = Input()->GetCursor().position;
-					auto center = m_cam->GetWorldPosition(Vec2(cursorPos.x, cursorPos.y), 
-						Input()->GetWindowWidth(), Input()->GetWindowHeight());
-					auto& position = Position();
-					Vec2 d = { center.x - position.x - 25,  center.y - position.y - 40  };
-					auto len = d.Length();
-					d.Normalize();
+	//			{
+	//				auto& cursorPos = Input()->GetCursor().position;
+	//				auto center = m_cam->GetWorldPosition(Vec2(cursorPos.x, cursorPos.y), 
+	//					Input()->GetWindowWidth(), Input()->GetWindowHeight());
+	//				auto& position = Position();
+	//				Vec2 d = { center.x - position.x - 25,  center.y - position.y - 40  };
+	//				auto len = d.Length();
+	//				d.Normalize();
 
-					auto rotation = (d.y / std::abs(d.y)) * std::acos(d.Dot(Vec2::X_AXIS));
+	//				auto rotation = (d.y / std::abs(d.y)) * std::acos(d.Dot(Vec2::X_AXIS));
 
-					m_recoil = std::max(m_recoil - dt, 0.0f);
+	//				m_recoil = std::max(m_recoil - dt, 0.0f);
 
-					if (m_recoil > 0)
-					{
-						m_gun->Position() = Lerp(m_gunRecoilBegin, m_gunRecoilEnd, (m_recoilMax - m_recoil) / m_recoilMax);
-					}
-					else
-					{
-						m_gun->Position() = m_gunRecoilEnd;
-					}
+	//				if (m_recoil > 0)
+	//				{
+	//					m_gun->Position() = Lerp(m_gunRecoilBegin, m_gunRecoilEnd, (m_recoilMax - m_recoil) / m_recoilMax);
+	//				}
+	//				else
+	//				{
+	//					m_gun->Position() = m_gunRecoilEnd;
+	//				}
 
-					if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
-					{
-						Shoot(d, rotation);
-					}
+	//				if (Input()->IsKeyDown(KEYBOARD::MOUSE_LEFT))
+	//				{
+	//					Shoot(d, rotation);
+	//				}
 
-					m_gun->Rotation() = rotation;
+	//				m_gun->Rotation() = rotation;
 
-					m_redLine->Rotation() = m_gun->Rotation();
-					m_redLine->Scale().x = len;
+	//				m_redLine->Rotation() = m_gun->Rotation();
+	//				m_redLine->Scale().x = len;
 
-					m_crossHair->Position() = center - position;
-				}
-			}
+	//				m_crossHair->Position() = center - position;
+	//			}
+	//		}
 
-			/*virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
-			{
-				std::cout << "Collide " << m_count++ <<"\n";
-			}*/
+	//		/*virtual void OnCollide(GameObject2D* obj, const Collision2DPair& pair) override
+	//		{
+	//			std::cout << "Collide " << m_count++ <<"\n";
+	//		}*/
 
-			inline void Shoot(const Vec2& dir, float rotation)
-			{
-				//auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-				//bullet->NewComponent<SpriteRenderer>("medium_bullet2.png")
-				//	->Sprite().Transform().Scale() = { 0.5f,0.5f };
-				//bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
-				//bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
-				//bullet->Position() = Position();
-				////bullet->Rotation() = PI / 2.0f;
-				//m_scene->AddObject(bullet);
+	//		inline void Shoot(const Vec2& dir, float rotation)
+	//		{
+	//			//auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//			//bullet->NewComponent<SpriteRenderer>("medium_bullet2.png")
+	//			//	->Sprite().Transform().Scale() = { 0.5f,0.5f };
+	//			//bullet->NewComponent<BulletScript>()->SetFrom(GetObject());
+	//			//bullet->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, m_bulletCollider);
+	//			//bullet->Position() = Position();
+	//			////bullet->Rotation() = PI / 2.0f;
+	//			//m_scene->AddObject(bullet);
 
-				if (m_recoil <= 0.0f)
-				{
-					auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-					auto bulletRdr = bullet->NewComponent<SpriteRenderer>("red.png");
-					bulletRdr->Sprite().FitTextureSize({ 60, 10 });
-					bulletRdr->Sprite().SetAnchorPoint({ 0.5f, 0.5f });
-					bullet->NewComponent<BulletScript>()->Setup(GetObject(), dir, 3000.0f);
-					bullet->NewComponent<Physics2D>(Physics2D::SENSOR, m_bulletCollider)
-						->CollisionMask() = (1ull << 3);
-					bullet->Position() = Position();
-					bullet->Position().x += 25;
-					bullet->Position().y += 40;
+	//			if (m_recoil <= 0.0f)
+	//			{
+	//				auto bullet = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//				auto bulletRdr = bullet->NewComponent<SpriteRenderer>("red.png");
+	//				bulletRdr->Sprite().FitTextureSize({ 60, 10 });
+	//				bulletRdr->Sprite().SetAnchorPoint({ 0.5f, 0.5f });
+	//				bullet->NewComponent<BulletScript>()->Setup(GetObject(), dir, 3000.0f);
+	//				bullet->NewComponent<Physics2D>(Physics2D::SENSOR, m_bulletCollider)
+	//					->CollisionMask() = (1ull << 3);
+	//				bullet->Position() = Position();
+	//				bullet->Position().x += 25;
+	//				bullet->Position().y += 40;
 
-					bullet->Position() += dir * 50;
+	//				bullet->Position() += dir * 50;
 
-					bullet->Rotation() = rotation;
-					m_scene->AddObject(bullet);
+	//				bullet->Rotation() = rotation;
+	//				m_scene->AddObject(bullet);
 
-					m_gunRecoilEnd = m_gun->Position();
-					m_gunRecoilBegin = m_gun->Position() - dir * m_gunRecoilLen;
-					m_gun->Position() = m_gunRecoilBegin;
+	//				m_gunRecoilEnd = m_gun->Position();
+	//				m_gunRecoilBegin = m_gun->Position() - dir * m_gunRecoilLen;
+	//				m_gun->Position() = m_gunRecoilBegin;
 
-					m_recoil = m_recoilMax;
-				}
-			}
-		};
+	//				m_recoil = m_recoilMax;
+	//			}
+	//		}
+	//	};
 
-		Transform2D originTranform = {};
+	//	Transform2D originTranform = {};
 
-		auto player = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		player->Position() = { 800 / 2, mapValues.size() * 60 - 100 };
-		auto sprites = player->NewComponent<SpritesRenderer>();
-		sprites->SetSprite(sprites->Load("Player.png", AARect(), Vec2(50, 50)));
-		sprites->Load("PlayerUP.png", AARect(), Vec2(50, 50));
-		sprites->Load("PlayerDOWN.png", AARect(), Vec2(50, 50));
-		sprites->Load("PlayerLEFT.png", AARect(), Vec2(50, 50));
-		sprites->Load("PlayerRIGHT.png", AARect(), Vec2(50, 50));
-		player->NewComponent<PlayerScript>();
+	//	auto player = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//	player->Position() = { 800 / 2, mapValues.size() * 60 - 100 };
+	//	auto sprites = player->NewComponent<SpritesRenderer>();
+	//	sprites->SetSprite(sprites->Load("Player.png", AARect(), Vec2(50, 50)));
+	//	sprites->Load("PlayerUP.png", AARect(), Vec2(50, 50));
+	//	sprites->Load("PlayerDOWN.png", AARect(), Vec2(50, 50));
+	//	sprites->Load("PlayerLEFT.png", AARect(), Vec2(50, 50));
+	//	sprites->Load("PlayerRIGHT.png", AARect(), Vec2(50, 50));
+	//	player->NewComponent<PlayerScript>();
 
-		auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 50,50 }), Vec2(5, 5));
-		player->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, cellCollider)
-			->CollisionMask() = (1ull << 2);
+	//	auto cellCollider = MakeShared<AARectCollider>(AARect({ 0,0 }, { 50,50 }), Vec2(5, 5));
+	//	player->NewComponent<RigidBody2D>(RigidBody2D::KINEMATIC, cellCollider)
+	//		->CollisionMask() = (1ull << 2);
 
-		Vec2 camViewSize = { 960 * 1.2f, 720 * 1.2f };
-		auto camObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		auto cam = camObj->NewComponent<Camera2D>(AARect({ 0,0 }, camViewSize));
-		cam->SetClamp(camViewSize / 2.0f, Vec2(mapValues[0].size() * 60) - camViewSize / 2.0f);
-		player->AddChild(camObj);
+	//	Vec2 camViewSize = { 960 * 1.2f, 720 * 1.2f };
+	//	auto camObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//	auto cam = camObj->NewComponent<Camera2D>(AARect({ 0,0 }, camViewSize));
+	//	cam->SetClamp(camViewSize / 2.0f, Vec2(mapValues[0].size() * 60) - camViewSize / 2.0f);
+	//	player->AddChild(camObj);
 
-		// red line
-		auto line = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		auto lineRdr = line->NewComponent<SpriteRenderer>("red.png");
-		lineRdr->Sprite().FitTextureSize(Vec2(1, 5));
-		lineRdr->Sprite().SetOpacity(64);
-		lineRdr->ClearAABB();
-		line->Position() = { 50 / 2.0f, 40 };
-		player->AddChild(line);
+	//	// red line
+	//	auto line = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//	auto lineRdr = line->NewComponent<SpriteRenderer>("red.png");
+	//	lineRdr->Sprite().FitTextureSize(Vec2(1, 5));
+	//	lineRdr->Sprite().SetOpacity(64);
+	//	lineRdr->ClearAABB();
+	//	line->Position() = { 50 / 2.0f, 40 };
+	//	player->AddChild(line);
 
-		// gun
-		auto gunObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		auto gunRdr = gunObj->NewComponent<SpriteRenderer>("smg2.png");
-		gunRdr->Sprite().SetAnchorPoint(Vec2(100 / 331.0f, 40 / 120.0f));
-		gunRdr->Sprite().Transform().Scale() = Vec2(0.3f);
-		gunRdr->ClearAABB();
-		gunObj->Position() = { 50 / 2.0f, 40 };
-		player->AddChild(gunObj);
+	//	// gun
+	//	auto gunObj = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//	auto gunRdr = gunObj->NewComponent<SpriteRenderer>("smg2.png");
+	//	gunRdr->Sprite().SetAnchorPoint(Vec2(100 / 331.0f, 40 / 120.0f));
+	//	gunRdr->Sprite().Transform().Scale() = Vec2(0.3f);
+	//	gunRdr->ClearAABB();
+	//	gunObj->Position() = { 50 / 2.0f, 40 };
+	//	player->AddChild(gunObj);
 
-		// crosshair
-		auto crossHair = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
-		auto crossHairRdr = crossHair->NewComponent<SpriteRenderer>("CrosshairsRed.png");
-		crossHairRdr->Sprite().FitTextureSize({ 80, 80 });
-		crossHairRdr->Sprite().SetAnchorPoint({ 0.5f,0.5f });
-		crossHairRdr->Sprite().SetOpacity(128);
-		crossHairRdr->ClearAABB();
-		player->AddChild(crossHair);
+	//	// crosshair
+	//	auto crossHair = mheap::New<GameObject2D>(GameObject2D::DYNAMIC);
+	//	auto crossHairRdr = crossHair->NewComponent<SpriteRenderer>("CrosshairsRed.png");
+	//	crossHairRdr->Sprite().FitTextureSize({ 80, 80 });
+	//	crossHairRdr->Sprite().SetAnchorPoint({ 0.5f,0.5f });
+	//	crossHairRdr->Sprite().SetOpacity(128);
+	//	crossHairRdr->ClearAABB();
+	//	player->AddChild(crossHair);
 
-		mainScene->AddObject(player);
-	}
+	//	mainScene->AddObject(player);
+	//}
 
-	{
-		class MapRenderer : public Renderer2D
-		{
-		private:
-			struct LoadedSprite
-			{
-				Resource<Texture2D> rc;
-				sf::Sprite sprite;
-			};
+	//{
+	//	class MapRenderer : public Renderer2D
+	//	{
+	//	private:
+	//		struct LoadedSprite
+	//		{
+	//			Resource<Texture2D> rc;
+	//			sf::Sprite sprite;
+	//		};
 
-			Vec2 m_cellSize = {};
-			std::vector<LoadedSprite> m_sprites;
-			std::vector<size_t> m_map;
-			size_t m_width;
-			size_t m_height;
+	//		Vec2 m_cellSize = {};
+	//		std::vector<LoadedSprite> m_sprites;
+	//		std::vector<size_t> m_map;
+	//		size_t m_width;
+	//		size_t m_height;
 
-		public:
-			MapRenderer(size_t width, size_t height, const Vec2& cellSize, size_t cellValueMax)
-				: m_width(width), m_height(height), m_cellSize(cellSize)
-			{
-				m_sprites.resize(cellValueMax + 1);
-				m_map.resize(m_width * m_height);
+	//	public:
+	//		MapRenderer(size_t width, size_t height, const Vec2& cellSize, size_t cellValueMax)
+	//			: m_width(width), m_height(height), m_cellSize(cellSize)
+	//		{
+	//			m_sprites.resize(cellValueMax + 1);
+	//			m_map.resize(m_width * m_height);
 
-				m_zOrder = -99999;
-			}
+	//			m_zOrder = -99999;
+	//		}
 
-			void SetCellValue(size_t x, size_t y, size_t value)
-			{
-				assert(value < m_sprites.size());
-				m_map[y * m_width + x] = value;
-			}
+	//		void SetCellValue(size_t x, size_t y, size_t value)
+	//		{
+	//			assert(value < m_sprites.size());
+	//			m_map[y * m_width + x] = value;
+	//		}
 
-			void LoadCell(size_t value, String path, const AARect& textureRect)
-			{
-				auto& s = m_sprites[value];
-				s.rc = resource::Load<Texture2D>(path);
-				s.sprite.setTexture(s.rc->GetSFTexture());
-				SetSpriteTextureRect(s.sprite, textureRect);
-				s.sprite.setScale(reinterpret_cast<sf::Vector2f&>(GetScaleFitTo(s.sprite, m_cellSize)));
-			}
+	//		void LoadCell(size_t value, String path, const AARect& textureRect)
+	//		{
+	//			auto& s = m_sprites[value];
+	//			s.rc = resource::Load<Texture2D>(path);
+	//			s.sprite.setTexture(s.rc->GetSFTexture());
+	//			SetSpriteTextureRect(s.sprite, textureRect);
+	//			s.sprite.setScale(reinterpret_cast<sf::Vector2f&>(GetScaleFitTo(s.sprite, m_cellSize)));
+	//		}
 
-			virtual void Render(RenderingSystem2D* rdr) override
-			{
-				Vec2 temp[4];
-				auto cam = rdr->GetCurrentCamera();
-				AARect view = cam->GetView();
-				view.GetPoints(temp);
+	//		virtual void Render(RenderingSystem2D* rdr) override
+	//		{
+	//			Vec2 temp[4];
+	//			auto cam = rdr->GetCurrentCamera();
+	//			AARect view = cam->GetView();
+	//			view.GetPoints(temp);
 
-				auto beginX		= (intmax_t)std::floor(temp[0].x / m_cellSize.x);
-				auto endX		= (intmax_t)std::ceil(temp[1].x / m_cellSize.x);
+	//			auto beginX		= (intmax_t)std::floor(temp[0].x / m_cellSize.x);
+	//			auto endX		= (intmax_t)std::ceil(temp[1].x / m_cellSize.x);
 
-				auto beginY		= (intmax_t)std::floor(temp[0].y / m_cellSize.y);
-				auto endY		= (intmax_t)std::ceil(temp[2].y / m_cellSize.y);
+	//			auto beginY		= (intmax_t)std::floor(temp[0].y / m_cellSize.y);
+	//			auto endY		= (intmax_t)std::ceil(temp[2].y / m_cellSize.y);
 
-				beginX			= clamp(beginX, (intmax_t)0, (intmax_t)m_width);
-				endX			= clamp(endX, (intmax_t)0, (intmax_t)m_width);
+	//			beginX			= clamp(beginX, (intmax_t)0, (intmax_t)m_width);
+	//			endX			= clamp(endX, (intmax_t)0, (intmax_t)m_width);
 
-				beginY			= clamp(beginY, (intmax_t)0, (intmax_t)m_height);
-				endY			= clamp(endY, (intmax_t)0, (intmax_t)m_height);
+	//			beginY			= clamp(beginY, (intmax_t)0, (intmax_t)m_height);
+	//			endY			= clamp(endY, (intmax_t)0, (intmax_t)m_height);
 
-				for (size_t y = beginY; y < endY; y++)
-				{
-					for (size_t x = beginX; x < endX; x++)
-					{
-						auto v = m_map[y * m_width + x];
-						RenderSprite(rdr, m_sprites[v].sprite, 0, { x * m_cellSize.x, y * m_cellSize.y });
-					}
-				}
-			}
+	//			for (size_t y = beginY; y < endY; y++)
+	//			{
+	//				for (size_t x = beginX; x < endX; x++)
+	//				{
+	//					auto v = m_map[y * m_width + x];
+	//					RenderSprite(rdr, m_sprites[v].sprite, 0, { x * m_cellSize.x, y * m_cellSize.y });
+	//				}
+	//			}
+	//		}
 
-		};
-		
-		auto map = mheap::New<GameObject2D>(GameObject2D::GHOST);
-		auto mapRenderer = map->NewComponent<MapRenderer>(mapValues[0].size(), mapValues.size(), Vec2(60, 60), 10);
+	//	};
+	//	
+	//	auto map = mheap::New<GameObject2D>(GameObject2D::GHOST);
+	//	auto mapRenderer = map->NewComponent<MapRenderer>(mapValues[0].size(), mapValues.size(), Vec2(60, 60), 10);
 
-		for (size_t y = 0; y < mapValues.size(); y++)
-		{
-			auto& row = mapValues[y];
-			for (size_t x = 0; x < row.size(); x++)
-			{
-				mapRenderer->LoadCell(row[x], String::Format("{}.png", row[x]), {});
-				mapRenderer->SetCellValue(x, y, row[x]);
-			}
-		}
+	//	for (size_t y = 0; y < mapValues.size(); y++)
+	//	{
+	//		auto& row = mapValues[y];
+	//		for (size_t x = 0; x < row.size(); x++)
+	//		{
+	//			mapRenderer->LoadCell(row[x], String::Format("{}.png", row[x]), {});
+	//			mapRenderer->SetCellValue(x, y, row[x]);
+	//		}
+	//	}
 
-		mainScene->AddObject(map);
-	}
+	//	mainScene->AddObject(map);
+	//}
 }
 
 void Engine::Run()
@@ -617,6 +620,12 @@ void Engine::Iteration()
 
 	g_sumDt += g_timer.dt;
 
+	if (m_iterationHandler)
+	{
+		g_sumDt = m_iterationHandler->DoIteration(g_sumDt, mainScene);
+		return;
+	}
+
 	auto fixedDt = StartupConfig::Get().fixedDt;
 
 	while (g_sumDt > fixedDt)
@@ -634,6 +643,8 @@ void Engine::Iteration()
 
 void Engine::ProcessInput()
 {
+	if (!m_input) return;
+
 	m_input->RollEvent();
 
 	auto& window = *m_window;

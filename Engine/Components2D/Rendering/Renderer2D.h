@@ -14,7 +14,7 @@
 
 NAMESPACE_BEGIN
 
-class Renderer2D : public Rendering2D
+class API Renderer2D : public Rendering2D
 {
 protected:
 	// get scale that scale sprite to fit the expectSize

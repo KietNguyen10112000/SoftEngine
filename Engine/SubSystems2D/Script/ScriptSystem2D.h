@@ -19,6 +19,8 @@ private:
 
 	std::Vector<GameObject2D*> m_onUpdate;
 
+	Script2D* m_dummyScript = nullptr;
+
 public:
 	ScriptSystem2D(Scene2D* scene);
 

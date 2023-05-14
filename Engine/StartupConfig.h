@@ -3,7 +3,7 @@
 
 NAMESPACE_BEGIN
 
-struct StartupConfig
+struct API StartupConfig
 {
 	static StartupConfig s_instance;
 

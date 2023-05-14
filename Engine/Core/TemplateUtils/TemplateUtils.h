@@ -96,21 +96,44 @@ size_t VTableIndex(F f)
 	return (t->*getIndex)();
 }
 
+inline void* GetVTable(void* baseInstance)
+{
+	return (void*)*(size_t*)(baseInstance);
+}
+
+//template <auto FUNC, typename Base, typename Derived>
+//inline bool IsOverridden(Base* baseInstance, Derived* derivedInstance)
+//{
+//	using vtable = size_t;
+//
+//	auto offset = VTableIndex<Base>(FUNC);
+//
+//	auto baseVtb = (vtable*)*(size_t*)(baseInstance);
+//	auto derivedVtb = (vtable*)*(size_t*)(derivedInstance);
+//
+//	if (*(baseVtb + offset) != *(derivedVtb + offset))
+//	{
+//		return true;
+//	}
+//	
+//	return false;
+//}
+
 template <auto FUNC, typename Base, typename Derived>
-inline bool IsOverridden(Base* baseInstance, Derived* derivedInstance)
+inline bool IsOverridden(void* baseVTable, Derived* derivedInstance)
 {
 	using vtable = size_t;
 
 	auto offset = VTableIndex<Base>(FUNC);
 
-	auto baseVtb = (vtable*)*(size_t*)(baseInstance);
+	auto baseVtb = (vtable*)baseVTable;
 	auto derivedVtb = (vtable*)*(size_t*)(derivedInstance);
 
 	if (*(baseVtb + offset) != *(derivedVtb + offset))
 	{
 		return true;
 	}
-	
+
 	return false;
 }
 

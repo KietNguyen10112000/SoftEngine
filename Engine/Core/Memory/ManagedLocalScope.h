@@ -197,6 +197,7 @@ public:
 		{
 			gc::RegisterRoots(&stack[0], stack.size());
 		}
+		stack.clear();
 	}
 
 	inline static void Push(byte** p)
@@ -285,6 +286,11 @@ public:
 		{
 			callback(v.ptr);
 		}
+	}
+
+	inline static void ClearStack()
+	{
+		(*s)->stack.clear();
 	}
 
 };

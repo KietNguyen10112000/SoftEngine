@@ -19,6 +19,11 @@ int TranslateErrorCode(int input);
 
 int Connect(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer);
 
+int Bind(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer);
+int Listen(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient);
+int Accept(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient,
+    SOCKET_HANDLE& output, byte* outputBuffer, int sizeofOutputBuffer);
+
 bool IsReadyRead(SOCKET_HANDLE sock, long sec, long usec);
 bool IsReadyWrite(SOCKET_HANDLE sock, long sec, long usec);
 

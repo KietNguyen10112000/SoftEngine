@@ -15,6 +15,15 @@ class Scene2D;
 class Input;
 class Plugin;
 
+class IterationHandler
+{
+public:
+	// sumDt is sum of delta time from previous iteration
+	// return remain sumDt
+	virtual float DoIteration(float sumDt, Scene2D* scene) = 0;
+
+};
+
 class API Engine : Traceable<Engine>, public EventDispatcher
 {
 public:
@@ -41,6 +50,8 @@ private:
 	std::Vector<Plugin*> m_intevalPlugins;
 
 	void* m_eventArgv[NUM_ARGS] = {};
+
+	IterationHandler* m_iterationHandler = nullptr;
 
 public:
 	static Handle<Engine> Initialize();
@@ -74,6 +85,16 @@ public:
 	inline auto GetInput()
 	{
 		return m_input;
+	}
+
+	inline auto& IsRunning()
+	{
+		return m_isRunning;
+	}
+
+	inline auto SetIterationHandler(IterationHandler* handler)
+	{
+		m_iterationHandler = handler;
 	}
 
 };
