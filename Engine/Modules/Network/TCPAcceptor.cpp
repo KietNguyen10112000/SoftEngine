@@ -8,11 +8,7 @@ NAMESPACE_BEGIN
 
 TCPAcceptor::TCPAcceptor(const TCP_SOCKET_DESCRIPTION& desc, size_t maxClient)
 {
-	m_sock = socketapi::CreateSocket(desc, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
-	m_maxClient = maxClient;
-
-	socketapi::Bind(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
-	socketapi::Listen(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]), (int)m_maxClient);
+	Initialize(desc, maxClient);
 }
 
 TCPAcceptor::~TCPAcceptor()
@@ -20,11 +16,20 @@ TCPAcceptor::~TCPAcceptor()
 	socketapi::DestroySocket(m_sock);
 }
 
+int TCPAcceptor::Initialize(const TCP_SOCKET_DESCRIPTION& desc, size_t maxClient)
+{
+	m_sock = socketapi::CreateSocket(desc, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
+	m_maxClient = maxClient;
+
+	socketapi::Bind(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
+	socketapi::Listen(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]), (int)m_maxClient);
+	return 0;
+}
+
 int TCPAcceptor::Accept(TCPConnector& output)
 {
-	socketapi::Accept(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]),
+	return socketapi::Accept(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]),
 		(int)m_maxClient, output.m_sock, output.m_opaque, sizeof(output.m_opaque) / sizeof(output.m_opaque[0]));
-	return 0;
 }
 
 NAMESPACE_END

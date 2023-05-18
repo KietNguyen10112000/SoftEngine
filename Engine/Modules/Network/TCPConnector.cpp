@@ -40,6 +40,14 @@ int TCPConnector::Connect()
 	return 0;
 }
 
+int TCPConnector::Disconnect()
+{
+	socketapi::DestroySocket(m_sock);
+	m_sock = nullptr;
+	memset(m_opaque, 0, sizeof(m_opaque));
+	return 0;
+}
+
 int TCPConnector::Recv(std::Vector<byte>& buffer)
 {
 	auto ret = recv((SOCKET)m_sock, (char*)&buffer[0], buffer.size(), 0);
@@ -78,6 +86,16 @@ int TCPConnector::Send(byte* buffer, int bufferSize)
 		return socketapi::TranslateErrorCode(ret);
 	}
 	return ret;
+}
+
+void TCPConnector::SetBlockingMode(bool isBlockingNode)
+{
+	socketapi::SetBlockingMode(m_sock, isBlockingNode);
+}
+
+bool TCPConnector::ReadyForRecv()
+{
+	return socketapi::IsReadyRead(m_sock, 0, 1);
 }
 
 NAMESPACE_END

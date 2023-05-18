@@ -90,6 +90,11 @@ SOCKET_HANDLE CreateSocket(const TCP_SOCKET_DESCRIPTION& desc, byte* buffer, int
         setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&recvBuffer, sizeof(int));
     }
 
+    if (desc.useNonBlocking)
+    {
+        SetBlockingMode((SOCKET_HANDLE)sock, false);
+    }
+
     return (SOCKET_HANDLE)sock;
 }
 
@@ -127,12 +132,13 @@ int TranslateErrorCode(int input)
     case WSAEMSGSIZE:
         return SOCKET_ERCODE::MSG_SIZE;
     case WSAEALREADY:
-        return 0;
+        return SOCKET_ERCODE::WOULD_BLOCK;
     case WSAECONNREFUSED:
         return SOCKET_ERCODE::CONNECT_REFUSED;
     default:
-        Throw("");
-        break;
+        //Throw("");
+        //break;
+        return SOCKET_ERCODE::UNKNOWN;
     }
 }
 
@@ -180,7 +186,7 @@ int Accept(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient, 
     if ((size_t)output == INVALID_SOCKET)
     {
         ercode = WSAGetLastError();
-        Throw();
+        return TranslateErrorCode(ercode);
     }
 
     return 0;

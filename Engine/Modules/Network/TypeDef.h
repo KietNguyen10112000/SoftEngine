@@ -27,6 +27,8 @@ struct SOCKET_ERCODE
 
 	constexpr static int CONNECT_TIMEOUT = -9998;
 	constexpr static int CONNECT_REFUSED = -9999;
+
+	constexpr static int UNKNOWN = -999999;
 };
 
 NAMESPACE_END

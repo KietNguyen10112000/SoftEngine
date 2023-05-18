@@ -20,6 +20,7 @@ public:
 
 public:
 	int Connect();
+	int Disconnect();
 
 	int Recv(std::Vector<byte>& buffer);
 	int Recv(byte* buffer, int bufferSize);
@@ -27,6 +28,13 @@ public:
 	int Send(std::Vector<byte>& buffer);
 	int Send(byte* buffer, int bufferSize);
 
+	void SetBlockingMode(bool isBlockingNode);
+	bool ReadyForRecv();
+
+	inline bool IsDisconnected() const
+	{
+		return m_sock == nullptr;
+	}
 };
 
 NAMESPACE_END
