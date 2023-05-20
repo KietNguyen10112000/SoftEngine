@@ -9,9 +9,11 @@
 
 NAMESPACE_BEGIN
 
+#define FORWARD_OPAQUE(o)  o, sizeof(o) / sizeof(o[0])
+
 TCPConnector::TCPConnector(const TCP_SOCKET_DESCRIPTION& desc)
 {
-	m_sock = socketapi::CreateSocket(desc, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
+	m_sock = socketapi::CreateSocket(desc, FORWARD_OPAQUE(m_remoteOpaque));
 }
 
 TCPConnector::~TCPConnector()
@@ -23,7 +25,7 @@ int TCPConnector::Connect()
 {
 	socketapi::SetBlockingMode(m_sock, false);
 
-	auto ret = socketapi::Connect(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
+	auto ret = socketapi::Connect(m_sock, FORWARD_OPAQUE(m_localOpaque), FORWARD_OPAQUE(m_remoteOpaque));
 
 	if (ret < 0 && ret != SOCKET_ERCODE::WOULD_BLOCK)
 	{
@@ -44,7 +46,8 @@ int TCPConnector::Disconnect()
 {
 	socketapi::DestroySocket(m_sock);
 	m_sock = nullptr;
-	memset(m_opaque, 0, sizeof(m_opaque));
+	memset(m_localOpaque, 0, sizeof(m_localOpaque));
+	memset(m_remoteOpaque, 0, sizeof(m_remoteOpaque));
 	return 0;
 }
 
@@ -61,7 +64,7 @@ int TCPConnector::Recv(std::Vector<byte>& buffer)
 int TCPConnector::Recv(byte* buffer, int bufferSize)
 {
 	auto ret = recv((SOCKET)m_sock, (char*)buffer, bufferSize, 0);
-	if (ret < 0)
+	if (ret <= 0)
 	{
 		return socketapi::TranslateErrorCode(ret);
 	}
@@ -96,6 +99,20 @@ void TCPConnector::SetBlockingMode(bool isBlockingNode)
 bool TCPConnector::ReadyForRecv()
 {
 	return socketapi::IsReadyRead(m_sock, 0, 1);
+}
+
+String TCPConnector::GetAddressString()
+{
+	char addrStr[256] = {};
+	socketapi::ConvertAddrToStr(FORWARD_OPAQUE(m_localOpaque), addrStr);
+	return addrStr;
+}
+
+String TCPConnector::GetPeerAddressString()
+{
+	char addrStr[256] = {};
+	socketapi::ConvertAddrToStr(FORWARD_OPAQUE(m_remoteOpaque), addrStr);
+	return addrStr;
 }
 
 NAMESPACE_END

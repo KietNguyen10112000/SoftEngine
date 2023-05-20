@@ -6,6 +6,9 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Iphlpapi.lib")
 
+#include <stdio.h>
+#include <iostream>
+
 NAMESPACE_SOCKET_API_BEGIN 
 
 static int IPVersion(const char* src) 
@@ -142,13 +145,27 @@ int TranslateErrorCode(int input)
     }
 }
 
-int Connect(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer)
+int Connect(SOCKET_HANDLE handle, 
+    byte* localOpaque, int sizeofLocalOpaque,
+    byte* remoteOpaque, int sizeofRemoteOpaque)
 {
-    int& addrLen = *(int*)&buffer[sizeofBuffer - 4];
-    if (connect((SOCKET)handle, (SOCKADDR*)buffer, addrLen) == SOCKET_ERROR)
+    int& remoteAddrLen = *(int*)&remoteOpaque[sizeofRemoteOpaque - 4];
+    int& addrLen = *(int*)&localOpaque[sizeofLocalOpaque - 4];
+    addrLen = remoteAddrLen;
+
+    auto connectRet = connect((SOCKET)handle, (SOCKADDR*)remoteOpaque, remoteAddrLen);
+    if (connectRet == SOCKET_ERROR)
     {
-        return TranslateErrorCode(SOCKET_ERROR);
+        auto ercode = TranslateErrorCode(WSAGetLastError());
+        if (ercode != SOCKET_ERCODE::WOULD_BLOCK)
+        {
+            return ercode;
+        }
     }
+
+    int& localAddrLen = *(int*)&localOpaque[sizeofLocalOpaque - 4];
+    localAddrLen = sizeofLocalOpaque - 4;
+    getsockname((SOCKET)handle, (SOCKADDR*)localOpaque, &localAddrLen);
 
     return 0;
 }
@@ -176,17 +193,28 @@ int Listen(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient)
     return 0;
 }
 
-int Accept(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient, SOCKET_HANDLE& output, byte* outputBuffer, int sizeofOutputBuffer)
+int Accept(SOCKET_HANDLE handle, byte* buffer, int sizeofBuffer, int maxClient, 
+    SOCKET_HANDLE& output, 
+    byte* localOpaque, int sizeofLocalOpaque,
+    byte* remoteOpaque, int sizeofRemoteOpaque)
 {
     int ercode;
-    int& addrLen = *(int*)&outputBuffer[sizeofOutputBuffer - 4];
-    addrLen = 28;
-    output = (SOCKET_HANDLE)accept((SOCKET)handle, (SOCKADDR*)outputBuffer, &addrLen);
+    int& addrLen = *(int*)&remoteOpaque[sizeofRemoteOpaque - 4];
+    addrLen = sizeofRemoteOpaque - 4;
+    output = (SOCKET_HANDLE)accept((SOCKET)handle, (SOCKADDR*)remoteOpaque, &addrLen);
 
     if ((size_t)output == INVALID_SOCKET)
     {
         ercode = WSAGetLastError();
         return TranslateErrorCode(ercode);
+    }
+
+    int& localAddrLen = *(int*)&localOpaque[sizeofLocalOpaque - 4];
+    localAddrLen = sizeofLocalOpaque - 4;
+    while (getsockname((SOCKET)output, (SOCKADDR*)&localOpaque, &localAddrLen) != 0)
+    {
+        std::cout << "Wait for get socket info...\n";
+        Sleep(16);
     }
 
     return 0;
@@ -216,6 +244,35 @@ bool IsReadyWrite(SOCKET_HANDLE sock, long sec, long usec)
     tv.tv_usec = usec;
 
     return (select(0, 0, &fds, 0, &tv) == 1);
+}
+
+void ConvertAddrToStr(byte* buffer, int sizeofBuffer, char* outputBuffer)
+{
+    sockaddr* sa = (sockaddr*)buffer;
+    int& addrLen = *(int*)&buffer[sizeofBuffer - 4];
+
+    if (sa->sa_family == AF_INET)
+    {
+        sockaddr_in* p = (sockaddr_in*)buffer;
+        auto ret = inet_ntop(sa->sa_family, &p->sin_addr, outputBuffer, 256);
+
+        if (ret == NULL)
+        {
+            std::cout << "ConvertAddrToStr error code: " << WSAGetLastError() << "\n";
+        }
+
+        auto len = strlen(outputBuffer);
+        outputBuffer[len++] = ':';
+        sprintf(outputBuffer + len, "%d", p->sin_port);
+    }
+    else
+    {
+        sockaddr_in6* p = (sockaddr_in6*)buffer;
+        inet_ntop(sa->sa_family, &p->sin6_addr, outputBuffer, 256);
+        auto len = strlen(outputBuffer);
+        outputBuffer[len++] = ':';
+        sprintf(outputBuffer + len, "%d", p->sin6_port);
+    }
 }
 
 NAMESPACE_SOCKET_API_END

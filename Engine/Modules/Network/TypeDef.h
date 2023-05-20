@@ -8,7 +8,7 @@ using SOCKET_HANDLE = void*;
 struct SOCKET_DESCRIPTION
 {
 	// host, support ipv4 & ipv6
-	const char* host;
+	const char*		host;
 	uint16_t		port;
 
 	uint32_t		recvBufferSize;

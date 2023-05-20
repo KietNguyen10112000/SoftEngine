@@ -3,6 +3,8 @@
 
 #include "Core/Structures/STD/STDContainers.h"
 
+#include "Core/Structures/String.h"
+
 NAMESPACE_BEGIN
 
 class API TCPConnector
@@ -11,7 +13,9 @@ private:
 	friend class TCPAcceptor;
 
 	SOCKET_HANDLE m_sock = nullptr;
-	byte m_opaque[32] = {};
+
+	byte m_localOpaque[32] = {};
+	byte m_remoteOpaque[32] = {};
 
 public:
 	inline TCPConnector() {};
@@ -30,6 +34,12 @@ public:
 
 	void SetBlockingMode(bool isBlockingNode);
 	bool ReadyForRecv();
+
+	// return the local address used to connect to peer address
+	String GetAddressString();
+
+	// return peer address (another one connector)
+	String GetPeerAddressString();
 
 	inline bool IsDisconnected() const
 	{

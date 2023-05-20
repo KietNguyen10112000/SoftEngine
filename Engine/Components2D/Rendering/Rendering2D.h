@@ -21,7 +21,8 @@ private:
 	ID m_id = INVALID_ID;
 
 protected:
-	intmax_t m_zOrder = 0;
+	int m_zOrder = 0;
+	int m_visible = 1;
 
 public:
 	inline Rendering2D() {};
@@ -54,6 +55,11 @@ public:
 	inline auto& ZOrder()
 	{
 		return m_zOrder;
+	}
+
+	inline void SetVisible(bool visible)
+	{
+		m_visible = visible;
 	}
 
 };

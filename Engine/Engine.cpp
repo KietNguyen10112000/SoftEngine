@@ -168,6 +168,20 @@ void Engine::FinalPlugins()
 
 void Engine::Setup()
 {
+	/*TCP_SOCKET_DESCRIPTION desc;
+	desc.host = "127.0.0.1";
+	desc.port = 9023;
+	desc.useNonBlocking = true;
+	TCPConnector tpc(desc);
+	if (tpc.Connect() < 0)
+	{
+		std::cout << "Unable to connect to server. Aborted.\n";
+		Throw();
+	}
+	tpc.SetBlockingMode(false);
+	auto str = tpc.GetAddressString();
+	auto str2 = tpc.GetPeerAddressString();*/
+
 	g_timer.Update();
 	g_timer.Update();
 

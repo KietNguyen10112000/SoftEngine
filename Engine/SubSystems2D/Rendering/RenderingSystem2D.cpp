@@ -113,7 +113,8 @@ void RenderingSystem2D::Iteration(float dt)
 
 	for (auto& r : m_renderList)
 	{
-		r->Render(this);
+		if (r->m_visible)
+			r->Render(this);
 	}
 
 	window.display();

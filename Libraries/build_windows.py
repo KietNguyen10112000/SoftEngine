@@ -47,6 +47,13 @@ def googletest():
     
     copy_all_files('./googletest/googletest/include', './build/include/googletest', ['**/*.h'])
     
+    
+def SFML():
+    copy_all_files('./SFML/SFML-2.5.1/lib', '../build/bin/Debug', ['**/*.lib', '**/*.pdb'])
+    copy_all_files('./SFML/SFML-2.5.1/bin', '../build/bin/Debug', ['**/*.dll', '**/*.pdb'])
+    copy_all_files('./SFML/SFML-2.5.1/lib', '../build/bin/Release', ['**/*.lib', '**/*.pdb'])
+    copy_all_files('./SFML/SFML-2.5.1/bin', '../build/bin/Release', ['**/*.dll', '**/*.pdb'])
+    
 
 
 
@@ -54,3 +61,4 @@ def googletest():
 
 #=============================RUNNING=================================================
 googletest()
+SFML()

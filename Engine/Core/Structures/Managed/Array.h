@@ -2,6 +2,7 @@
 #include "Core/Memory/ManagedPointers.h"
 #include "Core/Memory/Trace.h"
 #include "Core/Structures/TypeDef.h"
+#include "Core/Memory/Memory.h"
 
 NAMESPACE_BEGIN
 

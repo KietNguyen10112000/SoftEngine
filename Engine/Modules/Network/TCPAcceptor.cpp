@@ -4,6 +4,8 @@
 
 #include "API/API.h"
 
+#define FORWARD_OPAQUE(o)  o, sizeof(o) / sizeof(o[0])
+
 NAMESPACE_BEGIN
 
 TCPAcceptor::TCPAcceptor(const TCP_SOCKET_DESCRIPTION& desc, size_t maxClient)
@@ -18,18 +20,21 @@ TCPAcceptor::~TCPAcceptor()
 
 int TCPAcceptor::Initialize(const TCP_SOCKET_DESCRIPTION& desc, size_t maxClient)
 {
-	m_sock = socketapi::CreateSocket(desc, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
+	m_sock = socketapi::CreateSocket(desc, FORWARD_OPAQUE(m_opaque));
 	m_maxClient = maxClient;
 
-	socketapi::Bind(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]));
-	socketapi::Listen(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]), (int)m_maxClient);
+	socketapi::Bind(m_sock, FORWARD_OPAQUE(m_opaque));
+	socketapi::Listen(m_sock, FORWARD_OPAQUE(m_opaque), (int)m_maxClient);
 	return 0;
 }
 
 int TCPAcceptor::Accept(TCPConnector& output)
 {
-	return socketapi::Accept(m_sock, m_opaque, sizeof(m_opaque) / sizeof(m_opaque[0]),
-		(int)m_maxClient, output.m_sock, output.m_opaque, sizeof(output.m_opaque) / sizeof(output.m_opaque[0]));
+	auto ret = socketapi::Accept(m_sock, FORWARD_OPAQUE(m_opaque),
+		(int)m_maxClient, output.m_sock, 
+		FORWARD_OPAQUE(output.m_localOpaque), FORWARD_OPAQUE(output.m_remoteOpaque));
+
+	return ret;
 }
 
 NAMESPACE_END
