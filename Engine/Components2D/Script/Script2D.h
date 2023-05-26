@@ -9,7 +9,17 @@
 #include "Objects/Async/AsyncTaskRunner.h"
 #include "Objects2D/Physics/Collision/Collision2DPair.h"
 
+#include "PhysicsInterface.h"
+
+#include "Script2DMeta.h"
+
+#include <bitset>
+
 NAMESPACE_BEGIN
+
+#define SCRIPT2D_DEFAULT_METHOD(clazz)													\
+TRACEABLE_FRIEND();																		\
+virtual void InitializeClassMetaData() override {_InitializeClassMetaData<clazz>();}
 
 class API Script2D : Traceable<Script2D>, public SubSystemComponent2D, public AsyncTaskRunner
 {
@@ -29,12 +39,16 @@ private:
 		ON_COLLISION_EXIT
 	};
 
-	ID m_onGUIId		= INVALID_ID;
+	std::bitset<64> m_overriddenVtbIdx = {};
 
-	ID m_onCollideId	= INVALID_ID;
+	ID m_onGUIId				= INVALID_ID;
+
+	ID m_onCollideId			= INVALID_ID;
 
 protected:
 	Scene2D* m_scene = nullptr;
+
+	PhysicsInterface m_physicsInterface;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -79,18 +93,52 @@ private:
 		EndUpdate();
 	}
 
+protected:
+#define SET_VTB_OVERRIDDEN_IDX(funcName, idxName)								\
+{																				\
+	auto f = &Script2D::funcName;												\
+	auto p = (void*&)f;															\
+	auto f1 = &ChildClass::funcName;											\
+	auto p1 = (void*&)f1;														\
+	if (p1 != p)																\
+	{																			\
+		m_overriddenVtbIdx.set(idxName);										\
+	}																			\
+}
+
+
+	template <typename ChildClass>
+	inline void _InitializeClassMetaData()
+	{
+		SET_VTB_OVERRIDDEN_IDX(OnGUI,				Script2DMeta::Get().onGUIVtbIdx);
+		SET_VTB_OVERRIDDEN_IDX(OnCollide,			Script2DMeta::Get().onCollideVtbIdx);
+		SET_VTB_OVERRIDDEN_IDX(OnCollisionEnter,	Script2DMeta::Get().onCollisionEnterVtbIdx);
+		SET_VTB_OVERRIDDEN_IDX(OnCollisionExit,		Script2DMeta::Get().onCollisionExitVtbIdx);
+		SET_VTB_OVERRIDDEN_IDX(OnUpdate,			Script2DMeta::Get().onUpdateVtbIdx);
+	}
+
+#undef SET_VTB_OVERRIDDEN_IDX
+
+	virtual void InitializeClassMetaData() = 0;
+
 public:
-	virtual void OnStart() {};
-	virtual void OnUpdate(float dt) {};
-	virtual void OnCollide(GameObject2D* another, const Collision2DPair& pair) {};
-	virtual void OnCollisionEnter(GameObject2D* another, const Collision2DPair& pair) {};
-	virtual void OnCollisionExit(GameObject2D* another, const Collision2DPair& pair) {};
-	virtual void OnGUI() {};
+	// methods for user override
+	virtual void OnStart();
+	virtual void OnUpdate(float dt);
+	virtual void OnCollide(GameObject2D* another, const Collision2DPair& pair);
+	virtual void OnCollisionEnter(GameObject2D* another, const Collision2DPair& pair);
+	virtual void OnCollisionExit(GameObject2D* another, const Collision2DPair& pair);
+	virtual void OnGUI();
 
 public:
 	inline auto Input()
 	{
 		return m_scene->GetInput();
+	}
+
+	inline auto* Physics()
+	{
+		return &m_physicsInterface;
 	}
 
 	inline auto& Position()

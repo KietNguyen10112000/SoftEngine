@@ -116,6 +116,11 @@ public:
 		}
 	}
 
+	virtual bool RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) override
+	{
+		return RectRayQuery(m_rect, selfTransform, ray, output);
+	}
+
 };
 
 NAMESPACE_END

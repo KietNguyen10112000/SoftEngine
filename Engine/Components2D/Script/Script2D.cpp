@@ -9,6 +9,8 @@ void Script2D::OnComponentAddedToScene()
 	auto scene = m_object->GetScene();
 	m_scene = scene;
 
+	m_physicsInterface.m_scriptSystem = m_scene->GetScriptSystem();
+
 	OnStart();
 }
 
@@ -40,5 +42,22 @@ bool Script2D::IsNewBranch()
 {
 	return true;
 }
+
+void Script2D::OnStart() {};
+void Script2D::OnUpdate(float dt) {};
+void Script2D::OnCollide(GameObject2D* another, const Collision2DPair& pair) 
+{
+	
+};
+
+void Script2D::OnCollisionEnter(GameObject2D* another, const Collision2DPair& pair) 
+{
+};
+
+void Script2D::OnCollisionExit(GameObject2D* another, const Collision2DPair& pair) 
+{
+};
+
+void Script2D::OnGUI() {};
 
 NAMESPACE_END

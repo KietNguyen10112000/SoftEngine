@@ -91,7 +91,7 @@ size_t VTableIndex(F f)
 
 	T* t = reinterpret_cast<T*>(&vt);
 
-	typedef int (T::* GetIndex)();
+	typedef size_t (T::* GetIndex)();
 	GetIndex getIndex = (GetIndex)f;
 	return (t->*getIndex)();
 }

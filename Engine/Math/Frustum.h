@@ -91,7 +91,7 @@ private:
 	{
 		auto n1 = p1.GetNormal();
 
-		if (p1.ValueAt(p) >= 0)
+		if (p1.ValueOf(p) >= 0)
 		{
 			return;
 		}
@@ -203,7 +203,7 @@ public:
 			for (int i = 0; i < 8; ++i) 
 			{
 				// test this point against the planes
-				if (m_planes[p].ValueAt(vCorner[i]) < 0) 
+				if (m_planes[p].ValueOf(vCorner[i]) < 0)
 				{
 					//iPtIn = 0;
 					--iInCount;

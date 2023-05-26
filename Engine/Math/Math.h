@@ -17,4 +17,6 @@
 #include "Utils.h"
 #include "Transform2D.h"
 
+#include "Line2D.h"
+
 using namespace math;

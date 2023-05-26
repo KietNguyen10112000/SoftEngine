@@ -96,6 +96,7 @@ protected:
 
 	Transform2D						m_transform;
 	String							m_name;
+	size_t							m_tag = 0;
 
 private:
 	template <typename T>
@@ -540,6 +541,11 @@ public:
 	inline const auto& GetCachedTransform() const
 	{
 		return m_cachedTransform;
+	}
+
+	inline auto& Tag()
+	{
+		return m_tag;
 	}
 	
 };

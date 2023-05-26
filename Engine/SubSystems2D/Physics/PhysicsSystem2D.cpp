@@ -117,6 +117,8 @@ void PhysicsSystem2D::BoardPhase()
 			{
 				auto another = obj->GetComponentRaw<Physics2D>();
 
+				if (!another) continue;
+
 				if (another->CollisionMask() & top->CollisionMask())
 				{
 					pairs.push_back(AllocateCollisionPair(top, another, 1));
@@ -130,6 +132,7 @@ void PhysicsSystem2D::BoardPhase()
 				auto another = obj->GetComponentRaw<Physics2D>();
 
 				//if (another == top) continue;
+				if (!another) continue;
 
 				if (another->m_lastBoardPhaseIterationCount == m_iterationCount)
 				{

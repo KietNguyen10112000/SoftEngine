@@ -6,6 +6,9 @@
 
 #include "../Collision/Collision2DResult.h"
 
+#include "Objects2D/Scene2D/Ray/Ray2D.h"
+#include "Objects2D/Scene2D/Ray/Ray2DQueryResult.h"
+
 NAMESPACE_BEGIN
 
 inline Rect AARectToRect(const AARect& aaRect)
@@ -56,7 +59,7 @@ inline void FindMinMaxProjection(const Vec2& axis, Vec2* vertices,
 		}
 	}
 
-	assert(maxIdx != minIdx);
+	//assert(maxIdx != minIdx);
 }
 
 inline void RectRectCollision(const Rect& A, const Rect& B, Collision2DResult& result)
@@ -199,6 +202,43 @@ Return:
 		result.AB = -result.AB;
 	}
 	
+}
+
+template <typename _Rect>
+bool RectRayQuery(const _Rect& _rect, const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output)
+{
+	auto rect = _rect;
+	rect.Transform(selfTransform);
+
+	Vec2 temp[4];
+	rect.GetPoints(temp);
+
+	Line2D edges[4] = {
+		Line2D::FromPoints(temp[0], temp[1]),
+		Line2D::FromPoints(temp[0], temp[2]),
+		Line2D::FromPoints(temp[3], temp[1]),
+		Line2D::FromPoints(temp[3], temp[2]),
+	};
+
+	Line2D lineRay = Line2D::FromPointAndDirection(ray.begin, ray.direction);
+
+	Vec2 intersectPoint;
+	auto oriSize = output.points.size();
+	for (auto& edge : edges)
+	{
+		if (lineRay.Intersect(edge, intersectPoint))
+		{
+			auto d = intersectPoint - ray.begin;
+			auto length2 = d.Length2();
+			// same side, length < ray's length
+			if (d.Dot(ray.direction) > 0 && length2 <= ray.length2)
+			{
+				output.points.push_back({ intersectPoint, length2 });
+			}
+		}
+	}
+
+	return output.points.size() != oriSize;
 }
 
 NAMESPACE_END

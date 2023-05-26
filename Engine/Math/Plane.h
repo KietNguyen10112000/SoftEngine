@@ -109,14 +109,14 @@ public:
 		return -d * m_normal;
 	};
 
-	inline auto ValueAt(const Vec3& point) const
+	inline auto ValueOf(const Vec3& point) const
 	{
 		return point.Dot(normal) + d;
 	}
 
 	inline auto Distance(const Vec3& point) const
 	{
-		return std::abs(ValueAt(point));
+		return std::abs(ValueOf(point));
 	}
 
 	//plane must be normlize
@@ -128,7 +128,7 @@ public:
 
 	inline int SideOf(const Vec3& point) const
 	{
-		const auto val = ValueAt(point);
+		const auto val = ValueOf(point);
 		return (0 < val) - (val < 0);
 	}
 

@@ -6,6 +6,9 @@
 
 #include "../Collision/Collision2DResult.h"
 
+#include "Objects2D/Scene2D/Ray/Ray2D.h"
+#include "Objects2D/Scene2D/Ray/Ray2DQueryResult.h"
+
 NAMESPACE_BEGIN
 
 struct Collision2DResult;
@@ -63,6 +66,8 @@ public:
 		Collider2D* another,
 		const Mat3& anotherTransform
 	) = 0;
+
+	virtual bool RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) = 0;
 
 };
 
