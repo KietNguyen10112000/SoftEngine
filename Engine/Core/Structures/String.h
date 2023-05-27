@@ -239,38 +239,27 @@ public:
 	}
 
 	inline thread_local static std::ostringstream ss;
+
+	constexpr static size_t N = 1080;
+	constexpr static size_t FMT_N = 128;
+	inline thread_local static char s_buf[N + FMT_N] = {};
+
 	template <typename T>
 	static String From(const T& v)
 	{
-		//constexpr size_t N = 1080; // 1077 is enough
-		//thread_local static char buf[N] = {};
-		/*const char* fmt = 0;
-
-		if constexpr (std::is_same_v<T, bool>)
-		{
-			fmt = v ? "true" : "false";
-		}
-		else if constexpr (std::is_same_v<T, char>)
-		{
-			fmt = "%c";
-		}
-		else if constexpr (std::is_integral_v<T>)
-		{
-			fmt = "%d";
-		}
-		else if constexpr (std::is_floating_point_v<T>)
-		{
-			fmt = "%f";
-		}
-
-		snprintf(buf, N, fmt, v);*/
-
-		
 		ss.clear();
 		ss.seekp(0);
 		ss << v << '\0';
 		String ret = ss.str().c_str();
 		return ret;
+	};
+
+	// fmt likes printf(fmt)
+	template <typename T>
+	static String FromFmt(const char* fmt, const T& v)
+	{
+		snprintf(s_buf, N, fmt, v);
+		return s_buf;
 	};
 
 	struct Formatter
@@ -287,12 +276,21 @@ public:
 					return (buf + String::From(v));
 			}*/
 			auto c = *it;
+			char* bracketBegin = 0;
+			char* bracketEnd = 0;
 			while (c != 0)
 			{
-				if (c == '{' && (*(++it) == '}'))
+				if (c == '{')
 				{
+					bracketBegin = it;
+				}
+
+				if (c == '}')
+				{
+					bracketEnd = it;
 					break;
 				}
+
 				c = *(++it);
 			}
 
@@ -302,7 +300,7 @@ public:
 			}
 			else
 			{
-				intmax_t len = it - snapshot - 1;
+				intmax_t len = bracketBegin - snapshot;
 
 				//if (len < 0) std::cout << "error\n";
 
@@ -312,12 +310,37 @@ public:
 
 				if constexpr (sizeof...(args) == 0)
 				{
-					return buf + String::From(v) + it;
+					if (bracketBegin + 1 == bracketEnd)
+					{
+						return buf + String::From(v) + it;
+					}
+					else
+					{
+						char* fmt = &s_buf[N];
+						auto count = bracketEnd - bracketBegin - 1;
+						::memcpy(fmt, bracketBegin + 1, count);
+						*(fmt + count) = '\0';
+						auto ret = buf + String::FromFmt(fmt, v) + it;
+						return ret;
+					}
 				}
 
 				if constexpr (sizeof...(args) != 0)
 				{
-					String s = buf + String::From(v);
+					String s;
+					if (bracketBegin + 1 == bracketEnd)
+					{
+						s = buf + String::From(v);
+					}
+					else
+					{
+						char* fmt = &s_buf[N];
+						auto count = bracketEnd - bracketBegin - 1;
+						::memcpy(fmt, bracketBegin + 1, count);
+						*(fmt + count) = '\0';
+						s = buf + String::FromFmt(fmt, v) + it;
+					}
+
 					return s + Format(std::forward<Args>(args)...);
 				}
 			}

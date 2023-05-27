@@ -23,9 +23,20 @@ public:
 		Initialize(path, rect, transform);
 	};
 
+	inline Sprite(const Resource<Texture2D>& texture, const AARect& rect = {}, const Transform2D& transform = {})
+	{
+		Initialize(texture, rect, transform);
+	};
+
 	inline void Initialize(String path, const AARect& rect, const Transform2D& transform)
 	{
 		m_texture = resource::Load<Texture2D>(path);
+		Initialize(m_texture, rect, transform);
+	}
+
+	inline void Initialize(const Resource<Texture2D>& texture, const AARect& rect, const Transform2D& transform)
+	{
+		m_texture = texture;
 
 		m_sprite.setTexture(m_texture->GetSFTexture());
 		SetSize({});

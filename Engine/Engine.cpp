@@ -28,6 +28,7 @@
 #include "Components2D/Rendering/SpriteRenderer.h"
 #include "Components2D/Rendering/Camera2D.h"
 #include "Components2D/Rendering/SpritesRenderer.h"
+#include "Components2D/Rendering/AnimatedSpritesRenderer.h"
 #include "Components2D/Physics/Physics2D.h"
 #include "Components2D/Physics/RigidBody2D.h"
 

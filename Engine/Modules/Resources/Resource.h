@@ -96,6 +96,16 @@ public:
 		*this = rc;
 	}
 
+	Resource(const Resource<T>& rc)
+	{
+		*this = rc;
+	}
+
+	/*Resource(const Resource<T>& rc)
+	{
+		*this = rc;
+	}*/
+
 	~Resource()
 	{
 		Reset();
@@ -113,6 +123,8 @@ public:
 	template <typename _T>
 	inline void operator=(const Resource<_T>& rc)
 	{
+		if (m_rc == rc.m_rc) return;
+
 		Reset();
 		m_rc = rc.m_rc;
 		m_rc->m_refCount++;
@@ -120,6 +132,8 @@ public:
 
 	inline void operator=(const Resource<T>& rc)
 	{
+		if (m_rc == rc.m_rc) return;
+
 		Reset();
 		m_rc = rc.m_rc;
 		m_rc->m_refCount++;

@@ -22,6 +22,12 @@ public:
 
 	};
 
+	inline SpriteRenderer(const Resource<Texture2D>& texture, const AARect& rect = {}, const Transform2D& transform = {})
+		: m_sprite(texture, rect, transform)
+	{
+
+	};
+
 	// =)))
 	inline void ClearAABB()
 	{
