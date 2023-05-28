@@ -1,4 +1,5 @@
 #include "TaskWorker.h"
+#include "Engine/StartupConfig.h"
 
 NAMESPACE_BEGIN
 
@@ -10,6 +11,11 @@ void TaskWorker::Initalize(size_t maxWorker, size_t reservedThread)
 	auto numThreads = std::thread::hardware_concurrency();
 	numThreads = std::min((uint32_t)maxWorker, numThreads);
 	numThreads = std::min((uint32_t)FiberInfo::TOTAL_FIBERS, numThreads);
+
+	if (StartupConfig::Get().numThreads != -1)
+	{
+		numThreads = StartupConfig::Get().numThreads;
+	}
 
 	assert(numThreads > reservedThread);
 	numThreads -= reservedThread;

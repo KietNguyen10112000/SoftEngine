@@ -38,7 +38,7 @@ inline void ProcessArgs(int argc, const char** argv)
 
 		if ((id = str.find("--NThread=")) != std::string_view::npos)
 		{
-			StartupConfig::Get().maxThreads = std::stoi(str.substr(id + 10).data());
+			StartupConfig::Get().numThreads = std::stoi(str.substr(id + 10).data());
 			continue;
 		}
 
