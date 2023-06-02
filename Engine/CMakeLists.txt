@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
 add_compile_definitions(EXPORTS UNICODE DEV)
+add_compile_definitions(IMGUI_USER_CONFIG="Libraries/config/ImGUIConfig.h")
 
 set(BINARY Engine)
 set(LIB_ENGINE LibEngine)
@@ -89,8 +90,9 @@ IF (WIN32)
         IMGUI_SRC
 
         "../Libraries/imgui/*.cpp"
-        "../Libraries/imgui/backends/imgui_impl_win32.cpp"
-        "../Libraries/imgui/backends/imgui_impl_dx12.cpp"
+        "../Libraries/imgui-SFML/*.cpp"
+        #"../Libraries/imgui/backends/imgui_impl_win32.cpp"
+        #"../Libraries/imgui/backends/imgui_impl_dx12.cpp"
     )
 ELSE()
     message( FATAL_ERROR "unsupported, yet!" )
@@ -104,6 +106,10 @@ add_executable (
     ${IMGUI_SRC}
 )
 
+find_package(OpenGL REQUIRED)
+include_directories( ${OPENGL_INCLUDE_DIRS})
+
+
 include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}"
      "${CMAKE_CURRENT_SOURCE_DIR}/Modules"
@@ -114,6 +120,7 @@ include_directories(PUBLIC
      "${CMAKE_SOURCE_DIR}/Libraries/imgui"
 
      "${CMAKE_SOURCE_DIR}/Libraries/SFML/SFML-2.5.1/include"
+     "${CMAKE_SOURCE_DIR}/Libraries/imgui-SFML"
 )
 
 target_link_directories(
@@ -193,6 +200,8 @@ target_link_libraries(
 
     $<$<CONFIG:Debug>:${SFML_LIBS_DEBUG}>
     $<$<CONFIG:Release>:${SFML_LIBS_RELEASE}>
+
+    ${OPENGL_LIBRARIES}
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

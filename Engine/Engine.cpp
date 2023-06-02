@@ -38,6 +38,9 @@
 #include "Objects2D/Scene2D/UniqueGridScene2D.h"
 #include "Objects2D/GameObject2D.h"
 
+#include "imgui.h"
+#include "imgui-SFML.h"
+
 //#include "Network/TCPAcceptor.h"
 //#include "Network/TCPConnector.h"
 
@@ -97,6 +100,9 @@ void Engine::InitGraphics()
 {
 	if (StartupConfig::Get().isEnableRendering)
 	{
+		/*SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+		::SetProcessDPIAware();*/
+
 		m_input = rheap::New<Input>();
 		//m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
 		if (Graphics2D::Initilize(m_window, StartupConfig::Get().windowWidth, StartupConfig::Get().windowHeight) != 0)
@@ -104,6 +110,28 @@ void Engine::InitGraphics()
 			m_isRunning = false;
 		}
 		platform::BindInput(m_input, m_window->getSystemHandle());
+
+		ImGui::SFML::Init(reinterpret_cast<sf::RenderWindow&>(*m_window), false);
+
+		ImGuiStyle& style = ImGui::GetStyle();
+
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		ImFontConfig config{};
+		//config.GlyphExtraSpacing.x = 1.0f;
+		config.OversampleH = config.OversampleV = 1;
+		config.PixelSnapH = true;
+		config.SizePixels = 13.0f * 1.0f;
+		//config.EllipsisChar = (ImWchar)0x0085;
+		config.GlyphOffset.y = 1.0f * ((float)(int)(((config.SizePixels / 13.0f)) + 0.5f));
+		config.GlyphRanges = io.Fonts->GetGlyphRangesVietnamese();
+		//config.GlyphExtraSpacing.x = 1.0f;
+		
+		//io.Fonts->AddFontDefault(&config);
+		io.Fonts->AddFontFromFileTTF("segoeui.ttf", (int)(24.0f), &config);
+		ImGui::SFML::UpdateFontTexture();
+		
+		//io.FontGlobalScale = 2.0f;
+		//style.ScaleAllSizes(2.0f);
 	}
 }
 
@@ -111,6 +139,7 @@ void Engine::FinalGraphics()
 {
 	if (StartupConfig::Get().isEnableRendering)
 	{
+		ImGui::SFML::Shutdown();
 		Graphics2D::Finalize();
 		platform::DeleteWindow(m_window);
 		rheap::Delete(m_input);
@@ -666,6 +695,7 @@ void Engine::ProcessInput()
 	sf::Event event;
 	while (window.pollEvent(event))
 	{
+		ImGui::SFML::ProcessEvent(window, event);
 		// "close requested" event: we close the window
 		if (event.type == sf::Event::Closed)
 			window.close();

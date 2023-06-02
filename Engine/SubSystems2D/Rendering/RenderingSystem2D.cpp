@@ -1,4 +1,4 @@
-#include "RenderingSystem2D.h"
+﻿#include "RenderingSystem2D.h"
 
 #include "Core/TemplateUtils/TemplateUtils.h"
 
@@ -9,6 +9,9 @@
 #include "Graphics2D/Graphics2D.h"
 
 #include <iostream>
+
+#include "imgui.h"
+#include "imgui-SFML.h"
 
 
 NAMESPACE_BEGIN
@@ -116,6 +119,23 @@ void RenderingSystem2D::Iteration(float dt)
 		if (r->m_visible)
 			r->Render(this);
 	}
+
+	static sf::Clock deltaClock;
+
+	ImGui::SFML::Update(reinterpret_cast<sf::RenderWindow&>(window), deltaClock.restart());
+	/*ImGui::ShowDemoWindow();
+	ImGui::Begin(u8"Nguyễn Hữu Kiệt");
+	ImGui::Button("Look at this pretty button");
+	ImGui::End();*/
+
+	m_scene->GetScriptSystem()->ForEachOnGUIScripts(
+		[](Script2D* script)
+		{
+			script->OnGUI();
+		}
+	);
+
+	ImGui::SFML::Render(window);
 
 	window.display();
 }

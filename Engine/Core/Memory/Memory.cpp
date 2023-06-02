@@ -144,8 +144,11 @@ void rheap::internal::OperatorDelete(void* ptr) noexcept
     if (soft::g_rawHeap)
         soft::g_rawHeap->Deallocate((soft::ManagedHandle*)ptr - 1);
     else
+    {
         // case of static initalizer
-        std::cout << "[   WARN   ]\tinvalid delete call\n";
+        if (ptr) 
+            std::cout << "[   WARN   ]\tinvalid delete call\n";
+    }
 }
 
 NAMESPACE_MEMORY_END
