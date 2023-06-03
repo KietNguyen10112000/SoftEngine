@@ -69,6 +69,53 @@ void Scene2D::Dtor()
 	}
 }
 
+void Scene2D::ProcessTimeoutAndInterval()
+{
+	m_isProcessingTimeHandles = true;
+
+	auto dt = Dt();
+	m_timeouts.ForEachWithID(
+		[&](TimeFunction& timeFunc, ID id)
+		{
+			if ((timeFunc.t -= dt) <= 0)
+			{
+				timeFunc.func->Invoke();
+
+				if (timeFunc.uid != 0)
+				{
+					m_timeoutRemoves.push_back(id);
+				}
+			}
+		}
+	);
+
+	m_intervals.ForEach(
+		[&](TimeFunction& timeFunc)
+		{
+			timeFunc.t += dt;
+			while (timeFunc.t > timeFunc.T)
+			{
+				timeFunc.func->Invoke();
+				timeFunc.t -= timeFunc.T;
+			}
+		}
+	);
+
+	for (auto& id : m_timeoutRemoves)
+	{
+		m_timeouts.Remove(id);
+	}
+	m_timeoutRemoves.clear();
+
+	for (auto& id : m_intervalRemoves)
+	{
+		m_intervals.Remove(id);
+	}
+	m_intervalRemoves.clear();
+
+	m_isProcessingTimeHandles = false;
+}
+
 void Scene2D::PrevIteration()
 {
 	//m_scriptSystem->PrevIteration(Dt());
@@ -77,6 +124,8 @@ void Scene2D::PrevIteration()
 	m_trash.clear();
 	m_iterationCount++;
 	ReConstruct();
+
+	ProcessTimeoutAndInterval();
 }
 
 void Scene2D::Iteration()
@@ -130,7 +179,7 @@ void Scene2D::AddObject(Handle<GameObject2D>& obj, bool isGhost)
 
 Return:
 //	obj->InvokeOnComponentAddedToScene();
-	m_adds.push_back(obj);
+	m_adds.push_back(obj.Get());
 }
 
 #define ROLL_TO_FILL_BLANK(v, objName, idName)				\

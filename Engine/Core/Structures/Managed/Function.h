@@ -25,6 +25,30 @@ void Trace(Tracer* tracer)                                                      
     postExtCode;                                                                        \
 }
 
+
+#define DEFINE_TRACE2(offsetAdder, prevExtCode, postExtCode)                                                        \
+template<size_t I = 0, size_t OFFSET = 0, typename... Tp>                                                           \
+void traceToElm(Tracer* tracer, std::tuple<Tp...>& t) {                                                             \
+    using _Ttype = typename std::remove_reference<typename std::tuple_element<I, std::tuple<Tp...>>::type>::type;   \
+    TraceToElm(tracer, (_Ttype*)((byte*)this + offsetAdder + OFFSET));                                              \
+    if constexpr (I + 1 != sizeof...(Tp))                                                                           \
+        traceToElm<I + 1, OFFSET + sizeof(_Ttype)>(tracer, t);                                                      \
+}                                                                                                                   \
+template <typename _Elm>                                                                                            \
+void TraceToElm(Tracer* tracer, _Elm* e)                                                                            \
+{                                                                                                                   \
+    if constexpr (std::is_base_of_v<Traceable<_Elm>, _Elm>)                                                         \
+    {                                                                                                               \
+        tracer->Trace(*e);                                                                                          \
+    }                                                                                                               \
+}                                                                                                                   \
+TRACEABLE_FRIEND();                                                                                                 \
+void Trace(Tracer* tracer)                                                                                          \
+{                                                                                                                   \
+    prevExtCode;                                                                                                    \
+    if constexpr (std::tuple_size<decltype(m_args)>::value != 0) traceToElm(tracer, m_args);                        \
+}
+
 namespace helper
 {
     template <int... Is>
@@ -55,7 +79,8 @@ public:
     Function(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
 
 private:
-    DEFINE_TRACE(m_args);
+    //DEFINE_TRACE(m_args);
+    DEFINE_TRACE2(sizeof(m_fn));
 
     template <int... Is>
     void func(std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -98,7 +123,8 @@ private:
         Callback(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
 
     private:
-        DEFINE_TRACE(m_args);
+        //DEFINE_TRACE(m_args);
+        DEFINE_TRACE2(sizeof(m_fn));
 
         template <int... Is>
         void func(R r, std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -132,8 +158,13 @@ public:
         : m_fn(fn), m_args(std::forward<Args>(args)...) {};
 
 private:
-    DEFINE_TRACE(
+    /*DEFINE_TRACE(
         m_args,
+        tracer->Trace(m_callback);
+    );*/
+
+    DEFINE_TRACE2(
+        sizeof(m_callback) + sizeof(m_fn),
         tracer->Trace(m_callback);
     );
 
@@ -179,10 +210,39 @@ public:
     AsyncFunctionVoidReturn(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
 
 private:
-    DEFINE_TRACE(
+    /*DEFINE_TRACE(
         m_args,
         tracer->Trace(m_callback);
+    );*/
+
+    DEFINE_TRACE2(
+        sizeof(m_callback) + sizeof(m_fn),
+        tracer->Trace(m_callback);
     );
+
+    //template<size_t I = 0, size_t OFFSET = 0, typename... Tp>
+    //void traceToElm(Tracer* tracer, std::tuple<Tp...>& t) {
+    //    using _Ttype = typename std::remove_reference<typename std::tuple_element<I, std::tuple<Tp...>>::type>::type;
+    //    TraceToElm(tracer, (_Ttype*)((byte*)this + sizeof(m_callback) + sizeof(m_fn) + OFFSET));
+    //    if constexpr (I + 1 != sizeof...(Tp))
+    //        traceToElm<I + 1, OFFSET + sizeof(_Ttype)>(tracer, t);
+    //}
+
+    //template <typename _Elm>
+    //void TraceToElm(Tracer* tracer, _Elm* e)
+    //{
+    //    if constexpr (std::is_base_of_v<Traceable<_Elm>, _Elm>)
+    //    {
+    //        tracer->Trace(*e);
+    //    }
+    //}
+    //TRACEABLE_FRIEND();
+    //void Trace(Tracer* tracer)
+    //{
+    //    tracer->Trace(m_callback);
+    //    traceToElm(tracer, m_args);
+    //    //std::apply([&](auto&&... arg) {((TraceToElm(tracer, arg)), ...); }, m_args);
+    //}
 
     template <int... Is>
     void func(std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -235,7 +295,8 @@ private:
         Callback(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
 
     private:
-        DEFINE_TRACE(m_args);
+        //DEFINE_TRACE(m_args);
+        DEFINE_TRACE2(sizeof(m_fn));
 
         template <int... Is>
         void func(R r, std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -270,8 +331,13 @@ public:
         : m_obj(obj), m_fn(fn), m_args(std::forward<Args>(args)...) {};
 
 private:
-    DEFINE_TRACE(
+    /*DEFINE_TRACE(
         m_args,
+        tracer->Trace(m_callback);
+    );*/
+
+    DEFINE_TRACE(
+        sizeof(m_callback) + sizeof(m_obj) + sizeof(m_fn),
         tracer->Trace(m_callback);
     );
 
@@ -321,8 +387,13 @@ public:
         : m_obj(obj), m_fn(fn), m_args(std::forward<Args>(args)...) {};
 
 private:
-    DEFINE_TRACE(
+    /*DEFINE_TRACE(
         m_args,
+        tracer->Trace(m_callback);
+    );*/
+
+    DEFINE_TRACE(
+        sizeof(m_callback) + sizeof(m_obj) + sizeof(m_fn),
         tracer->Trace(m_callback);
     );
 

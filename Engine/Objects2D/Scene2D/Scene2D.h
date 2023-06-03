@@ -4,6 +4,8 @@
 #include "Core/Structures/STD/STDContainers.h"
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/Managed/ConcurrentList.h"
+#include "Core/Structures/Managed/UnorderedList.h"
+#include "Core/Structures/Managed/Function.h"
 #include "Core/Memory/SmartPointers.h"
 #include "Core/Time/Clock.h"
 
@@ -38,6 +40,16 @@ public:
 
 class API Scene2D : Traceable<Scene2D>
 {
+public:
+	struct TimeHandle
+	{
+		ID id = 0;
+		ID uid = 0;
+
+		TimeHandle() {};
+		TimeHandle(ID id, ID uid) : id(id), uid(uid) {};
+	};
+
 protected:
 	constexpr static byte SCENE_MEM_STABLE_VALUE1 = 1;
 	constexpr static byte SCENE_MEM_STABLE_VALUE2 = 2;
@@ -55,6 +67,23 @@ protected:
 	friend class PhysicsSystem2D;
 	friend class ScriptSystem2D;
 	friend class GameObject2D;
+
+	struct TimeFunction : public Traceable<TimeFunction>
+	{
+		Handle<FunctionBase> func;
+		float t;
+		float T;
+		ID uid;
+
+		void Trace(Tracer* tracer)
+		{
+			tracer->Trace(func);
+		}
+
+		TimeFunction() {};
+		TimeFunction(const Handle<FunctionBase>& func, float t, float T, ID uid)
+			: func(func), t(t), T(T), uid(uid) {};
+	};
 
 	Engine* m_engine = nullptr;
 	Input* m_input = nullptr;
@@ -88,11 +117,19 @@ protected:
 	// for defer delete
 	Array<Handle<GameObject2D>> m_trash;
 
+	UnorderedList<TimeFunction> m_timeouts;
+	UnorderedList<TimeFunction> m_intervals;
+
+	std::Vector<ID> m_timeoutRemoves;
+	std::Vector<ID> m_intervalRemoves;
+
 	std::Vector<GameObject2D*> m_removes;
 
 	std::Vector<GameObject2D*> m_adds;
 
 	size_t m_uidCount = 0;
+	size_t m_timeHandleUIDCount = 0;
+	bool m_isProcessingTimeHandles = false;
 
 private:
 	ID m_oldStableValue = 0;
@@ -106,6 +143,8 @@ protected:
 	{
 		tracer->Trace(m_tempObjects);
 		tracer->Trace(m_trash);
+		tracer->Trace(m_timeouts);
+		tracer->Trace(m_intervals);
 	}
 
 public:
@@ -128,6 +167,8 @@ private:
 	{
 		return id & TEMP_OBJECT_ID_UNMASK;
 	}
+
+	void ProcessTimeoutAndInterval();
 
 	//bool IsDynamicObject(GameObject2D* obj);
 
@@ -199,6 +240,61 @@ public:
 
 	// query dynamic objects
 	virtual void AABBDynamicQueryAARect(const AARect& aaRect, Scene2DQuerySession* session) = 0;
+
+public:
+	// t in sec
+	template <typename Fn, typename... Args>
+	inline auto SetInterval(float t, Fn fn, Args&&... args)
+	{
+		auto func = MakeAsyncFunction(fn, std::forward<Args>(args)...);
+		auto uid = ++m_timeHandleUIDCount;
+		auto id = m_intervals.Add({ Handle<FunctionBase>(func),0.0f,t,uid });
+		return TimeHandle(id, uid);
+	}
+
+	// t in sec
+	template <typename Fn, typename... Args>
+	inline auto SetTimeout(float t, Fn fn, Args&&... args)
+	{
+		auto func = MakeAsyncFunction(fn, std::forward<Args>(args)...);
+		auto uid = ++m_timeHandleUIDCount;
+		auto id = m_timeouts.Add({ Handle<FunctionBase>(func),t,0.0f,uid });
+		return TimeHandle(id, uid);
+	}
+
+	inline void ClearInterval(const TimeHandle& handle)
+	{
+		auto& fn = m_intervals.Get(handle.id);
+		if (fn.uid == handle.uid)
+		{
+			fn.uid = 0;
+			if (m_isProcessingTimeHandles)
+			{
+				m_intervalRemoves.push_back(handle.id);
+			}
+			else
+			{
+				m_intervals.Remove(handle.id);
+			}
+		}
+	}
+
+	inline void ClearTimeout(const TimeHandle& handle)
+	{
+		auto& fn = m_timeouts.Get(handle.id);
+		if (fn.uid == handle.uid)
+		{
+			fn.uid = 0;
+			if (m_isProcessingTimeHandles)
+			{
+				m_timeoutRemoves.push_back(handle.id);
+			}
+			else
+			{
+				m_timeouts.Remove(handle.id);
+			}
+		}
+	}
 
 public:
 	inline auto GetRenderingSystem()

@@ -75,12 +75,27 @@ public:
 		m_signs.clear();
 	}
 
+	inline auto& Get(ID id)
+	{
+		return m_elms[((Sign*)id)->index];
+	}
+
 	template<typename Func>
 	inline void ForEach(Func callback)
 	{
 		for (auto& v : m_elms)
 		{
 			callback(v);
+		}
+	}
+
+	template<typename Func>
+	inline void ForEachWithID(Func callback)
+	{
+		size_t id = 0;
+		for (auto& v : m_elms)
+		{
+			callback(v, id++);
 		}
 	}
 

@@ -252,7 +252,7 @@ public:
 
 	inline void operator=(T* ptr)
 	{
-		if constexpr (std::is_final_v<T>)
+		if constexpr (std::is_final_v<T> || !std::is_polymorphic_v<T>)
 		{
 			//assert(dynamic_cast<void*>(ptr) == ptr);
 			Set((byte*)ptr, ptr);

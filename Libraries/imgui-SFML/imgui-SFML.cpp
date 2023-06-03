@@ -292,8 +292,8 @@ bool Init(sf::Window& window, const sf::Vector2f& displaySize, bool loadDefaultF
     io.DisplaySize = ImVec2(displaySize.x, displaySize.y);
 
     // clipboard
-    io.SetClipboardTextFn = setClipboardText;
-    io.GetClipboardTextFn = getClipboardText;
+    //io.SetClipboardTextFn = setClipboardText;
+    //io.GetClipboardTextFn = getClipboardText;
 
     // load mouse cursors
     loadMouseCursor(ImGuiMouseCursor_Arrow, sf::Cursor::Arrow);
