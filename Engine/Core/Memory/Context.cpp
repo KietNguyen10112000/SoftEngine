@@ -121,6 +121,11 @@ void gc::Context::Mark()
 						state.blockEnd = handle->GetUsableMemAddress() + size * traceTable->instanceSize;
 					}*/
 					auto size = traceTable->GetDynamicArraySize(state.ppptr);
+					if (size == 0) 
+					{
+						m_stack.pop_back();
+						continue;
+					}
 					state.blockEnd = handle->GetUsableMemAddress() + size * traceTable->instanceSize;
 				}
 				else

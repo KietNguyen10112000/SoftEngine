@@ -3,8 +3,10 @@
 #include "SubSystems2D/SubSystem2D.h"
 
 #include "Objects2D/Scene2D/Scene2D.h"
+#include "Objects2D/Rendering/Sprite.h"
 
 #include "SFML/Graphics.hpp"
+
 
 NAMESPACE_BEGIN
 
@@ -55,6 +57,21 @@ public:
 	{
 		m_bindedWindow->draw(sprite);
 	}
+
+	inline void DrawSprite(Sprite& sprite)
+	{
+		auto& originTransform = sprite.Transform();
+
+		auto& scale = originTransform.GetScale();
+		auto& rotation = originTransform.GetRotation();
+		auto& translation = originTransform.GetTranslation();
+
+		auto& sfSprite = sprite.SFSprite();
+		sfSprite.setPosition(reinterpret_cast<const sf::Vector2f&>(translation));
+		sfSprite.setRotation(ToDegrees(rotation));
+		sfSprite.setScale(reinterpret_cast<const sf::Vector2f&>(scale));
+		DrawSprite(sfSprite);
+	};
 
 };
 

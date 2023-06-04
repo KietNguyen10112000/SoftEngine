@@ -5,8 +5,42 @@
 #include "Core/Memory/Trace.h"
 
 #include <tuple>
+#include <type_traits>
 
 NAMESPACE_BEGIN
+
+namespace tupleHelper
+{
+    template <typename sizeT>
+    constexpr sizeT align(sizeT size, sizeT alignment) {
+        const auto diff = alignment ? size % alignment : 0;
+        return size + (diff ? alignment - diff : 0);
+    }
+
+    template <size_t Index, typename TupleT>
+    struct offset_of;
+
+    template <typename TupleT>
+    struct offset_of<0, TupleT> {
+        enum : size_t { value = 0, };
+    };
+
+    template <typename TupleT>
+    struct offset_of<1, TupleT> {
+        typedef typename std::tuple_element<0, TupleT>::type PrevType;
+        typedef typename std::tuple_element<1, TupleT>::type Type;
+        enum : size_t { value = align(offset_of<0, TupleT>::value + sizeof(PrevType), alignof(Type)) };
+    };
+
+    template <size_t Index, typename TupleT>
+    struct offset_of {
+        typedef typename std::tuple_element<Index - 1, TupleT>::type PrevType;
+        typedef typename std::tuple_element<Index, TupleT>::type Type;
+        enum : size_t {
+            value = align(offset_of<Index - 1, TupleT>::value + sizeof(PrevType), alignof(Type)),
+        };
+    };
+}
 
 #define DEFINE_TRACE(_args, prevExtCode, postExtCode)                                   \
 template <typename _Elm>                                                                \
@@ -26,13 +60,13 @@ void Trace(Tracer* tracer)                                                      
 }
 
 
-#define DEFINE_TRACE2(offsetAdder, prevExtCode, postExtCode)                                                        \
+#define DEFINE_TRACE2(beginAddr, prevExtCode, postExtCode)                                                          \
 template<size_t I = 0, size_t OFFSET = 0, typename... Tp>                                                           \
 void traceToElm(Tracer* tracer, std::tuple<Tp...>& t) {                                                             \
     using _Ttype = typename std::remove_reference<typename std::tuple_element<I, std::tuple<Tp...>>::type>::type;   \
-    TraceToElm(tracer, (_Ttype*)((byte*)this + offsetAdder + OFFSET));                                              \
+    TraceToElm(tracer, (_Ttype*)((byte*)beginAddr + OFFSET));                                                       \
     if constexpr (I + 1 != sizeof...(Tp))                                                                           \
-        traceToElm<I + 1, OFFSET + sizeof(_Ttype)>(tracer, t);                                                      \
+        traceToElm<I + 1, OFFSET + tupleHelper::offset_of<I, std::tuple<Tp...>>::value>(tracer, t);                 \
 }                                                                                                                   \
 template <typename _Elm>                                                                                            \
 void TraceToElm(Tracer* tracer, _Elm* e)                                                                            \
@@ -48,6 +82,11 @@ void Trace(Tracer* tracer)                                                      
     prevExtCode;                                                                                                    \
     if constexpr (std::tuple_size<decltype(m_args)>::value != 0) traceToElm(tracer, m_args);                        \
 }
+
+
+#define PLAIN_TYPE(t) t
+
+#define PLAIN_TYPE2(t) std::remove_reference_t<std::remove_cv_t<t>>
 
 namespace helper
 {
@@ -76,11 +115,11 @@ private:
     std::tuple<_Ts...> m_args;
 
 public:
-    Function(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
+    Function(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<PLAIN_TYPE(_Ts)>(args)...) {};
 
 private:
     //DEFINE_TRACE(m_args);
-    DEFINE_TRACE2(sizeof(m_fn));
+    DEFINE_TRACE2(&m_args);
 
     template <int... Is>
     void func(std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -120,11 +159,11 @@ private:
         std::tuple<_Ts...> m_args;
 
     public:
-        Callback(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
+        Callback(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward< PLAIN_TYPE(_Ts)>(args)...) {};
 
     private:
         //DEFINE_TRACE(m_args);
-        DEFINE_TRACE2(sizeof(m_fn));
+        DEFINE_TRACE2(&m_args);
 
         template <int... Is>
         void func(R r, std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -155,7 +194,8 @@ private:
 
 public:
     AsyncFunction(Fn fn, Args&&... args)
-        : m_fn(fn), m_args(std::forward<Args>(args)...) {};
+        : m_fn(fn), m_args(std::forward<PLAIN_TYPE(Args)>(args)...) {};
+    AsyncFunction(Fn fn, const Args&... args) : m_fn(fn), m_args(args...) {};
 
 private:
     /*DEFINE_TRACE(
@@ -164,7 +204,7 @@ private:
     );*/
 
     DEFINE_TRACE2(
-        sizeof(m_callback) + sizeof(m_fn),
+        &m_args,
         tracer->Trace(m_callback);
     );
 
@@ -207,7 +247,8 @@ private:
     std::tuple<_Ts...> m_args;
 
 public:
-    AsyncFunctionVoidReturn(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
+    //AsyncFunctionVoidReturn(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<PLAIN_TYPE(_Ts)>(args)...) {};
+    AsyncFunctionVoidReturn(_Fn fn, const _Ts&... args) : m_fn(fn), m_args(args...) {};
 
 private:
     /*DEFINE_TRACE(
@@ -216,16 +257,16 @@ private:
     );*/
 
     DEFINE_TRACE2(
-        sizeof(m_callback) + sizeof(m_fn),
+        &m_args,
         tracer->Trace(m_callback);
     );
 
     //template<size_t I = 0, size_t OFFSET = 0, typename... Tp>
     //void traceToElm(Tracer* tracer, std::tuple<Tp...>& t) {
     //    using _Ttype = typename std::remove_reference<typename std::tuple_element<I, std::tuple<Tp...>>::type>::type;
-    //    TraceToElm(tracer, (_Ttype*)((byte*)this + sizeof(m_callback) + sizeof(m_fn) + OFFSET));
+    //    TraceToElm(tracer, (_Ttype*)((byte*)&m_args + OFFSET));
     //    if constexpr (I + 1 != sizeof...(Tp))
-    //        traceToElm<I + 1, OFFSET + sizeof(_Ttype)>(tracer, t);
+    //        traceToElm<I + 1, OFFSET + tupleHelper::offset_of<I, std::tuple<Tp...>>::value>(tracer, t);
     //}
 
     //template <typename _Elm>
@@ -292,11 +333,11 @@ private:
         std::tuple<_Ts...> m_args;
 
     public:
-        Callback(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<_Ts>(args)...) {};
+        Callback(_Fn fn, _Ts&&... args) : m_fn(fn), m_args(std::forward<PLAIN_TYPE(_Ts)>(args)...) {};
 
     private:
         //DEFINE_TRACE(m_args);
-        DEFINE_TRACE2(sizeof(m_fn));
+        DEFINE_TRACE2(&m_args);
 
         template <int... Is>
         void func(R r, std::tuple<_Ts...>& tup, helper::index<Is...>)
@@ -328,7 +369,7 @@ private:
 
 public:
     AsyncMemberFunction(T* obj, Fn fn, Args&&... args)
-        : m_obj(obj), m_fn(fn), m_args(std::forward<Args>(args)...) {};
+        : m_obj(obj), m_fn(fn), m_args(std::forward<PLAIN_TYPE(Args)>(args)...) {};
 
 private:
     /*DEFINE_TRACE(
@@ -384,7 +425,7 @@ private:
 
 public:
     AsyncMemberFunctionVoidReturn(T* obj, Fn fn, Args&&... args)
-        : m_obj(obj), m_fn(fn), m_args(std::forward<Args>(args)...) {};
+        : m_obj(obj), m_fn(fn), m_args(std::forward<PLAIN_TYPE(Args)>(args)...) {};
 
 private:
     /*DEFINE_TRACE(
@@ -447,18 +488,18 @@ auto MakeAsyncMemberFunction(T* obj, void (T::* fn)(Args...), Args&&... args)
 
 // to capture variable, using args
 template <typename Fn, typename... Args>
-auto MakeAsyncFunction(Fn fn, Args&&... args)
+auto MakeAsyncFunction(Fn fn, const Args&... args)
 {
     using return_type = std::invoke_result_t<Fn, Args...>;
     //return_type (*_fn)(Args...) = fn;
 
     if constexpr (std::is_same_v<return_type, void>)
     {
-        return mheap::New<AsyncFunctionVoidReturn<Fn, Args...>>(fn, std::forward<Args>(args)...);
+        return mheap::New<AsyncFunctionVoidReturn<Fn, PLAIN_TYPE2(Args)...>>(fn, args...);
     }
     else
     {
-        return mheap::New<AsyncFunction<Fn, return_type, Args...>>(fn, std::forward<Args>(args)...);
+        return mheap::New<AsyncFunction<Fn, return_type, PLAIN_TYPE2(Args)...>>(fn, args...);
     }
 }
 

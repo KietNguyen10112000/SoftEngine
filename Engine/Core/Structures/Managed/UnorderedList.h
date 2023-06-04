@@ -7,7 +7,7 @@
 NAMESPACE_BEGIN
 
 template<typename T, size_t GROWTH_SIZE = 128>
-class UnorderedList : Traceable<UnorderedList<T>>
+class UnorderedList : Traceable<UnorderedList<T, GROWTH_SIZE>>
 {
 private:
 	struct Sign
@@ -95,7 +95,7 @@ public:
 		size_t id = 0;
 		for (auto& v : m_elms)
 		{
-			callback(v, id++);
+			callback(v, (ID)m_signs[id++]);
 		}
 	}
 
