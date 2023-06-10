@@ -147,11 +147,18 @@ public:
 	inline auto& GetDimensions() const { return m_dimensions; };
 	inline auto GetCenter() const { return m_topLeft + m_dimensions / 2.0f; };
 
+	inline auto Center() const { return GetCenter(); };
+
 	inline auto& GetTopLeft() const { return m_topLeft; };
 
 	inline AARect GetLooser(const Vec2& gap)
 	{
 		return AARect(GetTopLeft() - gap / 2.0f, GetDimensions() + gap);
+	}
+
+	inline float Perimeter() const
+	{
+		return (m_dimensions.x + m_dimensions.y) * 2.0f;
 	}
 };
 

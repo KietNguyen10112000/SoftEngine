@@ -13,6 +13,7 @@ protected:
 
 	std::Vector<Sprite> m_sprites;
 	size_t m_currentId = INVALID_ID;
+	bool m_clearedAABB = false;
 
 public:
 	inline SpritesRenderer(size_t capacity = 16)
@@ -52,6 +53,11 @@ public:
 		return m_sprites[id];
 	}
 
+	inline void ClearAABB()
+	{
+		m_clearedAABB = true;
+	}
+
 	virtual void Render(RenderingSystem2D* rdr) override
 	{
 		if (m_currentId == INVALID_ID)
@@ -65,7 +71,7 @@ public:
 
 	virtual AARect GetLocalAABB() override
 	{
-		if (m_currentId == INVALID_ID)
+		if (m_clearedAABB || m_currentId == INVALID_ID)
 		{
 			return {};
 		}

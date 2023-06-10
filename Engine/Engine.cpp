@@ -34,6 +34,7 @@
 
 #include "Objects2D/Physics/Colliders/AARectCollider.h"
 #include "Objects2D/Physics/Colliders/RectCollider.h"
+#include "Objects2D/Physics/Colliders/CircleCollider.h"
 
 #include "Objects2D/Scene2D/UniqueGridScene2D.h"
 #include "Objects2D/GameObject2D.h"

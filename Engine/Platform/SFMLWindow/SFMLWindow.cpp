@@ -173,7 +173,7 @@ public:
             break;
 
         case WM_RBUTTONUP:
-            input->UpKey(KEYBOARD::MOUSE_MID);
+            input->UpKey(KEYBOARD::MOUSE_RIGHT);
             break;
 
             /*case WM_RBUTTONDBLCLK:

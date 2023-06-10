@@ -31,6 +31,7 @@ public:
 
 
 	friend class PhysicsSystem2D;
+	friend class ScriptSystem2D;
 
 private:
 	ID m_id = INVALID_ID;
@@ -43,6 +44,8 @@ protected:
 	size_t m_lastBoardPhaseIterationCount = 0;
 	std::Vector<Collision2DPair*> m_collisionPairs[2];
 	size_t m_collisionPairsId = 0;
+
+	size_t m_collisionPairEnterCount = 0;
 
 public:
 	inline Physics2D(TYPE type,
@@ -90,6 +93,11 @@ public:
 	inline auto& CollisionPairs()
 	{
 		return m_collisionPairs[m_collisionPairsId];
+	}
+
+	inline auto& PrevCollisionPairs()
+	{
+		return m_collisionPairs[(m_collisionPairsId + 1) % 2];
 	}
 
 	inline auto& Collider()

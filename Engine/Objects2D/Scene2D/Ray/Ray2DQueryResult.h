@@ -28,6 +28,17 @@ struct Ray2DQueryResult
 	{
 		points.clear();
 	}
+
+	inline void StoreIfSameSide(const Ray2D& ray, const Vec2& v)
+	{
+		auto d = v - ray.begin;
+		auto length2 = d.Length2();
+		// same side, length < ray's length
+		if (d.Dot(ray.direction) > 0 && length2 <= ray.length2)
+		{
+			points.push_back({ v, length2 });
+		}
+	}
 };
 
 NAMESPACE_END

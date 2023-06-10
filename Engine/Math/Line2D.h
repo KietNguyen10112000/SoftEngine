@@ -26,6 +26,8 @@ public:
 		float c;
 	};
 
+	inline Line2D() : normal(0,0), c(0) {};
+
 	inline Line2D(const Vec2& point, const Vec2& normal)
 	{
 		m_normal = normal.Normal();
@@ -71,6 +73,11 @@ public:
 	inline void InitializeFromPoints(const Vec2& p1, const Vec2& p2)
 	{
 		Initialize(p1, Vec2(p2.y - p1.y, p1.x - p2.x));
+	}
+
+	inline float Distance(const Vec2& p)
+	{
+		return std::abs(ValueOf(p));
 	}
 };
 

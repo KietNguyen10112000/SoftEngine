@@ -205,7 +205,7 @@ Return:
 }
 
 template <typename _Rect>
-bool RectRayQuery(const _Rect& _rect, const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output)
+void RectRayQuery(const _Rect& _rect, const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output)
 {
 	auto rect = _rect;
 	rect.Transform(selfTransform);
@@ -223,7 +223,7 @@ bool RectRayQuery(const _Rect& _rect, const Mat3& selfTransform, Ray2D& ray, Ray
 	Line2D lineRay = Line2D::FromPointAndDirection(ray.begin, ray.direction);
 
 	Vec2 intersectPoint;
-	auto oriSize = output.points.size();
+	//auto oriSize = output.points.size();
 	for (auto& edge : edges)
 	{
 		if (lineRay.Intersect(edge, intersectPoint))
@@ -238,7 +238,69 @@ bool RectRayQuery(const _Rect& _rect, const Mat3& selfTransform, Ray2D& ray, Ray
 		}
 	}
 
-	return output.points.size() != oriSize;
+	//return output.points.size() != oriSize;
+}
+
+// AB is from rect to circle
+template <typename _Rect>
+inline void RectCircleCollision(const _Rect& rect, const Circle& circle, Collision2DResult& result)
+{
+	Vec2 temp[4];
+	rect.GetPoints(temp);
+
+	float d1, d2, d3, d4;
+	Line2D l1, l2, l3, l4;
+
+	bool intersect =
+			circle.Intersect(temp[0], temp[1], l1, d1)
+		||	circle.Intersect(temp[0], temp[2], l2, d2)
+		||	circle.Intersect(temp[3], temp[1], l3, d3)
+		||	circle.Intersect(temp[3], temp[2], l4, d4);
+
+	intersect = intersect || (std::abs(d1 + d2 + d3 + d4 - rect.Perimeter()) < 0.00001f);
+
+	if (!intersect)
+	{
+		result.penetration = 0;
+		return;
+	}
+
+	Line2D edges[4] = {
+		l1,l2,l3,l4
+	};
+
+	float minDist = INFINITY;
+	float sideCircle = 0;
+	size_t minEIdx = -1;
+	for (size_t i = 0; i < 4; i++)
+	{
+		auto v = edges[i].ValueOf(circle.m_center);
+		auto dist = std::abs(v);
+		if (minDist > dist)
+		{
+			minEIdx = i;
+			minDist = dist;
+			sideCircle = v;
+		}
+	}
+
+	assert(minEIdx != -1);
+
+	auto rectCenter = rect.Center();
+	
+	auto& minEdge = edges[minEIdx];
+	auto rectCenterSide = minEdge.ValueOf(rectCenter);
+
+	if (rectCenterSide * sideCircle > 0)
+	{
+		result.penetration = minDist;
+	}
+	else
+	{
+		result.penetration = circle.m_radius - minDist;
+	}
+
+	result.normal = (-rectCenterSide / std::abs(rectCenterSide)) * minEdge.normal;
 }
 
 NAMESPACE_END

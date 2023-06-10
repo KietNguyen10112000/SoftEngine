@@ -18,5 +18,6 @@
 #include "Transform2D.h"
 
 #include "Line2D.h"
+#include "Circle.h"
 
 using namespace math;

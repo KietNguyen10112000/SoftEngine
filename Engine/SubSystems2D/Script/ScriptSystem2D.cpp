@@ -45,21 +45,77 @@ void ScriptSystem2D::PrevIteration(float dt)
 
 void ScriptSystem2D::Iteration(float dt)
 {
+	auto onCollideVtbIdx		= Script2DMeta::Get().onCollideVtbIdx;
+	auto onCollisionEnterVtbIdx = Script2DMeta::Get().onCollisionEnterVtbIdx;
+	auto onCollisionExitVtbIdx	= Script2DMeta::Get().onCollisionExitVtbIdx;
+
 	for (auto& script : m_onCollide)
 	{
 		auto physics = script->GetObject()->GetComponentRaw<Physics2D>();
 		auto& pairs = physics->CollisionPairs();
-		for (auto& pair : pairs)
-		{
-			auto another = pair->GetAnotherOf(physics);
-			if (another && pair->result.HasCollision())
-			{
-				script->OnCollide(another->GetObject(), *pair);
+		auto& prevPairs = physics->PrevCollisionPairs();
+		auto& curPairs = pairs;
 
-				if (script->GetObject()->IsFloating())
+		if (script->m_overriddenVtbIdx.test(onCollideVtbIdx))
+		{
+			for (auto& pair : pairs)
+			{
+				auto another = pair->GetAnotherOf(physics);
+				if (another && pair->result.HasCollision())
 				{
-					break;
+					script->OnCollide(another->GetObject(), *pair);
+
+					if (script->GetObject()->IsFloating())
+					{
+						break;
+					}
 				}
+			}
+		}
+		
+		if (script->m_overriddenVtbIdx.test(onCollisionEnterVtbIdx)
+			|| script->m_overriddenVtbIdx.test(onCollideVtbIdx))
+		{
+			for (auto& pair : prevPairs)
+			{
+				if (!pair->result.HasCollision()) continue;
+
+				auto another = pair->GetAnotherOf(physics);
+				another->m_collisionPairEnterCount = 1;
+			}
+
+			for (auto& pair : curPairs)
+			{
+				if (!pair->result.HasCollision()) continue;
+
+				auto another = pair->GetAnotherOf(physics);
+				if (another->m_collisionPairEnterCount != 1)
+				{
+					script->OnCollisionEnter(another->GetObject(), *pair);
+					if (script->GetObject()->IsFloating())
+					{
+						break;
+					}
+				}
+
+				another->m_collisionPairEnterCount = 0;
+			}
+
+			for (auto& pair : prevPairs)
+			{
+				if (!pair->result.HasCollision()) continue;
+
+				auto another = pair->GetAnotherOf(physics);
+				if (another->m_collisionPairEnterCount == 1)
+				{
+					script->OnCollisionExit(another->GetObject(), *pair);
+					if (script->GetObject()->IsFloating())
+					{
+						break;
+					}
+				}
+
+				another->m_collisionPairEnterCount = 0;
 			}
 		}
 	}
@@ -103,7 +159,9 @@ void ScriptSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 	}
 
 	//if (IsOverridden<&Script2D::OnCollide, Script2D>(g_originScriptVTable, script))
-	if (script->m_overriddenVtbIdx.test(Script2DMeta::Get().onCollideVtbIdx))
+	if (script->m_overriddenVtbIdx.test(Script2DMeta::Get().onCollideVtbIdx)
+		|| script->m_overriddenVtbIdx.test(Script2DMeta::Get().onCollisionEnterVtbIdx)
+		|| script->m_overriddenVtbIdx.test(Script2DMeta::Get().onCollisionExitVtbIdx))
 	{
 		assert(script->m_onCollideId == INVALID_ID && "script added twices");
 		script->m_onCollideId = m_onCollide.size();
@@ -172,9 +230,11 @@ Ray2DQueryInfo* ScriptSystem2D::RayQuery(const Vec2& begin, const Vec2& end, siz
 		{
 			auto& collider = comp->Collider();
 			auto beginIdx = m_rayQueryInfo.points.size();	
-			if (collider->RayQuery(object->GlobalTransformMatrix(), ray, m_rayQueryInfo))
+			collider->RayQuery(object->GlobalTransformMatrix(), ray, m_rayQueryInfo);
+			auto endIdx = m_rayQueryInfo.points.size();
+
+			if (beginIdx != endIdx)
 			{
-				auto endIdx = m_rayQueryInfo.points.size();
 				m_rayQueryInfo.objectResult.push_back({ object, beginIdx, endIdx });
 			}
 		}

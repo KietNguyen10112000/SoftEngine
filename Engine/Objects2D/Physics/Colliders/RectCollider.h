@@ -24,6 +24,21 @@ public:
 	// this collider is A, and the another is B
 	virtual void Collide(
 		const Mat3& selfTransform,
+		const Circle& circle,
+		const Mat3& circleTransform,
+		Collision2DResult& output
+	) override {
+		auto A = m_rect;
+		A.Transform(selfTransform);
+
+		auto B = circle;
+		B.Transform(circleTransform);
+
+		RectCircleCollision(A, B, output);
+	}
+
+	virtual void Collide(
+		const Mat3& selfTransform,
 		const AARect& aaRect,
 		const Mat3& aaRectTransform,
 		Collision2DResult& output
@@ -81,9 +96,9 @@ public:
 		}
 	}
 
-	virtual bool RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) override
+	virtual void RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) override
 	{
-		return RectRayQuery(m_rect, selfTransform, ray, output);
+		RectRayQuery(m_rect, selfTransform, ray, output);
 	}
 
 };

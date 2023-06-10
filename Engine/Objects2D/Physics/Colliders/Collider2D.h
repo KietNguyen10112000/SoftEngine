@@ -20,6 +20,13 @@ public:
 
 	// this collider is A, and the another is B
 	virtual void Collide(
+		const Mat3& selfTransform,
+		const Circle& circle,
+		const Mat3& circleTransform,
+		Collision2DResult& output
+	) = 0;
+
+	virtual void Collide(
 		const Mat3& selfTransform, 
 		const AARect& rect, 
 		const Mat3& rectTransform, 
@@ -67,7 +74,7 @@ public:
 		const Mat3& anotherTransform
 	) = 0;
 
-	virtual bool RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) = 0;
+	virtual void RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) = 0;
 
 };
 

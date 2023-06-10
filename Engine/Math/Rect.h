@@ -182,6 +182,11 @@ public:
 		return *this;
 	}
 
+	inline float Perimeter() const
+	{
+		return (m_vec1.Length() + m_vec2.Length()) * 2.0f;
+	}
+
 };
 
 using Rect = Rect2D;
