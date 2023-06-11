@@ -55,11 +55,12 @@ public:
 		return true;
 	}*/
 
-	inline bool Intersect(const Vec2& p1, const Vec2& p2, Line2D& outputLine, float& outputD) const
+	inline bool Intersect(const Vec2& p1, const Vec2& p2, Line2D& lp1p2, float& outputD, float& outputOverlap) const
 	{
-		outputLine = Line2D::FromPoints(p1, p2);
+		//outputLine = Line2D::FromPoints(p1, p2);
+		lp1p2 = Line2D::FromPoints(p1, p2);
 		auto d = (p2 - p1).Normalize();
-		auto& line = outputLine;
+		auto& line = lp1p2;
 
 		auto side = line.ValueOf(m_center);
 		outputD = std::abs(side);
@@ -95,7 +96,8 @@ public:
 		auto c2 = (v3 + v4) / 2.0f;
 		auto e2 = std::abs(v3 - v4) / 2.0f;
 
-		if (e1 + e2 - std::abs(c1 - c2) < 0)
+		outputOverlap = e1 + e2 - std::abs(c1 - c2);
+		if (outputOverlap < 0)
 		{
 			return false;
 		}

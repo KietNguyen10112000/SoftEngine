@@ -13,11 +13,42 @@ public:
 		KINEMATIC
 	};
 
-	const TYPE m_BODY_TYPE;
-
-	RigidBody2D(TYPE type, const SharedPtr<Collider2D>& collider) : Body2D(collider), m_BODY_TYPE(type)
+	struct BODY_DESC
 	{
+		size_t	m = 1;
+		Vec2	v = {};
+	};
 
+	struct KINEMATIC_DESC : public BODY_DESC
+	{
+		int priority = 0;
+	};
+
+	struct DYNAMIC_DESC : public BODY_DESC
+	{
+		int padd = 0;
+	};
+
+	struct DESC
+	{
+		TYPE type;
+		union
+		{
+			KINEMATIC_DESC kinematic = {};
+			DYNAMIC_DESC dynamic;
+		};
+	};
+
+	DESC m_desc = {};
+
+public:
+	RigidBody2D(const TYPE type, const SharedPtr<Collider2D>& collider) : Body2D(collider)
+	{
+		m_desc.type = type;
+	}
+
+	RigidBody2D(DESC desc, const SharedPtr<Collider2D>& collider) : Body2D(collider), m_desc(desc)
+	{
 	}
 
 	inline void ReactKinematic()
@@ -65,11 +96,26 @@ public:
 			// object doesn't move, nothing happend
 			return;
 		}
+
+		auto& collisionPairs = CollisionPairs();
+		for (auto& pair : collisionPairs)
+		{
+			if (!pair->result.HasCollision()) continue;
+
+			auto another = pair->GetAnotherOf(this);
+
+			Collider()->AdjustSelf(
+				obj->Transform(),
+				obj->Transform().ToTransformMatrix(),
+				another->Collider().get(),
+				another->GetObject()->GlobalTransformMatrix()
+			);
+		}
 	}
 
 	virtual void ReactCollisionPairs() override
 	{
-		switch (m_BODY_TYPE)
+		switch (m_desc.type)
 		{
 		case DYNAMIC:
 			ReactDynamic();

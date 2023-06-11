@@ -35,9 +35,17 @@ public:
 
 		auto AB = (B.m_center - A.m_center);
 		auto len = AB.Length();
-		AB /= len;
 
-		if (A.m_radius + B.m_radius > len)
+		if (len == 0 || std::isnan(len))
+		{
+			AB = { 0,1 };
+		}
+		else
+		{
+			AB /= len;
+		}
+
+		if (A.m_radius + B.m_radius <= len)
 		{
 			output.penetration = 0;
 			return;
@@ -98,7 +106,13 @@ public:
 		Collider2D* another,
 		const Mat3& anotherTransform
 	) override {
+		Collision2DResult collision = {};
+		another->Collide(anotherTransform, m_circle, selfTransformMat, collision);
 
+		if (collision.HasCollision())
+		{
+			selfTransform.Translation() += collision.AB * collision.penetration;
+		}
 	};
 
 	virtual void RayQuery(const Mat3& selfTransform, Ray2D& ray, Ray2DQueryResult& output) override 
