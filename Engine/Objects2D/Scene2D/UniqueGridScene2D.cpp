@@ -293,6 +293,18 @@ void UniqueGridScene2D::AABBStaticQueryAARect(const AARect& aaRect, Scene2DQuery
 	ret.insert(ret.end(), m_outsideStaticObjects.begin(), m_outsideStaticObjects.end());
 	ss->m_begin = ret.data();
 	ss->m_end = ret.data() + ret.size();
+
+#ifdef _DEBUG
+	for (auto& e : ret)
+	{
+		assert(e->m_queried == 0);
+		e->m_queried = 1;
+	}
+	for (auto& e : ret)
+	{
+		e->m_queried = 0;
+	}
+#endif // _DEBUG
 }
 
 void UniqueGridScene2D::AABBDynamicQueryAARect(const AARect& aaRect, Scene2DQuerySession* session)
@@ -351,6 +363,19 @@ void UniqueGridScene2D::AABBDynamicQueryAARect(const AARect& aaRect, Scene2DQuer
 	ret.insert(ret.end(), m_outsideDynamicObjects.begin(), m_outsideDynamicObjects.end());
 	ss->m_begin = ret.data();
 	ss->m_end = ret.data() + ret.size();
+
+#ifdef _DEBUG
+	for (auto& e : ret)
+	{
+		assert(e->m_queried == 0);
+		e->m_queried = 1;
+	}
+	for (auto& e : ret)
+	{
+		e->m_queried = 0;
+	}
+#endif // _DEBUG
+
 }
 
 NAMESPACE_END

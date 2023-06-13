@@ -81,6 +81,8 @@ void ScriptSystem2D::Iteration(float dt)
 				if (!pair->result.HasCollision()) continue;
 
 				auto another = pair->GetAnotherOf(physics);
+				if (!another) continue;
+				assert(another->m_collisionPairEnterCount == 0);
 				another->m_collisionPairEnterCount = 1;
 			}
 
@@ -89,12 +91,16 @@ void ScriptSystem2D::Iteration(float dt)
 				if (!pair->result.HasCollision()) continue;
 
 				auto another = pair->GetAnotherOf(physics);
+
+				if (!another) continue;
+
 				if (another->m_collisionPairEnterCount != 1)
 				{
 					script->OnCollisionEnter(another->GetObject(), *pair);
 					if (script->GetObject()->IsFloating())
 					{
-						break;
+						another->m_collisionPairEnterCount = 0;
+						continue;
 					}
 				}
 
@@ -106,12 +112,14 @@ void ScriptSystem2D::Iteration(float dt)
 				if (!pair->result.HasCollision()) continue;
 
 				auto another = pair->GetAnotherOf(physics);
+				if (!another) continue;
 				if (another->m_collisionPairEnterCount == 1)
 				{
 					script->OnCollisionExit(another->GetObject(), *pair);
 					if (script->GetObject()->IsFloating())
 					{
-						break;
+						another->m_collisionPairEnterCount = 0;
+						continue;
 					}
 				}
 

@@ -100,6 +100,7 @@ void PhysicsSystem2D::BoardPhase()
 
 		m_boardPhaseStack.push_back(physics);
 		//physics->m_lastBoardPhaseIterationCount = m_iterationCount;
+		physics->m_isInStackCount = m_iterationCount;
 		while (!m_boardPhaseStack.empty())
 		{
 			auto top = m_boardPhaseStack.back();
@@ -145,7 +146,12 @@ void PhysicsSystem2D::BoardPhase()
 					auto pair = AllocateCollisionPair(top, another, 2);
 					pairs.push_back(pair);
 					another->CollisionPairs().push_back(pair);
-					m_boardPhaseStack.push_back(another);
+
+					if (another->m_isInStackCount != m_iterationCount) 
+					{
+						m_boardPhaseStack.push_back(another);
+						another->m_isInStackCount = m_iterationCount;
+					}
 				}
 			}
 		}

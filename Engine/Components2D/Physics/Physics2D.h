@@ -42,6 +42,7 @@ protected:
 
 	size_t m_collisionMask = 1;
 	size_t m_lastBoardPhaseIterationCount = 0;
+	size_t m_isInStackCount = 0;
 	std::Vector<Collision2DPair*> m_collisionPairs[2];
 	size_t m_collisionPairsId = 0;
 
