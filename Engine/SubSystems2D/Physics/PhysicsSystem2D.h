@@ -59,6 +59,8 @@ protected:
 	Return:
 		ret->A = A;
 		ret->B = B;
+		ret->cacheA = A;
+		ret->cacheB = B;
 		ret->refCount = refCount;
 		ret->result.penetration = 0;
 

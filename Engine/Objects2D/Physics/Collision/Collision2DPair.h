@@ -17,6 +17,9 @@ struct Collision2DPair
 	Physics2D* A;
 	Physics2D* B;
 
+	Physics2D* cacheA;
+	Physics2D* cacheB;
+
 	Collision2DResult result;
 
 	inline bool IsA(Physics2D* physics)

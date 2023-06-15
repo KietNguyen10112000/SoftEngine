@@ -55,23 +55,6 @@ void ScriptSystem2D::Iteration(float dt)
 		auto& pairs = physics->CollisionPairs();
 		auto& prevPairs = physics->PrevCollisionPairs();
 		auto& curPairs = pairs;
-
-		if (script->m_overriddenVtbIdx.test(onCollideVtbIdx))
-		{
-			for (auto& pair : pairs)
-			{
-				auto another = pair->GetAnotherOf(physics);
-				if (another && pair->result.HasCollision())
-				{
-					script->OnCollide(another->GetObject(), *pair);
-
-					if (script->GetObject()->IsFloating())
-					{
-						break;
-					}
-				}
-			}
-		}
 		
 		if (script->m_overriddenVtbIdx.test(onCollisionEnterVtbIdx)
 			|| script->m_overriddenVtbIdx.test(onCollideVtbIdx))
@@ -81,7 +64,10 @@ void ScriptSystem2D::Iteration(float dt)
 				if (!pair->result.HasCollision()) continue;
 
 				auto another = pair->GetAnotherOf(physics);
-				if (!another) continue;
+
+				//if (!another) continue;
+				assert(another != nullptr);
+
 				assert(another->m_collisionPairEnterCount == 0);
 				another->m_collisionPairEnterCount = 1;
 			}
@@ -92,7 +78,19 @@ void ScriptSystem2D::Iteration(float dt)
 
 				auto another = pair->GetAnotherOf(physics);
 
-				if (!another) continue;
+				//if (!another) continue;
+				assert(another != nullptr);
+
+				if (another->m_collisionPairEnterCount == 1 && (pair->cacheA == 0 || pair->cacheB == 0))
+				{
+					pair->result.penetration = 0;
+					script->OnCollisionExit(another->GetObject(), *pair);
+					if (script->GetObject()->IsFloating())
+					{
+						another->m_collisionPairEnterCount = 0;
+						continue;
+					}
+				}
 
 				if (another->m_collisionPairEnterCount != 1)
 				{
@@ -112,7 +110,10 @@ void ScriptSystem2D::Iteration(float dt)
 				if (!pair->result.HasCollision()) continue;
 
 				auto another = pair->GetAnotherOf(physics);
-				if (!another) continue;
+
+				//if (!another) continue;
+				assert(another != nullptr);
+
 				if (another->m_collisionPairEnterCount == 1)
 				{
 					script->OnCollisionExit(another->GetObject(), *pair);
@@ -124,6 +125,26 @@ void ScriptSystem2D::Iteration(float dt)
 				}
 
 				another->m_collisionPairEnterCount = 0;
+			}
+		}
+
+		if (script->m_overriddenVtbIdx.test(onCollideVtbIdx))
+		{
+			for (auto& pair : pairs)
+			{
+				auto another = pair->GetAnotherOf(physics);
+
+				assert(another != nullptr);
+
+				if (/*another && */ pair->result.HasCollision())
+				{
+					script->OnCollide(another->GetObject(), *pair);
+
+					if (script->GetObject()->IsFloating())
+					{
+						break;
+					}
+				}
 			}
 		}
 	}

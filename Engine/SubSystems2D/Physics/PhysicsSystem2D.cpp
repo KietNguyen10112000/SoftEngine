@@ -64,13 +64,13 @@ void PhysicsSystem2D::RemoveSubSystemComponent(SubSystemComponent2D* comp)
 		{
 			if (p->A == physics)
 			{
-				p->A = 0;
+				p->cacheA = 0;
 			}
 			else
 			{
-				p->B = 0;
+				p->cacheB = 0;
 			}
-			p->result.penetration = 0;
+			//p->result.penetration = 0;
 		}
 		FreeCollisionPairs(pairs);
 	}

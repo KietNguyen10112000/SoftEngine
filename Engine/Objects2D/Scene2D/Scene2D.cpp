@@ -121,7 +121,6 @@ void Scene2D::PrevIteration()
 	//m_scriptSystem->PrevIteration(Dt());
 	//m_physicsSystem->PrevIteration(Dt());
 	//m_renderingSystem->PrevIteration(Dt());
-	m_trash.clear();
 	m_iterationCount++;
 	ReConstruct();
 
@@ -139,6 +138,8 @@ void Scene2D::Iteration()
 
 	m_scriptSystem->Iteration(Dt());
 	m_physicsSystem->Iteration(Dt());
+
+	m_trash.clear();
 
 	ProcessRemoveList();
 	ProcessAddList();

@@ -548,6 +548,10 @@ public:
 		return m_tag;
 	}
 	
+	inline const auto& Type() const
+	{
+		return m_type;
+	}
 };
 
 NAMESPACE_END
