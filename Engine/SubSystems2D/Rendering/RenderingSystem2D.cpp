@@ -120,6 +120,9 @@ void RenderingSystem2D::Iteration(float dt)
 			r->Render(this);
 	}
 
+	auto size = window.getSize();
+	window.setView(sf::View({ (float)size.x / 2.0f,(float)size.y / 2.0f }, { (float)size.x, (float)size.y }));
+
 	static sf::Clock deltaClock;
 
 	ImGui::SFML::Update(reinterpret_cast<sf::RenderWindow&>(window), deltaClock.restart());

@@ -77,6 +77,24 @@ protected:
 		rdr->DrawSprite(sprite);
 	};
 
+
+	inline static void RenderSprite(sf::RenderTexture& texture, sf::Sprite& sprite,
+		const Vec2& scale, float rotation, const Vec2& position)
+	{
+		sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(position));
+		sprite.setRotation(ToDegrees(rotation));
+		sprite.setScale(reinterpret_cast<const sf::Vector2f&>(scale));
+		texture.draw(sprite);
+	};
+
+	inline static void RenderSprite(sf::RenderTexture& texture, sf::Sprite& sprite,
+		float rotation, const Vec2& position)
+	{
+		sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(position));
+		sprite.setRotation(ToDegrees(rotation));
+		texture.draw(sprite);
+	};
+
 };
 
 NAMESPACE_END
