@@ -90,6 +90,8 @@ public:
 	virtual void ReactCollisionPairs() {};
 	virtual void ContributeTo(Body2D* body) {};
 
+	virtual void NarrowPhase(float dt) {};
+
 public:
 	inline auto& CollisionPairs()
 	{

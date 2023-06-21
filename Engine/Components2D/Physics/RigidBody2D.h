@@ -41,6 +41,9 @@ public:
 
 	DESC m_desc = {};
 
+	// total force
+	Vec2 m_F = { 0,0 };
+
 public:
 	RigidBody2D(const TYPE type, const SharedPtr<Collider2D>& collider) : Body2D(collider)
 	{
@@ -49,6 +52,31 @@ public:
 
 	RigidBody2D(DESC desc, const SharedPtr<Collider2D>& collider) : Body2D(collider), m_desc(desc)
 	{
+	}
+
+	inline void MoveByV(float dt)
+	{
+		//std::cout << std::abs(m_desc.dynamic.v.Length()) << "\n";
+		if (std::abs(m_desc.dynamic.v.Length()) > 0.001f)
+		{
+			// anti-force
+
+			auto aF = -m_desc.dynamic.v.Normal() * std::min(0.1f * m_desc.dynamic.m, 1.0f) * 500.0f;
+			m_F += aF;
+		}
+		else if (std::abs(m_F.Length()) < 0.001f)
+		{
+			m_desc.dynamic.v = Vec2::ZERO;
+		}
+
+		auto a = m_F / m_desc.dynamic.m;
+		m_desc.dynamic.v += a * dt;
+		if (m_desc.dynamic.v != Vec2::ZERO)
+		{
+			GetObject()->Position() = GetObject()->Position() + m_desc.dynamic.v * dt;
+		}
+
+		m_F = Vec2::ZERO;
 	}
 
 	inline void ReactKinematic()
@@ -91,11 +119,11 @@ public:
 
 		auto& cachedTransform = obj->GetCachedTransform();
 		auto& prevPosition = cachedTransform.GetTranslation();
-		if (prevPosition == obj->Position())
-		{
-			// object doesn't move, nothing happend
-			return;
-		}
+		//if (prevPosition == obj->Position())
+		//{
+		//	// object doesn't move, nothing happend
+		//	return;
+		//}
 
 		auto& collisionPairs = CollisionPairs();
 		for (auto& pair : collisionPairs)
@@ -124,6 +152,24 @@ public:
 			ReactKinematic();
 			break;
 		}
+		
+	}
+
+	virtual void NarrowPhase(float dt) override 
+	{
+		switch (m_desc.type)
+		{
+		case DYNAMIC:
+			MoveByV(dt);
+			break;
+		case KINEMATIC:
+			break;
+		}
+	}
+
+	virtual void ApplyForce(const Vec2& pos, const Vec2& F) override
+	{
+		m_F += F;
 	}
 
 };

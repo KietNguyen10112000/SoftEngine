@@ -175,6 +175,7 @@ void PhysicsSystem2D::SolveAllCollisionPairs()
 
 void PhysicsSystem2D::NarrowPhase()
 {
+	auto dt = m_scene->Dt();
 	SolveAllCollisionPairs();
 
 	for (auto& physics : m_boardPhaseEntries)
@@ -183,6 +184,11 @@ void PhysicsSystem2D::NarrowPhase()
 		{
 			physics->ReactCollisionPairs();
 		}
+	}
+
+	for (auto& physics : m_boardPhaseEntries)
+	{
+		physics->NarrowPhase(dt);
 	}
 }
 

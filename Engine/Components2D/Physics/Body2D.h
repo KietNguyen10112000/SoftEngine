@@ -73,6 +73,9 @@ public:
 		}
 	}
 
+public:
+	virtual void ApplyForce(const Vec2& pos, const Vec2& F) = 0;
+
 };
 
 NAMESPACE_END
