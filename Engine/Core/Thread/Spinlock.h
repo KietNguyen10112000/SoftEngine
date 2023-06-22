@@ -89,6 +89,14 @@ public:
         lock_.store(false, std::memory_order_release);
     }
 
+    inline bool try_lock_no_check_own_thread() noexcept {
+        DEBUG_CODE(
+            threadId = -1;
+        );
+        return !lock_.load(std::memory_order_relaxed) &&
+            !lock_.exchange(true, std::memory_order_acquire);
+    }
+
     inline void lock_no_check_own_thread() noexcept {
         for (;;) {
             if (!lock_.exchange(true, std::memory_order_acquire)) {

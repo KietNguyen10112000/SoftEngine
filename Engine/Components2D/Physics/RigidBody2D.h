@@ -61,7 +61,7 @@ public:
 		{
 			// anti-force
 
-			auto aF = -m_desc.dynamic.v.Normal() * std::min(0.1f * m_desc.dynamic.m, 1.0f) * 500.0f;
+			auto aF = -m_desc.dynamic.v.Normal() * std::min(0.1f * m_desc.dynamic.m, 1.0f) * 1000.0f;
 			m_F += aF;
 		}
 		else if (std::abs(m_F.Length()) < 0.001f)
@@ -161,6 +161,7 @@ public:
 		{
 		case DYNAMIC:
 			MoveByV(dt);
+			ReactDynamic();
 			break;
 		case KINEMATIC:
 			break;
