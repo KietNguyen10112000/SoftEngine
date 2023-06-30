@@ -48,6 +48,10 @@ protected:
 
 	size_t m_collisionPairEnterCount = 0;
 
+	bool m_disabled = false;
+	// just for 4 bytes align
+	bool m_disabledPadd[3];
+
 public:
 	inline Physics2D(TYPE type,
 		const SharedPtr<Collider2D>& collider
@@ -116,6 +120,16 @@ public:
 	inline auto& CollisionMask()
 	{
 		return m_collisionMask;
+	}
+
+	inline void SetDisable(bool disable)
+	{
+		m_disabled = disable;
+	}
+
+	inline auto IsDisabled() const
+	{
+		return m_disabled;
 	}
 };
 

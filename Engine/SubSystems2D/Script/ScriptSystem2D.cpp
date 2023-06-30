@@ -202,7 +202,7 @@ void ScriptSystem2D::AddSubSystemComponent(SubSystemComponent2D* comp)
 	{
 		if (root->m_subSystemID[COMPONENT_ID] != INVALID_ID)
 		{
-			assert(0);
+			return;
 		}
 		root->m_subSystemID[COMPONENT_ID] = m_onUpdate.size();
 		m_onUpdate.push_back(root);

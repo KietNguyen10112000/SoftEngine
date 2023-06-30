@@ -17,7 +17,7 @@
 
 NAMESPACE_BEGIN
 
-class GameObject2D final : Traceable<GameObject2D>
+class API GameObject2D final : Traceable<GameObject2D>
 {
 public:
 	enum TYPE
@@ -468,16 +468,34 @@ public:
 		assert(obj->IsRoot());
 		m_children.Push(obj);
 		obj->m_parent = this;
+
+		if (m_scene)
+		{
+			auto scene = m_scene;
+			GameObject2D::PostTraversal(obj.Get(),
+				[scene](GameObject2D* o) {
+					o->m_scene = scene;
+				}
+			);
+
+			obj->RecalculateAABB();
+			obj->InvokeOnComponentAddedToScene();
+		}
 	}
 
-	inline auto& Child(size_t index)
+	inline const auto& Child(size_t index) const
 	{
 		return m_children[index];
 	}
 
-	inline auto& Children()
+	inline const auto& Children() const
 	{
 		return m_children;
+	}
+
+	inline const auto& Parent() const
+	{
+		return m_parent;
 	}
 
 	inline bool IsRoot()

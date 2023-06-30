@@ -57,6 +57,11 @@ public:
 		return m_zOrder;
 	}
 
+	inline bool IsVisible() const
+	{
+		return m_visible;
+	}
+
 	inline void SetVisible(bool visible)
 	{
 		m_visible = visible;

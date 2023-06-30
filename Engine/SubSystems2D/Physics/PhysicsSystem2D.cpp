@@ -180,7 +180,7 @@ void PhysicsSystem2D::NarrowPhase()
 
 	for (auto& physics : m_boardPhaseEntries)
 	{
-		if (!physics->CollisionPairs().empty())
+		if (!physics->IsDisabled() && !physics->CollisionPairs().empty())
 		{
 			physics->ReactCollisionPairs();
 		}
@@ -188,7 +188,10 @@ void PhysicsSystem2D::NarrowPhase()
 
 	for (auto& physics : m_boardPhaseEntries)
 	{
-		physics->NarrowPhase(dt);
+		if (!physics->IsDisabled())
+		{
+			physics->NarrowPhase(dt);
+		}
 	}
 }
 
