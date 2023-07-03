@@ -156,6 +156,11 @@ public:
 		return m_object->Transform().Scale();
 	}
 
+	inline Scene2D* GetScene()
+	{
+		return m_scene;
+	}
+
 };
 
 NAMESPACE_END

@@ -108,6 +108,16 @@ public:
 		SetSize(expectSize);
 	}
 
+	inline void PrepareRender()
+	{
+		auto& scale = Transform().GetScale();
+		auto& rotation = Transform().GetRotation();
+		auto& translation = Transform().GetTranslation();
+		m_sprite.setPosition(reinterpret_cast<const sf::Vector2f&>(translation));
+		m_sprite.setRotation(ToDegrees(rotation));
+		m_sprite.setScale(reinterpret_cast<const sf::Vector2f&>(scale));
+	}
+
 public:
 	inline auto& SFSprite()
 	{
