@@ -55,6 +55,7 @@ protected:
 		rdr->DrawSprite(sfSprite);
 	};
 
+public:
 	inline static void RenderSprite(RenderingSystem2D* rdr, Sprite& sprite, 
 		const Vec2& scale, float rotation, const Vec2& position)
 	{
@@ -70,6 +71,31 @@ protected:
 		sfSprite.setScale(reinterpret_cast<const sf::Vector2f&>(_scale));
 		rdr->DrawSprite(sfSprite);
 	};
+
+	inline static void RenderSprite(RenderingSystem2D* rdr, Sprite& sprite)
+	{
+		auto& originTransform = sprite.Transform();
+
+		auto& _scale = originTransform.GetScale();
+		auto& _rotation = originTransform.GetRotation();
+		auto& _translation = originTransform.GetTranslation();
+
+		auto& sfSprite = sprite.SFSprite();
+		sfSprite.setPosition(reinterpret_cast<const sf::Vector2f&>(_translation));
+		sfSprite.setRotation(ToDegrees(_rotation));
+		sfSprite.setScale(reinterpret_cast<const sf::Vector2f&>(_scale));
+		rdr->DrawSprite(sfSprite);
+	};
+
+	inline void FlushTransform(sf::Transformable& sfObj)
+	{
+		auto& scale = m_object->GlobalTransform().GetScale();
+		auto& rotation = m_object->GlobalTransform().GetRotation();
+		auto& translation = m_object->GlobalTransform().GetTranslation();
+		sfObj.setPosition(reinterpret_cast<const sf::Vector2f&>(translation));
+		sfObj.setRotation(ToDegrees(rotation));
+		sfObj.setScale(reinterpret_cast<const sf::Vector2f&>(scale));
+	}
 
 	inline void RenderSprite(RenderingSystem2D* rdr, sf::Sprite& sprite)
 	{

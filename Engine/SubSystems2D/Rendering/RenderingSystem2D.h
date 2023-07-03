@@ -58,6 +58,11 @@ public:
 		m_bindedWindow->draw(sprite);
 	}
 
+	inline void DrawSF(sf::Drawable& drawable)
+	{
+		m_bindedWindow->draw(drawable);
+	}
+
 	inline void DrawSprite(Sprite& sprite)
 	{
 		auto& originTransform = sprite.Transform();
