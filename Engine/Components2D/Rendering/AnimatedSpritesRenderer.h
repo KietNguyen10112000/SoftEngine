@@ -14,6 +14,7 @@ protected:
 	friend class RenderingSystem2D;
 
 	bool m_clearedAABB = false;
+	size_t m_count = 0;
 
 public:
 	// =)))
@@ -25,8 +26,14 @@ public:
 public:
 	virtual void Render(RenderingSystem2D* rdr) override
 	{
-		auto dt = GetObject()->GetScene()->Dt();
-		Play(dt);
+		auto scene = GetObject()->GetScene();
+		auto iterationCount = scene->GetIterationCount();
+		if (m_count != iterationCount)
+		{
+			auto dt = scene->Dt();
+			Play(dt);
+		}
+
 		RenderSpriteWithObject(rdr, GetCurrentSpriteFrame());
 	};
 
