@@ -97,10 +97,8 @@ protected:
 #define SET_VTB_OVERRIDDEN_IDX(funcName, idxName)								\
 {																				\
 	auto f = &Script2D::funcName;												\
-	auto p = (void*&)f;															\
 	auto f1 = &ChildClass::funcName;											\
-	auto p1 = (void*&)f1;														\
-	if (p1 != p)																\
+	if constexpr (!std::is_same<decltype(f), decltype(f1)>::value)				\
 	{																			\
 		m_overriddenVtbIdx.set(idxName);										\
 	}																			\

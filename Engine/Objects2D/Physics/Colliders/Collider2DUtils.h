@@ -248,9 +248,11 @@ inline void RectCircleCollision(const _Rect& rect, const Circle& circle, Collisi
 	Vec2 temp[4];
 	rect.GetPoints(temp);
 
-	float d[4];
-	Line2D l[4];
-	float ovlp[4];
+	//std::cout << rect.Center().x << ", " << rect.Center().y << "\n";
+
+	float d[4] = {};
+	Line2D l[4] = {};
+	float ovlp[4] = {};
 	/*Line2D l1 = Line2D::FromPoints(temp[0], temp[1]);
 	Line2D l2 = Line2D::FromPoints(temp[0], temp[2]);
 	Line2D l3 = Line2D::FromPoints(temp[3], temp[1]);
@@ -307,6 +309,8 @@ inline void RectCircleCollision(const _Rect& rect, const Circle& circle, Collisi
 	}
 
 	result.normal = (-rectCenterSide / std::abs(rectCenterSide)) * minEdge.normal;
+
+	//std::cout << result.penetration << "\n";
 
 	/*Line2D edges[4] = {
 		l1,l2,l3,l4
