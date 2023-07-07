@@ -9,6 +9,7 @@ class RigidBody2D : public Body2D
 public:
 	enum TYPE
 	{
+		STATIC,
 		DYNAMIC,
 		KINEMATIC
 	};
@@ -45,12 +46,14 @@ public:
 	Vec2 m_F = { 0,0 };
 
 public:
-	RigidBody2D(const TYPE type, const SharedPtr<Collider2D>& collider) : Body2D(collider)
+	RigidBody2D(const TYPE type, const SharedPtr<Collider2D>& collider) 
+		: Body2D(type == STATIC ? Physics2D::STATIC : Physics2D::DYNAMIC_BODY, collider)
 	{
 		m_desc.type = type;
 	}
 
-	RigidBody2D(DESC desc, const SharedPtr<Collider2D>& collider) : Body2D(collider), m_desc(desc)
+	RigidBody2D(DESC desc, const SharedPtr<Collider2D>& collider) : 
+		Body2D(desc.type == STATIC ? Physics2D::STATIC : Physics2D::DYNAMIC_BODY, collider), m_desc(desc)
 	{
 	}
 
@@ -132,6 +135,11 @@ public:
 
 			auto another = pair->GetAnotherOf(this);
 
+			if (another->IsDisabled())
+			{
+				continue;
+			}
+
 			Collider()->AdjustSelf(
 				obj->Transform(),
 				obj->Transform().ToTransformMatrix(),
@@ -146,7 +154,7 @@ public:
 		switch (m_desc.type)
 		{
 		case DYNAMIC:
-			ReactDynamic();
+			//ReactDynamic();
 			break;
 		case KINEMATIC:
 			ReactKinematic();

@@ -38,7 +38,7 @@ protected:
 	uint32_t m_keysUpCount[NUM_KEYS] = {};
 	//size_t m_keysUpTime[NUM_KEYS] = {};
 
-	//bool m_prevKeys[NUM_KEYS] = {};
+	bool m_prevKeys[NUM_KEYS] = {};
 	bool m_curKeys[NUM_KEYS] = {};
 
 	Cursor m_prevCursors[NUM_CURSORS] = {};
@@ -100,7 +100,7 @@ public:
 		m_currentTime = Clock::ms::now();
 		::memset(m_keysDownCount, 0, sizeof(uint32_t) * NUM_KEYS);
 		::memset(m_keysUpCount, 0, sizeof(uint32_t) * NUM_KEYS);
-		//::memcpy(m_prevKeys, m_curKeys, sizeof(bool) * NUM_KEYS);
+		::memcpy(m_prevKeys, m_curKeys, sizeof(bool) * NUM_KEYS);
 		::memcpy(m_prevCursors, m_curCursors, sizeof(Cursor) * NUM_CURSORS);
 		
 		for (auto& c : m_curCursors)
@@ -117,7 +117,7 @@ public:
 
 	inline bool IsKeyUp(byte keyCode)
 	{
-		return m_keysUpCount[keyCode] != 0;
+		return m_keysUpCount[keyCode] != 0 || (m_prevKeys[keyCode] == true && m_curKeys[keyCode] == false);
 	}
 
 	// pressDuration in ms

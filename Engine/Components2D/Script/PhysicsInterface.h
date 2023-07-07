@@ -28,6 +28,11 @@ public:
 		return m_scriptSystem->RayQuery(begin, end, sortMask);
 	}
 
+	ColliderQueryInfo* ColliderQuery(Collider2D * collider, const Transform2D & transform)
+	{
+		return m_scriptSystem->ColliderQuery(collider, transform);
+	}
+
 };
 
 NAMESPACE_END

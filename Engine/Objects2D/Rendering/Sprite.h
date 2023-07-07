@@ -126,6 +126,11 @@ public:
 
 	AARect GetLocalAABB()
 	{
+		if (m_size == Vec2::ZERO)
+		{
+			return {};
+		}
+
 		AARect rect;
 		rect.m_topLeft = -m_anchorPoint * m_size;
 		rect.m_dimensions = m_size;

@@ -21,6 +21,13 @@ public:
 		return m_rect.GetLooser(m_gap);
 	}
 
+	virtual AARect GetAABB(const Mat3& transform) override
+	{
+		auto A = m_rect;
+		A.Transform(transform);
+		return A;
+	}
+
 	// this collider is A, and the another is B
 
 	virtual void Collide(

@@ -18,6 +18,8 @@ class Collider2D
 public:
 	virtual AARect GetLocalAABB() = 0;
 
+	virtual AARect GetAABB(const Mat3& transform) = 0;
+
 	// this collider is A, and the another is B
 	virtual void Collide(
 		const Mat3& selfTransform,

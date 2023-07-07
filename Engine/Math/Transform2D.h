@@ -42,6 +42,7 @@ public:
 		m_scale *= transform.m_scale;
 		m_rotation += transform.m_rotation;
 		m_translation += transform.m_translation;
+		return *this;
 	}
 
 	inline static void Joint(const Transform2D& transform1, const Transform2D& transform2, Transform2D& output)

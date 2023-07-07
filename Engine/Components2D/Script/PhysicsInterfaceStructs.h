@@ -47,6 +47,21 @@ struct Ray2DQueryInfo : public Ray2DQueryResult
 			if (fn(obj.object)) break;
 		}
 	}
+
+	inline auto& Results()
+	{
+		return objectResult;
+	}
+};
+
+struct ColliderQueryInfo
+{
+	std::Vector<GameObject2D*> objects;
+
+	inline auto& Results()
+	{
+		return objects;
+	}
 };
 
 NAMESPACE_END

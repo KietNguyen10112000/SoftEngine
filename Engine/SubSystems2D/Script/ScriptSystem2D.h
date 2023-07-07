@@ -27,6 +27,8 @@ private:
 	// single thread, single rayQueryInfo
 	Ray2DQueryInfo m_rayQueryInfo;
 
+	ColliderQueryInfo m_colliderQueryInfo;
+
 public:
 	ScriptSystem2D(Scene2D* scene);
 	~ScriptSystem2D();
@@ -60,6 +62,7 @@ public:
 public:
 	// don't delete result, just use it
 	Ray2DQueryInfo* RayQuery(const Vec2& begin, const Vec2& end, size_t sortLevel);
+	ColliderQueryInfo* ColliderQuery(Collider2D* collider, const Transform2D& transform);
 
 };
 

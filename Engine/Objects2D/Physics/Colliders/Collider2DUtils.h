@@ -220,22 +220,55 @@ void RectRayQuery(const _Rect& _rect, const Mat3& selfTransform, Ray2D& ray, Ray
 		Line2D::FromPoints(temp[3], temp[2]),
 	};
 
+	Vec2 segmentsBegin[4] = {
+		temp[0],
+		temp[0],
+		temp[3],
+		temp[3],
+	};
+
+	Vec2 segmentsDir[4] = {
+		(temp[1] - temp[0]),
+		(temp[2] - temp[0]),
+		(temp[1] - temp[3]),
+		(temp[2] - temp[3]),
+	};
+
+	float segmentsLength2[4] = {
+		(temp[1] - temp[0]).Length2(),
+		(temp[2] - temp[0]).Length2(),
+		(temp[1] - temp[3]).Length2(),
+		(temp[2] - temp[3]).Length2(),
+	};
+
 	Line2D lineRay = Line2D::FromPointAndDirection(ray.begin, ray.direction);
 
 	Vec2 intersectPoint;
 	//auto oriSize = output.points.size();
+
+	size_t i = 0;
 	for (auto& edge : edges)
 	{
+		auto& segmentBegin = segmentsBegin[i];
+		auto& segmentDir = segmentsDir[i];
+		auto& segmentLength2 = segmentsLength2[i];
+
+		
+
 		if (lineRay.Intersect(edge, intersectPoint))
 		{
+			auto dl = intersectPoint - segmentBegin;
+			auto dlLength2 = dl.Length2();
 			auto d = intersectPoint - ray.begin;
 			auto length2 = d.Length2();
-			// same side, length < ray's length
-			if (d.Dot(ray.direction) > 0 && length2 <= ray.length2)
+			
+			// inside line segment, inside ray
+			if ((dl.Dot(segmentDir) > 0 && dlLength2 <= segmentLength2) && (d.Dot(ray.direction) > 0 && length2 <= ray.length2))
 			{
 				output.points.push_back({ intersectPoint, length2 });
 			}
 		}
+		i++;
 	}
 
 	//return output.points.size() != oriSize;

@@ -18,7 +18,8 @@ protected:
 	std::Vector<Collision2DPair*> m_collisionPlanes;
 
 public:
-	Body2D(const SharedPtr<Collider2D>& collider) : Physics2D(Physics2D::DYNAMIC_BODY, collider) {};
+	//Body2D(const SharedPtr<Collider2D>& collider) : Physics2D(Physics2D::DYNAMIC_BODY, collider) {};
+	Body2D(Physics2D::TYPE type, const SharedPtr<Collider2D>& collider) : Physics2D(type, collider) {};
 
 public:
 	// just take single plane of collision

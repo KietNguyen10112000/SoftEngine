@@ -20,6 +20,13 @@ public:
 		return AARect(m_circle.m_center - Vec2(m_circle.m_radius), Vec2(m_circle.m_radius * 2.0f));
 	}
 
+	virtual AARect GetAABB(const Mat3& transform) override
+	{
+		auto A = m_circle;
+		A.Transform(transform);
+		return AARect(A.m_center - Vec2(A.m_radius), Vec2(A.m_radius * 2.0f));
+	}
+
 	// this collider is A, and the another is B
 	virtual void Collide(
 		const Mat3& selfTransform,

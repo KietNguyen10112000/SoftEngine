@@ -320,4 +320,32 @@ Ray2DQueryInfo* ScriptSystem2D::RayQuery(const Vec2& begin, const Vec2& end, siz
 	return m_rayQueryInfo.objectResult.size() != 0 ? &m_rayQueryInfo : nullptr;
 }
 
+ColliderQueryInfo* ScriptSystem2D::ColliderQuery(Collider2D* collider, const Transform2D& transform)
+{
+	auto mat = transform.ToTransformMatrix();
+	auto region = collider->GetAABB(mat);
+	m_querySession->Clear();
+	m_scene->AABBStaticQueryAARect(region, m_querySession);
+	m_scene->AABBDynamicQueryAARect(region, m_querySession);
+
+	m_colliderQueryInfo.objects.clear();
+	Collision2DResult collisionResult = {};
+	for (auto& object : *m_querySession)
+	{
+		auto physics = object->GetComponentRaw<Physics2D>();
+		if (!physics)
+		{
+			continue;
+		}
+
+		collider->Collide(mat, physics->Collider().get(), object->GlobalTransformMatrix(), collisionResult);
+		if (collisionResult.HasCollision())
+		{
+			m_colliderQueryInfo.objects.push_back(object);
+		}
+	}
+
+	return m_colliderQueryInfo.objects.size() != 0 ? &m_colliderQueryInfo : nullptr;
+}
+
 NAMESPACE_END
