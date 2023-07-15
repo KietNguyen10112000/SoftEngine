@@ -38,7 +38,7 @@ public:
 	{
 		m_texture = texture;
 
-		m_sprite.setTexture(m_texture->GetSFTexture());
+		m_sprite.setTexture(m_texture->GetSFTexture(), true);
 		SetSize({});
 
 		if (rect.IsValid())
@@ -100,11 +100,29 @@ public:
 		m_size = size;
 	}
 
-	inline void FitTextureSize(const Vec2& expectSize)
+	inline void FitTextureSize(const Vec2& expectSize, bool keepRatio = false)
 	{
 		/*auto& textureRect = m_sprite.getTextureRect();
 		m_size.x = expectSize.x / (float)textureRect.width;
 		m_size.y = expectSize.y / (float)textureRect.height;*/
+		if (keepRatio)
+		{
+			auto& textureRect = m_sprite.getTextureRect();
+			m_size.x = textureRect.width;
+			m_size.y = textureRect.height;
+
+			if (expectSize.x != 0 && expectSize.y != 0)
+			{
+				auto scaleX = expectSize.x / (float)textureRect.width;
+				auto scaleY = expectSize.y / (float)textureRect.height;
+				auto scale = std::min(scaleX, scaleY);
+				m_transform.Scale().x = scale;
+				m_transform.Scale().y = scale;
+				m_size = m_size * scale;
+			}
+			return;
+		}
+
 		SetSize(expectSize);
 	}
 

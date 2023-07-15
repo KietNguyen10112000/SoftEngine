@@ -63,6 +63,7 @@ public:
 	}
 
 	// callback is null or return true if repeat animation again
+	template <bool RESET_TRACK = true>
 	inline void SetAnimation(ID id, AnimationDoneCallback callback = 0, void* userPtr = 0)
 	{
 		auto count = m_animations[id];
@@ -74,7 +75,10 @@ public:
 		m_curAnimIdxBegin = id + 2;
 		m_curAnimIdxEnd = m_curAnimIdxBegin + count;
 		m_curAnimIdx = m_curAnimIdxBegin;
-		m_sumDt = 0;
+
+		if constexpr (RESET_TRACK)
+			m_sumDt = 0;
+
 		m_curSpriteFrameIdx = m_animations[m_curAnimIdx];
 
 		m_doneCallback = callback;
@@ -98,7 +102,7 @@ public:
 
 			if (repeat)
 			{
-				SetAnimation(m_curAnimID, m_doneCallback, m_userPtr);
+				SetAnimation<false>(m_curAnimID, m_doneCallback, m_userPtr);
 			}
 		}
 
