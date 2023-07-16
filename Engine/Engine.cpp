@@ -88,6 +88,11 @@ Engine::Engine() : EventDispatcher(ENGINE_EVENT::COUNT)
 	InitNetwork();
 	InitGraphics();
 	InitPlugins();
+
+	if (StartupConfig::Get().isEnableRendering)
+	{
+		ImGui::SFML::UpdateFontTexture();
+	}
 }
 
 Engine::~Engine()
@@ -129,7 +134,7 @@ void Engine::InitGraphics()
 		
 		//io.Fonts->AddFontDefault(&config);
 		io.Fonts->AddFontFromFileTTF("segoeui.ttf", (int)(24.0f), &config);
-		ImGui::SFML::UpdateFontTexture();
+		//ImGui::SFML::UpdateFontTexture();
 		
 		//io.FontGlobalScale = 2.0f;
 		//style.ScaleAllSizes(2.0f);
