@@ -104,6 +104,11 @@ namespace rheap
 		API void OperatorDelete(void* ptr) noexcept;
 	}
 
+#ifdef _DEBUG
+	API void* malloc(size_t nBytes);
+
+	API void free(void* p);
+#else
 	inline void* malloc(size_t nBytes)
 	{
 		return internal::Allocate(nBytes)->GetUsableMemAddress();
@@ -113,6 +118,7 @@ namespace rheap
 	{
 		internal::Deallocate((ManagedHandle*)p - 1);
 	}
+#endif // _DEBUG
 
 	// follow the C standard
 	inline void* realloc(void* p, size_t nBytes)

@@ -22,7 +22,8 @@ using WeakPtr = ::std::weak_ptr<T>;
 template <typename T, typename... Args>
 UniquePtr<T> MakeUnique(Args&&... args)
 {
-	return UniquePtr<T>(rheap::New<T>(std::forward<Args>(args)...));
+	//return UniquePtr<T>(rheap::New<T>(std::forward<Args>(args)...));
+	return UniquePtr<T>(new T(std::forward<Args>(args)...));
 }
 
 template <typename T, typename... Args>

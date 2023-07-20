@@ -12,6 +12,9 @@ ManagedHeap* g_gcHeap = 0;
 
 thread_local size_t g_stableValue = 0;
 
+constexpr size_t NEW_DELETE_OPERATOR_SIGN = 88888888;
+constexpr size_t MALLOC_SIGN = 88888889;
+
 void MemoryInitialize()
 {
     if (g_rawHeap) return;
@@ -129,6 +132,36 @@ void rheap::internal::Reset()
     new (g_rawHeap) ManagedHeap(false);
 }
 
+#ifdef _DEBUG
+void* rheap::malloc(size_t nBytes)
+{
+    auto handle = soft::g_rawHeap->Allocate(nBytes + 2 * sizeof(size_t), 0, 0, 0);
+    auto mem = handle->GetUsableMemAddress();
+
+    size_t* p = (size_t*)mem;
+    *p = MALLOC_SIGN;
+
+    p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
+    *p = MALLOC_SIGN;
+
+    auto ret = ((size_t*)mem) + 1;
+    return ret;
+}
+
+void rheap::free(void* ptr)
+{
+    size_t* p = ((size_t*)ptr) - 1;
+    auto handle = ((ManagedHandle*)p) - 1;
+
+    assert(*p == MALLOC_SIGN);
+
+    p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
+    assert(*p == MALLOC_SIGN);
+
+    soft::g_rawHeap->Deallocate(handle);
+}
+#endif // _DEBUG
+
 void* rheap::internal::OperatorNew(size_t _Size)
 {
     if (!soft::g_rawHeap)
@@ -136,13 +169,41 @@ void* rheap::internal::OperatorNew(size_t _Size)
         soft::MemoryInitialize();
     }
 
+#ifdef _DEBUG
+    auto handle = soft::g_rawHeap->Allocate(_Size + 2 * sizeof(size_t), 0, 0, 0);
+    auto mem = handle->GetUsableMemAddress();
+    
+    size_t* p = (size_t*)mem;
+    *p = NEW_DELETE_OPERATOR_SIGN;
+
+    p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
+    *p = NEW_DELETE_OPERATOR_SIGN;
+
+    auto ret = ((size_t*)mem) + 1;
+    return ret;
+#else
     return soft::g_rawHeap->Allocate(_Size, 0, 0, 0)->GetUsableMemAddress();
+#endif // _DEBUG
 }
 
 void rheap::internal::OperatorDelete(void* ptr) noexcept
 {
     if (soft::g_rawHeap)
+    {
+#ifdef _DEBUG
+        size_t* p = ((size_t*)ptr) - 1;
+        auto handle = ((ManagedHandle*)p) - 1;
+
+        assert(*p == NEW_DELETE_OPERATOR_SIGN);
+
+        p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
+        assert(*p == NEW_DELETE_OPERATOR_SIGN);
+
+        soft::g_rawHeap->Deallocate(handle);
+#else
         soft::g_rawHeap->Deallocate((soft::ManagedHandle*)ptr - 1);
+#endif // _DEBUG
+    }
     else
     {
         // case of static initalizer
