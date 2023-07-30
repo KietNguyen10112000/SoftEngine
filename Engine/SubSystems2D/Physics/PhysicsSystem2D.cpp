@@ -75,8 +75,10 @@ void PhysicsSystem2D::RemoveSubSystemComponent(SubSystemComponent2D* comp)
 		FreeCollisionPairs(pairs);
 	}
 	
-
-	STD_VECTOR_ROLL_TO_FILL_BLANK(m_boardPhaseEntries, physics->m_id, back->m_id);
+	if (physics->m_TYPE != Physics2D::STATIC)
+	{
+		STD_VECTOR_ROLL_TO_FILL_BLANK(m_boardPhaseEntries, physics->m_id, back->m_id);
+	}
 }
 
 void PhysicsSystem2D::BoardPhase()
