@@ -1,6 +1,0 @@
-#include "SubSystem2D.h"
-
-NAMESPACE_BEGIN
-
-
-NAMESPACE_END
