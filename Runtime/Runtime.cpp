@@ -24,8 +24,13 @@
 #include "StartupConfig.h"
 #include "RUNTIME_EVENT.h"
 
+#include "Common/Base/MetadataUtils.h"
+#include "Common/Base/Metadata.h"
+
 //#include "Network/TCPAcceptor.h"
 //#include "Network/TCPConnector.h"
+
+#include "imgui.h"
 
 NAMESPACE_BEGIN
 
@@ -67,6 +72,9 @@ void Runtime::Finalize()
 Runtime::Runtime()
 {
 	m_eventArgv[0] = this;
+
+	MetadataParser::Initialize();
+
 	InitNetwork();
 	InitGraphics();
 	InitPlugins();
@@ -77,6 +85,8 @@ Runtime::~Runtime()
 	FinalPlugins();
 	FinalGraphics();
 	FinalNetwork();
+
+	MetadataParser::Finalize();
 }
 
 void Runtime::InitGraphics()
@@ -162,16 +172,32 @@ void Runtime::Setup()
 	g_timer.Update();
 
 	DeferredBufferTracker::Get()->Reset();
+
+	Mat4 mat = {};
+	auto accessor = Accessor::For("Mat4", mat, 0);
+	accessor.Set(
+		"[1 2 3 4]"
+		"[1 2 3 4]"
+		"[1 2 3 4]"
+		"[1 2 3 4]"
+	);
+	std::cout << accessor.Get() << "\n";
+	//exit(0);
+
+	m_isRunning = false;
 }
 
 void Runtime::Run()
 {
-	auto mainScene = m_scenes[0].Get();
-
-	while (m_isRunning)
+	if (m_scenes.size() != 0)
 	{
-		Iteration();
-		Thread::Sleep(1);
+		auto mainScene = m_scenes[0].Get();
+
+		while (m_isRunning)
+		{
+			Iteration();
+			Thread::Sleep(1);
+		}
 	}
 
 	TaskWorker::Get()->IsRunning() = false;

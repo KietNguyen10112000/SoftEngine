@@ -90,16 +90,16 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 		assert(0);
 	}
 
-	Graphics* ret = nullptr;
+	//Graphics* ret = nullptr;
 
 	switch (backendAPI)
 	{
 
 #ifdef _WIN32
 	case soft::GRAPHICS_BACKEND_API::DX12:
-		ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
-		ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>((dx12::DX12Graphics*)ret);
-		s_instance.reset(ret);
+		//ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
+		//ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>((dx12::DX12Graphics*)ret);
+		//s_instance.reset(ret);
 		break;
 #endif
 
@@ -117,7 +117,7 @@ void Graphics::Finalize()
 
 	if (!graphics) return;
 
-	rheap::Delete(graphics->m_debugGraphics);
+	//rheap::Delete(graphics->m_debugGraphics);
 	rheap::Delete(graphics);
 }
 

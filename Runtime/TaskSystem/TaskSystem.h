@@ -8,7 +8,7 @@
 
 #include "Task.h"
 
-#include "SubSystems/SubSystemInfo.h"
+#include "MainSystem/MainSystemInfo.h"
 
 #include "TaskParamUnpack.h"
 
@@ -38,7 +38,7 @@ protected:
 	static std::mutex s_mutex;
 	static std::atomic<size_t> s_workingWorkersCount;
 	static size_t s_workersCount;
-	static SynchContext s_sychCtxs[SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT];
+	static SynchContext s_sychCtxs[MainSystemInfo::COUNT];
 	static ConcurrentQueue<Fiber*> s_resumeFibers;
 	static ConcurrentQueue<Task> s_queues[Task::PRIORITY::COUNT];
 
@@ -191,7 +191,7 @@ protected:
 	template <bool WAIT = false>
 	inline static void SubmitOneSynchTempl(const Task& task, size_t sychContextId)
 	{
-		assert(sychContextId < SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT);
+		assert(sychContextId < MainSystemInfo::COUNT);
 
 		if constexpr (WAIT)
 		{
@@ -214,7 +214,7 @@ protected:
 	template <bool WAIT = false>
 	inline static void SubmitManySynchTempl(const Task* tasks, size_t count, size_t sychContextId)
 	{
-		assert(sychContextId < SubSystemInfo::INDEXED_SUBSYSTEMS_COUNT);
+		assert(sychContextId < MainSystemInfo::COUNT);
 
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)

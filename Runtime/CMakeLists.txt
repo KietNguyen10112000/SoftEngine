@@ -38,6 +38,10 @@ file(
 
     "Platform/*.h"
     "Platform/*.cpp"
+
+
+    "Common/Base/*.h"
+    "Common/Base/*.cpp"
 	
 
     "Modules/Graphics/*.h"
@@ -72,6 +76,8 @@ IF (WIN32)
     file(
         GLOB
         IMGUI_SRC
+
+        "../Libraries/imgui/*.cpp"
         "../Libraries/imgui/backends/imgui_impl_win32.cpp"
         "../Libraries/imgui/backends/imgui_impl_dx12.cpp"
     )

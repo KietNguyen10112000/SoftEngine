@@ -222,6 +222,11 @@ public:
 		return strcmp(c_str(), r.c_str()) == 0;
 	};
 
+	inline char operator[](size_t index) const
+	{
+		return *((char*)(m_header + 1) + index);
+	}
+
 public:
 	static String From(const char* v)
 	{
