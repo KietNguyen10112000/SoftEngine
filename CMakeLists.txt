@@ -13,5 +13,5 @@ add_compile_definitions(UNICODE)
 project ("SoftEngine")
 
 # Include sub-projects.
-add_subdirectory ("Engine")
+add_subdirectory ("Runtime")
 add_subdirectory ("Test")
