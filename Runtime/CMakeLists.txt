@@ -42,6 +42,10 @@ file(
 
     "Common/Base/*.h"
     "Common/Base/*.cpp"
+
+
+    "Scene/*.h"
+    "Scene/*.cpp"
 	
 
     "Modules/Graphics/*.h"

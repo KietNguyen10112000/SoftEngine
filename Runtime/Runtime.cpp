@@ -32,6 +32,8 @@
 
 #include "imgui.h"
 
+#include "Scene/GameObject.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -173,13 +175,10 @@ void Runtime::Setup()
 
 	DeferredBufferTracker::Get()->Reset();
 
-	Mat4 mat = {};
-	auto accessor = Accessor::For("Mat4", mat, 0);
+	int v = 0;
+	auto accessor = Accessor::For("Mat4", v, 0);
 	accessor.Set(
-		"[1 2 3 4]"
-		"[1 2 3 4]"
-		"[1 2 3 4]"
-		"[1 2 3 4]"
+		"1.2"
 	);
 	std::cout << accessor.Get() << "\n";
 	//exit(0);
@@ -241,6 +240,7 @@ void Runtime::Iteration()
 	if (m_iterationHandler)
 	{
 		g_sumDt = m_iterationHandler->DoIteration(g_sumDt, mainScene);
+		SynchronizeAllSubSystems();
 		return;
 	}
 
@@ -253,7 +253,7 @@ void Runtime::Iteration()
 	}
 
 	// SynchronizeAllSubSystems
-	//SynchronizeAllSubSystems();
+	SynchronizeAllSubSystems();
 }
 
 void Runtime::ProcessInput()

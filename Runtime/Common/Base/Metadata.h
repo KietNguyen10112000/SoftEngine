@@ -120,7 +120,7 @@ public:
 	) : m_name(name), m_editFormat(editFormat), m_var(var), m_setter(setter), m_getter(getter), m_instance(instance) {};
 
 	template<typename T>
-	Accessor(const char* name, const T& var, Serializable* instance) : m_name(name), m_var(&var), m_instance(instance)
+	Accessor(const char* name, T& var, Serializable* instance) : m_name(name), m_var(&var), m_instance(instance)
 	{
 		static_assert(std::is_fundamental_v<T> == true);
 

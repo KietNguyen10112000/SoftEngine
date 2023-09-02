@@ -27,7 +27,7 @@ struct API StartupConfig
 	float fixedDt = 0.016f;
 
 	uint32_t numThreads		= -1;
-	uint32_t maxThreads		= 2;
+	uint32_t maxThreads		= -1;
 	uint32_t reservedThread = 0;
 
 };

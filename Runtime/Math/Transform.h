@@ -43,6 +43,11 @@ public:
 		return m_rotation;
 	}
 
+	inline auto& Position()
+	{
+		return m_translation.xyz();
+	}
+
 };
 
 }
