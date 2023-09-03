@@ -2,9 +2,11 @@
 
 #include "Core/TypeDef.h"
 
+#include "Common/Base/Serializable.h"
+
 NAMESPACE_BEGIN
 
-class MainComponent
+class MainComponent : public Serializable
 {
 protected:
 	friend class GameObject;

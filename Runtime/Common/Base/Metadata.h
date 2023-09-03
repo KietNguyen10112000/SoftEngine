@@ -215,6 +215,7 @@ private:
 
 	// class contains class
 	Array<Handle<ClassMetadata>> m_subClasses;
+	std::vector<const char*> m_subClassesPropertyNames;
 
 	size_t m_visited = 0;
 
@@ -225,29 +226,33 @@ private:
 	}
 
 public:
-	ClassMetadata() {};
+	//ClassMetadata() {};
 
-	ClassMetadata(const char* className, Serializable* instance) : m_className(className), m_instance(instance) {};
+	ClassMetadata(const char* className, Serializable* instance) 
+		: m_className(className), m_instance(instance) {};
 
 private:
 	template<bool RECURSIVE = true, typename Fn>
-	void ForEachPropertiesImpl(Fn fn)
+	void ForEachPropertiesImpl(Fn fn, const char* name)
 	{
 		SetVisited(true);
 
 		for (auto& a : m_properties)
 		{
-			fn(this, a);
+			// param: (current class type, current class instance name, property name)
+			fn(this, name, a);
 		}
 
 		if constexpr (RECURSIVE)
 		{
+			size_t i = 0;
 			for (auto& c : m_subClasses)
 			{
 				if (!c->IsVisited()) 
 				{
-					c->ForEachPropertiesImpl<RECURSIVE>(fn);
+					c->ForEachPropertiesImpl<RECURSIVE>(fn, m_subClassesPropertyNames[i]);
 				}
+				i++;
 			}
 		}
 	}
@@ -286,9 +291,10 @@ public:
 		}
 	}
 
-	void AddSubClass(const Handle<ClassMetadata>& subClass)
+	void AddProperty(const char* name, const Handle<ClassMetadata>& subClass)
 	{
 		m_subClasses.Push(subClass);
+		m_subClassesPropertyNames.push_back(name);
 	}
 
 	bool IsVisited() const
@@ -302,9 +308,9 @@ public:
 	}
 
 	template<bool RECURSIVE = true, typename Fn>
-	void ForEachProperties(Fn fn)
+	void ForEachProperties(Fn fn, const char* currentIntanceName = "")
 	{
-		ForEachPropertiesImpl<RECURSIVE>(fn);
+		ForEachPropertiesImpl<RECURSIVE>(fn, currentIntanceName);
 
 		if constexpr (RECURSIVE)
 		{

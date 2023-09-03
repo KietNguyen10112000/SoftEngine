@@ -120,6 +120,11 @@ public:
 		return m_header->m_length;
 	};
 
+	inline bool empty() const
+	{
+		return m_header == nullptr || length() == 0;
+	}
+
 	inline size_t hash() const
 	{
 		return m_header->m_hash;

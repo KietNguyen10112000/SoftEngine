@@ -274,6 +274,11 @@ public:
 		return Get();
 	}
 
+	inline operator T* () const
+	{
+		return Get();
+	}
+
 	/*operator ManagedPointer<byte>() const
 	{
 		ManagedPointer<byte> ret;

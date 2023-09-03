@@ -11,6 +11,23 @@ public:
 	constexpr static ID PHYSICS_ID				= 1;
 	constexpr static ID SCRIPTING_ID			= 2;
 	constexpr static ID AUDIO_ID				= 4;
+
+
+	static constexpr const char* COMPONENT_NAME[COUNT] = {
+		"RenderingComponent",
+		"PhysicsComponent",
+		"ScriptComponent",
+		"AudioComponent"
+	};
 };
+
+#define MAIN_SYSTEM_FRIEND_CLASSES()	\
+friend class Runtime;					\
+friend class Scene;						\
+friend class MainSystem;				\
+friend class RenderingSystem;			\
+friend class PhysicsSystem;				\
+friend class ScriptingSystem;			\
+friend class AudioSystem;
 
 NAMESPACE_END

@@ -5,6 +5,8 @@
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/STD/STDContainers.h"
 
+#include <bitset>
+
 NAMESPACE_BEGIN
 
 class Input;
@@ -26,14 +28,14 @@ public:
 	constexpr static byte STABLE_VALUE	= 127;
 	constexpr static byte NUM_ARGS		= 128;
 
+	constexpr static byte MAX_RUNNING_SCENES = 32;
+
 private:
+	friend class Scene;
+
 	Array<Handle<Scene>> m_scenes;
 
-	TRACEABLE_FRIEND();
-	void Trace(Tracer* tracer)
-	{
-		tracer->Trace(m_scenes);
-	}
+	std::bitset<MAX_RUNNING_SCENES> m_runningSceneStableValue;
 
 	Input* m_input = nullptr;
 	void* m_window = nullptr;
@@ -57,6 +59,12 @@ public:
 	~Runtime();
 
 private:
+	TRACEABLE_FRIEND();
+	void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_scenes);
+	}
+
 	void InitGraphics();
 	void FinalGraphics();
 
@@ -65,6 +73,8 @@ private:
 
 	void InitPlugins();
 	void FinalPlugins();
+
+	byte GetNextStableValue();
 
 public:
 	void Setup();

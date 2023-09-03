@@ -253,7 +253,7 @@ void Runtime::Iteration()
 	}
 
 	// SynchronizeAllSubSystems
-	SynchronizeAllSubSystems();
+	//SynchronizeAllSubSystems();
 }
 
 void Runtime::ProcessInput()
@@ -297,6 +297,21 @@ void Runtime::SynchronizeAllSubSystems()
 		TaskSystem::GetWorkerCount()
 	);
 	tracker->UpdateCustomEnd();
+}
+
+byte Runtime::GetNextStableValue()
+{
+	for (size_t i = 0; i < MAX_RUNNING_SCENES; i++)
+	{
+		if (!m_runningSceneStableValue.test(i))
+		{
+			m_runningSceneStableValue.set(i, true);
+			return (byte)i;
+		}
+	}
+
+	assert(0 && "Too much running scene");
+	return 256;
 }
 
 NAMESPACE_END

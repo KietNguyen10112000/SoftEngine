@@ -269,4 +269,15 @@ public:
 
 };
 
+#define MANAGED_ARRAY_ROLL_TO_FILL_BLANK(v, objName, idName)	\
+if (v.size() == 1)												\
+{																\
+	v.clear();													\
+} else {														\
+auto& blank = v[objName->idName];								\
+auto& back = v.back();											\
+back->idName = objName->idName;									\
+blank = back;													\
+v.Pop();}
+
 NAMESPACE_END
