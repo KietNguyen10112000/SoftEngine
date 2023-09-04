@@ -399,7 +399,7 @@ public:
 		task.m_handle = handle;
 		task.m_handle->counter++;
 
-		assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
+		//assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
 
 		s_queues[priority].enqueue(task);
 		TryInvokeOneMoreWorker();

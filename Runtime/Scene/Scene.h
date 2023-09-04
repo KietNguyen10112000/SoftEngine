@@ -20,8 +20,9 @@ private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 	constexpr static size_t NUM_TRASH_ARRAY = 2;
+	constexpr static size_t NUM_DEFER_LIST = 2;
 
-	struct NotifyTaskParam
+	struct IterationTaskParam
 	{
 		Scene* scene = nullptr;
 		ID mainSystemId;
@@ -32,11 +33,9 @@ private:
 
 	Array<Handle<GameObject>> m_trashObjects[NUM_TRASH_ARRAY];
 
-	std::vector<GameObject*> m_addList;
-
-	std::vector<GameObject*> m_removeList;
-
-	std::vector<GameObject*> m_changedTransformList;
+	std::vector<GameObject*> m_addList				[NUM_DEFER_LIST] = {};
+	std::vector<GameObject*> m_removeList			[NUM_DEFER_LIST] = {};
+	std::vector<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
 
 	MainSystem* m_mainSystems[MainSystemInfo::COUNT] = {};
 
@@ -46,11 +45,15 @@ private:
 	byte padd;
 
 	size_t m_iterationCount = 0;
+	float m_dt = 0;
 
-	NotifyTaskParam		m_taskParams							[MainSystemInfo::COUNT] = {};
-	Task				m_notifyAddListTasks					[MainSystemInfo::COUNT] = {};
-	Task				m_notifyRemoveListTasks					[MainSystemInfo::COUNT] = {};
-	Task				m_notifyChangedTransformListTasks		[MainSystemInfo::COUNT] = {};
+	IterationTaskParam	m_taskParams							[MainSystemInfo::COUNT] = {};
+	Task				m_mainSystemIterationTasks				[MainSystemInfo::COUNT] = {};
+
+
+	std::atomic<size_t>		m_numMainSystemEndReconstruct = 0;
+	TaskWaitingHandle		m_endReconstructWaitingHandle = { 0,0 };
+	Task					m_endReconstructTask = {};
 
 public:
 	Scene(Runtime* runtime);
@@ -63,31 +66,69 @@ private:
 		//tracer->Trace(m_longLifeObjects);
 		tracer->Trace(m_shortLifeObjects);
 		tracer->Trace(m_trashObjects);
-		tracer->Trace(m_removeList);
+		//tracer->Trace(m_removeList);
 	}
 
 	void BakeAllMainSystems();
-	void SetupNotifyTasks();
+	void SetupMainSystemIterationTasks();
 
 	/// 
 	/// add all object's components to main system
 	/// 
-	void NotifyAddObjectListForMainSystem();
+	void ProcessAddObjectListForMainSystem(ID mainSystemId);
 
 	/// 
 	/// remove all object's components from main system
 	/// 
-	void NotifyRemoveObjectListForMainSystem();
+	void ProcessRemoveObjectListForMainSystem(ID mainSystemId);
 
 	/// 
 	/// when object transform changed, call me
 	/// 
 	void OnObjectTransformChanged(GameObject* obj);
-	void NotifyChangedTransformListForMainSystem();
+	void ProcessChangedTransformListForMainSystem(ID mainSystemId);
+
+	void EndReconstructForMainSystem(ID mainSystemId);
+	void EndReconstructForAllMainSystems();
 
 	inline auto& GetCurrentTrash()
 	{
 		return m_trashObjects[m_iterationCount % NUM_TRASH_ARRAY];
+	}
+
+	inline auto& GetCurrentAddList()
+	{
+		return m_addList[m_iterationCount % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetCurrentRemoveList()
+	{
+		return m_removeList[m_iterationCount % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetCurrentChangedTransformList()
+	{
+		return m_changedTransformList[m_iterationCount % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetPrevTrash()
+	{
+		return m_trashObjects[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetPrevAddList()
+	{
+		return m_addList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetPrevRemoveList()
+	{
+		return m_removeList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetPrevChangedTransformList()
+	{
+		return m_changedTransformList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
 	}
 
 public:

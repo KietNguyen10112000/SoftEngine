@@ -13,8 +13,12 @@ class MainSystem
 {
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
+
+protected:
+	Scene* m_scene = nullptr;
 	
 public:
+	MainSystem(Scene* scene) : m_scene(scene) {};
 	virtual ~MainSystem() {};
 
 protected:
@@ -22,6 +26,8 @@ protected:
 	virtual void AddComponent(MainComponent* comp) = 0;
 	virtual void RemoveComponent(MainComponent* comp) = 0;
 	virtual void OnObjectTransformChanged(MainComponent* comp) = 0;
+
+	virtual void Iteration(float dt) = 0;
 
 };
 

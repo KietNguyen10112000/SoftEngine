@@ -33,6 +33,7 @@
 #include "imgui.h"
 
 #include "Scene/GameObject.h"
+#include "Scene/Scene.h"
 
 NAMESPACE_BEGIN
 
@@ -175,15 +176,8 @@ void Runtime::Setup()
 
 	DeferredBufferTracker::Get()->Reset();
 
-	int v = 0;
-	auto accessor = Accessor::For("Mat4", v, 0);
-	accessor.Set(
-		"1.2"
-	);
-	std::cout << accessor.Get() << "\n";
-	//exit(0);
-
-	m_isRunning = false;
+	auto scene = mheap::New<Scene>(this);
+	m_scenes.Push(scene);
 }
 
 void Runtime::Run()
@@ -240,17 +234,25 @@ void Runtime::Iteration()
 	if (m_iterationHandler)
 	{
 		g_sumDt = m_iterationHandler->DoIteration(g_sumDt, mainScene);
-		SynchronizeAllSubSystems();
+		//SynchronizeAllSubSystems();
 		return;
 	}
 
 	auto fixedDt = StartupConfig::Get().fixedDt;
-
-	while (g_sumDt > fixedDt)
+	if (fixedDt > 0)
 	{
-		//mainScene->Iteration();
-		g_sumDt -= fixedDt;
+		while (g_sumDt > fixedDt)
+		{
+			mainScene->Iteration(fixedDt);
+			g_sumDt -= fixedDt;
+		}
+
+		return;
 	}
+
+	mainScene->Iteration(g_sumDt);
+	g_sumDt = 0;
+	
 
 	// SynchronizeAllSubSystems
 	//SynchronizeAllSubSystems();

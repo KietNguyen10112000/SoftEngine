@@ -42,6 +42,8 @@ file(
 
     "Common/Base/*.h"
     "Common/Base/*.cpp"
+    "Common/QueryStructures/*.h"
+    "Common/QueryStructures/*.cpp"
 
 
     "Scene/*.h"

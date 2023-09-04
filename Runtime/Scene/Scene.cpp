@@ -10,7 +10,7 @@ NAMESPACE_BEGIN
 Scene::Scene(Runtime* runtime)
 {
 	m_stableValue = runtime->GetNextStableValue();
-	SetupNotifyTasks();
+	SetupMainSystemIterationTasks();
 }
 
 Scene::~Scene()
@@ -28,7 +28,7 @@ void Scene::BakeAllMainSystems()
 {
 }
 
-void Scene::SetupNotifyTasks()
+void Scene::SetupMainSystemIterationTasks()
 {
 	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 	{
@@ -36,91 +36,73 @@ void Scene::SetupNotifyTasks()
 		param.scene = this;
 		param.mainSystemId = i;
 
-		// add task
-		auto& addTask = m_notifyAddListTasks[i];
-		addTask.Params() = &param;
-		addTask.Entry() = [](void* p)
+		auto& iterationTask = m_mainSystemIterationTasks[i];
+		iterationTask.Params() = &param;
+		iterationTask.Entry() = [](void* p)
 		{
-			TASK_SYSTEM_UNPACK_PARAM_2(NotifyTaskParam, p, scene, mainSystemId);
+			TASK_SYSTEM_UNPACK_PARAM_2(IterationTaskParam, p, scene, mainSystemId);
 
-			auto& list = scene->m_addList;
 			auto system = scene->m_mainSystems[mainSystemId];
-			for (auto& obj : list)
+			if (!system)
 			{
-				obj->PreTraversal(
-					[system, mainSystemId](GameObject* obj)
-					{
-						auto& comp = obj->m_mainComponents[mainSystemId];
-						if (comp)
-						{
-							system->AddComponent(comp);
-						}
-					}
-				);
+				scene->EndReconstructForMainSystem(mainSystemId);
+				return;
 			}
+
+			scene->ProcessAddObjectListForMainSystem(mainSystemId);
+			scene->ProcessChangedTransformListForMainSystem(mainSystemId);
+			scene->ProcessRemoveObjectListForMainSystem(mainSystemId);
+
+			scene->EndReconstructForMainSystem(mainSystemId);
+
+			system->Iteration(scene->m_dt);
 		};
+	}
 
-		// remove task
-		auto& removeTask = m_notifyRemoveListTasks[i];
-		removeTask.Params() = &param;
-		removeTask.Entry() = [](void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_2(NotifyTaskParam, p, scene, mainSystemId);
+	m_endReconstructTask.Params() = this;
+	m_endReconstructTask.Entry() = [](void* p)
+	{
+		auto scene = (Scene*)p;
+		scene->EndReconstructForAllMainSystems();
+	};
+}
 
-			auto& list = scene->m_removeList;
-			auto& system = scene->m_mainSystems[mainSystemId];
-			for (auto& obj : list)
+void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
+{
+	auto& list = GetPrevAddList();
+	auto system = m_mainSystems[mainSystemId];
+	for (auto& obj : list)
+	{
+		obj->PreTraversal(
+			[system, mainSystemId](GameObject* obj)
 			{
-				obj->PostTraversal(
-					[system, mainSystemId](GameObject* obj)
-					{
-						auto& comp = obj->m_mainComponents[mainSystemId];
-						if (comp)
-						{
-							system->RemoveComponent(comp);
-						}
-					}
-				);
+				auto& comp = obj->m_mainComponents[mainSystemId];
+				if (comp)
+				{
+					system->AddComponent(comp);
+				}
 			}
-		};
-
-		// change transform
-		auto& changedTransformTask = m_notifyChangedTransformListTasks[i];
-		changedTransformTask.Params() = &param;
-		changedTransformTask.Entry() = [](void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_2(NotifyTaskParam, p, scene, mainSystemId);
-
-			auto& list = scene->m_changedTransformList;
-			auto& system = scene->m_mainSystems[mainSystemId];
-			for (auto& obj : list)
-			{
-				obj->PreTraversal(
-					[system, mainSystemId](GameObject* obj)
-					{
-						auto& comp = obj->m_mainComponents[mainSystemId];
-						if (comp)
-						{
-							system->OnObjectTransformChanged(comp);
-						}
-					}
-				);
-			}
-		};
+		);
 	}
 }
 
-void Scene::NotifyAddObjectListForMainSystem()
+void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 {
-	TaskSystem::SubmitAndWait(m_notifyAddListTasks, MainSystemInfo::COUNT, Task::CRITICAL);
-	m_addList.clear();
-}
-
-void Scene::NotifyRemoveObjectListForMainSystem()
-{
-	TaskSystem::SubmitAndWait(m_notifyRemoveListTasks, MainSystemInfo::COUNT, Task::CRITICAL);
-	m_removeList.clear();
-	GetCurrentTrash().Clear();
+	auto& list = GetPrevRemoveList();
+	auto& system = m_mainSystems[mainSystemId];
+	for (auto& obj : list)
+	{
+		obj->PostTraversal(
+			[system, mainSystemId](GameObject* obj)
+			{
+				auto& comp = obj->m_mainComponents[mainSystemId];
+				if (comp)
+				{
+					system->RemoveComponent(comp);
+				}
+			}
+		);
+	}
 }
 
 void Scene::OnObjectTransformChanged(GameObject* obj)
@@ -131,13 +113,46 @@ void Scene::OnObjectTransformChanged(GameObject* obj)
 	}
 
 	obj->m_isChangedTransform = true;
-	m_changedTransformList.push_back(obj);
+	GetCurrentChangedTransformList().push_back(obj);
 }
 
-void Scene::NotifyChangedTransformListForMainSystem()
+void Scene::ProcessChangedTransformListForMainSystem(ID mainSystemId)
 {
-	TaskSystem::SubmitAndWait(m_notifyChangedTransformListTasks, MainSystemInfo::COUNT, Task::CRITICAL);
-	m_changedTransformList.clear();
+	auto& list = GetPrevChangedTransformList();
+	auto& system = m_mainSystems[mainSystemId];
+	for (auto& obj : list)
+	{
+		obj->PreTraversal(
+			[system, mainSystemId](GameObject* obj)
+			{
+				auto& comp = obj->m_mainComponents[mainSystemId];
+				if (comp)
+				{
+					system->OnObjectTransformChanged(comp);
+				}
+			}
+		);
+	}
+}
+
+void Scene::EndReconstructForMainSystem(ID mainSystemId)
+{
+	if (!((--m_numMainSystemEndReconstruct) == 0))
+	{
+		return;
+	}
+
+	TaskSystem::Submit(&m_endReconstructWaitingHandle, m_endReconstructTask, Task::CRITICAL);
+}
+
+void Scene::EndReconstructForAllMainSystems()
+{
+	auto& list = GetPrevRemoveList();
+	for (auto& obj : list)
+	{
+		obj->m_scene = nullptr;
+		obj->m_sceneId = INVALID_ID;
+	}
 }
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
@@ -146,6 +161,8 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 	{
 		return;
 	}
+
+	obj->m_scene = this;
 
 	if (indexedName)
 	{
@@ -166,7 +183,7 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 		m_shortLifeObjects.Push(obj);
 	}
 
-	m_addList.push_back(obj);
+	GetCurrentAddList().push_back(obj);
 }
 
 void Scene::RemoveObject(const Handle<GameObject>& obj)
@@ -191,7 +208,7 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 		// do remove indexing
 	}
 
-	m_removeList.push_back(obj);
+	GetCurrentRemoveList().push_back(obj);
 }
 
 Handle<GameObject> Scene::FindObjectByIndexedName(String name)
@@ -217,8 +234,20 @@ void Scene::EndSetupLongLifeObject()
 
 void Scene::Iteration(float dt)
 {
+	m_iterationCount++;
+	GetCurrentAddList().clear();
+	GetCurrentRemoveList().clear();
+	GetCurrentChangedTransformList().clear();
+	GetCurrentTrash().clear();
 
+	m_numMainSystemEndReconstruct.store(MainSystemInfo::COUNT, std::memory_order_relaxed);
+	TaskSystem::PrepareHandle(&m_endReconstructWaitingHandle);
+	
+	TaskSystem::SubmitAndWait(m_mainSystemIterationTasks, MainSystemInfo::COUNT, Task::CRITICAL);
 
+	TaskSystem::WaitForHandle(&m_endReconstructWaitingHandle);
+
+	std::cout << "Scene::Iteration\n";
 }
 
 NAMESPACE_END
