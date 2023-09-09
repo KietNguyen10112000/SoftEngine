@@ -235,7 +235,7 @@ public:
 	virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	virtual void OnPropertyChanged(const UnknownAddress& var) override;
 
-private:
+public:
 	inline const Transform& ReadLocalTransform() const
 	{
 		return m_localTransform[m_transformReadIdx];

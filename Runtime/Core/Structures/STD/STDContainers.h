@@ -27,15 +27,26 @@ namespace std
 }
 
 
-#define STD_VECTOR_ROLL_TO_FILL_BLANK(v, blankId, backID)	\
-if (v.size() == 1)											\
-{															\
-	v.clear();												\
-} else {													\
-auto& blank = v[blankId];									\
-auto& back = v.back();										\
-backID = blankId;											\
-blank = back;												\
+#define STD_VECTOR_ROLL_TO_FILL_BLANK(v, removeObjName, idName)	\
+if (v.size() == 1)												\
+{																\
+	v.clear();													\
+} else {														\
+auto& blank = v[removeObjName->idName];							\
+auto& back = v.back();											\
+back->idName = removeObjName->idName;							\
+blank = back;													\
+v.pop_back(); }
+
+
+#define STD_VECTOR_ROLL_TO_FILL_BLANK_2(v, idx)					\
+if (v.size() == 1)												\
+{																\
+	v.clear();													\
+} else {														\
+auto& blank = v[idx];											\
+auto& back = v.back();											\
+blank = back;													\
 v.pop_back(); }
 
 //NAMESPACE_END

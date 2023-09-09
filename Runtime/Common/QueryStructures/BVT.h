@@ -5,7 +5,7 @@
 NAMESPACE_BEGIN
 
 
-class API BVH : public AABBQueryStructure
+class API BVT : public AABBQueryStructure
 {
 public:
 	using NodeId = ID;
@@ -42,8 +42,8 @@ protected:
 	NodeId m_root = INVALID_ID;
 
 public:
-	BVH();
-	~BVH();
+	BVT();
+	~BVT();
 
 protected:
 	NodeId AllocateNode();

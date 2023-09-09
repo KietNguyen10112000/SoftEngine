@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/TypeDef.h"
+
 NAMESPACE_BEGIN
 
 class MainSystemInfo

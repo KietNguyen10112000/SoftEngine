@@ -3,6 +3,7 @@
 #include "Runtime.h"
 #include "GameObject.h"
 #include "MainSystem/MainSystem.h"
+#include "MainSystem/Rendering/RenderingSystem.h"
 
 
 NAMESPACE_BEGIN
@@ -11,6 +12,8 @@ Scene::Scene(Runtime* runtime)
 {
 	m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
+
+	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
 }
 
 Scene::~Scene()
@@ -45,7 +48,7 @@ void Scene::SetupMainSystemIterationTasks()
 			auto system = scene->m_mainSystems[mainSystemId];
 			if (!system)
 			{
-				scene->EndReconstructForMainSystem(mainSystemId);
+				//scene->EndReconstructForMainSystem(mainSystemId);
 				return;
 			}
 
@@ -53,7 +56,7 @@ void Scene::SetupMainSystemIterationTasks()
 			scene->ProcessChangedTransformListForMainSystem(mainSystemId);
 			scene->ProcessRemoveObjectListForMainSystem(mainSystemId);
 
-			scene->EndReconstructForMainSystem(mainSystemId);
+			//scene->EndReconstructForMainSystem(mainSystemId);
 
 			system->Iteration(scene->m_dt);
 		};
@@ -80,6 +83,7 @@ void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 				if (comp)
 				{
 					system->AddComponent(comp);
+					comp->OnComponentAdded();
 				}
 			}
 		);
@@ -98,6 +102,7 @@ void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 				auto& comp = obj->m_mainComponents[mainSystemId];
 				if (comp)
 				{
+					comp->OnComponentRemoved();
 					system->RemoveComponent(comp);
 				}
 			}
@@ -128,6 +133,7 @@ void Scene::ProcessChangedTransformListForMainSystem(ID mainSystemId)
 				auto& comp = obj->m_mainComponents[mainSystemId];
 				if (comp)
 				{
+					comp->OnTransformChanged();
 					system->OnObjectTransformChanged(comp);
 				}
 			}
@@ -157,7 +163,7 @@ void Scene::EndReconstructForAllMainSystems()
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 {
-	if (obj->m_scene != nullptr)
+	if (obj->m_scene != nullptr || obj->m_sceneId != INVALID_ID)
 	{
 		return;
 	}
@@ -188,7 +194,7 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 
 void Scene::RemoveObject(const Handle<GameObject>& obj)
 {
-	if (obj->m_scene != this)
+	if (obj->m_scene != this || obj->m_sceneId == INVALID_ID)
 	{
 		return;
 	}
@@ -202,6 +208,9 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_shortLifeObjects, obj, m_sceneId);
 		GetCurrentTrash().Push(obj);
 	}
+
+	//obj->m_scene = nullptr;
+	obj->m_sceneId = INVALID_ID;
 
 	if (!obj->m_indexedName.empty())
 	{
@@ -240,12 +249,12 @@ void Scene::Iteration(float dt)
 	GetCurrentChangedTransformList().clear();
 	GetCurrentTrash().clear();
 
-	m_numMainSystemEndReconstruct.store(MainSystemInfo::COUNT, std::memory_order_relaxed);
-	TaskSystem::PrepareHandle(&m_endReconstructWaitingHandle);
+	//m_numMainSystemEndReconstruct.store(MainSystemInfo::COUNT, std::memory_order_relaxed);
+	//TaskSystem::PrepareHandle(&m_endReconstructWaitingHandle);
 	
 	TaskSystem::SubmitAndWait(m_mainSystemIterationTasks, MainSystemInfo::COUNT, Task::CRITICAL);
 
-	TaskSystem::WaitForHandle(&m_endReconstructWaitingHandle);
+	//TaskSystem::WaitForHandle(&m_endReconstructWaitingHandle);
 
 	std::cout << "Scene::Iteration\n";
 }

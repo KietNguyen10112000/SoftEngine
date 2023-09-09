@@ -10,7 +10,15 @@ class MainComponent : public Serializable
 {
 protected:
 	friend class GameObject;
+	friend class DoubleBVH;
 
+	struct DoubleBVHId
+	{
+		ID bvhId = INVALID_ID;
+		ID ulistId = INVALID_ID;
+	};
+
+	DoubleBVHId m_doubleBVHId[2] = {};
 	GameObject* m_object = nullptr;
 
 public:
@@ -21,6 +29,8 @@ public:
 	virtual void OnComponentRemoved() = 0;
 
 	virtual void OnTransformChanged() = 0;
+
+	virtual AABox GetGlobalAABB() = 0;
 
 public:
 	inline GameObject* GameObject()

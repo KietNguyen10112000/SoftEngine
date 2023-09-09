@@ -1,4 +1,4 @@
-#include "BVH.h"
+#include "BVT.h"
 
 #include "Core/Memory/Memory.h"
 
@@ -6,32 +6,32 @@
 
 NAMESPACE_BEGIN
 
-class BVHSession : public AABBQuerySession
+class BVTSession : public AABBQuerySession
 {
 public:
     constexpr static size_t INIT_CAPACITY = 16 * KB;
-    std::Vector<BVH::NodeId> m_stack;
+    std::Vector<BVT::NodeId> m_stack;
 
 public:
-    BVHSession()
+    BVTSession()
     {
         m_stack.reserve(INIT_CAPACITY);
         m_result.reserve(INIT_CAPACITY);
     }
 
-    ~BVHSession()
+    ~BVTSession()
     {
 
     }
 
 };
 
-BVH::BVH()
+BVT::BVT()
 {
     m_nodes.resize(1024);
 }
 
-BVH::~BVH()
+BVT::~BVT()
 {
     /*if (m_root)
     {
@@ -49,7 +49,7 @@ BVH::~BVH()
     }*/
 }
 
-BVH::NodeId BVH::AllocateNode()
+BVT::NodeId BVT::AllocateNode()
 {
     NodeId ret;
     if (m_allocatedNode != INVALID_ID)
@@ -75,13 +75,13 @@ Return:
     return ret;
 }
 
-void BVH::DeallocateNode(BVH::NodeId node)
+void BVT::DeallocateNode(BVT::NodeId node)
 {
     Get(node).next = m_allocatedNode;
     m_allocatedNode = node;
 }
 
-void BVH::FreeTree(Node* node)
+void BVT::FreeTree(Node* node)
 {
     /*Node* it = node;
     while (it != nullptr)
@@ -143,7 +143,7 @@ else                                        \
     m_root = jointedNode;                   \
 }
 
-BVH::NodeId BVH::Balance(NodeId node)
+BVT::NodeId BVT::Balance(NodeId node)
 {
     NodeId ret = node;
 
@@ -238,7 +238,7 @@ BVH::NodeId BVH::Balance(NodeId node)
     return ret;
 }
 
-void BVH::AddNode(NodeId node)
+void BVT::AddNode(NodeId node)
 {
     //size_t count = 0;
 
@@ -333,7 +333,7 @@ void BVH::AddNode(NodeId node)
     }
 }
 
-void BVH::RemoveNode(NodeId node)
+void BVT::RemoveNode(NodeId node)
 {
     assert(Get(node).IsLeaf());
 
@@ -390,7 +390,7 @@ Return:
     DeallocateNode(node);
 }
 
-size_t BVH::Height(NodeId node)
+size_t BVT::Height(NodeId node)
 {
     if (node == INVALID_ID || Get(node).IsLeaf()) return 0;
 
@@ -400,19 +400,19 @@ size_t BVH::Height(NodeId node)
     return std::max(h1, h2) + 1;
 }
 
-size_t BVH::Height()
+size_t BVT::Height()
 {
     return Height(m_root);
 }
 
 
-void BVH::Validate(NodeId node)
+void BVT::Validate(NodeId node)
 {
     if (Get(node).IsLeaf())
     {
         if (Get(node).height != 0)
         {
-            std::cout << "[ERROR]:\tBVH::Validate failed\n";
+            std::cout << "[ERROR]:\tBVT::Validate failed\n";
             assert(0);
         }
         return;
@@ -421,7 +421,7 @@ void BVH::Validate(NodeId node)
     intmax_t d = Get(Get(node).child1).height - Get(Get(node).child2).height;
     if (d > 1 || d < -1)
     {
-        std::cout << "[ERROR]:\tBVH::Validate failed\n";
+        std::cout << "[ERROR]:\tBVT::Validate failed\n";
         assert(0);
     }
 
@@ -432,7 +432,7 @@ void BVH::Validate(NodeId node)
 
 #undef JOINT_2_NODES
 
-ID BVH::Add(const AABox& aabb, void* userPtr)
+ID BVT::Add(const AABox& aabb, void* userPtr)
 {
     NodeId newNode = AllocateNode();
     Get(newNode).bound = aabb;
@@ -454,7 +454,7 @@ ID BVH::Add(const AABox& aabb, void* userPtr)
     return (ID)newNode;
 }
 
-void BVH::Remove(ID id)
+void BVT::Remove(ID id)
 {
     // assert id must be leaf node
     RemoveNode((NodeId)id);
@@ -464,28 +464,28 @@ void BVH::Remove(ID id)
 //#endif // _DEBUG
 }
 
-void BVH::Clear()
+void BVT::Clear()
 {
     m_allocatedNode = INVALID_ID;
     m_nodesAllocatedCount = 0;
     m_root = INVALID_ID;
 }
 
-AABBQuerySession* BVH::NewSession()
+AABBQuerySession* BVT::NewSession()
 {
-    return rheap::New<BVHSession>();
+    return rheap::New<BVTSession>();
 }
 
-void BVH::DeleteSession(AABBQuerySession* session)
+void BVT::DeleteSession(AABBQuerySession* session)
 {
-    return rheap::Delete((BVHSession*)session);
+    return rheap::Delete((BVTSession*)session);
 }
 
-void BVH::QueryAABox(const AABox& aabox, AABBQuerySession* session)
+void BVT::QueryAABox(const AABox& aabox, AABBQuerySession* session)
 {
     if (m_root != INVALID_ID && Get(m_root).bound.IsOverlap(aabox))
     {
-        auto* dvbtSession = (BVHSession*)session;
+        auto* dvbtSession = (BVTSession*)session;
         auto& stack = dvbtSession->m_stack;
         auto& result = dvbtSession->m_result;
 
@@ -515,11 +515,11 @@ void BVH::QueryAABox(const AABox& aabox, AABBQuerySession* session)
     }
 }
 
-void BVH::QueryFrustum(const Frustum& frustum, AABBQuerySession* session)
+void BVT::QueryFrustum(const Frustum& frustum, AABBQuerySession* session)
 {
     if (m_root != INVALID_ID && frustum.IsOverlap(Get(m_root).bound))
     {
-        auto* dvbtSession = (BVHSession*)session;
+        auto* dvbtSession = (BVTSession*)session;
         auto& stack = dvbtSession->m_stack;
         auto& result = dvbtSession->m_result;
 
@@ -549,15 +549,15 @@ void BVH::QueryFrustum(const Frustum& frustum, AABBQuerySession* session)
     }
 }
 
-void BVH::QuerySphere(const Sphere& sphere, AABBQuerySession* session)
+void BVT::QuerySphere(const Sphere& sphere, AABBQuerySession* session)
 {
 }
 
-void BVH::QueryBox(const Box& box, AABBQuerySession* session)
+void BVT::QueryBox(const Box& box, AABBQuerySession* session)
 {
 }
 
-void BVH::Query(AABBQueryTester* tester, AABBQuerySession* session)
+void BVT::Query(AABBQueryTester* tester, AABBQuerySession* session)
 {
 }
 

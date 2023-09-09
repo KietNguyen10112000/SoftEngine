@@ -42,8 +42,24 @@ file(
 
     "Common/Base/*.h"
     "Common/Base/*.cpp"
+    "Common/ComponentQueryStructures/*.h"
+    "Common/ComponentQueryStructures/*.cpp"
     "Common/QueryStructures/*.h"
     "Common/QueryStructures/*.cpp"
+
+
+    "MainSystem/Rendering/*.h"
+    "MainSystem/Rendering/*.cpp"
+    "MainSystem/Rendering/Components/*.h"
+    "MainSystem/Rendering/Components/*.cpp"
+    "MainSystem/Physics/*.h"
+    "MainSystem/Physics/*.cpp"
+    "MainSystem/Scripting/*.h"
+    "MainSystem/Scripting/*.cpp"
+    "MainSystem/Audio/*.h"
+    "MainSystem/Audio/*.cpp"
+    "MainSystem/Animation/*.h"
+    "MainSystem/Animation/*.cpp"
 
 
     "Scene/*.h"
