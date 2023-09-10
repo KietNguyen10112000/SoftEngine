@@ -44,7 +44,7 @@ int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
 
 	TCPConnector tcp{ desc };
 	auto ret = tcp.Connect();
-	if (ret == SOCKET_ERCODE::CONNECT_TIMEOUT || ret == SOCKET_ERCODE::CONNECT_REFUSED)
+	if (ret == SOCKET_ERCODE::CONNECT_TIMEOUT || ret == SOCKET_ERCODE::CONNECT_REFUSED || ret == SOCKET_ERCODE::UNKNOWN)
 	{
 		std::cout << "[ERROR]: Graphics dev needs enable shader compiler server in directory 'DevTools/'\n";
 		return -1;
@@ -90,16 +90,16 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 		assert(0);
 	}
 
-	//Graphics* ret = nullptr;
+	Graphics* ret = nullptr;
 
 	switch (backendAPI)
 	{
 
 #ifdef _WIN32
 	case soft::GRAPHICS_BACKEND_API::DX12:
-		//ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
+		ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
 		//ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>((dx12::DX12Graphics*)ret);
-		//s_instance.reset(ret);
+		s_instance.reset(ret);
 		break;
 #endif
 

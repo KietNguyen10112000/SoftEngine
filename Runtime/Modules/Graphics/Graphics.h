@@ -2,6 +2,9 @@
 #include "Core/TypeDef.h"
 
 #include "Core/Pattern/Singleton.h"
+#include "Core/Memory/SmartPointers.h"
+
+#include "GraphicsFundamental.h"
 
 NAMESPACE_BEGIN
 
@@ -29,7 +32,13 @@ public:
 	static void Finalize();
 
 public:
-	
+	virtual SharedPtr<GraphicsPipeline> CreateRasterizerPipeline(const GRAPHICS_PIPELINE_DESC& desc) = 0;
+	virtual SharedPtr<GraphicsShaderResource> CreateShaderResource(const GRAPHICS_SHADER_RESOURCE_DESC& desc) = 0;
+	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) = 0;
+
+	virtual SharedPtr<GraphicsPipelineInput> CreatePipelineInput(const GRAPHICS_PIPELINE_INPUT_DESC& desc) = 0;
+	virtual SharedPtr<GraphicsVertexBuffer> CreateVertexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc) = 0;
+	virtual SharedPtr<GraphicsIndexBuffer> CreateIndexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc) = 0;
 
 public:
 	inline auto GetDebugGraphics()

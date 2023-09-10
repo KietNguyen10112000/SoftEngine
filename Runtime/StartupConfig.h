@@ -12,10 +12,10 @@ struct API StartupConfig
 		return s_instance;
 	}
 
-	bool isEnableRendering	= false;
-	bool isEnablePhysics	= false;
-	bool isEnableScript		= false;
-	bool isEnableNetwork	= false;
+	bool isEnableRendering	= true;
+	bool isEnablePhysics	= true;
+	bool isEnableScript		= true;
+	bool isEnableNetwork	= true;
 
 	const char* pluginsPath			= "Plugins/";
 	const char* resourcesPath		= "Resources/";
