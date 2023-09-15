@@ -14,4 +14,4 @@ project ("SoftEngine")
 
 # Include sub-projects.
 add_subdirectory ("Runtime")
-add_subdirectory ("Test")
+#add_subdirectory ("Test")

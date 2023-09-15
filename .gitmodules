@@ -7,3 +7,9 @@
 [submodule "Libraries/imgui"]
 	path = Libraries/imgui
 	url = git@github.com:ocornut/imgui.git
+[submodule "Libraries/PhysX"]
+	path = Libraries/PhysX
+	url = git@github.com:NVIDIA-Omniverse/PhysX.git
+[submodule "Libraries/assimp"]
+	path = Libraries/assimp
+	url = git@github.com:assimp/assimp.git

@@ -2,5 +2,5 @@ Sign DX12
 Src ../../Runtime/Modules/Graphics/Detail/DX12/Shaders/
 Dest ../../build/bin/Debug/Shaders/
 Dupl ../../build/bin/Release/Shaders/
-.vs.hlsl->.vs.cso "dxc/dxc.exe" -T vs_6_0 -E main <input> -Fo <output>
-.ps.hlsl->.ps.cso "dxc/dxc.exe" -T ps_6_0 -E main <input> -Fo <output>
+.vs.hlsl->.vs.cso "../dxc/dxc.exe" -T vs_6_0 -E main <input> -Fo <output>
+.ps.hlsl->.ps.cso "../dxc/dxc.exe" -T ps_6_0 -E main <input> -Fo <output>

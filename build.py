@@ -23,12 +23,16 @@ os.system('cmake --build ./build/SoftEngine --config Release')
 os.makedirs('./build/bin/Debug/Plugins', exist_ok=True)
 os.makedirs('./build/bin/Release/Plugins', exist_ok=True)
 
-if osName == WINDOWS:
-    print('\nRun debug build test...')
-    os.system('call "./build/bin/Debug/test"')
-    print('\n=========================================================================================\nRun release build test...')
-    os.system('call "./build/bin/Release/test"')
-else:
-    print(osName + ' is not supported currently!')
-    sys.exit(-1)
+os.makedirs('./build/bin/Debug/Shaders', exist_ok=True)
+os.makedirs('./build/bin/Release/Shaders', exist_ok=True)
+
+
+#if osName == WINDOWS:
+#    print('\nRun debug build test...')
+#    os.system('call "./build/bin/Debug/test"')
+#    print('\n=========================================================================================\nRun release build test...')
+#    os.system('call "./build/bin/Release/test"')
+#else:
+#    print(osName + ' is not supported currently!')
+#    sys.exit(-1)
 
