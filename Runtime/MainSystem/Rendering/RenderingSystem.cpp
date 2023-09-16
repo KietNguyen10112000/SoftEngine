@@ -68,6 +68,16 @@ void RenderingSystem::Iteration(float dt)
 {
 	m_bvh.Reconstruct(5'000'000);
 
+	ProcessAllCmds(GetPrevServer(), this);
+}
+
+void RenderingSystem::PrevIteration()
+{
+	UpdateCurrentServer();
+}
+
+void RenderingSystem::PostIteration()
+{
 }
 
 

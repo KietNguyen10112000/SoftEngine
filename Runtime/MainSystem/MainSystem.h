@@ -27,7 +27,9 @@ protected:
 	virtual void RemoveComponent(MainComponent* comp) = 0;
 	virtual void OnObjectTransformChanged(MainComponent* comp) = 0;
 
+	virtual void PrevIteration() = 0;
 	virtual void Iteration(float dt) = 0;
+	virtual void PostIteration() = 0;
 
 };
 

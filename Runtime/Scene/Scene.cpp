@@ -251,12 +251,28 @@ void Scene::Iteration(float dt)
 
 	//m_numMainSystemEndReconstruct.store(MainSystemInfo::COUNT, std::memory_order_relaxed);
 	//TaskSystem::PrepareHandle(&m_endReconstructWaitingHandle);
+
+	for (auto& sys : m_mainSystems)
+	{
+		if (sys)
+		{
+			sys->PrevIteration();
+		}
+	}
 	
 	TaskSystem::SubmitAndWait(m_mainSystemIterationTasks, MainSystemInfo::COUNT, Task::CRITICAL);
 
 	//TaskSystem::WaitForHandle(&m_endReconstructWaitingHandle);
 
 	std::cout << "Scene::Iteration\n";
+
+	for (auto& sys : m_mainSystems)
+	{
+		if (sys)
+		{
+			sys->PostIteration();
+		}
+	}
 }
 
 NAMESPACE_END

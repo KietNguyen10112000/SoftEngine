@@ -7,9 +7,26 @@ NAMESPACE_DX12_BEGIN
 
 class DX12Graphics : public Graphics
 {
+protected:
+	constexpr static size_t NUM_GRAPHICS_BACK_BUFFERS		= 3;
+	constexpr static size_t NUM_GRAPHICS_COMMAND_LISTS		= 128;
+
+	ComPtr<IDXGISwapChain3>                 m_swapChain;
+	ComPtr<ID3D12Device2>                   m_device;
+	ComPtr<IDXGIFactory4>                   m_dxgiFactory;
+	ComPtr<ID3D12CommandQueue>				m_commandQueue;
+
+	ComPtr<ID3D12DescriptorHeap>            m_rtvDescriptorHeap;
+	ComPtr<ID3D12Resource>                  m_renderTargets[NUM_GRAPHICS_BACK_BUFFERS];
+	ComPtr<ID3D12DescriptorHeap>            m_dsvDescriptorHeap;
+	ComPtr<ID3D12Resource>                  m_depthBuffers[NUM_GRAPHICS_BACK_BUFFERS];
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
+
+private:
+
 
 public:
 	// Inherited via Graphics

@@ -294,7 +294,7 @@ public:
 };
 
 // same as ConcurrentBag but dynamic size and for each support
-template <typename T>
+template <typename T, typename Alloc = STDAllocator<T>>
 class ConcurrentArrayList
 {
 public:
@@ -368,7 +368,7 @@ public:
 	};
 
 public:
-	std::Vector<T>		m_buffer;
+	std::vector<T, Alloc>		m_buffer;
 	std::atomic<size_t> m_size		= { 0 };
 	std::atomic<size_t> m_numWriter	= { 0 };
 	spinlock			m_growthLock;
@@ -549,6 +549,11 @@ public:
 	inline auto end()
 	{
 		return m_buffer.data() + m_size.load(std::memory_order_relaxed);
+	}
+
+	inline void ReserveNoSafe(size_t size)
+	{
+		m_buffer.reserve(size);
 	}
 };
 

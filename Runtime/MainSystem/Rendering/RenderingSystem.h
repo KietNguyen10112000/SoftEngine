@@ -6,12 +6,23 @@
 #include "Modules/Graphics/GraphicsFundamental.h"
 
 #include "Common/ComponentQueryStructures/DoubleBVH.h"
+#include "Common/Base/AsyncServer.h"
 
 NAMESPACE_BEGIN
 
 class Camera;
 
-class RenderingSystem : public MainSystem
+class RenderingSystemCommand
+{
+public:
+	enum CmdID
+	{
+		CMD0,
+		COUNT
+	};
+};
+
+class RenderingSystem : public MainSystem, public AsyncServer2<RenderingSystem, RenderingSystemCommand::COUNT>
 {
 private:
 	friend class Camera;
@@ -51,6 +62,10 @@ public:
 	virtual void OnObjectTransformChanged(MainComponent* comp) override;
 
 	virtual void Iteration(float dt) override;
+
+	virtual void PrevIteration() override;
+
+	virtual void PostIteration() override;
 
 };
 
