@@ -33,12 +33,59 @@ public:
 
 public:
 	virtual SharedPtr<GraphicsPipeline> CreateRasterizerPipeline(const GRAPHICS_PIPELINE_DESC& desc) = 0;
-	virtual SharedPtr<GraphicsShaderResource> CreateShaderResource(const GRAPHICS_SHADER_RESOURCE_DESC& desc) = 0;
+
+	virtual void CreateShaderResources(
+		uint32_t numShaderResources, 
+		const GRAPHICS_SHADER_RESOURCE_DESC* descs, 
+		SharedPtr<GraphicsShaderResource>* output
+	) = 0;
+
 	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) = 0;
 
-	virtual SharedPtr<GraphicsPipelineInput> CreatePipelineInput(const GRAPHICS_PIPELINE_INPUT_DESC& desc) = 0;
+	//virtual SharedPtr<GraphicsPipelineInput> CreatePipelineInput(const GRAPHICS_PIPELINE_INPUT_DESC& desc) = 0;
 	virtual SharedPtr<GraphicsVertexBuffer> CreateVertexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc) = 0;
+
 	virtual SharedPtr<GraphicsIndexBuffer> CreateIndexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc) = 0;
+
+	virtual void SetGraphicsPipeline(GraphicsPipeline* graphicsPipeline) = 0;
+
+	virtual void SetDrawParams(GraphicsParams* params) = 0;
+
+	virtual void SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) = 0;
+
+	virtual void ClearRenderTarget(GraphicsRenderTarget* rtv, Vec4 clearColor, uint32_t numRect, const AARect* rects) = 0;
+	virtual void ClearDepthStencil(GraphicsDepthStencilBuffer* dsv, uint32_t numRect, const AARect* rects) = 0;
+
+	virtual void DrawInstanced(
+		uint32_t numVertexBuffers,
+		GraphicsVertexBuffer** vertexBuffers, 
+		uint32_t vertexCountPerInstance, 
+		uint32_t instanceCount,
+		uint32_t startVertexLocation,
+		uint32_t startInstanceLocation
+	) = 0;
+
+	virtual void DrawIndexedInstanced(
+		GraphicsIndexBuffer* indexBuffer,
+		uint32_t indexCountPerInstance,
+		uint32_t numVertexBuffers,
+		GraphicsVertexBuffer** vertexBuffers,
+		uint32_t vertexCountPerInstance,
+		uint32_t instanceCount,
+		uint32_t startVertexLocation,
+		uint32_t startInstanceLocation
+	) = 0;
+
+	virtual GraphicsRenderTarget* GetScreenRenderTarget() = 0;
+	virtual GraphicsDepthStencilBuffer* GetScreenDepthStencilBuffer() = 0;
+
+	// the fence in term of modern graphics programming
+	// after each draw call, each EndFrame() call, fence value will be increased
+	virtual uint64_t GetCurrentFenceValue() = 0;
+	virtual void WaitForFenceValue(uint64_t value) = 0;
+
+	virtual void BeginFrame() = 0;
+	virtual void EndFrame(bool vsync) = 0;
 
 public:
 	inline auto GetDebugGraphics()

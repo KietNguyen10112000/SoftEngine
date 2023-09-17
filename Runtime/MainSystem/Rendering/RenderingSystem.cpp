@@ -2,6 +2,8 @@
 
 #include "Components/Camera.h"
 
+#include "Modules/Graphics/Graphics.h"
+
 NAMESPACE_BEGIN
 
 RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
@@ -69,6 +71,20 @@ void RenderingSystem::Iteration(float dt)
 	m_bvh.Reconstruct(5'000'000);
 
 	ProcessAllCmds(GetPrevServer(), this);
+
+	auto graphics = Graphics::Get();
+	graphics->BeginFrame();
+
+	// do render
+
+	auto screenRT = graphics->GetScreenRenderTarget();
+	auto screenDS = graphics->GetScreenDepthStencilBuffer();
+
+	//graphics->SetRenderTarget(1, &screenRT, screenDS);
+	graphics->ClearRenderTarget(screenRT, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
+	graphics->ClearDepthStencil(screenDS, 0, 0);
+
+	graphics->EndFrame(true);
 }
 
 void RenderingSystem::PrevIteration()

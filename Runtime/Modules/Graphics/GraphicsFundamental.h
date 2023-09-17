@@ -200,27 +200,27 @@ public:
 
 class GraphicsRenderTarget
 {
-protected:
-	GraphicsShaderResource* m_shaderResource = nullptr;
-
-public:
-	inline auto GetShaderResource()
-	{
-		return m_shaderResource;
-	}
+//protected:
+//	GraphicsShaderResource* m_shaderResource = nullptr;
+//
+//public:
+//	inline auto GetShaderResource()
+//	{
+//		return m_shaderResource;
+//	}
 
 };
 
 class GraphicsDepthStencilBuffer
 {
-protected:
-	GraphicsShaderResource* m_shaderResource = nullptr;
-
-public:
-	inline auto GetShaderResource()
-	{
-		return m_shaderResource;
-	}
+//protected:
+//	GraphicsShaderResource* m_shaderResource = nullptr;
+//
+//public:
+//	inline auto GetShaderResource()
+//	{
+//		return m_shaderResource;
+//	}
 
 };
 
@@ -251,33 +251,33 @@ class GraphicsIndexBuffer
 
 };
 
-class GraphicsPipelineInput
-{
-public:
-	virtual void SetVertexBuffers(uint32_t numBuffers, GraphicsVertexBuffer** vertexBuffer) = 0;
-	virtual void SetIndexBuffers(uint32_t numBuffers, GraphicsIndexBuffer** indexBuffer) = 0;
-
-};
-
-class GraphicsPipelineOutput
-{
-public:
-	virtual void SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv) = 0;
-	virtual void SetDepthStencilBuffer(GraphicsDepthStencilBuffer* dsv) = 0;
-
-};
-
-struct GraphicsRenderCall
-{
-	GraphicsParams* params;
-	GraphicsPipelineInput* input;
-	GraphicsPipelineOutput* output;
-};
+//class GraphicsPipelineInput
+//{
+//public:
+//	virtual void SetVertexBuffers(uint32_t numBuffers, GraphicsVertexBuffer** vertexBuffer) = 0;
+//	virtual void SetIndexBuffers(uint32_t numBuffers, GraphicsIndexBuffer** indexBuffer) = 0;
+//
+//};
+//
+//class GraphicsPipelineOutput
+//{
+//public:
+//	virtual void SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv) = 0;
+//	virtual void SetDepthStencilBuffer(GraphicsDepthStencilBuffer* dsv) = 0;
+//
+//};
+//
+//struct GraphicsRenderCall
+//{
+//	GraphicsParams* params;
+//	GraphicsPipelineInput* input;
+//	GraphicsPipelineOutput* output;
+//};
 
 class GraphicsPipeline
 {
 public:
-	virtual GraphicsRenderCall* PrepareRenderCall() = 0;
+	virtual GraphicsParams* PrepareRenderParams() = 0;
 	
 };
 

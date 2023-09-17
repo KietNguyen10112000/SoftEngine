@@ -13,3 +13,6 @@
 [submodule "Libraries/assimp"]
 	path = Libraries/assimp
 	url = git@github.com:assimp/assimp.git
+[submodule "Libraries/D3D12MemoryAllocator"]
+	path = Libraries/D3D12MemoryAllocator
+	url = git@github.com:GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git

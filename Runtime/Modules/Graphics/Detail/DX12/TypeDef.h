@@ -6,6 +6,8 @@
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <Windows.h>
+#include "d3dx12.h"
+#include "D3D12MemAlloc.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -21,3 +23,14 @@ using Microsoft::WRL::ComPtr;
 #define NAMESPACE_DX12_BEGIN NAMESPACE_BEGIN namespace dx12 {
 
 #define NAMESPACE_DX12_END } NAMESPACE_END
+
+
+NAMESPACE_DX12_BEGIN
+
+struct DX12Resource
+{
+	ComPtr<ID3D12Resource> resource;
+	ComPtr<D3D12MA::Allocation> allocation;
+};
+
+NAMESPACE_DX12_END
