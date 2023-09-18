@@ -16,7 +16,7 @@ class DX12Graphics : public Graphics
 {
 protected:
 	constexpr static size_t			NUM_GRAPHICS_BACK_BUFFERS					= 3;
-	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 512;
+	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 128;
 	constexpr static DXGI_FORMAT	BACK_BUFFER_FORMAT							= DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	constexpr static size_t			RTV_ALLOCATOR_NUM_RTV_PER_HEAP				= 256;
@@ -39,6 +39,7 @@ protected:
 	ComPtr<ID3D12Resource>                  m_renderTargets[NUM_GRAPHICS_BACK_BUFFERS];
 	//ComPtr<ID3D12Resource>                  m_depthBuffers[NUM_GRAPHICS_BACK_BUFFERS];
 	DX12Resource							m_depthBuffers[NUM_GRAPHICS_BACK_BUFFERS];
+	uint64_t								m_frameFenceValues[NUM_GRAPHICS_BACK_BUFFERS] = {};
 	D3D12_RECT								m_backBufferScissorRect = {};
 	D3D12_VIEWPORT							m_backBufferViewport = {};
 	size_t									m_currentBackBufferId = 0;

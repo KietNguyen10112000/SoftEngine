@@ -11,6 +11,7 @@ TaskSystem::SynchContext TaskSystem::s_sychCtxs[MainSystemInfo::COUNT] = {};
 ConcurrentQueue<Fiber*> TaskSystem::s_resumeFibers;
 ConcurrentQueue<Task> TaskSystem::s_queues[Task::PRIORITY::COUNT];
 ConcurrentQueue<Task> TaskSystem::s_threadQueues[ThreadLimit::MAX_THREADS];
+TaskSystem::ThreadContext TaskSystem::s_threadContext[ThreadLimit::MAX_THREADS] = {};
 
 TaskSystem::SynchContext::SynchContext() : tasks(TaskSystemInfo::QUEUE_CAPACITY)
 {

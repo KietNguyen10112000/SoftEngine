@@ -278,14 +278,6 @@ void DX12Graphics::ClearRenderTarget(GraphicsRenderTarget* rtv, Vec4 clearColor,
 {
     auto dx12rtv = (DX12RenderTarget*)rtv;
     auto cmdList = GetCmdList();
-
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Transition.pResource = m_currentRenderTarget.m_dx12Resource.resource.Get();
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    cmdList->ResourceBarrier(1, &barrier);
-
     cmdList->ClearRenderTargetView(dx12rtv->m_rtv, &clearColor[0], 0, 0);
 }
 
@@ -340,6 +332,17 @@ void DX12Graphics::BeginFrame()
     m_currentRenderTarget.m_dx12Resource.resource = m_renderTargets[m_currentBackBufferId];
     m_currentRenderTarget.m_rtv.ptr = m_rtvStart.ptr + m_currentBackBufferId * m_rtvAllocator.GetCPUStride();
     m_currentDepthStencilBuffer.m_dsv.ptr = m_dsvStart.ptr + m_currentBackBufferId * m_dsvAllocator.GetCPUStride();
+
+    WaitForDX12FenceValue(m_frameFenceValues[m_currentBackBufferId]);
+
+    auto cmdList = GetCmdList();
+
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Transition.pResource = m_currentRenderTarget.m_dx12Resource.resource.Get();
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    cmdList->ResourceBarrier(1, &barrier);
 }
 
 void DX12Graphics::EndFrame(bool vsync)
@@ -354,7 +357,15 @@ void DX12Graphics::EndFrame(bool vsync)
 
     ExecuteCurrentCmdList();
 
-    m_swapChain->Present(vsync, 0);
+    m_swapChain->Present(vsync ? 1 : 0, 0);
+
+    m_frameFenceValues[m_currentBackBufferId] = GetCurrentDX12FenceValue();
+    ThrowIfFailed(
+        m_commandQueue->Signal(
+            m_fence.Get(),
+            m_currentFenceValue++
+        )
+    );
 
     m_currentBackBufferId = (m_currentBackBufferId + 1) % NUM_GRAPHICS_BACK_BUFFERS;
 }

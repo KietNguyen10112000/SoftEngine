@@ -225,7 +225,29 @@ void Runtime::Iteration()
 
 	auto mainScene = m_scenes[0].Get();
 
-	ProcessInput();
+	//std::cout << "Iteration [thread id: " << Thread::GetID() << ", fiber id: " << Thread::GetCurrentFiberID() << "]\n";
+
+	// dynamic submit wait
+	TaskSystem::PrepareHandle(&taskHandle);
+
+	// process input task must execute on main thread 
+	// the thread create the Window - this is required for win32 messeges queue
+	// win32 messeges queue is attach with thread that create HWND
+	Task processInput = {};
+	processInput.Params() = this;
+	processInput.Entry() = [](void* e)
+	{
+		auto engine = (Runtime*)e;
+		engine->ProcessInput();
+
+		//std::cout << "ProcessInput [thread id: " << Thread::GetID() << ", fiber id: " << Thread::GetCurrentFiberID() << "]\n";
+	};
+
+	// 0 is main thread id
+	TaskSystem::SubmitForThread(&taskHandle, 0, processInput);
+
+	// wait
+	TaskSystem::WaitForHandle(&taskHandle);
 
 	g_timer.Update();
 

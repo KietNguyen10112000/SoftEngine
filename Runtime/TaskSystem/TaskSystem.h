@@ -34,6 +34,13 @@ protected:
 		~SynchContext();
 	};
 
+	struct ThreadContext
+	{
+		size_t executedTaskCount = 0;
+		size_t submittedTaskCount = 0;
+		Spinlock allowWaitLock;
+	};
+
 	static std::condition_variable s_cv;
 	static std::mutex s_mutex;
 	static std::atomic<size_t> s_workingWorkersCount;
@@ -44,6 +51,7 @@ protected:
 
 	// task that must run in specified thread
 	static ConcurrentQueue<Task> s_threadQueues[ThreadLimit::MAX_THREADS];
+	static ThreadContext s_threadContext[ThreadLimit::MAX_THREADS];
 
 public:
 	static void Initialize();
@@ -85,12 +93,15 @@ protected:
 	inline static bool Take(Task& output, SynchContext*& sych)
 	{
 	begin:
+		auto threadId = Thread::GetID();
+		auto& context = TaskSystem::s_threadContext[threadId];
 		//sych = 0;
 
 		// thread specified task
-		auto& threadQueue = s_threadQueues[ThreadID::Get()];
+		auto& threadQueue = s_threadQueues[threadId];
 		if (threadQueue.size_approx() != 0 && threadQueue.try_dequeue(output))
 		{
+			context.executedTaskCount++;
 			return true;
 		}
 
@@ -253,7 +264,7 @@ protected:
 
 	//==================================================================================================
 	template <bool WAIT = false>
-	inline static void SubmitOneForThreadTempl(const Task& task, size_t threadID)
+	inline static void SubmitOneForThreadTempl(const Task& task, size_t threadId)
 	{
 		if constexpr (WAIT)
 		{
@@ -263,7 +274,19 @@ protected:
 			task.m_handle->waitingFiber = fiber;
 		}
 
-		s_threadQueues[threadID].enqueue(task);
+		//s_threadQueues[threadID].enqueue(task);
+		//TryInvokeAllWorkers();
+
+		auto& context = s_threadContext[threadId];
+		while (!context.allowWaitLock.try_lock())
+		{
+			TryInvokeAllWorkers();
+		}
+
+		s_threadQueues[threadId].enqueue(task);
+
+		context.submittedTaskCount++;
+		context.allowWaitLock.unlock();
 		TryInvokeAllWorkers();
 
 		if constexpr (WAIT)
@@ -274,7 +297,7 @@ protected:
 	}
 
 	template <bool WAIT = false>
-	inline static void SubmitManyForThreadTempl(const Task* tasks, size_t count, size_t threadID)
+	inline static void SubmitManyForThreadTempl(const Task* tasks, size_t count, size_t threadId)
 	{
 		TaskWaitingHandle* pHandle = 0;
 		if constexpr (WAIT)
@@ -285,7 +308,13 @@ protected:
 			pHandle->waitingFiber = fiber;
 		}
 
-		auto& queue = s_queues[threadID];
+		auto& queue = s_queues[threadId];
+
+		auto& context = s_threadContext[threadId];
+		while (!context.allowWaitLock.try_lock())
+		{
+			TryInvokeAllWorkers();
+		}
 
 		for (size_t i = 0; i < count; i++)
 		{
@@ -302,6 +331,8 @@ protected:
 			queue.enqueue(tasks[i]);
 		}
 
+		context.submittedTaskCount++;
+		context.allowWaitLock.unlock();
 		TryInvokeAllWorkers();
 
 		if constexpr (WAIT)
@@ -412,7 +443,16 @@ public:
 
 		assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
 
+		auto& context = s_threadContext[threadId];
+		while (!context.allowWaitLock.try_lock())
+		{
+			TryInvokeAllWorkers();
+		}
+
 		s_threadQueues[threadId].enqueue(task);
+
+		context.submittedTaskCount++;
+		context.allowWaitLock.unlock();
 		TryInvokeAllWorkers();
 	}
 

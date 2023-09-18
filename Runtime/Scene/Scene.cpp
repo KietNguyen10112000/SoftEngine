@@ -264,7 +264,7 @@ void Scene::Iteration(float dt)
 
 	//TaskSystem::WaitForHandle(&m_endReconstructWaitingHandle);
 
-	std::cout << "Scene::Iteration\n";
+	//std::cout << "Scene::Iteration\n";
 
 	for (auto& sys : m_mainSystems)
 	{

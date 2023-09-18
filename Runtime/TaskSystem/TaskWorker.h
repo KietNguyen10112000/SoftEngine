@@ -71,8 +71,15 @@ public:
 
 				if (pause)
 				{
-					TaskSystem::WorkerWait();
-					TaskSystem::WorkerResume();
+					auto& context = TaskSystem::s_threadContext[Thread::GetID()];
+
+					if (context.submittedTaskCount == context.executedTaskCount && context.allowWaitLock.try_lock())
+					{
+						TaskSystem::WorkerWait();
+						TaskSystem::WorkerResume();
+						context.allowWaitLock.unlock();
+					}
+
 					continue;
 				}
 			}
