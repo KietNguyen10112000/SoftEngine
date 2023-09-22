@@ -7,6 +7,7 @@
 
 #include "DX12DescriptorAllocator.h"
 #include "DX12RingBufferCommandList.h"
+#include "DX12ResourceUploader.h"
 
 #include "D3D12MemAlloc.h"
 
@@ -14,9 +15,9 @@ NAMESPACE_DX12_BEGIN
 
 class DX12Graphics : public Graphics
 {
-protected:
+public:
 	constexpr static size_t			NUM_GRAPHICS_BACK_BUFFERS					= 3;
-	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 128;
+	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 256;
 	constexpr static DXGI_FORMAT	BACK_BUFFER_FORMAT							= DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	constexpr static size_t			RTV_ALLOCATOR_NUM_RTV_PER_HEAP				= 256;
@@ -57,17 +58,19 @@ protected:
 
 	DX12RingBufferCommandList m_ringBufferCmdList;
 
+	DX12ResourceUploader m_resourceUploader;
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
+
+	void FirstInit();
 
 private:
 	void InitD3D12();
 	void InitAllocators();
 	void InitSwapchain(void* _hwnd);
 	void InitFence();
-
-	void ExecuteCurrentCmdList();
 
 public:
 	// Inherited via Graphics
@@ -121,6 +124,8 @@ public:
 	);
 
 public:
+	void ExecuteCurrentCmdList();
+
 	inline static DX12Graphics* GetDX12()
 	{
 		return (DX12Graphics*)Get();
@@ -146,6 +151,11 @@ public:
 		m_currentFenceValue++;
 	}
 
+	inline void SignalCurrentDX12FenceValue()
+	{
+		m_commandQueue->Signal(m_fence.Get(), m_currentFenceValue++);
+	}
+
 	inline void WaitForDX12FenceValue(uint64_t value)
 	{
 		if (m_fence->GetCompletedValue() < value)
@@ -158,6 +168,11 @@ public:
 	inline auto* GetCmdList()
 	{
 		return m_ringBufferCmdList.CmdList();
+	}
+
+	inline auto* GetResourceUploader()
+	{
+		return &m_resourceUploader;
 	}
 
 };

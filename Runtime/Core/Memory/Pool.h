@@ -514,6 +514,13 @@ public:
 //	
 //};
 
+template <size_t SIZE, size_t POOL_ALLOC = 4 * 1024>
+struct PoolAllocator
+{
+	using pool_type = typename std::conditional<(SIZE > 8), Pool<SIZE, POOL_ALLOC>, Pool0<POOL_ALLOC>>::type;
+	inline static pool_type s_pool = { 1 };
+};
+
 // global
 template <typename T, size_t POOL_ALLOC = 4*1024>
 class STLNodeGlobalAllocator
@@ -526,22 +533,18 @@ public:
 	};
 	
 	using value_type = T;
-	
-	using pool_type = Pool<sizeof(T), POOL_ALLOC>;
-	
-	inline static pool_type s_pool = { 1 };
 
 	STLNodeGlobalAllocator() = default;
 	template <class U> constexpr STLNodeGlobalAllocator(const STLNodeGlobalAllocator <U, POOL_ALLOC>&) noexcept {}
 	
 	T* allocate(size_t n)
 	{
-		return (T*)s_pool.Allocate();
+		return (T*)PoolAllocator<sizeof(T), POOL_ALLOC>::s_pool.Allocate();
 	};
 	
 	void deallocate(T* p, size_t n)
 	{	
-		s_pool.Deallocate((byte*)p);
+		PoolAllocator<sizeof(T), POOL_ALLOC>::s_pool.Deallocate((byte*)p);
 	};
 	
 };

@@ -278,6 +278,7 @@ protected:
 		//TryInvokeAllWorkers();
 
 		auto& context = s_threadContext[threadId];
+		context.submittedTaskCount++;
 		while (!context.allowWaitLock.try_lock())
 		{
 			TryInvokeAllWorkers();
@@ -285,7 +286,6 @@ protected:
 
 		s_threadQueues[threadId].enqueue(task);
 
-		context.submittedTaskCount++;
 		context.allowWaitLock.unlock();
 		TryInvokeAllWorkers();
 
@@ -311,6 +311,8 @@ protected:
 		auto& queue = s_queues[threadId];
 
 		auto& context = s_threadContext[threadId];
+		context.submittedTaskCount += count;
+
 		while (!context.allowWaitLock.try_lock())
 		{
 			TryInvokeAllWorkers();
@@ -331,7 +333,6 @@ protected:
 			queue.enqueue(tasks[i]);
 		}
 
-		context.submittedTaskCount++;
 		context.allowWaitLock.unlock();
 		TryInvokeAllWorkers();
 
@@ -444,14 +445,13 @@ public:
 		assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
 
 		auto& context = s_threadContext[threadId];
+		context.submittedTaskCount++;
 		while (!context.allowWaitLock.try_lock())
 		{
 			TryInvokeAllWorkers();
 		}
 
 		s_threadQueues[threadId].enqueue(task);
-
-		context.submittedTaskCount++;
 		context.allowWaitLock.unlock();
 		TryInvokeAllWorkers();
 	}

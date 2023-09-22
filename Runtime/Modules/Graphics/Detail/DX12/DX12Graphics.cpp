@@ -21,6 +21,11 @@ DX12Graphics::~DX12Graphics()
     }
 }
 
+void DX12Graphics::FirstInit()
+{
+    m_resourceUploader.Initialize();
+}
+
 void DX12Graphics::InitD3D12()
 {
 #ifdef _DEBUG

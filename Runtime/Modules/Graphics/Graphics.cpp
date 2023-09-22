@@ -100,6 +100,7 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 		ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
 		//ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>((dx12::DX12Graphics*)ret);
 		s_instance.reset(ret);
+		((dx12::DX12Graphics*)ret)->FirstInit();
 		break;
 #endif
 

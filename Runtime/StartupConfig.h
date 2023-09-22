@@ -28,7 +28,7 @@ struct API StartupConfig
 
 	uint32_t numThreads		= -1;
 	uint32_t maxThreads		= -1;
-	uint32_t reservedThread = 2;
+	uint32_t reservedThread = 4;
 
 };
 
