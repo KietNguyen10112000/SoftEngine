@@ -3,6 +3,7 @@
 #include "Components/Camera.h"
 
 #include "Modules/Graphics/Graphics.h"
+#include <Core/Thread/Thread.h>
 
 NAMESPACE_BEGIN
 
@@ -83,6 +84,8 @@ void RenderingSystem::Iteration(float dt)
 	//graphics->SetRenderTarget(1, &screenRT, screenDS);
 	graphics->ClearRenderTarget(screenRT, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
 	graphics->ClearDepthStencil(screenDS, 0, 0);
+
+	Thread::Sleep(14);
 
 	graphics->EndFrame(true);
 }

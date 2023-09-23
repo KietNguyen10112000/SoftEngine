@@ -24,7 +24,7 @@ struct API StartupConfig
 	const char* windowTitle = "SoftEngine";
 	int windowWidth = -1;
 	int windowHeight = -1;
-	float fixedDt = 0.016f;
+	float fixedDt = 0;
 
 	uint32_t numThreads		= -1;
 	uint32_t maxThreads		= -1;

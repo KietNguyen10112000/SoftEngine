@@ -243,7 +243,7 @@ WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int he
     ret->input = input;
 
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)ret);
-    ShowWindow(hwnd, SW_SHOWMAXIMIZED);
+    ShowWindow(hwnd, SW_SHOW);
 
     PlatformInput_Init(ret);
 

@@ -11,6 +11,8 @@ DX12Graphics::DX12Graphics(void* hwnd)
     InitSwapchain(hwnd);
     InitFence();
     m_ringBufferCmdList.Resize(m_device.Get(), NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS);
+    InitRootSignature(); 
+    InitGPUVisibleDescriptorHeap();
 }
 
 DX12Graphics::~DX12Graphics()
@@ -244,6 +246,113 @@ void DX12Graphics::CreateShaderResources(
 ) {
 }
 
+void DX12Graphics::InitRootSignature()
+{
+    constexpr size_t NUM_STAGE = 5;
+
+    D3D12_DESCRIPTOR_RANGE ranges[2 * NUM_STAGE] = {};
+
+    size_t descriptorHeapOffset = 0;
+    size_t rangeIdx = 0;
+
+    size_t registerSpaces[] = {
+        REGISTER_SPACE_VS,
+        REGISTER_SPACE_PS,
+        REGISTER_SPACE_GS,
+        REGISTER_SPACE_HS,
+        REGISTER_SPACE_DS
+    };
+
+    size_t numCbv[] = {
+        NUM_CBV_VS,
+        NUM_CBV_PS,
+        NUM_CBV_GS,
+        NUM_CBV_HS,
+        NUM_CBV_DS
+    };
+
+    size_t numSrv[] = {
+        NUM_SRV_VS,
+        NUM_SRV_PS,
+        NUM_SRV_GS,
+        NUM_SRV_HS,
+        NUM_SRV_DS
+    };
+
+    D3D12_SHADER_VISIBILITY visibilities[] = {
+        D3D12_SHADER_VISIBILITY_VERTEX,
+        D3D12_SHADER_VISIBILITY_PIXEL,
+        D3D12_SHADER_VISIBILITY_GEOMETRY,
+        D3D12_SHADER_VISIBILITY_HULL,
+        D3D12_SHADER_VISIBILITY_DOMAIN
+    };
+
+    D3D12_ROOT_PARAMETER rootParameters[NUM_STAGE] = {};
+    for (size_t i = 0; i < NUM_STAGE; i++)
+    {
+        auto& parameter = rootParameters[i];
+        parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        parameter.DescriptorTable.pDescriptorRanges = &ranges[rangeIdx];
+        parameter.DescriptorTable.NumDescriptorRanges = 2;
+        parameter.ShaderVisibility = visibilities[i];
+
+        D3D12_DESCRIPTOR_RANGE& cbvRange = ranges[rangeIdx++];
+        cbvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+        cbvRange.BaseShaderRegister = 0;
+        cbvRange.RegisterSpace = registerSpaces[i];
+        cbvRange.NumDescriptors = numCbv[i];
+        cbvRange.OffsetInDescriptorsFromTableStart = descriptorHeapOffset;
+
+        descriptorHeapOffset += cbvRange.NumDescriptors;
+
+        D3D12_DESCRIPTOR_RANGE& srvRange = ranges[rangeIdx++];
+        srvRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+        srvRange.BaseShaderRegister = 0;
+        srvRange.RegisterSpace = registerSpaces[i];
+        srvRange.NumDescriptors = numSrv[i];
+        srvRange.OffsetInDescriptorsFromTableStart = descriptorHeapOffset;
+
+        descriptorHeapOffset += srvRange.NumDescriptors;
+    }
+
+    D3D12_STATIC_SAMPLER_DESC rootSampler = {};
+    rootSampler.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+    rootSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    rootSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    rootSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    rootSampler.MipLODBias = 0;
+    rootSampler.MaxAnisotropy = 0;
+    rootSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    rootSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+    rootSampler.MinLOD = 0.0f;
+    rootSampler.MaxLOD = D3D12_FLOAT32_MAX;
+    rootSampler.ShaderRegister = 0;
+    rootSampler.RegisterSpace = 0;
+    rootSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    rootSignatureDesc.pParameters = rootParameters;
+    rootSignatureDesc.NumParameters = NUM_STAGE;
+    rootSignatureDesc.pStaticSamplers = &rootSampler;
+    rootSignatureDesc.NumStaticSamplers = 1;
+
+    ComPtr<ID3DBlob> signature;
+    ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr));
+
+    ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
+        IID_PPV_ARGS(&m_rootSignature)));
+}
+
+void DX12Graphics::InitGPUVisibleDescriptorHeap()
+{
+    D3D12_DESCRIPTOR_HEAP_DESC gpuHeapDesc = {};
+    gpuHeapDesc.NumDescriptors = TOTAL_DESCRIPTORS_OF_GPU_VISIBLE_HEAP;
+    gpuHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    gpuHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    ThrowIfFailed(m_device->CreateDescriptorHeap(&gpuHeapDesc, IID_PPV_ARGS(&m_gpuVisibleHeap)));
+}
+
 SharedPtr<GraphicsRenderTarget> DX12Graphics::CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc)
 {
 	return SharedPtr<GraphicsRenderTarget>();
@@ -362,15 +471,15 @@ void DX12Graphics::EndFrame(bool vsync)
 
     ExecuteCurrentCmdList();
 
-    m_swapChain->Present(vsync ? 1 : 0, 0);
+    ThrowIfFailed(m_swapChain->Present(vsync ? 1 : 0, 0));
 
-    m_frameFenceValues[m_currentBackBufferId] = GetCurrentDX12FenceValue();
-    ThrowIfFailed(
+    m_frameFenceValues[m_currentBackBufferId] = GetCurrentDX12FenceValue() - 1;
+    /*ThrowIfFailed(
         m_commandQueue->Signal(
             m_fence.Get(),
             m_currentFenceValue++
         )
-    );
+    );*/
 
     m_currentBackBufferId = (m_currentBackBufferId + 1) % NUM_GRAPHICS_BACK_BUFFERS;
 }

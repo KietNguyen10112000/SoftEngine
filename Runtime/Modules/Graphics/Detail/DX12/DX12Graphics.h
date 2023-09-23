@@ -17,11 +17,42 @@ class DX12Graphics : public Graphics
 {
 public:
 	constexpr static size_t			NUM_GRAPHICS_BACK_BUFFERS					= 3;
-	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 256;
+	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 128;
 	constexpr static DXGI_FORMAT	BACK_BUFFER_FORMAT							= DXGI_FORMAT_R8G8B8A8_UNORM;
 
 	constexpr static size_t			RTV_ALLOCATOR_NUM_RTV_PER_HEAP				= 256;
 	constexpr static size_t			DSV_ALLOCATOR_NUM_DSV_PER_HEAP				= 256;
+
+	constexpr static size_t			REGISTER_SPACE_VS	= 0;
+	constexpr static size_t			NUM_CBV_VS			= 16;
+	constexpr static size_t			NUM_SRV_VS			= 16;
+
+	constexpr static size_t			REGISTER_SPACE_PS	= 1;
+	constexpr static size_t			NUM_CBV_PS			= 16;
+	constexpr static size_t			NUM_SRV_PS			= 16;
+
+	constexpr static size_t			REGISTER_SPACE_GS	= 2;
+	constexpr static size_t			NUM_CBV_GS			= 16;
+	constexpr static size_t			NUM_SRV_GS			= 16;
+
+	constexpr static size_t			REGISTER_SPACE_HS	= 3;
+	constexpr static size_t			NUM_CBV_HS			= 16;
+	constexpr static size_t			NUM_SRV_HS			= 16;
+
+	constexpr static size_t			REGISTER_SPACE_DS	= 4;
+	constexpr static size_t			NUM_CBV_DS			= 16;
+	constexpr static size_t			NUM_SRV_DS			= 16;
+
+	constexpr static size_t			TOTAL_DESCRIPTORS_PER_RENDER_ROOM = + NUM_CBV_VS + NUM_SRV_VS
+																+ NUM_CBV_PS + NUM_SRV_PS
+																+ NUM_CBV_GS + NUM_SRV_GS
+																+ NUM_CBV_HS + NUM_SRV_HS
+																+ NUM_CBV_DS + NUM_SRV_DS;
+	constexpr static size_t			RENDER_BATCH_SIZE	= 48;
+	constexpr static size_t			NUM_RENDER_ROOM		= RENDER_BATCH_SIZE * NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS;
+
+	constexpr static size_t			TOTAL_DESCRIPTORS_OF_GPU_VISIBLE_HEAP = TOTAL_DESCRIPTORS_PER_RENDER_ROOM * NUM_RENDER_ROOM;
+
 
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
 	ComPtr<ID3D12Device2>                   m_device;
@@ -60,6 +91,11 @@ public:
 
 	DX12ResourceUploader m_resourceUploader;
 
+	// rasterzier root signature
+	ComPtr<ID3D12RootSignature> m_rootSignature;
+
+	ComPtr<ID3D12DescriptorHeap> m_gpuVisibleHeap;
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
@@ -71,6 +107,9 @@ private:
 	void InitAllocators();
 	void InitSwapchain(void* _hwnd);
 	void InitFence();
+
+	void InitRootSignature();
+	void InitGPUVisibleDescriptorHeap();
 
 public:
 	// Inherited via Graphics

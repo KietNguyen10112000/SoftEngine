@@ -101,7 +101,7 @@ void Runtime::InitGraphics()
 
 		m_input = rheap::New<Input>();
 
-		m_window = (void*)platform::CreateWindow(m_input, 0, 0, -1, -1, "SoftEngine");
+		m_window = (void*)platform::CreateWindow(m_input, 0, 0, StartupConfig::Get().windowWidth, StartupConfig::Get().windowHeight, "SoftEngine");
 		if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
 		{
 			m_isRunning = false;
