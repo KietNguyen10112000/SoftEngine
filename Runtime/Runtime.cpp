@@ -70,6 +70,8 @@ void Runtime::Finalize()
 	mheap::internal::FreeStableObjects(Runtime::STABLE_VALUE, 0, 0);
 	gc::Run(-1);
 	resource::internal::Finalize();
+
+	Graphics::Finalize();
 }
 
 Runtime::Runtime()
@@ -113,7 +115,7 @@ void Runtime::FinalGraphics()
 {
 	if (StartupConfig::Get().isEnableRendering)
 	{
-		Graphics::Finalize();
+		//Graphics::Finalize();
 		platform::DeleteWindow(m_window);
 		rheap::Delete(m_input);
 	}

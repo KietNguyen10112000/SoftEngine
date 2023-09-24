@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/TypeDef.h"
+#include "Core/Memory/SmartPointers.h"
 #include "Math/Math.h"
 
 NAMESPACE_BEGIN
@@ -27,12 +28,15 @@ struct GRAPHICS_DATA_FORMAT
 	{
 		FORMAT_R32G32B32_FLOAT,
 		FORMAT_R32G32B32A32_FLOAT,
-		FORMAT_R8G8B8A8_UNORM
+		FORMAT_R8G8B8A8_UNORM,
+
+		COUNT
 	};
 };
 
 struct GRAPHICS_CONSTANT_BUFFER_DESC
 {
+	size_t perferNumRoom = -1;
 	size_t bufferSize;
 };
 
@@ -72,7 +76,7 @@ struct GRAPHICS_SHADER_RESOURCE_DESC
 
 	union
 	{
-		GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC buffer;
+		GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC buffer = {};
 		GRAPHICS_SHADER_RESOURCE_TYPE_TEXTURE2D_DESC texture2D;
 	};
 };
@@ -105,7 +109,7 @@ struct GRAPHICS_PIPELINE_INPUT_ELEMENT_DESC
 	GRAPHICS_DATA_FORMAT::FORMAT							format;
 	uint32_t												inputSlot;
 	uint32_t												alignedByteOffset;
-	GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::TYPE	inputSlotClass;
+	GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::TYPE			inputSlotClass;
 	uint32_t												instanceDataStepRate;
 };
 
@@ -143,7 +147,9 @@ struct GRAPHICS_PRIMITIVE_TOPOLOGY
 		PRIMITIVE_TOPOLOGY_TYPE_POINT = 1,
 		PRIMITIVE_TOPOLOGY_TYPE_LINE = 2,
 		PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE = 3,
-		PRIMITIVE_TOPOLOGY_TYPE_PATCH = 4
+		PRIMITIVE_TOPOLOGY_TYPE_PATCH = 4,
+
+		COUNT
 	};
 };
 
@@ -168,6 +174,10 @@ struct GRAPHICS_PIPELINE_DESC
 	GRAPHICS_PARAMS_DESC hsParamsDesc;
 	GRAPHICS_PARAMS_DESC dsParamsDesc;
 	GRAPHICS_PARAMS_DESC gsParamsDesc;
+
+	GRAPHICS_PRIMITIVE_TOPOLOGY::TYPE primitiveTopology;
+
+	size_t preferRenderCallPerFrame = -1;
 };
 
 struct GRAPHICS_RAYTRACING_PIPELINE_DESC
@@ -181,9 +191,11 @@ struct GRAPHICS_SHADER_SPACE
 	{
 		SHADER_SPACE_VS,
 		SHADER_SPACE_PS,
+		SHADER_SPACE_GS,
 		SHADER_SPACE_HS,
 		SHADER_SPACE_DS,
-		SHADER_SPACE_GS
+
+		COUNT
 	};
 };
 
@@ -191,12 +203,20 @@ class GraphicsShaderResource
 {
 public:
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_BUFFER
-	virtual void UpdateBufferSynch(void* buffer, size_t bufferSize) = 0;
+	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
 
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_TEXTURE2D
-	virtual void UpdateTexture2DSynch(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region) = 0;
+	virtual void UpdateTexture2D(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region) = 0;
 
 };
+
+class GraphicsConstantBuffer
+{
+public:
+	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
+
+};
+
 
 class GraphicsRenderTarget
 {
@@ -228,21 +248,23 @@ class GraphicsParams
 {
 public:
 	// set ConstantBuffer with async update content
-	virtual void SetConstantBuffer(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID slotIndex, 
-		void* buffer, size_t bufferSize) = 0;
+	virtual void SetConstantBuffers(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex,
+		uint32_t numBuffers, SharedPtr<GraphicsConstantBuffer>* constantBuffers) = 0;
 
-	// set Shader Resource type Buffer with async update content
-	virtual void SetShaderResourceBuffer(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID slotIndex, 
-		GraphicsShaderResource* shaderResource, void* buffer, size_t bufferSize) = 0;
+	// set Shader Resource type Buffer
+	virtual void SetShaderResourcesBuffer(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, 
+		uint32_t numResources, SharedPtr<GraphicsShaderResource>* shaderResources) = 0;
 
-	// set Shader Resource type Texture2D with async update content
-	virtual void SetShaderResourceTexture2D(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID slotIndex, 
-		GraphicsShaderResource* shaderResource, void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region) = 0;
+	// set Shader Resource type Texture2D
+	virtual void SetShaderResourcesTexture2D(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex,
+		uint32_t numResources, SharedPtr<GraphicsShaderResource>* shaderResources) = 0;
 
 };
 
 class GraphicsVertexBuffer
 {
+public:
+	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
 
 };
 
@@ -278,7 +300,7 @@ class GraphicsPipeline
 {
 public:
 	virtual GraphicsParams* PrepareRenderParams() = 0;
-	
+
 };
 
 NAMESPACE_END

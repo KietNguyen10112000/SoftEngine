@@ -1,6 +1,11 @@
 #include "DX12Graphics.h"
 
 #include "DX12DescriptorAllocator.h"
+#include "DX12Utils.h"
+#include "DX12Resources.h"
+
+#include "FileSystem/FileUtils.h"
+
 
 NAMESPACE_DX12_BEGIN
 
@@ -26,6 +31,12 @@ DX12Graphics::~DX12Graphics()
 void DX12Graphics::FirstInit()
 {
     m_resourceUploader.Initialize();
+
+    auto cmdList = GetCmdList();
+    cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
+
+    ID3D12DescriptorHeap* ppHeaps[] = { m_gpuVisibleHeap.Get() };
+    cmdList->SetDescriptorHeaps(1, ppHeaps);
 }
 
 void DX12Graphics::InitD3D12()
@@ -77,6 +88,8 @@ void DX12Graphics::InitD3D12()
 
     ThrowIfFailed(D3D12CreateDevice(adapters[chosenAdapterId].Get(), D3D_FEATURE_LEVEL_11_1, IID_PPV_ARGS(&m_device)));
     m_adapter = adapters[chosenAdapterId];
+
+    m_CBV_SRV_UAV_CPUdescriptorHandleStride = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 }
 
 void DX12Graphics::InitAllocators()
@@ -232,11 +245,144 @@ void DX12Graphics::ExecuteCurrentCmdList()
     );
 
     m_ringBufferCmdList.NextCmdListAlloc(m_currentFenceValue - 1, m_fence.Get(), m_fenceEvent);
+
+    cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
+    ID3D12DescriptorHeap* ppHeaps[] = { m_gpuVisibleHeap.Get() };
+    cmdList->SetDescriptorHeaps(1, ppHeaps);
 }
 
 SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHICS_PIPELINE_DESC& desc)
 {
-	return SharedPtr<GraphicsPipeline>();
+    size_t numRenderCallPerFrame = std::clamp(desc.preferRenderCallPerFrame, GRAPHICS_PIPELINE_MIN_RENDER_ROOMS, GRAPHICS_PIPELINE_MAX_RENDER_ROOMS);
+    auto ret = std::make_shared<DX12GraphicsPipeline>(numRenderCallPerFrame, desc);
+    auto& dx12pipeline = ret->m_pipelineState;
+
+    byte *vs = nullptr, *ps = nullptr, *gs = nullptr, *hs = nullptr, *ds = nullptr;
+    size_t lenVS = 0, lenPS = 0, lenGS = 0, lenHS = 0, lenDS = 0;
+
+    if (desc.vs)
+    {
+        FileUtils::ReadFile(desc.vs, vs, lenVS);
+    }
+
+    if (desc.ps)
+    {
+        FileUtils::ReadFile(desc.ps, ps, lenPS);
+    }
+
+    if (desc.gs)
+    {
+        FileUtils::ReadFile(desc.gs, gs, lenGS);
+    }
+
+    if (desc.hs)
+    {
+        FileUtils::ReadFile(desc.hs, hs, lenHS);
+    }
+
+    if (desc.ds)
+    {
+        FileUtils::ReadFile(desc.ds, ds, lenDS);
+    }
+
+    D3D12_GRAPHICS_PIPELINE_STATE_DESC dx12desc = {};
+
+    D3D12_INPUT_ELEMENT_DESC inputElements[16] = {};
+
+    for (size_t i = 0; i < desc.inputDesc.numElements; i++)
+    {
+        inputElements[i] = dx12utils::ConvertToDX12InputElement(desc.inputDesc.elements[i]);
+    }
+
+    dx12desc.InputLayout.NumElements = desc.inputDesc.numElements;
+    dx12desc.InputLayout.pInputElementDescs = inputElements;
+
+    dx12desc.VS.pShaderBytecode = vs;
+    dx12desc.VS.BytecodeLength = lenVS;
+
+    dx12desc.PS.pShaderBytecode = ps;
+    dx12desc.PS.BytecodeLength = lenPS;
+
+    dx12desc.GS.pShaderBytecode = gs;
+    dx12desc.GS.BytecodeLength = lenGS;
+
+    dx12desc.HS.pShaderBytecode = hs;
+    dx12desc.HS.BytecodeLength = lenHS;
+
+    dx12desc.DS.pShaderBytecode = ds;
+    dx12desc.DS.BytecodeLength = lenDS;
+
+    dx12desc.PrimitiveTopologyType = dx12utils::ConvertToDX12PrimitiveTopoplogy(desc.primitiveTopology); // type of topology we are drawing
+    dx12desc.SampleDesc.Count = 1;
+    dx12desc.SampleDesc.Quality = 0; // must be the same sample description as the swapchain and depth/stencil buffer
+    dx12desc.SampleMask = 0xffffffff;
+    dx12desc.NumRenderTargets = desc.outputDesc.numRenderTarget;
+    for (size_t i = 0; i < desc.outputDesc.numRenderTarget; i++)
+    {
+        dx12desc.RTVFormats[i] = dx12utils::ConvertToDX12Format(desc.outputDesc.RTVFormat[i]); // format of the render target
+    }
+
+    dx12desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
+    dx12desc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
+    dx12desc.RasterizerState.FrontCounterClockwise = FALSE;
+    dx12desc.RasterizerState.DepthBias = 0;
+    dx12desc.RasterizerState.SlopeScaledDepthBias = 0.0f;
+    dx12desc.RasterizerState.DepthBiasClamp = 0.0f;
+    dx12desc.RasterizerState.DepthClipEnable = TRUE;
+    dx12desc.RasterizerState.MultisampleEnable = FALSE;
+    dx12desc.RasterizerState.AntialiasedLineEnable = FALSE;
+
+    dx12desc.BlendState.AlphaToCoverageEnable = FALSE;
+    dx12desc.BlendState.IndependentBlendEnable = TRUE;
+    dx12desc.BlendState.RenderTarget[0].BlendEnable = TRUE;
+    dx12desc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+    dx12desc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+    dx12desc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+    dx12desc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_INV_DEST_ALPHA;//D3D11_BLEND_ONE;
+    dx12desc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ONE;//D3D11_BLEND_ZERO;
+    dx12desc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    dx12desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+    dx12desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+    dx12desc.DepthStencilState.DepthEnable = TRUE; // enable depth testing
+    dx12desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // can write depth data to all of the depth/stencil buffer
+    dx12desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // pixel fragment passes depth test if destination pixel's depth is less than pixel fragment's
+    dx12desc.DepthStencilState.StencilEnable = FALSE; // disable stencil test
+    dx12desc.DepthStencilState.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK; // a default stencil read mask (doesn't matter at this point since stencil testing is turned off)
+    dx12desc.DepthStencilState.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK; // a default stencil write mask (also doesn't matter)
+    const D3D12_DEPTH_STENCILOP_DESC defaultStencilOp = // a stencil operation structure, again does not really matter since stencil testing is turned off
+    { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+    dx12desc.DepthStencilState.FrontFace = defaultStencilOp; // both front and back facing polygons get the same treatment
+    dx12desc.DepthStencilState.BackFace = defaultStencilOp;
+
+    ThrowIfFailed(m_device->CreateGraphicsPipelineState(&dx12desc, IID_PPV_ARGS(&dx12pipeline)));
+
+    if (desc.vs)
+    {
+        FileUtils::FreeBuffer(vs);
+    }
+
+    if (desc.ps)
+    {
+        FileUtils::FreeBuffer(ps);
+    }
+
+    if (desc.gs)
+    {
+        FileUtils::FreeBuffer(gs);
+    }
+
+    if (desc.hs)
+    {
+        FileUtils::FreeBuffer(hs);
+    }
+
+    if (desc.ds)
+    {
+        FileUtils::FreeBuffer(ds);
+    }
+
+	return ret;
 }
 
 void DX12Graphics::CreateShaderResources(
@@ -244,6 +390,111 @@ void DX12Graphics::CreateShaderResources(
     const GRAPHICS_SHADER_RESOURCE_DESC* descs, 
     SharedPtr<GraphicsShaderResource>* output
 ) {
+}
+
+void DX12Graphics::CreateConstantBuffers(
+    uint32_t numConstantBuffers,
+    const GRAPHICS_CONSTANT_BUFFER_DESC* descs,
+    SharedPtr<GraphicsConstantBuffer>* output
+) {
+    size_t numCBVOfEachDesc = 0;
+    for (size_t i = 0; i < numConstantBuffers; i++)
+    {
+        numCBVOfEachDesc = std::max(numCBVOfEachDesc, std::clamp(descs[i].perferNumRoom, CBV_MIN_DESCRIPTORS_PER_HEAP, CBV_MAX_DESCRIPTORS_PER_HEAP));
+    }
+
+    D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+    heapDesc.NumDescriptors = (uint32_t)numCBVOfEachDesc * numConstantBuffers;
+    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+    ComPtr<ID3D12DescriptorHeap> descriptorHeap;
+    ThrowIfFailed(m_device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&descriptorHeap)));
+    auto cpuHandleStart = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    auto cpuHandleStride = m_device->GetDescriptorHandleIncrementSize(heapDesc.Type);
+
+    // create resource
+    D3D12_GPU_VIRTUAL_ADDRESS baseGPUAddress;
+    byte* uploadAddress = 0;
+    {
+        size_t totalSize = 0;
+        size_t totalSizeOfEach = 0;
+        for (size_t i = 0; i < numConstantBuffers; i++)
+        {
+            auto bufferSize = MemoryUtils::Align<256>(descs[i].bufferSize);
+            //assert(MemoryUtils::Align<256>(bufferSize) == bufferSize);
+            totalSize += bufferSize * numCBVOfEachDesc;
+            totalSizeOfEach += bufferSize;
+        }
+
+        uint32_t stride = numConstantBuffers * cpuHandleStride;
+
+        ComPtr<ID3D12Resource> resource;
+        D3D12_HEAP_PROPERTIES heapProps = {};
+        heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+        m_device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(totalSize),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(&resource)
+        );
+
+        resource->Map(0, 0, (void**)&uploadAddress);
+
+        baseGPUAddress = resource->GetGPUVirtualAddress();
+        auto tempGPUAddress = baseGPUAddress;
+
+        for (size_t i = 0; i < numConstantBuffers; i++)
+        {
+            auto bufferSize = MemoryUtils::Align<256>(descs[i].bufferSize);
+            totalSize += bufferSize * numCBVOfEachDesc;
+
+            auto dx12buffer = std::make_shared<DX12ConstantBuffer>();
+            dx12buffer->m_descriptorHeap = descriptorHeap;
+            dx12buffer->m_resource = resource;
+            dx12buffer->m_baseGPUAddress = baseGPUAddress;
+            dx12buffer->m_CPUHandleStride = stride;
+            dx12buffer->m_numViews = numCBVOfEachDesc;
+            dx12buffer->m_vaddressBytesStride = totalSizeOfEach;
+            dx12buffer->m_viewIdx = 0;
+            dx12buffer->m_vaddress = uploadAddress;
+
+            dx12buffer->m_fenceValues = (uint64_t*)std::malloc(numCBVOfEachDesc * sizeof(uint64_t));
+            std::memset(dx12buffer->m_fenceValues, 0, numCBVOfEachDesc * sizeof(uint64_t));
+
+            output[i] = dx12buffer;
+
+            baseGPUAddress += bufferSize;
+            uploadAddress += bufferSize;
+        }
+
+        baseGPUAddress = tempGPUAddress;
+    }
+    
+    // create views
+    {
+        D3D12_CONSTANT_BUFFER_VIEW_DESC viewDesc = {};
+        viewDesc.BufferLocation = baseGPUAddress;
+        for (size_t j = 0; j < numCBVOfEachDesc; j++)
+        {
+            for (size_t i = 0; i < numConstantBuffers; i++)
+            {
+                auto bufferSize = MemoryUtils::Align<256>(descs[i].bufferSize);
+                viewDesc.SizeInBytes = bufferSize;
+
+                auto dx12buffer = (DX12ConstantBuffer*)output[i].get();
+                if (dx12buffer->m_baseCPUHandle.ptr == 0)
+                    dx12buffer->m_baseCPUHandle = cpuHandleStart;
+
+                m_device->CreateConstantBufferView(&viewDesc, cpuHandleStart);
+
+                cpuHandleStart.ptr += cpuHandleStride;
+                viewDesc.BufferLocation += bufferSize;
+            }
+        }
+    }
+
 }
 
 void DX12Graphics::InitRootSignature()
@@ -351,6 +602,9 @@ void DX12Graphics::InitGPUVisibleDescriptorHeap()
     gpuHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     gpuHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     ThrowIfFailed(m_device->CreateDescriptorHeap(&gpuHeapDesc, IID_PPV_ARGS(&m_gpuVisibleHeap)));
+
+    m_gpuVisibleHeapCPUHandleStart = m_gpuVisibleHeap->GetCPUDescriptorHandleForHeapStart();
+    m_gpuVisibleHeapGPUHandleStart = m_gpuVisibleHeap->GetGPUDescriptorHandleForHeapStart();
 }
 
 SharedPtr<GraphicsRenderTarget> DX12Graphics::CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc)
@@ -360,7 +614,31 @@ SharedPtr<GraphicsRenderTarget> DX12Graphics::CreateRenderTarget(const GRAPHICS_
 
 SharedPtr<GraphicsVertexBuffer> DX12Graphics::CreateVertexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc)
 {
-	return SharedPtr<GraphicsVertexBuffer>();
+    auto vertexBuffer = std::make_shared<DX12VertexBuffer>();
+    vertexBuffer->m_view.SizeInBytes = desc.stride * desc.count;
+    vertexBuffer->m_view.StrideInBytes = desc.stride;
+
+    D3D12_RESOURCE_DESC vbufDesc = {};
+    vbufDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    vbufDesc.Width = desc.stride * desc.count;
+    vbufDesc.Height = 1;
+    vbufDesc.DepthOrArraySize = 1;
+    vbufDesc.MipLevels = 1;
+    vbufDesc.SampleDesc.Count = 1;
+    vbufDesc.SampleDesc.Quality = 0;
+    vbufDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+    AllocateDX12Resource(
+        &vbufDesc,
+        D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        &vertexBuffer->m_resource
+    );
+
+    vertexBuffer->m_view.BufferLocation = vertexBuffer->m_resource.resource->GetGPUVirtualAddress();
+    
+	return vertexBuffer;
 }
 
 SharedPtr<GraphicsIndexBuffer> DX12Graphics::CreateIndexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc)
@@ -370,6 +648,9 @@ SharedPtr<GraphicsIndexBuffer> DX12Graphics::CreateIndexBuffer(const GRAPHICS_SH
 
 void DX12Graphics::SetGraphicsPipeline(GraphicsPipeline* graphicsPipeline)
 {
+    auto dx12pipeline = (DX12GraphicsPipeline*)graphicsPipeline;
+    GetCmdList()->SetPipelineState(dx12pipeline->m_pipelineState.Get());
+    m_currentGraphicsPipeline = dx12pipeline;
 }
 
 void DX12Graphics::SetDrawParams(GraphicsParams* params)
@@ -380,8 +661,72 @@ void DX12Graphics::SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv, G
 {
 }
 
-void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, uint32_t vertexCountPerInstance, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation)
+void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, 
+    uint32_t vertexCountPerInstance, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation)
 {
+    WaitForDX12FenceValue(m_renderRoomFenceValues[m_renderRoomIdx]);
+    m_renderRoomFenceValues[m_renderRoomIdx] = GetCurrentDX12FenceValue();
+
+    auto cmdList = GetCmdList();
+
+    // set up render pipeline params
+    {
+        auto paramsRoom = m_currentGraphicsPipeline->GetCurrentRenderParamsRoom();
+        auto cpuDescriptorHandleCBV = GetCurrentRenderRoomCPUDescriptorHandleStart();
+        auto gpuDescriptorHandle = GetCurrentRenderRoomGPUDescriptorHandleStart();
+        auto cpuDescriptorHandleSRV = cpuDescriptorHandleCBV;
+        cpuDescriptorHandleSRV.ptr += GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER * GetCbvSrvUavCPUDescriptorHandleStride();
+
+        auto spaceStride = (GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER + GRAPHICS_PARAMS_DESC::NUM_SHADER_RESOURCE) 
+            * GetCbvSrvUavCPUDescriptorHandleStride();
+
+        uint32_t stageIndex = 0;
+        for (auto& paramsShaderSpace : paramsRoom->m_params)
+        {
+            cmdList->SetGraphicsRootDescriptorTable(stageIndex, gpuDescriptorHandle);
+
+            if (paramsShaderSpace.m_constantBufferDescriptorRangesIdx != 0)
+            {
+                // copy all descriptor ranges to shader visible descriptor heap
+                for (uint32_t i = 0; i < paramsShaderSpace.m_constantBufferDescriptorRangesIdx; i++)
+                {
+                    auto& range = paramsShaderSpace.m_constantBufferDescriptorRanges[i];
+                    auto registerHandle = cpuDescriptorHandleCBV;
+                    registerHandle.ptr += range.baseRegisterIndex * GetCbvSrvUavCPUDescriptorHandleStride();
+                    m_device->CopyDescriptorsSimple(range.count, registerHandle, range.baseCPUDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                }
+            }
+
+            if (paramsShaderSpace.m_shaderResourceDescriptorRangesIdx != 0)
+            {
+                // copy all descriptor ranges to shader visible descriptor heap
+                for (uint32_t i = 0; i < paramsShaderSpace.m_shaderResourceDescriptorRangesIdx; i++)
+                {
+                    auto& range = paramsShaderSpace.m_shaderResourceDescriptorRanges[i];
+                    auto registerHandle = cpuDescriptorHandleSRV;
+                    registerHandle.ptr += range.baseRegisterIndex * GetCbvSrvUavCPUDescriptorHandleStride();
+                    m_device->CopyDescriptorsSimple(range.count, registerHandle, range.baseCPUDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                }
+            }
+
+            cpuDescriptorHandleCBV.ptr += spaceStride;
+            cpuDescriptorHandleSRV.ptr += spaceStride;
+            stageIndex++;
+            gpuDescriptorHandle.ptr += spaceStride;
+        }
+    }
+
+    // set up vertex views
+    {
+        for (uint32_t i = 0; i < numVertexBuffers; i++)
+        {
+            m_vertexBufferViews[i] = ((DX12VertexBuffer*)vertexBuffers[i])->m_view;
+        }
+    }
+
+    cmdList->IASetPrimitiveTopology(m_currentGraphicsPipeline->m_primitiveTopology);
+    cmdList->IASetVertexBuffers(0, numVertexBuffers, m_vertexBufferViews);
+    cmdList->DrawInstanced(vertexCountPerInstance, instanceCount, startVertexLocation, startInstanceLocation);
 }
 
 void DX12Graphics::DrawIndexedInstanced(GraphicsIndexBuffer* indexBuffer, uint32_t indexCountPerInstance, uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, uint32_t vertexCountPerInstance, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation)
@@ -443,6 +788,8 @@ void DX12Graphics::WaitForFenceValue(uint64_t value)
 
 void DX12Graphics::BeginFrame()
 {
+    m_frameCount++;
+
     m_currentRenderTarget.m_dx12Resource.resource = m_renderTargets[m_currentBackBufferId];
     m_currentRenderTarget.m_rtv.ptr = m_rtvStart.ptr + m_currentBackBufferId * m_rtvAllocator.GetCPUStride();
     m_currentDepthStencilBuffer.m_dsv.ptr = m_dsvStart.ptr + m_currentBackBufferId * m_dsvAllocator.GetCPUStride();
@@ -454,8 +801,8 @@ void DX12Graphics::BeginFrame()
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Transition.pResource = m_currentRenderTarget.m_dx12Resource.resource.Get();
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
     cmdList->ResourceBarrier(1, &barrier);
 }
 
@@ -465,8 +812,8 @@ void DX12Graphics::EndFrame(bool vsync)
     D3D12_RESOURCE_BARRIER barrier = {};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Transition.pResource = m_renderTargets[m_currentBackBufferId].Get();
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
     cmdList->ResourceBarrier(1, &barrier);
 
     ExecuteCurrentCmdList();

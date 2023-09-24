@@ -4,6 +4,8 @@
 
 #include "Modules/Graphics/GraphicsFundamental.h"
 
+#include "DX12GraphicsPipeline.h"
+
 NAMESPACE_DX12_BEGIN
 
 class DX12RenderTarget : public GraphicsRenderTarget

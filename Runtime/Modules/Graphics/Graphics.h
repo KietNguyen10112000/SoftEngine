@@ -40,6 +40,12 @@ public:
 		SharedPtr<GraphicsShaderResource>* output
 	) = 0;
 
+	virtual void CreateConstantBuffers(
+		uint32_t numConstantBuffers,
+		const GRAPHICS_CONSTANT_BUFFER_DESC* descs,
+		SharedPtr<GraphicsConstantBuffer>* output
+	) = 0;
+
 	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) = 0;
 
 	//virtual SharedPtr<GraphicsPipelineInput> CreatePipelineInput(const GRAPHICS_PIPELINE_INPUT_DESC& desc) = 0;

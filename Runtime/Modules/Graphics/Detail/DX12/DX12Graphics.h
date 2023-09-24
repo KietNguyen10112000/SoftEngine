@@ -11,49 +11,13 @@
 
 #include "D3D12MemAlloc.h"
 
+#include "DX12Config.h"
+
 NAMESPACE_DX12_BEGIN
 
-class DX12Graphics : public Graphics
+class DX12Graphics : public Graphics, public DX12_CONFIG
 {
 public:
-	constexpr static size_t			NUM_GRAPHICS_BACK_BUFFERS					= 3;
-	constexpr static size_t			NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS		= 128;
-	constexpr static DXGI_FORMAT	BACK_BUFFER_FORMAT							= DXGI_FORMAT_R8G8B8A8_UNORM;
-
-	constexpr static size_t			RTV_ALLOCATOR_NUM_RTV_PER_HEAP				= 256;
-	constexpr static size_t			DSV_ALLOCATOR_NUM_DSV_PER_HEAP				= 256;
-
-	constexpr static size_t			REGISTER_SPACE_VS	= 0;
-	constexpr static size_t			NUM_CBV_VS			= 16;
-	constexpr static size_t			NUM_SRV_VS			= 16;
-
-	constexpr static size_t			REGISTER_SPACE_PS	= 1;
-	constexpr static size_t			NUM_CBV_PS			= 16;
-	constexpr static size_t			NUM_SRV_PS			= 16;
-
-	constexpr static size_t			REGISTER_SPACE_GS	= 2;
-	constexpr static size_t			NUM_CBV_GS			= 16;
-	constexpr static size_t			NUM_SRV_GS			= 16;
-
-	constexpr static size_t			REGISTER_SPACE_HS	= 3;
-	constexpr static size_t			NUM_CBV_HS			= 16;
-	constexpr static size_t			NUM_SRV_HS			= 16;
-
-	constexpr static size_t			REGISTER_SPACE_DS	= 4;
-	constexpr static size_t			NUM_CBV_DS			= 16;
-	constexpr static size_t			NUM_SRV_DS			= 16;
-
-	constexpr static size_t			TOTAL_DESCRIPTORS_PER_RENDER_ROOM = + NUM_CBV_VS + NUM_SRV_VS
-																+ NUM_CBV_PS + NUM_SRV_PS
-																+ NUM_CBV_GS + NUM_SRV_GS
-																+ NUM_CBV_HS + NUM_SRV_HS
-																+ NUM_CBV_DS + NUM_SRV_DS;
-	constexpr static size_t			RENDER_BATCH_SIZE	= 48;
-	constexpr static size_t			NUM_RENDER_ROOM		= RENDER_BATCH_SIZE * NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS;
-
-	constexpr static size_t			TOTAL_DESCRIPTORS_OF_GPU_VISIBLE_HEAP = TOTAL_DESCRIPTORS_PER_RENDER_ROOM * NUM_RENDER_ROOM;
-
-
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
 	ComPtr<ID3D12Device2>                   m_device;
 	ComPtr<IDXGIFactory4>                   m_dxgiFactory;
@@ -96,6 +60,20 @@ public:
 
 	ComPtr<ID3D12DescriptorHeap> m_gpuVisibleHeap;
 
+	size_t m_frameCount = 0;
+
+	uint32_t m_CBV_SRV_UAV_CPUdescriptorHandleStride = 0;
+
+	DX12GraphicsPipeline* m_currentGraphicsPipeline = nullptr;
+	uint32_t m_renderRoomIdx = 0;
+
+	uint64_t m_renderRoomFenceValues[NUM_RENDER_ROOM] = {};
+
+	D3D12_CPU_DESCRIPTOR_HANDLE m_gpuVisibleHeapCPUHandleStart;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_gpuVisibleHeapGPUHandleStart;
+
+	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferViews[16] = {};
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
@@ -119,6 +97,12 @@ public:
 		uint32_t numShaderResources,
 		const GRAPHICS_SHADER_RESOURCE_DESC* descs,
 		SharedPtr<GraphicsShaderResource>* output
+	) override;
+
+	virtual void CreateConstantBuffers(
+		uint32_t numConstantBuffers,
+		const GRAPHICS_CONSTANT_BUFFER_DESC* descs,
+		SharedPtr<GraphicsConstantBuffer>* output
 	) override;
 
 	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) override;
@@ -197,6 +181,8 @@ public:
 
 	inline void WaitForDX12FenceValue(uint64_t value)
 	{
+		assert(value != m_currentFenceValue);
+
 		if (m_fence->GetCompletedValue() < value)
 		{
 			ThrowIfFailed(m_fence->SetEventOnCompletion(value, m_fenceEvent));
@@ -214,6 +200,29 @@ public:
 		return &m_resourceUploader;
 	}
 
+	inline auto GetFrameCount()
+	{
+		return m_frameCount;
+	}
+
+	inline auto GetCbvSrvUavCPUDescriptorHandleStride()
+	{
+		return m_CBV_SRV_UAV_CPUdescriptorHandleStride;
+	}
+
+	inline auto GetCurrentRenderRoomCPUDescriptorHandleStart()
+	{
+		auto ret = m_gpuVisibleHeapCPUHandleStart;
+		ret.ptr += m_renderRoomIdx * TOTAL_DESCRIPTORS_PER_RENDER_ROOM * GetCbvSrvUavCPUDescriptorHandleStride();
+		return ret;
+	}
+
+	inline auto GetCurrentRenderRoomGPUDescriptorHandleStart()
+	{
+		auto ret = m_gpuVisibleHeapGPUHandleStart;
+		ret.ptr += m_renderRoomIdx * TOTAL_DESCRIPTORS_PER_RENDER_ROOM * GetCbvSrvUavCPUDescriptorHandleStride();
+		return ret;
+	}
 };
 
 NAMESPACE_DX12_END

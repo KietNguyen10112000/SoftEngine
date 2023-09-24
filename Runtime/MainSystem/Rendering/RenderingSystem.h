@@ -41,6 +41,10 @@ private:
 	// camera that scene will be rendered to (that maybe not displayed to screen but still visiable somewhere)
 	std::vector<Camera*> m_activeCamera;
 
+	SharedPtr<GraphicsPipeline>				m_testPipeline;
+	SharedPtr<GraphicsVertexBuffer>			m_testVertexBuffer;
+	SharedPtr<GraphicsConstantBuffer>		m_testConstantBuffer;
+
 public:
 	RenderingSystem(Scene* scene);
 	~RenderingSystem();
