@@ -6,6 +6,8 @@
 
 #include "FileSystem/FileUtils.h"
 
+#include "Runtime/StartupConfig.h"
+
 
 NAMESPACE_DX12_BEGIN
 
@@ -18,6 +20,8 @@ DX12Graphics::DX12Graphics(void* hwnd)
     m_ringBufferCmdList.Resize(m_device.Get(), NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS);
     InitRootSignature(); 
     InitGPUVisibleDescriptorHeap();
+
+    m_compiledShadersPath = StartupConfig::Get().compiledShadersPath;
 }
 
 DX12Graphics::~DX12Graphics()
@@ -262,30 +266,32 @@ SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHIC
 
     if (desc.vs)
     {
-        FileUtils::ReadFile(desc.vs, vs, lenVS);
+        FileUtils::ReadFile(m_compiledShadersPath + String(desc.vs) + ".cso", vs, lenVS);
     }
 
     if (desc.ps)
     {
-        FileUtils::ReadFile(desc.ps, ps, lenPS);
+        FileUtils::ReadFile(m_compiledShadersPath + String(desc.ps) + ".cso", ps, lenPS);
     }
 
     if (desc.gs)
     {
-        FileUtils::ReadFile(desc.gs, gs, lenGS);
+        FileUtils::ReadFile(m_compiledShadersPath + String(desc.gs) + ".cso", gs, lenGS);
     }
 
     if (desc.hs)
     {
-        FileUtils::ReadFile(desc.hs, hs, lenHS);
+        FileUtils::ReadFile(m_compiledShadersPath + String(desc.hs) + ".cso", hs, lenHS);
     }
 
     if (desc.ds)
     {
-        FileUtils::ReadFile(desc.ds, ds, lenDS);
+        FileUtils::ReadFile(m_compiledShadersPath + String(desc.ds) + ".cso", ds, lenDS);
     }
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC dx12desc = {};
+
+    dx12desc.pRootSignature = m_rootSignature.Get();
 
     D3D12_INPUT_ELEMENT_DESC inputElements[16] = {};
 
@@ -313,6 +319,7 @@ SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHIC
     dx12desc.DS.BytecodeLength = lenDS;
 
     dx12desc.PrimitiveTopologyType = dx12utils::ConvertToDX12PrimitiveTopoplogy(desc.primitiveTopology); // type of topology we are drawing
+    ret->m_primitiveTopology = dx12utils::ConvertToD3DPrimitiveTopoplogy(dx12desc.PrimitiveTopologyType);
     dx12desc.SampleDesc.Count = 1;
     dx12desc.SampleDesc.Quality = 0; // must be the same sample description as the swapchain and depth/stencil buffer
     dx12desc.SampleMask = 0xffffffff;
@@ -659,6 +666,21 @@ void DX12Graphics::SetDrawParams(GraphicsParams* params)
 
 void DX12Graphics::SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv)
 {
+    
+    auto dx12dsv = (DX12DepthStencilBuffer*)dsv;
+
+    D3D12_CPU_DESCRIPTOR_HANDLE RTVs[8] = {};
+    for (uint32_t i = 0; i < numRT; i++)
+    {
+        auto dx12rtv = (DX12RenderTarget*)rtv[i];
+        RTVs[i] = dx12rtv->m_rtv;
+    }
+
+    auto cmdList = GetCmdList();
+    cmdList->OMSetRenderTargets(numRT, RTVs, 0, &dx12dsv->m_dsv);
+
+    cmdList->RSSetViewports(1, &m_backBufferViewport); // set the viewports
+    cmdList->RSSetScissorRects(1, &m_backBufferScissorRect); // set the scissor rects
 }
 
 void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, 

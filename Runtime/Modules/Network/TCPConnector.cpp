@@ -64,7 +64,7 @@ int TCPConnector::Recv(std::Vector<byte>& buffer)
 int TCPConnector::Recv(byte* buffer, int bufferSize)
 {
 	auto ret = recv((SOCKET)m_sock, (char*)buffer, bufferSize, 0);
-	if (ret <= 0)
+	if (ret < 0)
 	{
 		return socketapi::TranslateErrorCode(ret);
 	}

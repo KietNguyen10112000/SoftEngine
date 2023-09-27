@@ -3,6 +3,8 @@
 #include "TypeDef.h"
 #include "DX12Fundamental.h"
 
+#include "Core/Structures/String.h"
+
 #include "Modules/Graphics/Graphics.h"
 
 #include "DX12DescriptorAllocator.h"
@@ -73,6 +75,8 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE m_gpuVisibleHeapGPUHandleStart;
 
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferViews[16] = {};
+
+	String m_compiledShadersPath = "";
 
 public:
 	DX12Graphics(void* hwnd);

@@ -43,7 +43,8 @@ private:
 
 	SharedPtr<GraphicsPipeline>				m_testPipeline;
 	SharedPtr<GraphicsVertexBuffer>			m_testVertexBuffer;
-	SharedPtr<GraphicsConstantBuffer>		m_testConstantBuffer;
+	SharedPtr<GraphicsConstantBuffer>		m_testCameraConstantBuffer;
+	SharedPtr<GraphicsConstantBuffer>		m_testObjectConstantBuffer;
 
 public:
 	RenderingSystem(Scene* scene);

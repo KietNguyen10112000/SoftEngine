@@ -243,6 +243,7 @@ void Scene::EndSetupLongLifeObject()
 
 void Scene::Iteration(float dt)
 {
+	m_dt = dt;
 	m_iterationCount++;
 	GetCurrentAddList().clear();
 	GetCurrentRemoveList().clear();

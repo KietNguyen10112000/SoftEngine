@@ -1,17 +1,23 @@
 #include "RenderingSystem.h"
 
+#include "Core/Thread/Thread.h"
+
 #include "Components/Camera.h"
 
 #include "Modules/Graphics/Graphics.h"
-#include <Core/Thread/Thread.h>
+
+#include "Modules/Graphics/Detail/DX12/Shaders/Common/TypeDef.hlsli"
 
 NAMESPACE_BEGIN
 
-struct TestConstantBuffer
-{
-    Mat4 vp;
-    Mat4 dummy;
-};
+//struct TestConstantBuffer
+//{
+//    Mat4 vp;
+//    Mat4 dummy;
+//};
+
+CameraData g_cameraData;
+ObjectData g_objectData;
 
 RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
 {
@@ -95,14 +101,50 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
     vbDesc.count = 36;
     vbDesc.stride = sizeof(Vertex);
     m_testVertexBuffer = graphics->CreateVertexBuffer(vbDesc);
+    m_testVertexBuffer->UpdateBuffer(vList, sizeof(vList));
 
-    /*GRAPHICS_CONSTANT_BUFFER_DESC cbDesc = {};
-    cbDesc.bufferSize = sizeof(TestConstantBuffer);
-    cbDesc.perferNumRoom = 4096;
-    graphics->CreateConstantBuffers(1, &cbDesc, &m_testConstantBuffer);*/
+    GRAPHICS_CONSTANT_BUFFER_DESC cbDesc1 = {};
+    cbDesc1.bufferSize = sizeof(CameraData);
+    cbDesc1.perferNumRoom = 3;
+    graphics->CreateConstantBuffers(1, &cbDesc1, &m_testCameraConstantBuffer);
 
-    //GRAPHICS_PIPELINE_DESC pipelineDesc = {};
-    //graphics->CreateRasterizerPipeline()
+    GRAPHICS_CONSTANT_BUFFER_DESC cbDesc2 = {};
+    cbDesc2.bufferSize = sizeof(ObjectData);
+    cbDesc2.perferNumRoom = 4096;
+    graphics->CreateConstantBuffers(1, &cbDesc2, &m_testObjectConstantBuffer);
+
+    GRAPHICS_PIPELINE_DESC pipelineDesc = {};
+    pipelineDesc.preferRenderCallPerFrame = 4096;
+    pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    pipelineDesc.vs = "Test.vs";
+    pipelineDesc.ps = "Test.ps";
+
+    pipelineDesc.inputDesc.numElements = 2;
+    pipelineDesc.inputDesc.elements[0] = { 
+        "POSITION", 
+        0, 
+        GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
+        0, 
+        0, 
+        GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 
+        0 
+    };
+    pipelineDesc.inputDesc.elements[1] = { 
+        "COLOR", 
+        0, 
+        GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
+        0, 
+        sizeof(Vec3), 
+        GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+        0 
+    };
+
+    pipelineDesc.outputDesc.numRenderTarget = 1;
+    pipelineDesc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
+
+    m_testPipeline = graphics->CreateRasterizerPipeline(pipelineDesc);
+
+    g_objectData.transform = Mat4::Identity();
 }
 
 RenderingSystem::~RenderingSystem()
@@ -178,6 +220,23 @@ void RenderingSystem::Iteration(float dt)
 	//graphics->SetRenderTarget(1, &screenRT, screenDS);
 	graphics->ClearRenderTarget(screenRT, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
 	graphics->ClearDepthStencil(screenDS, 0, 0);
+
+    graphics->SetRenderTarget(1, &screenRT, screenDS);
+
+    g_cameraData.vp = Mat4::Identity().SetLookAtLH({ 5,0,0 }, { 0,0,0 }, Vec3::UP) 
+        * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 16 / 9.0f, 0.5f, 1000.0f);
+    g_objectData.transform *= Mat4::Rotation(Vec3::UP, dt * PI / 3.0f) * Mat4::Rotation(Vec3::RIGHT, dt * PI / 4.0f);
+    m_testCameraConstantBuffer->UpdateBuffer(&g_cameraData, sizeof(g_cameraData));
+    m_testObjectConstantBuffer->UpdateBuffer(&g_objectData, sizeof(g_objectData));
+
+    auto params = m_testPipeline->PrepareRenderParams();
+    params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_testCameraConstantBuffer);
+    params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_testObjectConstantBuffer);
+    graphics->SetGraphicsPipeline(m_testPipeline.get());
+    
+    auto vb = m_testVertexBuffer.get();
+    graphics->DrawInstanced(1, &vb, 36, 1, 0, 0);
+
 
 	Thread::Sleep(14);
 

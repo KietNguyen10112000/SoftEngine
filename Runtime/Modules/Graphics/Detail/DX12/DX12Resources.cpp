@@ -10,7 +10,9 @@ DX12ConstantBuffer::~DX12ConstantBuffer()
 
 void DX12ConstantBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
 {
-	assert(m_vaddressBytesStride == bufferSize);
+	assert(m_vaddressBytesStride >= bufferSize);
+
+	m_viewIdx = (m_viewIdx + 1) % m_numViews;
 
 	auto dx12 = DX12Graphics::GetDX12();
 	auto dest = GetCurrentUploadAddress();
@@ -18,8 +20,6 @@ void DX12ConstantBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
 	dx12->WaitForDX12FenceValue(m_fenceValues[m_viewIdx]);
 
 	std::memcpy(dest, buffer, bufferSize);
-
-	m_viewIdx = (m_viewIdx + 1) % m_numViews;
 }
 
 DX12VertexBuffer::~DX12VertexBuffer()

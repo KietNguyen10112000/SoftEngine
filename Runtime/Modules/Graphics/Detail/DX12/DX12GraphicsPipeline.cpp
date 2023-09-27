@@ -14,12 +14,12 @@ void DX12GraphicsParams::SetConstantBuffers(soft::GRAPHICS_SHADER_SPACE::SPACE s
 	uint32_t startIdx = 0;
 	
 Begin:
-	auto dx12buffer = (DX12ConstantBuffer*)constantBuffers[startIdx].get();
+	auto dx12buffer = (DX12ConstantBuffer*)constantBuffers[startIdx++].get();
 	auto baseCPUHandle = dx12buffer->GetCurrentCBV();
 
 	auto cpuHandleStride = dx12buffer->m_CPUHandleStride;
 
-	auto range = &paramsSpace.m_constantBufferDescriptorRanges[paramsSpace.m_constantBufferDescriptorRangesIdx];
+	auto range = &paramsSpace.m_constantBufferDescriptorRanges[paramsSpace.m_constantBufferDescriptorRangesIdx++];
 	range->baseCPUDescriptor = baseCPUHandle;
 	range->count = 1;
 	range->baseRegisterIndex = (uint32_t)baseSlotIndex;
@@ -39,7 +39,7 @@ Begin:
 			assert(0);
 
 			startIdx = i;
-			paramsSpace.m_constantBufferDescriptorRangesIdx++;
+			//paramsSpace.m_constantBufferDescriptorRangesIdx++;
 			loop = true;
 			
 			break;
@@ -89,7 +89,8 @@ DX12GraphicsPipeline::~DX12GraphicsPipeline()
 
 soft::GraphicsParams* DX12GraphicsPipeline::PrepareRenderParams()
 {
-	auto roomParams = &m_renderRoomParams[(m_currentRoomIdx++) % m_renderRoomParamsCount];
+	m_currentRoomIdx = (m_currentRoomIdx + 1) % m_renderRoomParamsCount;
+	auto roomParams = &m_renderRoomParams[m_currentRoomIdx];
 
 	for (auto& space : roomParams->m_params)
 	{
