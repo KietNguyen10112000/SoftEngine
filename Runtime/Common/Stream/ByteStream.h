@@ -25,6 +25,21 @@ protected:
 	}
 
 public:
+	inline byte* begin() const
+	{
+		return m_begin;
+	}
+
+	inline byte* end() const
+	{
+		return m_end;
+	}
+
+	inline byte* cur() const
+	{
+		return m_cur;
+	}
+
 #define BYTE_STREAM_ASSERT_NO_OVERFLOW(len) assert((m_cur + len <= m_end) && "ByteStream overflow");
 
 	inline const char* GetString()
@@ -128,6 +143,20 @@ public:
 		}
 	}
 
+	inline void SkipBuffer(size_t bufferSize)
+	{
+		BYTE_STREAM_ASSERT_NO_OVERFLOW(bufferSize);
+		m_cur += bufferSize;
+	}
+
+	inline void PickBuffer(byte* buffer, size_t bufferSize)
+	{
+		BYTE_STREAM_ASSERT_NO_OVERFLOW(bufferSize);
+
+		std::memcpy(buffer, m_cur, bufferSize);
+		m_cur += bufferSize;
+	}
+
 #undef BYTE_STREAM_ASSERT_NO_OVERFLOW
 
 	inline bool IsEmpty()
@@ -151,12 +180,14 @@ class ByteStream : public ByteStreamRead
 {
 protected:
 	friend class PackageSender;
+	friend class FileSystem;
 
 	std::vector<byte>	m_buffer;
 
 	inline void GrowthBy(size_t size)
 	{
-		if (m_buffer.size() >= size)
+		auto ret = m_end - m_cur;
+		if (m_end - m_cur >= size)
 		{
 			return;
 		}
@@ -164,7 +195,7 @@ protected:
 		auto newSize = m_buffer.size() + size;
 		m_buffer.resize(newSize);
 
-		m_cur = m_buffer.data() + (m_begin - m_cur);
+		m_cur = m_buffer.data() + (m_cur - m_begin);
 		m_begin = m_buffer.data();
 		m_end = m_begin + newSize;
 	}
@@ -203,6 +234,14 @@ public:
 		// put placeholder for package size
 		Put<uint32_t>(0);
 	}
+
+	/*inline void Initialize(byte* begin, byte* cur)
+	{
+		size_t len = cur - begin;
+		GrowthBy(len);
+		std::memcpy(m_begin, begin, len);
+		m_cur = m_begin + (cur - begin);
+	}*/
 
 	inline size_t PutString(size_t len, const char* str)
 	{
@@ -290,6 +329,13 @@ public:
 	inline void Pack()
 	{
 		PackSize();
+	}
+
+	inline void PutBuffer(byte* buffer, size_t bufferSize)
+	{
+		GrowthBy(bufferSize);
+		std::memcpy(m_cur, buffer, bufferSize);
+		m_cur += bufferSize;
 	}
 };
 

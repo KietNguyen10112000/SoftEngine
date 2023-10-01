@@ -20,6 +20,7 @@ struct API StartupConfig
 	const char* pluginsPath			= "Plugins/";
 	const char* resourcesPath		= "Resources/";
 	const char* compiledShadersPath = "Shaders/";
+	const char* executablePath = nullptr;
 
 	const char* windowTitle = "SoftEngine";
 	int windowWidth = -1;

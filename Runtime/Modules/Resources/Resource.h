@@ -157,6 +157,7 @@ namespace resource
 template <typename _T, typename... Args>
 inline Resource<_T> Load(String path, Args&&... args)
 {
+	path = StartupConfig::Get().resourcesPath + path;
 	_T* rc = dynamic_cast<_T*>(internal::TryLoad(path, typeid(_T).name()));
 
 	if (!rc)
@@ -168,19 +169,19 @@ inline Resource<_T> Load(String path, Args&&... args)
 	return Resource<_T>(rc);
 }
 
-
-// callback = function(byte* buffer, size_t size)
-// relativePath is relative path to StartupConfig.resourcePath
-// return true if success
-template <typename Fn>
-inline bool ReadFile(String relativePath, Fn callback)
-{
-	byte* buffer; size_t size;
-	FileUtils::ReadFile(StartupConfig::Get().resourcesPath + relativePath, buffer, size);
-	callback(buffer, size);
-	FileUtils::FreeBuffer(buffer);
-	return true;
-}
+//
+//// callback = function(byte* buffer, size_t size)
+//// relativePath is relative path to StartupConfig.resourcePath
+//// return true if success
+//template <typename Fn>
+//inline bool ReadFile(String relativePath, Fn callback)
+//{
+//	byte* buffer; size_t size;
+//	FileUtils::ReadFile(StartupConfig::Get().resourcesPath + relativePath, buffer, size);
+//	callback(buffer, size);
+//	FileUtils::FreeBuffer(buffer);
+//	return true;
+//}
 
 }
 

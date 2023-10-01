@@ -16,3 +16,6 @@
 [submodule "Libraries/D3D12MemoryAllocator"]
 	path = Libraries/D3D12MemoryAllocator
 	url = git@github.com:GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git
+[submodule "Libraries/stb"]
+	path = Libraries/stb
+	url = git@github.com:nothings/stb.git

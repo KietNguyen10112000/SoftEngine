@@ -124,6 +124,7 @@ include_directories(PUBLIC
      "${CMAKE_SOURCE_DIR}/Libraries/glm"
      "${CMAKE_SOURCE_DIR}/Libraries/imgui"
      "${CMAKE_SOURCE_DIR}/Libraries/D3D12MemoryAllocator/include"
+     "${CMAKE_SOURCE_DIR}/Libraries/stb"
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

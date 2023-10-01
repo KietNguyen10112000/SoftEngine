@@ -35,6 +35,8 @@
 #include "Scene/GameObject.h"
 #include "Scene/Scene.h"
 
+#include "FileSystem/FileSystem.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -56,7 +58,10 @@ float g_sumDt = 0;
 
 Handle<Runtime> Runtime::Initialize()
 {
+	FileSystem::Initialize();
+	MetadataParser::Initialize();
 	resource::internal::Initialize();
+
 	auto old = mheap::internal::GetStableValue();
 	mheap::internal::SetStableValue(Runtime::STABLE_VALUE);
 	auto ret = mheap::New<Runtime>();
@@ -72,13 +77,15 @@ void Runtime::Finalize()
 	resource::internal::Finalize();
 
 	Graphics::Finalize();
+	MetadataParser::Finalize();
+	FileSystem::Finalize();
 }
 
 Runtime::Runtime()
 {
 	m_eventArgv[0] = this;
 
-	MetadataParser::Initialize();
+	
 
 	InitNetwork();
 	InitGraphics();
@@ -90,8 +97,6 @@ Runtime::~Runtime()
 	FinalPlugins();
 	FinalGraphics();
 	FinalNetwork();
-
-	MetadataParser::Finalize();
 }
 
 void Runtime::InitGraphics()

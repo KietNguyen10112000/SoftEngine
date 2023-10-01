@@ -31,6 +31,8 @@ inline void ProcessArgs(int argc, const char** argv)
 {
 	using namespace soft;
 
+	StartupConfig::Get().executablePath = argv[0];
+
 	size_t id = -1;
 	for (int i = 1; i < argc; i++)
 	{

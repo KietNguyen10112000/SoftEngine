@@ -8,6 +8,8 @@
 
 #include "Modules/Graphics/Detail/DX12/Shaders/Common/TypeDef.hlsli"
 
+#include "Modules/Resources/Texture2D.h"
+
 NAMESPACE_BEGIN
 
 //struct TestConstantBuffer
@@ -145,6 +147,8 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
     m_testPipeline = graphics->CreateRasterizerPipeline(pipelineDesc);
 
     g_objectData.transform = Mat4::Identity();
+
+    resource::Load<Texture2D>("2.png");
 }
 
 RenderingSystem::~RenderingSystem()
@@ -238,7 +242,7 @@ void RenderingSystem::Iteration(float dt)
     graphics->DrawInstanced(1, &vb, 36, 1, 0, 0);
 
 
-	Thread::Sleep(14);
+	//Thread::Sleep(10);
 
 	graphics->EndFrame(true);
 }
