@@ -27,7 +27,7 @@ void FileSystem::FileOrDirectory::Serialize(ByteStream* stream)
 	stream->Put(lastModifiedTime);
 }
 
-void FileSystem::FileOrDirectory::Deserialize(ByteStream* stream)
+void FileSystem::FileOrDirectory::Deserialize(ByteStreamRead* stream)
 {
 	stream->Pick(lastModifiedTime);
 }
@@ -40,6 +40,8 @@ FileSystem::FileSystem()
 	
 	m_cachePath = String(path.parent_path().u8string().c_str()) + "/.cache/";
 	m_rootPath = StartupConfig::Get().resourcesPath;
+
+	LoadCache();
 }
 
 FileSystem::~FileSystem()
@@ -49,9 +51,10 @@ FileSystem::~FileSystem()
 
 void FileSystem::LoadCache()
 {
-	ByteStream stream;
-	if (ReadStream(".filesystem", &stream))
+	ByteStream _stream;
+	if (ReadStream(".filesystem", &_stream))
 	{
+		auto stream = ByteStreamRead::From(_stream);
 		auto size = stream.Get<size_t>();
 		for (size_t i = 0; i < size; i++)
 		{
@@ -131,7 +134,6 @@ void FileSystem::WriteStream(const char* path, ByteStreamRead* stream)
 	}
 
 	fwrite(begin, sizeof(byte), len, fp);
-	fwrite(&len, sizeof(byte), sizeof(len), fp);
 
 	fclose(fp);
 }
@@ -151,12 +153,11 @@ bool FileSystem::ReadStream(const char* path, ByteStream* output)
 	size_t fileSize = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
 
-	output->Clean();
-	output->Initialize(fileSize);
+	output->Resize(fileSize - output->GetHeaderSize());
 
 	fread(output->begin(), sizeof(byte), fileSize, fp);
 
-	auto offset = output->Get<size_t>();
+	auto offset = fileSize;
 	output->m_cur = output->begin() + offset;
 
 	fclose(fp);

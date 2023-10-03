@@ -26,6 +26,7 @@ DX12Graphics::DX12Graphics(void* hwnd)
 
 DX12Graphics::~DX12Graphics()
 {
+    SignalCurrentDX12FenceValue();
     if (m_currentFenceValue != 0)
     {
         WaitForDX12FenceValue(m_currentFenceValue - 1);

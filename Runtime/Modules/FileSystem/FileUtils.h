@@ -32,7 +32,7 @@ inline void ReadFile(String fileName, byte*& buffer, size_t& fileSize)
 	fseek(fp, 0L, SEEK_END);
 	size_t size = ftell(fp);
 	
-	auto buf = (byte*)std::malloc(size);
+	auto buf = (byte*)rheap::malloc(std::max(64 * KB, size));
 
 	fseek(fp, 0L, SEEK_SET);
 	fread(buf, size, sizeof(byte), fp);
@@ -58,7 +58,7 @@ inline void WriteFile(const char* fileName, const void* buffer, size_t bufferSiz
 
 inline void FreeBuffer(byte*& buffer)
 {
-	std::free(buffer);
+	rheap::free(buffer);
 	buffer = nullptr;
 }
 

@@ -12,19 +12,47 @@ class ByteStreamRead
 protected:
 	friend class Package;
 	friend class PackageReceiver;
+	friend class ByteStream;
 
 	byte* m_begin = nullptr;
 	byte* m_end = nullptr;
 	byte* m_cur = nullptr;
 
-	inline void Initialize(byte* begin, size_t len)
+	/*inline void Initialize(byte* begin, size_t len)
 	{
 		m_begin		= begin;
 		m_end		= begin + len;
 		m_cur		= begin;
-	}
+	}*/
 
 public:
+	inline ByteStreamRead() {};
+	inline ByteStreamRead(byte* begin, size_t len)
+	{
+		m_begin = begin;
+		m_end = begin + len;
+		m_cur = begin;
+	}
+	inline ByteStreamRead(ByteStream* stream);
+	inline void BeginReadFrom(ByteStream* stream);
+
+	inline void BeginReadFrom(byte* begin, size_t len)
+	{
+		m_begin = begin;
+		m_end = begin + len;
+		m_cur = begin;
+	}
+
+	inline static ByteStreamRead From(ByteStream* stream)
+	{
+		return ByteStreamRead(stream);
+	}
+
+	inline static ByteStreamRead From(ByteStream& stream)
+	{
+		return ByteStreamRead(&stream);
+	}
+
 	inline byte* begin() const
 	{
 		return m_begin;
@@ -143,10 +171,13 @@ public:
 		}
 	}
 
-	inline void SkipBuffer(size_t bufferSize)
+	// return buffer that skipped
+	inline byte* SkipBuffer(size_t bufferSize)
 	{
 		BYTE_STREAM_ASSERT_NO_OVERFLOW(bufferSize);
+		auto ret = m_cur;
 		m_cur += bufferSize;
+		return ret;
 	}
 
 	inline void PickBuffer(byte* buffer, size_t bufferSize)
@@ -181,6 +212,7 @@ class ByteStream : public ByteStreamRead
 protected:
 	friend class PackageSender;
 	friend class FileSystem;
+	friend class ByteStreamRead;
 
 	std::vector<byte>	m_buffer;
 
@@ -218,22 +250,40 @@ protected:
 	}
 
 public:
-	//ByteStream()
-	//{
-	//	GrowthBy(sizeof(uint32_t));
+	inline ByteStream()
+	{
+		GrowthBy(sizeof(uint32_t));
 
-	//	// put placeholder for package size
-	//	Put<uint32_t>(0);
-	//}
+		// put placeholder for package size
+		Put<uint32_t>(0);
+	}
 
-	// must be called before put anything
-	inline void Initialize(size_t initSize)
+	inline ByteStream(size_t initSize)
 	{
 		GrowthBy(initSize + sizeof(uint32_t));
 
 		// put placeholder for package size
 		Put<uint32_t>(0);
 	}
+
+	inline void Resize(size_t newSize)
+	{
+		GrowthBy(newSize - m_buffer.size() + sizeof(uint32_t));
+	}
+
+	inline size_t GetHeaderSize() const
+	{
+		return sizeof(uint32_t);
+	}
+
+	//// must be called before put anything
+	//inline void Initialize(size_t initSize)
+	//{
+	//	GrowthBy(initSize + sizeof(uint32_t));
+
+	//	// put placeholder for package size
+	//	Put<uint32_t>(0);
+	//}
 
 	/*inline void Initialize(byte* begin, byte* cur)
 	{
@@ -331,12 +381,27 @@ public:
 		PackSize();
 	}
 
-	inline void PutBuffer(byte* buffer, size_t bufferSize)
+	inline byte* PutBuffer(byte* buffer, size_t bufferSize)
 	{
 		GrowthBy(bufferSize);
 		std::memcpy(m_cur, buffer, bufferSize);
+
+		auto ret = m_cur;
 		m_cur += bufferSize;
+		return ret;
 	}
 };
+
+ByteStreamRead::ByteStreamRead(ByteStream* stream)
+{
+	BeginReadFrom(stream);
+}
+
+void ByteStreamRead::BeginReadFrom(ByteStream* stream)
+{
+	m_begin = stream->begin();
+	m_end = stream->begin() + stream->m_buffer.size();
+	m_cur = m_begin + stream->GetHeaderSize();
+}
 
 NAMESPACE_END

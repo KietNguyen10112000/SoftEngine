@@ -26,7 +26,7 @@ private:
 		size_t lastModifiedTime;
 
 		void Serialize(ByteStream* stream);
-		void Deserialize(ByteStream* stream);
+		void Deserialize(ByteStreamRead* stream);
 	};
 
 	String m_cachePath;
