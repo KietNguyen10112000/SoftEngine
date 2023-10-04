@@ -8,7 +8,7 @@ NAMESPACE_BEGIN
 
 class Texture2D : public ResourceBase
 {
-protected:
+public:
 	static const char* CACHE_EXTENSION;
 
 	SharedPtr<GraphicsShaderResource> m_shaderResource;
@@ -22,7 +22,8 @@ private:
 
 public:
 	static void WriteCache(String path, byte* data, uint32_t width, uint32_t height, uint32_t channels, uint32_t mipLevel);
-	static void ReadCache(ByteStream* stream, byte** output, uint32_t* pWidths, uint32_t* pHeights, uint32_t* pChannels, uint32_t* pMipLevel);
+	static void ReadCache(ByteStream* stream, byte** output, size_t* outputSize, uint32_t* pWidths, uint32_t* pHeights, uint32_t* pChannels, uint32_t* pMipLevel);
+	static GRAPHICS_DATA_FORMAT::FORMAT ConvertChannelsToGraphicsFormat(uint32_t channels);
 
 };
 

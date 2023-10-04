@@ -14,9 +14,9 @@ protected:
 	friend class PackageReceiver;
 	friend class ByteStream;
 
-	byte* m_begin = nullptr;
-	byte* m_end = nullptr;
-	byte* m_cur = nullptr;
+	byte* m_beginRead = nullptr;
+	byte* m_endRead = nullptr;
+	byte* m_curRead = nullptr;
 
 	/*inline void Initialize(byte* begin, size_t len)
 	{
@@ -29,18 +29,18 @@ public:
 	inline ByteStreamRead() {};
 	inline ByteStreamRead(byte* begin, size_t len)
 	{
-		m_begin = begin;
-		m_end = begin + len;
-		m_cur = begin;
+		m_beginRead = begin;
+		m_endRead = begin + len;
+		m_curRead = begin;
 	}
 	inline ByteStreamRead(ByteStream* stream);
 	inline void BeginReadFrom(ByteStream* stream);
 
 	inline void BeginReadFrom(byte* begin, size_t len)
 	{
-		m_begin = begin;
-		m_end = begin + len;
-		m_cur = begin;
+		m_beginRead = begin;
+		m_endRead = begin + len;
+		m_curRead = begin;
 	}
 
 	inline static ByteStreamRead From(ByteStream* stream)
@@ -53,29 +53,39 @@ public:
 		return ByteStreamRead(&stream);
 	}
 
-	inline byte* begin() const
+	inline byte*& BeginRead()
 	{
-		return m_begin;
+		return m_beginRead;
 	}
 
-	inline byte* end() const
+	inline byte*& EndRead()
 	{
-		return m_end;
+		return m_endRead;
 	}
 
-	inline byte* cur() const
+	inline byte*& CurRead()
 	{
-		return m_cur;
+		return m_curRead;
 	}
 
-#define BYTE_STREAM_ASSERT_NO_OVERFLOW(len) assert((m_cur + len <= m_end) && "ByteStream overflow");
+	inline size_t GetHeaderSize() const
+	{
+		return sizeof(uint32_t);
+	}
+
+	inline void ResetRead()
+	{
+		CurRead() = BeginRead() + GetHeaderSize();
+	}
+
+#define BYTE_STREAM_ASSERT_NO_OVERFLOW(len) assert((m_curRead + len <= m_endRead) && "ByteStream overflow");
 
 	inline const char* GetString()
 	{
 #ifdef _DEBUG
 		bool valid = false;
-		auto it = m_cur;
-		while (it != m_end)
+		auto it = m_curRead;
+		while (it != m_endRead)
 		{
 			if (*it == 0)
 			{
@@ -90,8 +100,8 @@ public:
 		}
 #endif // _DEBUG
 
-		auto ret = (char*)m_cur;
-		m_cur += strlen(ret) + 1;
+		auto ret = (char*)m_curRead;
+		m_curRead += strlen(ret) + 1;
 		return ret;
 	}
 
@@ -108,8 +118,8 @@ public:
 		}
 
 		BYTE_STREAM_ASSERT_NO_OVERFLOW(sizeof(T));
-		auto p = (T*)m_cur;
-		m_cur += sizeof(T);
+		auto p = (T*)m_curRead;
+		m_curRead += sizeof(T);
 		return *p;
 	}
 
@@ -128,12 +138,12 @@ public:
 			std::is_same_v<T, String>
 			|| std::is_same_v<T, char*>)
 		{
-			m_cur += strlen((char*)m_cur) + 1;
+			m_curRead += strlen((char*)m_curRead) + 1;
 			return;
 		}
 
 		BYTE_STREAM_ASSERT_NO_OVERFLOW(sizeof(T));
-		m_cur += sizeof(T);
+		m_curRead += sizeof(T);
 		return;
 	}
 
@@ -146,7 +156,7 @@ public:
 
 		if (count > bufferSize)
 		{
-			m_cur = savedCur;
+			m_curRead = savedCur;
 			return false;
 		}
 
@@ -175,8 +185,8 @@ public:
 	inline byte* SkipBuffer(size_t bufferSize)
 	{
 		BYTE_STREAM_ASSERT_NO_OVERFLOW(bufferSize);
-		auto ret = m_cur;
-		m_cur += bufferSize;
+		auto ret = m_curRead;
+		m_curRead += bufferSize;
 		return ret;
 	}
 
@@ -184,26 +194,26 @@ public:
 	{
 		BYTE_STREAM_ASSERT_NO_OVERFLOW(bufferSize);
 
-		std::memcpy(buffer, m_cur, bufferSize);
-		m_cur += bufferSize;
+		std::memcpy(buffer, m_curRead, bufferSize);
+		m_curRead += bufferSize;
 	}
 
 #undef BYTE_STREAM_ASSERT_NO_OVERFLOW
 
 	inline bool IsEmpty()
 	{
-		assert(m_cur <= m_end);
-		return m_cur == m_end;
+		assert(m_curRead <= m_endRead);
+		return m_curRead == m_endRead;
 	}
 
 	inline size_t GetPayloadSize() const
 	{
-		return m_cur - m_begin - sizeof(uint32_t);
+		return m_curRead - m_beginRead - sizeof(uint32_t);
 	}
 
 	inline size_t GetSize() const
 	{
-		return m_cur - m_begin;
+		return m_curRead - m_beginRead;
 	}
 };
 
@@ -216,10 +226,29 @@ protected:
 
 	std::vector<byte>	m_buffer;
 
+	// m_endRead is CurWrite
+
+	byte* m_endWrite = nullptr;
+
+	inline auto& CurWrite()
+	{
+		return m_endRead;
+	}
+
+	inline auto& BeginWrite()
+	{
+		return m_beginRead;
+	}
+
+	inline auto& EndWrite()
+	{
+		return m_endWrite;
+	}
+
 	inline void GrowthBy(size_t size)
 	{
-		auto ret = m_end - m_cur;
-		if (m_end - m_cur >= size)
+		//auto ret = m_end - m_cur;
+		if (m_endWrite - CurWrite() >= size)
 		{
 			return;
 		}
@@ -227,26 +256,27 @@ protected:
 		auto newSize = m_buffer.size() + size;
 		m_buffer.resize(newSize);
 
-		m_cur = m_buffer.data() + (m_cur - m_begin);
-		m_begin = m_buffer.data();
-		m_end = m_begin + newSize;
+		CurRead() = m_buffer.data() + (CurRead() - BeginRead());
+		CurWrite() = m_buffer.data() + (CurWrite() - BeginWrite());
+		BeginWrite() = m_buffer.data();
+		EndWrite() = BeginWrite() + newSize;
 	}
 
 	inline bool SetHeaderSize(uint32_t size)
 	{
-		if (*(uint32_t*)m_begin != 0) return false;
+		if (*(uint32_t*)BeginWrite() != 0) return false;
 
-		*(uint32_t*)m_begin = size;
+		*(uint32_t*)BeginWrite() = size;
 		return true;
 	}
 
 	inline uint32_t PackSize()
 	{
-		auto size = m_cur - m_begin - sizeof(uint32_t);
+		auto size = CurWrite() - BeginWrite() - sizeof(uint32_t);
 		assert(size != 0);
-		if (!SetHeaderSize(size)) return m_cur - m_begin;
+		if (!SetHeaderSize(size)) return CurWrite() - BeginWrite();
 		Put<uint32_t>(size);
-		return m_cur - m_begin;
+		return CurWrite() - BeginWrite();
 	}
 
 public:
@@ -268,12 +298,7 @@ public:
 
 	inline void Resize(size_t newSize)
 	{
-		GrowthBy(newSize - m_buffer.size() + sizeof(uint32_t));
-	}
-
-	inline size_t GetHeaderSize() const
-	{
-		return sizeof(uint32_t);
+		GrowthBy(newSize - m_buffer.size() + GetHeaderSize());
 	}
 
 	//// must be called before put anything
@@ -297,11 +322,11 @@ public:
 	{
 		len++;
 		GrowthBy(len);
-		::memcpy(m_cur, str, len);
-		m_cur[len] = 0;
+		::memcpy(CurWrite(), str, len);
+		CurWrite()[len] = 0;
 
-		size_t ret = m_cur - m_begin;
-		m_cur += len;
+		size_t ret = CurWrite() - BeginWrite();
+		CurWrite() += len;
 		return ret;
 	}
 
@@ -323,9 +348,9 @@ public:
 		}
 
 		GrowthBy(sizeof(T));
-		auto p = (T*)m_cur;
-		size_t ret = m_cur - m_begin;
-		m_cur += sizeof(T);
+		auto p = (T*)CurWrite();
+		size_t ret = CurWrite() - BeginWrite();
+		CurWrite() += sizeof(T);
 		*p = v;
 		return ret;
 	}
@@ -351,29 +376,28 @@ public:
 		}
 	}
 
-	inline void Clean()
+	inline void ResetWrite()
 	{
-		m_cur = m_begin;
-		Put<uint32_t>(0);
+		CurWrite() = BeginWrite() + GetHeaderSize();
 	}
 
 	template <typename T>
 	inline void Set(size_t idx, const T& v)
 	{
-		auto p = (T*)&m_begin[idx];
+		auto p = (T*)&BeginWrite()[idx];
 		*p = v;
 	}
 
 	inline void Merge(ByteStream& another)
 	{
-		auto growthSize = another.m_cur - another.m_begin - sizeof(uint32_t);
+		auto growthSize = another.CurWrite() - another.BeginWrite() - sizeof(uint32_t);
 
 		if (growthSize == 0) return;
 
 		GrowthBy(growthSize);
 
-		memcpy(m_cur, another.m_begin + sizeof(uint32_t), growthSize);
-		m_cur += growthSize;
+		memcpy(CurWrite(), another.BeginWrite() + sizeof(uint32_t), growthSize);
+		CurWrite() += growthSize;
 	}
 
 	inline void Pack()
@@ -384,10 +408,10 @@ public:
 	inline byte* PutBuffer(byte* buffer, size_t bufferSize)
 	{
 		GrowthBy(bufferSize);
-		std::memcpy(m_cur, buffer, bufferSize);
+		std::memcpy(CurWrite(), buffer, bufferSize);
 
-		auto ret = m_cur;
-		m_cur += bufferSize;
+		auto ret = CurWrite();
+		CurWrite() += bufferSize;
 		return ret;
 	}
 };
@@ -399,9 +423,9 @@ ByteStreamRead::ByteStreamRead(ByteStream* stream)
 
 void ByteStreamRead::BeginReadFrom(ByteStream* stream)
 {
-	m_begin = stream->begin();
-	m_end = stream->begin() + stream->m_buffer.size();
-	m_cur = m_begin + stream->GetHeaderSize();
+	m_beginRead = stream->BeginWrite();
+	m_endRead = stream->CurWrite();
+	m_curRead = m_beginRead + stream->GetHeaderSize();
 }
 
 NAMESPACE_END

@@ -20,6 +20,8 @@ struct TEXTURE2D_REGION
 	uint32_t y = 0;
 	uint32_t width = 0;
 	uint32_t height = 0;
+	uint32_t mipLevel = 0;
+	uint32_t pixelStride = 0;
 };
 
 struct GRAPHICS_DATA_FORMAT
@@ -28,9 +30,12 @@ struct GRAPHICS_DATA_FORMAT
 	{
 		FORMAT_R32G32B32_FLOAT,
 		FORMAT_R32G32B32A32_FLOAT,
+		FORMAT_R8_UNORM,
+		FORMAT_R8G8B8_UNORM,
 		FORMAT_R8G8B8A8_UNORM,
 
-		COUNT
+		COUNT,
+		NONE
 	};
 };
 
@@ -49,18 +54,11 @@ struct GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC
 
 struct GRAPHICS_SHADER_RESOURCE_TYPE_TEXTURE2D_DESC
 {
-	enum TEXTURE_TYPE
-	{
-		TEXTURE_TYPE_NONE,
-		TEXTURE_TYPE_RGBA,
-		TEXTURE_TYPE_RGB,
-		TEXTURE_TYPE_R
-	};
-
-	TEXTURE_TYPE type = TEXTURE_TYPE_NONE;
+	GRAPHICS_DATA_FORMAT::FORMAT format = GRAPHICS_DATA_FORMAT::NONE;
 
 	uint32_t width;
 	uint32_t height;
+	uint32_t mipLevels;
 };
 
 struct GRAPHICS_SHADER_RESOURCE_DESC
@@ -206,7 +204,7 @@ public:
 	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
 
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_TEXTURE2D
-	virtual void UpdateTexture2D(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region) = 0;
+	virtual void UpdateTexture2D(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endUpdateChain = true) = 0;
 
 };
 

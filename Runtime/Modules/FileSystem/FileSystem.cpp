@@ -51,10 +51,9 @@ FileSystem::~FileSystem()
 
 void FileSystem::LoadCache()
 {
-	ByteStream _stream;
-	if (ReadStream(".filesystem", &_stream))
+	ByteStream stream;
+	if (ReadStream(".filesystem", &stream))
 	{
-		auto stream = ByteStreamRead::From(_stream);
 		auto size = stream.Get<size_t>();
 		for (size_t i = 0; i < size; i++)
 		{
@@ -120,9 +119,9 @@ void FileSystem::WriteStream(const char* path, ByteStreamRead* stream)
 {
 	auto fullpath = GetCachePath(path);
 	
-	auto begin = stream->begin();
-	auto cur = stream->cur();
-	size_t len = cur - begin;
+	auto begin = stream->BeginRead();
+	auto end = stream->EndRead();
+	size_t len = end - begin;
 
 	FILE* fp = fopen(fullpath.c_str(), "wb+");
 
@@ -155,10 +154,11 @@ bool FileSystem::ReadStream(const char* path, ByteStream* output)
 
 	output->Resize(fileSize - output->GetHeaderSize());
 
-	fread(output->begin(), sizeof(byte), fileSize, fp);
+	fread(output->BeginRead(), sizeof(byte), fileSize, fp);
 
 	auto offset = fileSize;
-	output->m_cur = output->begin() + offset;
+	output->CurWrite() = output->BeginRead() + offset;
+	output->CurRead() = output->BeginRead() + output->GetHeaderSize();
 
 	fclose(fp);
 

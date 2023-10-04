@@ -26,9 +26,10 @@ public:
 	ComPtr<IDXGIAdapter>					m_adapter;
 	ComPtr<ID3D12CommandQueue>				m_commandQueue;
 
-	// all rtv and dsv will be allocated via these allocators
+	// all rtv, dsv, srv will be allocated via these allocators
 	DX12DescriptorAllocator m_rtvAllocator;
 	DX12DescriptorAllocator m_dsvAllocator;
+	DX12DescriptorAllocator m_srvAllocator;
 
 	// all gpu resource will be allocated via this allocator
 	ComPtr<D3D12MA::Allocator> m_dx12ResourceAllocator;
@@ -150,6 +151,14 @@ public:
 		DX12Resource* output
 	);
 
+	void CreateShaderResourceTexture2D(
+		D3D12_CPU_DESCRIPTOR_HANDLE srvGroupStart,
+		uint32_t srvGroupCount,
+		D3D12_CPU_DESCRIPTOR_HANDLE srv,
+		const GRAPHICS_SHADER_RESOURCE_DESC& desc,
+		SharedPtr<GraphicsShaderResource>* output
+	);
+
 public:
 	void ExecuteCurrentCmdList();
 
@@ -166,6 +175,11 @@ public:
 	inline auto* GetDSVAllocator()
 	{
 		return &m_dsvAllocator;
+	}
+
+	inline auto* GetSRVAllocator()
+	{
+		return &m_srvAllocator;
 	}
 
 	inline uint64_t GetCurrentDX12FenceValue()

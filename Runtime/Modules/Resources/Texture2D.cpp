@@ -9,7 +9,7 @@
 
 NAMESPACE_BEGIN
 
-const char* Texture2D::CACHE_EXTENSION = ".texture2dcache";
+const char* Texture2D::CACHE_EXTENSION = ".texture2d";
 
 Texture2D::Texture2D(String path) : ResourceBase(path)
 {
@@ -29,7 +29,32 @@ void Texture2D::LoadCache(ByteStream* stream)
 {
 	byte* imageMips;
 	uint32_t widths[32], heights[32], channels, mipLevel;
-	ReadCache(stream, &imageMips, widths, heights, &channels, &mipLevel);
+	size_t imageLen;
+	ReadCache(stream, &imageMips, &imageLen, widths, heights, &channels, &mipLevel);
+
+	GRAPHICS_SHADER_RESOURCE_DESC desc = {};
+	desc.type = GRAPHICS_SHADER_RESOURCE_DESC::SHADER_RESOURCE_TYPE_TEXTURE2D;
+	desc.texture2D.format = ConvertChannelsToGraphicsFormat(channels);
+	desc.texture2D.width = widths[0];
+	desc.texture2D.height = heights[0];
+	desc.texture2D.mipLevels = mipLevel;
+	
+	Graphics::Get()->CreateShaderResources(1, &desc, &m_shaderResource);
+
+	TEXTURE2D_REGION region = {};
+	region.x = 0;
+	region.y = 0;
+	region.pixelStride = channels;
+	auto buf = imageMips;
+	for (uint32_t i = 0; i < mipLevel; i++)
+	{
+		region.mipLevel = i;
+		region.width = widths[i];
+		region.height = heights[i];
+		m_shaderResource->UpdateTexture2D(buf, imageLen, region, i == mipLevel - 1);
+
+		buf += region.width * region.height * channels;
+	}
 
 	rheap::free(imageMips);
 }
@@ -127,9 +152,11 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 	rheap::free(buffer);
 }
 
-void Texture2D::ReadCache(ByteStream* _stream, byte** output, uint32_t* pWidths, uint32_t* pHeights, uint32_t* pChannels, uint32_t* pMipLevel)
+void Texture2D::ReadCache(ByteStream* _stream, byte** output, size_t* outputSize, uint32_t* pWidths, uint32_t* pHeights, uint32_t* pChannels, uint32_t* pMipLevel)
 {
-	auto stream = ByteStreamRead::From(_stream);
+	//auto stream = ByteStreamRead::From(_stream);
+
+	auto& stream = *_stream;
 
 	int mipsW[32] = {};
 	int mipsH[32] = {};
@@ -181,6 +208,24 @@ void Texture2D::ReadCache(ByteStream* _stream, byte** output, uint32_t* pWidths,
 	{
 		pWidths[i] = mipsW[i];
 		pHeights[i] = mipsH[i];
+	}
+
+	*outputSize = outputBufferSize;
+}
+
+GRAPHICS_DATA_FORMAT::FORMAT Texture2D::ConvertChannelsToGraphicsFormat(uint32_t channels)
+{
+	switch (channels)
+	{
+	case 1:
+		return GRAPHICS_DATA_FORMAT::FORMAT_R8_UNORM;
+	case 3:
+		return GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8_UNORM;
+	case 4:
+		return GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
+	default:
+		assert(0);
+		break;
 	}
 }
 

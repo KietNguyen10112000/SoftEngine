@@ -3,6 +3,7 @@
 #include "DX12DescriptorAllocator.h"
 #include "DX12Utils.h"
 #include "DX12Resources.h"
+#include "DX12ShaderResource.h"
 
 #include "FileSystem/FileUtils.h"
 
@@ -108,6 +109,11 @@ void DX12Graphics::InitAllocators()
     dsvDescriptorHeapDesc.NumDescriptors = DSV_ALLOCATOR_NUM_DSV_PER_HEAP;
     dsvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
     m_dsvAllocator.Initialize(m_device.Get(), dsvDescriptorHeapDesc);
+
+    D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc = {};
+    srvDescriptorHeapDesc.NumDescriptors = DSV_ALLOCATOR_NUM_SRV_PER_HEAP;
+    srvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    m_srvAllocator.Initialize(m_device.Get(), srvDescriptorHeapDesc);
 
     D3D12MA::ALLOCATOR_DESC allocatorDesc = {};
     allocatorDesc.pDevice = m_device.Get();
@@ -393,11 +399,68 @@ SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHIC
 	return ret;
 }
 
+void DX12Graphics::CreateShaderResourceTexture2D(
+    D3D12_CPU_DESCRIPTOR_HANDLE srvGroupStart,
+    uint32_t srvGroupCount,
+    D3D12_CPU_DESCRIPTOR_HANDLE srv,
+    const GRAPHICS_SHADER_RESOURCE_DESC& _desc, 
+    SharedPtr<GraphicsShaderResource>* output
+) {
+    auto dx12shaderResource = std::make_shared<DX12ShaderResource>();
+    dx12shaderResource->m_srv = srv;
+    dx12shaderResource->m_srvGroupStart = srvGroupStart;
+    dx12shaderResource->m_srvGroupCount = srvGroupCount;
+
+    D3D12_RESOURCE_DESC texture2DDesc = {};
+    texture2DDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texture2DDesc.Width = _desc.texture2D.width;
+    texture2DDesc.Height = _desc.texture2D.height;
+    texture2DDesc.DepthOrArraySize = 1;
+    texture2DDesc.MipLevels = _desc.texture2D.mipLevels;
+    texture2DDesc.Format = dx12utils::ConvertToDX12Format(_desc.texture2D.format);
+    texture2DDesc.SampleDesc.Count = 1;
+    texture2DDesc.SampleDesc.Quality = 0;
+    texture2DDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+
+    AllocateDX12Resource(
+        &texture2DDesc,
+        D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        &dx12shaderResource->m_resource
+    );
+
+    *output = dx12shaderResource;
+}
+
 void DX12Graphics::CreateShaderResources(
     uint32_t numShaderResources, 
     const GRAPHICS_SHADER_RESOURCE_DESC* descs, 
     SharedPtr<GraphicsShaderResource>* output
 ) {
+    auto descriptorStart = GetSRVAllocator()->AllocateCPU(numShaderResources);
+    auto stride = GetSRVAllocator()->GetCPUStride();
+
+    auto* out = output;
+    for (uint32_t i = 0; i < numShaderResources; i++)
+    {
+        auto& desc = descs[i];
+
+        auto curDescriptor = descriptorStart;
+        curDescriptor.ptr += stride * i;
+
+        switch (desc.type)
+        {
+        case GRAPHICS_SHADER_RESOURCE_DESC::SHADER_RESOURCE_TYPE_TEXTURE2D:
+            CreateShaderResourceTexture2D(descriptorStart, numShaderResources, curDescriptor, desc, out);
+            break;
+        default:
+            assert(0);
+            break;
+        }
+
+        out++;
+    }
 }
 
 void DX12Graphics::CreateConstantBuffers(

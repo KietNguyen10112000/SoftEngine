@@ -148,7 +148,7 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
 
     g_objectData.transform = Mat4::Identity();
 
-    resource::Load<Texture2D>("2.png");
+    m_testTexture2D = resource::Load<Texture2D>("2.png");
 }
 
 RenderingSystem::~RenderingSystem()
@@ -236,6 +236,7 @@ void RenderingSystem::Iteration(float dt)
     auto params = m_testPipeline->PrepareRenderParams();
     params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_testCameraConstantBuffer);
     params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_testObjectConstantBuffer);
+    //params->SetShaderResourcesTexture2D(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_testTexture2D->m_shaderResource);
     graphics->SetGraphicsPipeline(m_testPipeline.get());
     
     auto vb = m_testVertexBuffer.get();

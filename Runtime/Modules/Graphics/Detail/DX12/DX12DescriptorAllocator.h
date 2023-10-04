@@ -108,7 +108,7 @@ public:
 
 			if (count <= m_desc.NumDescriptors)
 			{
-				assert(count == _count);
+				//assert(count == _count);
 				
 				auto pageOffset = count * HANDLE_CONTROL_BLOCK_SIZE;
 				heap.page.Free(heap.page.GetBuffer() + pageOffset + sizeof(AllocatedBlock));

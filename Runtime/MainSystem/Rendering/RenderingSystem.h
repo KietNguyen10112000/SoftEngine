@@ -8,6 +8,8 @@
 #include "Common/ComponentQueryStructures/DoubleBVH.h"
 #include "Common/Base/AsyncServer.h"
 
+#include "Resources/Texture2D.h"
+
 NAMESPACE_BEGIN
 
 class Camera;
@@ -45,6 +47,7 @@ private:
 	SharedPtr<GraphicsVertexBuffer>			m_testVertexBuffer;
 	SharedPtr<GraphicsConstantBuffer>		m_testCameraConstantBuffer;
 	SharedPtr<GraphicsConstantBuffer>		m_testObjectConstantBuffer;
+	Resource<Texture2D>						m_testTexture2D;
 
 public:
 	RenderingSystem(Scene* scene);
