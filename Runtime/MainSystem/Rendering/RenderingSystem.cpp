@@ -28,40 +28,40 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
     struct Vertex
     {
         Vec3 position;
-        Vec3 color;
+        Vec2 textcoord;
     };
 
     Vertex cubeVertices[] =
     {
-        { Vec3(-1.0f, -1.0f, -1.0f), Vec3(0, 1, 1) },
-        { Vec3(-1.0f,  1.0f, -1.0f), Vec3(0, 0, 1) },
-        { Vec3(1.0f,  1.0f, -1.0f), Vec3(1, 0, 1) },
-        { Vec3(1.0f, -1.0f, -1.0f), Vec3(1, 1, 1) },
+        { Vec3(-1.0f, -1.0f, -1.0f), Vec2(0, 1) },
+        { Vec3(-1.0f,  1.0f, -1.0f), Vec2(0, 0) },
+        { Vec3(1.0f,  1.0f, -1.0f), Vec2(1, 0) },
+        { Vec3(1.0f, -1.0f, -1.0f), Vec2(1, 1) },
 
-        { Vec3(-1.0f, -1.0f, 1.0f), Vec3(1, 1, 1) },
-        { Vec3(1.0f, -1.0f, 1.0f), Vec3(0, 1, 1) },
-        { Vec3(1.0f,  1.0f, 1.0f), Vec3(0, 0, 1) },
-        { Vec3(-1.0f,  1.0f, 1.0f), Vec3(1, 0, 1) },
+        { Vec3(-1.0f, -1.0f, 1.0f), Vec2(1, 1) },
+        { Vec3(1.0f, -1.0f, 1.0f), Vec2(0, 1) },
+        { Vec3(1.0f,  1.0f, 1.0f), Vec2(0, 0) },
+        { Vec3(-1.0f,  1.0f, 1.0f), Vec2(1, 0) },
 
-        { Vec3(-1.0f, 1.0f, -1.0f), Vec3(0, 1, 1) },
-        { Vec3(-1.0f, 1.0f,  1.0f), Vec3(0, 0, 1) },
-        { Vec3(1.0f, 1.0f,  1.0f), Vec3(1, 0, 1) },
-        { Vec3(1.0f, 1.0f, -1.0f), Vec3(1, 1, 1) },
+        { Vec3(-1.0f, 1.0f, -1.0f), Vec2(0, 1) },
+        { Vec3(-1.0f, 1.0f,  1.0f), Vec2(0, 0) },
+        { Vec3(1.0f, 1.0f,  1.0f), Vec2(1, 0) },
+        { Vec3(1.0f, 1.0f, -1.0f), Vec2(1, 1) },
 
-        { Vec3(-1.0f, -1.0f, -1.0f), Vec3(1, 1, 1) },
-        { Vec3(1.0f, -1.0f, -1.0f), Vec3(0, 1, 1) },
-        { Vec3(1.0f, -1.0f,  1.0f), Vec3(0, 0, 1) },
-        { Vec3(-1.0f, -1.0f,  1.0f), Vec3(1, 0, 1) },
+        { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
+        { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
+        { Vec3(1.0f, -1.0f,  1.0f), Vec2(0, 0) },
+        { Vec3(-1.0f, -1.0f,  1.0f), Vec2(1, 0) },
 
-        { Vec3(-1.0f, -1.0f,  1.0f), Vec3(0, 1, 1) },
-        { Vec3(-1.0f,  1.0f,  1.0f), Vec3(0, 0, 1) },
-        { Vec3(-1.0f,  1.0f, -1.0f), Vec3(1, 0, 1) },
-        { Vec3(-1.0f, -1.0f, -1.0f), Vec3(1, 1, 1) },
+        { Vec3(-1.0f, -1.0f,  1.0f), Vec2(0, 1) },
+        { Vec3(-1.0f,  1.0f,  1.0f), Vec2(0, 0) },
+        { Vec3(-1.0f,  1.0f, -1.0f), Vec2(1, 0) },
+        { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
 
-        { Vec3(1.0f, -1.0f, -1.0f), Vec3(0, 1, 1) },
-        { Vec3(1.0f,  1.0f, -1.0f), Vec3(0, 0, 1) },
-        { Vec3(1.0f,  1.0f,  1.0f), Vec3(1, 0, 1) },
-        { Vec3(1.0f, -1.0f,  1.0f), Vec3(1, 1, 1) },
+        { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
+        { Vec3(1.0f,  1.0f, -1.0f), Vec2(0, 0) },
+        { Vec3(1.0f,  1.0f,  1.0f), Vec2(1, 0) },
+        { Vec3(1.0f, -1.0f,  1.0f), Vec2(1, 1) },
     };
 
     // Create index buffer:
@@ -132,9 +132,9 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
         0 
     };
     pipelineDesc.inputDesc.elements[1] = { 
-        "COLOR", 
+        "TEXTCOORD", 
         0, 
-        GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
+        GRAPHICS_DATA_FORMAT::FORMAT_R32G32_FLOAT, 
         0, 
         sizeof(Vec3), 
         GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
@@ -148,6 +148,9 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
 
     g_objectData.transform = Mat4::Identity();
 
+    // buildings/victory_tower_0.png
+    // rain1.jpg
+    // 2.png
     m_testTexture2D = resource::Load<Texture2D>("2.png");
 }
 
@@ -236,7 +239,7 @@ void RenderingSystem::Iteration(float dt)
     auto params = m_testPipeline->PrepareRenderParams();
     params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_testCameraConstantBuffer);
     params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_testObjectConstantBuffer);
-    //params->SetShaderResourcesTexture2D(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_testTexture2D->m_shaderResource);
+    params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_testTexture2D->m_shaderResource);
     graphics->SetGraphicsPipeline(m_testPipeline.get());
     
     auto vb = m_testVertexBuffer.get();

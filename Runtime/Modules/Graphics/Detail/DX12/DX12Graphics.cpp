@@ -111,7 +111,7 @@ void DX12Graphics::InitAllocators()
     m_dsvAllocator.Initialize(m_device.Get(), dsvDescriptorHeapDesc);
 
     D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc = {};
-    srvDescriptorHeapDesc.NumDescriptors = DSV_ALLOCATOR_NUM_SRV_PER_HEAP;
+    srvDescriptorHeapDesc.NumDescriptors = SRV_ALLOCATOR_NUM_SRV_PER_HEAP;
     srvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     m_srvAllocator.Initialize(m_device.Get(), srvDescriptorHeapDesc);
 
@@ -431,6 +431,13 @@ void DX12Graphics::CreateShaderResourceTexture2D(
     );
 
     *output = dx12shaderResource;
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = texture2DDesc.Format;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = texture2DDesc.MipLevels;
+    m_device->CreateShaderResourceView(dx12shaderResource->m_resource.resource.Get(), &srvDesc, srv);
 }
 
 void DX12Graphics::CreateShaderResources(
@@ -635,6 +642,8 @@ void DX12Graphics::InitRootSignature()
         srvRange.OffsetInDescriptorsFromTableStart = descriptorHeapOffset;
 
         descriptorHeapOffset += srvRange.NumDescriptors;
+
+        descriptorHeapOffset = 0;
     }
 
     D3D12_STATIC_SAMPLER_DESC rootSampler = {};
@@ -676,6 +685,64 @@ void DX12Graphics::InitGPUVisibleDescriptorHeap()
 
     m_gpuVisibleHeapCPUHandleStart = m_gpuVisibleHeap->GetCPUDescriptorHandleForHeapStart();
     m_gpuVisibleHeapGPUHandleStart = m_gpuVisibleHeap->GetGPUDescriptorHandleForHeapStart();
+}
+
+void DX12Graphics::StageCurrentRenderParams()
+{
+    // set up render pipeline params
+    auto cmdList = GetCmdList();
+    auto paramsRoom = m_currentGraphicsPipeline->GetCurrentRenderParamsRoom();
+    auto cpuDescriptorHandleCBV = GetCurrentRenderRoomCPUDescriptorHandleStart();
+    auto gpuDescriptorHandle = GetCurrentRenderRoomGPUDescriptorHandleStart();
+    auto cpuDescriptorHandleSRV = cpuDescriptorHandleCBV;
+    cpuDescriptorHandleSRV.ptr += GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER * GetCbvSrvUavCPUDescriptorHandleStride();
+
+    auto spaceStride = (GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER + GRAPHICS_PARAMS_DESC::NUM_SHADER_RESOURCE)
+        * GetCbvSrvUavCPUDescriptorHandleStride();
+
+    uint32_t stageIndex = 0;
+    for (auto& paramsShaderSpace : paramsRoom->m_params)
+    {
+        cmdList->SetGraphicsRootDescriptorTable(stageIndex, gpuDescriptorHandle);
+
+//#ifdef _DEBUG
+//        auto start = GetCurrentRenderRoomCPUDescriptorHandleStart();
+//        start.ptr += spaceStride * stageIndex;
+//        assert(start.ptr == cpuDescriptorHandleCBV.ptr);
+//        assert(cpuDescriptorHandleCBV.ptr + GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER * GetCbvSrvUavCPUDescriptorHandleStride()
+//            == cpuDescriptorHandleSRV.ptr);
+//#endif // _DEBUG
+
+
+        if (paramsShaderSpace.m_constantBufferDescriptorRangesIdx != 0)
+        {
+            // copy all descriptor ranges to shader visible descriptor heap
+            for (uint32_t i = 0; i < paramsShaderSpace.m_constantBufferDescriptorRangesIdx; i++)
+            {
+                auto& range = paramsShaderSpace.m_constantBufferDescriptorRanges[i];
+                auto registerHandle = cpuDescriptorHandleCBV;
+                registerHandle.ptr += range.baseRegisterIndex * GetCbvSrvUavCPUDescriptorHandleStride();
+                m_device->CopyDescriptorsSimple(range.count, registerHandle, range.baseCPUDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            }
+        }
+
+        if (paramsShaderSpace.m_shaderResourceDescriptorRangesIdx != 0)
+        {
+            // copy all descriptor ranges to shader visible descriptor heap
+            for (uint32_t i = 0; i < paramsShaderSpace.m_shaderResourceDescriptorRangesIdx; i++)
+            {
+                auto& range = paramsShaderSpace.m_shaderResourceDescriptorRanges[i];
+                auto registerHandle = cpuDescriptorHandleSRV;
+                registerHandle.ptr += range.baseRegisterIndex * GetCbvSrvUavCPUDescriptorHandleStride();
+                m_device->CopyDescriptorsSimple(range.count, registerHandle, range.baseCPUDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            }
+        }
+
+        cpuDescriptorHandleCBV.ptr += spaceStride;
+        cpuDescriptorHandleSRV.ptr += spaceStride;
+        stageIndex++;
+        gpuDescriptorHandle.ptr += spaceStride;
+    }
 }
 
 SharedPtr<GraphicsRenderTarget> DX12Graphics::CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc)
@@ -730,7 +797,6 @@ void DX12Graphics::SetDrawParams(GraphicsParams* params)
 
 void DX12Graphics::SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv)
 {
-    
     auto dx12dsv = (DX12DepthStencilBuffer*)dsv;
 
     D3D12_CPU_DESCRIPTOR_HANDLE RTVs[8] = {};
@@ -755,52 +821,7 @@ void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer
 
     auto cmdList = GetCmdList();
 
-    // set up render pipeline params
-    {
-        auto paramsRoom = m_currentGraphicsPipeline->GetCurrentRenderParamsRoom();
-        auto cpuDescriptorHandleCBV = GetCurrentRenderRoomCPUDescriptorHandleStart();
-        auto gpuDescriptorHandle = GetCurrentRenderRoomGPUDescriptorHandleStart();
-        auto cpuDescriptorHandleSRV = cpuDescriptorHandleCBV;
-        cpuDescriptorHandleSRV.ptr += GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER * GetCbvSrvUavCPUDescriptorHandleStride();
-
-        auto spaceStride = (GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER + GRAPHICS_PARAMS_DESC::NUM_SHADER_RESOURCE) 
-            * GetCbvSrvUavCPUDescriptorHandleStride();
-
-        uint32_t stageIndex = 0;
-        for (auto& paramsShaderSpace : paramsRoom->m_params)
-        {
-            cmdList->SetGraphicsRootDescriptorTable(stageIndex, gpuDescriptorHandle);
-
-            if (paramsShaderSpace.m_constantBufferDescriptorRangesIdx != 0)
-            {
-                // copy all descriptor ranges to shader visible descriptor heap
-                for (uint32_t i = 0; i < paramsShaderSpace.m_constantBufferDescriptorRangesIdx; i++)
-                {
-                    auto& range = paramsShaderSpace.m_constantBufferDescriptorRanges[i];
-                    auto registerHandle = cpuDescriptorHandleCBV;
-                    registerHandle.ptr += range.baseRegisterIndex * GetCbvSrvUavCPUDescriptorHandleStride();
-                    m_device->CopyDescriptorsSimple(range.count, registerHandle, range.baseCPUDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                }
-            }
-
-            if (paramsShaderSpace.m_shaderResourceDescriptorRangesIdx != 0)
-            {
-                // copy all descriptor ranges to shader visible descriptor heap
-                for (uint32_t i = 0; i < paramsShaderSpace.m_shaderResourceDescriptorRangesIdx; i++)
-                {
-                    auto& range = paramsShaderSpace.m_shaderResourceDescriptorRanges[i];
-                    auto registerHandle = cpuDescriptorHandleSRV;
-                    registerHandle.ptr += range.baseRegisterIndex * GetCbvSrvUavCPUDescriptorHandleStride();
-                    m_device->CopyDescriptorsSimple(range.count, registerHandle, range.baseCPUDescriptor, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-                }
-            }
-
-            cpuDescriptorHandleCBV.ptr += spaceStride;
-            cpuDescriptorHandleSRV.ptr += spaceStride;
-            stageIndex++;
-            gpuDescriptorHandle.ptr += spaceStride;
-        }
-    }
+    StageCurrentRenderParams();
 
     // set up vertex views
     {
@@ -851,6 +872,20 @@ void DX12Graphics::AllocateDX12Resource(
         &output->allocation,
         IID_PPV_ARGS(&output->resource)
     ));
+
+    //D3D12_HEAP_PROPERTIES heapProps = {};
+    //heapProps.Type = heapType;
+   
+    //ThrowIfFailed(
+    //    m_device->CreateCommittedResource(
+    //        &heapProps, // a default heap
+    //        D3D12_HEAP_FLAG_NONE, // no flags
+    //        desc,
+    //        resourceState,
+    //        clearValue,
+    //        IID_PPV_ARGS(&output->resource)
+    //    )
+    //);
 }
 
 GraphicsRenderTarget* DX12Graphics::GetScreenRenderTarget()

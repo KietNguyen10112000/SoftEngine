@@ -1,15 +1,17 @@
+#define D3DCOMPILE_DEBUG 1
+
 #include "Common/TypeDef.hlsli"
 
 struct VS_INPUT
 {
 	float3 position		: POSITION;
-	float3 color		: COLOR0;
+	float2 textCoord	: TEXTCOORD;
 };
 
 struct VS_OUTPUT
 {
 	float4 position		: SV_POSITION;
-	float3 color		: COLOR0;
+	float2 textCoord	: TEXTCOORD;
 };
 
 cbuffer CameraCBuffer : register(b0, space0)
@@ -28,7 +30,7 @@ VS_OUTPUT main(VS_INPUT input)
 
 	output.position = mul(float4(input.position, 1.0f), Object.transform);
 	output.position = mul(output.position, Camera.vp);
-	output.color = input.color;
+	output.textCoord = input.textCoord;
 
 	return output;
 }

@@ -1,5 +1,7 @@
 #include "DX12GraphicsPipeline.h"
 
+#include "DX12ShaderResource.h"
+
 NAMESPACE_DX12_BEGIN
 
 void DX12GraphicsParams::SetConstantBuffers(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, 
@@ -55,14 +57,50 @@ Begin:
 	}
 }
 
-void DX12GraphicsParams::SetShaderResourcesBuffer(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, 
+void DX12GraphicsParams::SetShaderResources(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex,
 	uint32_t numResources, soft::SharedPtr<soft::GraphicsShaderResource>* shaderResources)
 {
-}
+	auto& paramsSpace = m_params[shaderSpace];
 
-void DX12GraphicsParams::SetShaderResourcesTexture2D(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, 
-	uint32_t numResources, soft::SharedPtr<soft::GraphicsShaderResource>* shaderResources)
-{
+	assert(numResources != 0 && numResources <= GRAPHICS_PARAMS_DESC::NUM_SHADER_RESOURCE - paramsSpace.m_shaderResourceDescriptorRangesIdx);
+
+	auto dx12 = DX12Graphics::GetDX12();
+
+	uint32_t startIdx = 0;
+
+Begin:
+	auto dx12SRV = (DX12ShaderResource*)shaderResources[startIdx++].get();
+	auto baseCPUHandle = dx12SRV->m_srv;
+
+	auto range = &paramsSpace.m_shaderResourceDescriptorRanges[paramsSpace.m_shaderResourceDescriptorRangesIdx++];
+	range->baseCPUDescriptor = baseCPUHandle;
+	range->count = 1;
+	range->baseRegisterIndex = (uint32_t)baseSlotIndex;
+
+	bool loop = false;
+	for (size_t i = startIdx; i < numResources; i++)
+	{
+		auto prevDx12SRV = dx12SRV;
+		dx12SRV = (DX12ShaderResource*)shaderResources[i].get();
+		if (dx12SRV->m_srvGroupStart.ptr != prevDx12SRV->m_srvGroupStart.ptr)
+		{
+			// just for test
+			assert(0);
+
+			startIdx = i;
+			loop = true;
+
+			break;
+		}
+
+		baseSlotIndex++;
+		range->count++;
+	}
+
+	if (loop)
+	{
+		goto Begin;
+	}
 }
 
 DX12GraphicsPipeline::DX12GraphicsPipeline(size_t preferRenderCallPerFrame, const GRAPHICS_PIPELINE_DESC& desc)

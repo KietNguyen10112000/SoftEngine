@@ -28,6 +28,7 @@ struct GRAPHICS_DATA_FORMAT
 {
 	enum FORMAT
 	{
+		FORMAT_R32G32_FLOAT,
 		FORMAT_R32G32B32_FLOAT,
 		FORMAT_R32G32B32A32_FLOAT,
 		FORMAT_R8_UNORM,
@@ -249,12 +250,8 @@ public:
 	virtual void SetConstantBuffers(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex,
 		uint32_t numBuffers, SharedPtr<GraphicsConstantBuffer>* constantBuffers) = 0;
 
-	// set Shader Resource type Buffer
-	virtual void SetShaderResourcesBuffer(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, 
-		uint32_t numResources, SharedPtr<GraphicsShaderResource>* shaderResources) = 0;
-
-	// set Shader Resource type Texture2D
-	virtual void SetShaderResourcesTexture2D(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex,
+	// set Shader Resource
+	virtual void SetShaderResources(GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex,
 		uint32_t numResources, SharedPtr<GraphicsShaderResource>* shaderResources) = 0;
 
 };

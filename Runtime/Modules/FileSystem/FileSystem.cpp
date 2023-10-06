@@ -67,6 +67,17 @@ void FileSystem::LoadCache()
 
 void FileSystem::SaveCache()
 {
+	/*ByteStream stream;
+	stream.Put((size_t)3);
+	stream.Put(String("Resources/rain1.jpg"));
+	stream.Put((size_t)13223309972603);
+	stream.Put(String("Resources/buildings/victory_tower_0.png"));
+	stream.Put((size_t)13313778521009);
+	stream.Put(String("Resources/2.png"));
+	stream.Put((size_t)13327853338327);
+
+	WriteStream(".filesystem", &stream);*/
+
 	ByteStream stream;
 	stream.Put(m_indexedFiles.size());
 

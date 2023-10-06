@@ -13,7 +13,7 @@ public:
 
 	constexpr static size_t			RTV_ALLOCATOR_NUM_RTV_PER_HEAP = 256;
 	constexpr static size_t			DSV_ALLOCATOR_NUM_DSV_PER_HEAP = 256;
-	constexpr static size_t			DSV_ALLOCATOR_NUM_SRV_PER_HEAP = 4096;
+	constexpr static size_t			SRV_ALLOCATOR_NUM_SRV_PER_HEAP = 4096;
 
 	constexpr static size_t			REGISTER_SPACE_VS = GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS;
 	constexpr static size_t			NUM_CBV_VS = GRAPHICS_PARAMS_DESC::NUM_CONSTANT_BUFFER;

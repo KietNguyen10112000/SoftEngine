@@ -7,7 +7,7 @@ add_compile_definitions(EXPORTS UNICODE DEV)
 add_compile_definitions(IMGUI_USER_CONFIG="Libraries/config/ImGUIConfig.h")
 
 set(BINARY Engine)
-set(LIB_ENGINE LibEngine)
+#set(LIB_ENGINE LibEngine)
 
 file(
     GLOB

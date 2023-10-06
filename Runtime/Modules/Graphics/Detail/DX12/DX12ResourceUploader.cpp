@@ -98,6 +98,7 @@ void DX12ResourceUploader::UploadBuffer(ID3D12Resource* destResource, size_t des
 
 void DX12ResourceUploader::Texture2DChannelsCopyFunc_1(void* dest, void* src, uint32_t width, uint32_t height, uint32_t destRowPitch)
 {
+	assert(0);
 }
 
 void DX12ResourceUploader::Texture2DChannelsCopyFunc_3(void* dest, void* src, uint32_t width, uint32_t height, uint32_t destRowPitch)
@@ -125,6 +126,17 @@ void DX12ResourceUploader::Texture2DChannelsCopyFunc_3(void* dest, void* src, ui
 
 void DX12ResourceUploader::Texture2DChannelsCopyFunc_4(void* dest, void* src, uint32_t width, uint32_t height, uint32_t destRowPitch)
 {
+	auto srcRowData = (byte*)src;
+	auto srcRowPitch = width * 4;
+	auto destRowData = (byte*)dest;
+
+	for (uint32_t y = 0; y < height; y++)
+	{
+		std::memcpy(destRowData, srcRowData, srcRowPitch);
+
+		srcRowData += srcRowPitch;
+		destRowData += destRowPitch;
+	}
 }
 
 void DX12ResourceUploader::UploadTexture2D(
@@ -152,7 +164,7 @@ void DX12ResourceUploader::UploadTexture2D(
 	auto block = AllocateBlock(size);
 	{
 		assert(pixelStride <= 4);
-		auto copyFunc = m_texture2dCopyFunc[pixelStride];
+		auto copyFunc = m_texture2dCopyFunc[pixelStride - 1];
 		assert(copyFunc != nullptr);
 		copyFunc(block->mem, srcBuffer, srcWidth, srcHeight, rowPitch);
 	}

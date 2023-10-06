@@ -35,8 +35,7 @@ public:
 
 	// Inherited via GraphicsParams
 	virtual void SetConstantBuffers(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, uint32_t numBuffers, soft::SharedPtr<soft::GraphicsConstantBuffer>* constantBuffers);
-	virtual void SetShaderResourcesBuffer(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, uint32_t numResources, soft::SharedPtr<soft::GraphicsShaderResource>* shaderResources);
-	virtual void SetShaderResourcesTexture2D(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, uint32_t numResources, soft::SharedPtr<soft::GraphicsShaderResource>* shaderResources);
+	virtual void SetShaderResources(soft::GRAPHICS_SHADER_SPACE::SPACE shaderSpace, ID baseSlotIndex, uint32_t numResources, soft::SharedPtr<soft::GraphicsShaderResource>* shaderResources);
 
 	inline void OnRenderCall(uint64_t fenceValue)
 	{

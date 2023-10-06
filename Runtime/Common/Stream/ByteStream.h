@@ -71,6 +71,7 @@ public:
 	inline size_t GetHeaderSize() const
 	{
 		return sizeof(uint32_t);
+		//return 0;
 	}
 
 	inline void ResetRead()
@@ -320,14 +321,19 @@ public:
 
 	inline size_t PutString(size_t len, const char* str)
 	{
-		len++;
-		GrowthBy(len);
+		//len++;
+		GrowthBy(len + 1);
 		::memcpy(CurWrite(), str, len);
 		CurWrite()[len] = 0;
 
 		size_t ret = CurWrite() - BeginWrite();
-		CurWrite() += len;
+		CurWrite() += len + 1;
 		return ret;
+	}
+
+	inline auto Put(const char* str)
+	{
+		return PutString(::strlen(str), str);
 	}
 
 	template <typename T>
@@ -342,7 +348,7 @@ public:
 			return PutString(v.length(), v.c_str());
 		}
 
-		if constexpr (std::is_same_v<T, char*>)
+		if constexpr (std::is_same_v<T, const char*> || std::is_same_v<T, char*> || std::is_same_v<T, char[]>)
 		{
 			return PutString(::strlen(v), v);
 		}

@@ -12,8 +12,11 @@ ManagedHeap* g_gcHeap = 0;
 
 thread_local size_t g_stableValue = 0;
 
-constexpr size_t NEW_DELETE_OPERATOR_SIGN = 88888888;
-constexpr size_t MALLOC_SIGN = 88888889;
+constexpr size_t NEW_DELETE_OPERATOR_SIGN_BEGIN = 88888887;
+constexpr size_t NEW_DELETE_OPERATOR_SIGN_END = 0x00000011;
+
+constexpr size_t MALLOC_SIGN_BEGIN = 88888889;
+constexpr size_t MALLOC_SIGN_END = 88888899;
 
 void MemoryInitialize()
 {
@@ -139,10 +142,10 @@ void* rheap::malloc(size_t nBytes)
     auto mem = handle->GetUsableMemAddress();
 
     size_t* p = (size_t*)mem;
-    *p = MALLOC_SIGN;
+    *p = MALLOC_SIGN_BEGIN;
 
     p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
-    *p = MALLOC_SIGN;
+    *p = MALLOC_SIGN_END;
 
     auto ret = ((size_t*)mem) + 1;
     return ret;
@@ -153,10 +156,10 @@ void rheap::free(void* ptr)
     size_t* p = ((size_t*)ptr) - 1;
     auto handle = ((ManagedHandle*)p) - 1;
 
-    assert(*p == MALLOC_SIGN);
+    assert(*p == MALLOC_SIGN_BEGIN);
 
     p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
-    assert(*p == MALLOC_SIGN);
+    assert(*p == MALLOC_SIGN_END);
 
     soft::g_rawHeap->Deallocate(handle);
 }
@@ -174,10 +177,10 @@ void* rheap::internal::OperatorNew(size_t _Size)
     auto mem = handle->GetUsableMemAddress();
     
     size_t* p = (size_t*)mem;
-    *p = NEW_DELETE_OPERATOR_SIGN;
+    *p = NEW_DELETE_OPERATOR_SIGN_BEGIN;
 
     p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
-    *p = NEW_DELETE_OPERATOR_SIGN;
+    *p = NEW_DELETE_OPERATOR_SIGN_END;
 
     auto ret = ((size_t*)mem) + 1;
     return ret;
@@ -194,10 +197,10 @@ void rheap::internal::OperatorDelete(void* ptr) noexcept
         size_t* p = ((size_t*)ptr) - 1;
         auto handle = ((ManagedHandle*)p) - 1;
 
-        assert(*p == NEW_DELETE_OPERATOR_SIGN);
+        assert(*p == NEW_DELETE_OPERATOR_SIGN_BEGIN);
 
         p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
-        assert(*p == NEW_DELETE_OPERATOR_SIGN);
+        assert(*p == NEW_DELETE_OPERATOR_SIGN_END);
 
         soft::g_rawHeap->Deallocate(handle);
 #else

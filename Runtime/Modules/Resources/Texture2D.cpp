@@ -16,10 +16,11 @@ Texture2D::Texture2D(String path) : ResourceBase(path)
 	assert(FileSystem::Get()->IsFileExist(path.c_str()));
 
 	ByteStream stream;
-	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadStream((path + CACHE_EXTENSION).c_str(), &stream))
+	auto streamPath = (path + CACHE_EXTENSION);
+	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
 	{
 		CreateCache(path);
-		return;
+		assert(FileSystem::Get()->ReadStream(streamPath.c_str(), &stream));
 	}
 
 	LoadCache(&stream);
@@ -66,7 +67,7 @@ void Texture2D::CreateCache(String path)
 	FileUtils::ReadFile(path, buffer, fileSize);
 
 	int width, height, numComponents;
-	auto imaData = stbi_load_from_memory(buffer, (int)fileSize, &width, &height, &numComponents, 4);
+	auto imaData = stbi_load_from_memory(buffer, (int)fileSize, &width, &height, &numComponents, 0);
 
 	WriteCache(path + CACHE_EXTENSION, imaData, width, height, numComponents, -1);
 
@@ -79,7 +80,7 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 {
 	if (mipLevel == -1)
 	{
-		mipLevel = std::log2(std::max(width, height));
+		mipLevel = std::log2(std::min(width, height));
 	}
 
 	size_t mipSizes[32] = {};
@@ -107,7 +108,7 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 		buf += imageLen;
 		imageLen = w * h * channels;
 
-		stbir_resize_uint8(prevImageBuf, prevW, prevH, channels * w, buf, w, h, channels, channels);
+		stbir_resize_uint8(prevImageBuf, prevW, prevH, 0, buf, w, h, 0, channels);
 
 		totalSize += imageLen;
 
@@ -115,12 +116,13 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 	}
 
 	buf = buffer;
+	//stbi_write_png_compression_level = 1000000;
 	for (uint32_t i = 0; i < mipLevel; i++)
 	{
 		auto w = width / (1 << i);
 		auto h = height / (1 << i);
 
-		mipsCompressedData[i] = stbi_write_png_to_mem(buf, channels * w, w, h, channels, &mipCompressedSize[i]);
+		mipsCompressedData[i] = stbi_write_png_to_mem(buf, 0, w, h, channels, &mipCompressedSize[i]);
 
 		buf += mipSizes[i];
 	}
@@ -184,7 +186,7 @@ void Texture2D::ReadCache(ByteStream* _stream, byte** output, size_t* outputSize
 	for (uint32_t i = 0; i < mipLevel; i++)
 	{
 		int comp = 0;
-		mipsData[i] = stbi_load_from_memory(buf, mipCompressedSize[i], &mipsW[i], &mipsH[i], &comp, channels);
+		mipsData[i] = stbi_load_from_memory(buf, mipCompressedSize[i], &mipsW[i], &mipsH[i], &comp, 0);
 		assert(comp == channels);
 
 		buf += mipCompressedSize[i];

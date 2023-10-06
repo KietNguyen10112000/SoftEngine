@@ -93,6 +93,7 @@ private:
 
 	void InitRootSignature();
 	void InitGPUVisibleDescriptorHeap();
+	void StageCurrentRenderParams();
 
 public:
 	// Inherited via Graphics
