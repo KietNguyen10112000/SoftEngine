@@ -7,6 +7,7 @@
 #include "DX12/DX12GraphicsPipeline.cpp"
 #include "DX12/DX12Resources.cpp"
 #include "DX12/DX12ShaderResource.cpp"
+#include "DX12/DX12Fundamental.cpp"
 
 #include "Libraries/D3D12MemoryAllocator/src/D3D12MemAlloc.cpp"
 #endif // WIN32

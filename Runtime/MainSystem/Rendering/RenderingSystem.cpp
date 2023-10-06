@@ -10,6 +10,9 @@
 
 #include "Modules/Resources/Texture2D.h"
 
+#include "Scene/Scene.h"
+#include "Input/Input.h"
+
 NAMESPACE_BEGIN
 
 //struct TestConstantBuffer
@@ -221,6 +224,29 @@ void RenderingSystem::Iteration(float dt)
 
 	// do render
 
+    static Vec3 cameraPos = { 5,0,0 };
+    constexpr float cameraSpeed = 10.0f;
+
+    if (m_scene->GetInput()->IsKeyDown('W'))
+    {
+        cameraPos.x -= cameraSpeed * dt;
+    }
+
+    if (m_scene->GetInput()->IsKeyDown('S'))
+    {
+        cameraPos.x += cameraSpeed * dt;
+    }
+
+    if (m_scene->GetInput()->IsKeyDown('A'))
+    {
+        cameraPos.z -= cameraSpeed * dt;
+    }
+
+    if (m_scene->GetInput()->IsKeyDown('D'))
+    {
+        cameraPos.z += cameraSpeed * dt;
+    }
+
 	auto screenRT = graphics->GetScreenRenderTarget();
 	auto screenDS = graphics->GetScreenDepthStencilBuffer();
 
@@ -230,8 +256,9 @@ void RenderingSystem::Iteration(float dt)
 
     graphics->SetRenderTarget(1, &screenRT, screenDS);
 
-    g_cameraData.vp = Mat4::Identity().SetLookAtLH({ 5,0,0 }, { 0,0,0 }, Vec3::UP) 
-        * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 16 / 9.0f, 0.5f, 1000.0f);
+    g_cameraData.vp = Mat4::Identity().SetLookAtLH(cameraPos, cameraPos + Vec3(-1,0,0), Vec3::UP)
+        * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 
+           StartupConfig::Get().windowWidth / (float)StartupConfig::Get().windowHeight, 0.5f, 1000.0f);
     g_objectData.transform *= Mat4::Rotation(Vec3::UP, dt * PI / 3.0f) * Mat4::Rotation(Vec3::RIGHT, dt * PI / 4.0f);
     m_testCameraConstantBuffer->UpdateBuffer(&g_cameraData, sizeof(g_cameraData));
     m_testObjectConstantBuffer->UpdateBuffer(&g_objectData, sizeof(g_objectData));

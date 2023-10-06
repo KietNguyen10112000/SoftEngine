@@ -23,8 +23,8 @@ struct API StartupConfig
 	const char* executablePath = nullptr;
 
 	const char* windowTitle = "SoftEngine";
-	int windowWidth = -1;
-	int windowHeight = -1;
+	int windowWidth = 1280;
+	int windowHeight = 960;
 	float fixedDt = 0;
 
 	uint32_t numThreads		= -1;

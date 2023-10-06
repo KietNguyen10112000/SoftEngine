@@ -80,7 +80,7 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 {
 	if (mipLevel == -1)
 	{
-		mipLevel = std::log2(std::min(width, height));
+		mipLevel = std::floor(std::log2(std::min(width, height)));
 	}
 
 	size_t mipSizes[32] = {};

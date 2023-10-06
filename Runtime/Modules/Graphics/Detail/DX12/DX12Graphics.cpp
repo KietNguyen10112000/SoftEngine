@@ -27,6 +27,11 @@ DX12Graphics::DX12Graphics(void* hwnd)
 
 DX12Graphics::~DX12Graphics()
 {
+    m_currentRenderTarget.m_rtv.ptr = 0;
+    ((DX12ShaderResource*)m_currentRenderTarget.m_shaderResource.get())->m_srvGroupStart.ptr = 0;
+    m_currentDepthStencilBuffer.m_dsv.ptr = 0;
+    ((DX12ShaderResource*)m_currentDepthStencilBuffer.m_shaderResource.get())->m_srvGroupStart.ptr = 0;
+
     SignalCurrentDX12FenceValue();
     if (m_currentFenceValue != 0)
     {
@@ -162,6 +167,21 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
 
     //ThrowIfFailed(m_swapChain->SetMaximumFrameLatency(1));
 
+    auto rtShaderResource = std::make_shared<DX12ShaderResource>();
+    rtShaderResource->m_resource.resource = m_renderTargets[0];
+    rtShaderResource->m_srvGroupStart = GetSRVAllocator()->AllocateCPU(NUM_GRAPHICS_BACK_BUFFERS);
+    rtShaderResource->m_srvGroupCount = NUM_GRAPHICS_BACK_BUFFERS;
+    rtShaderResource->m_srv = rtShaderResource->m_srvGroupStart;
+    m_currentRenderTarget.m_shaderResource = rtShaderResource;
+
+    auto rtSRVStart = rtShaderResource->m_srvGroupStart;
+    auto rtSRVStride = GetSRVAllocator()->GetCPUStride();
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC rtSRVDesc = {};
+    rtSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    rtSRVDesc.Format = swapChainDesc.BufferDesc.Format;
+    rtSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    rtSRVDesc.Texture2D.MipLevels = 1;
 
     // create rt for each back buffer
     auto cpuHandle = m_rtvAllocator.AllocateCPU(NUM_GRAPHICS_BACK_BUFFERS);
@@ -172,6 +192,9 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
         ThrowIfFailed(m_swapChain->GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i])));
         m_device->CreateRenderTargetView(m_renderTargets[i].Get(), 0, cpuHandle);
         cpuHandle.ptr += stride;
+
+        m_device->CreateShaderResourceView(m_renderTargets[i].Get(), &rtSRVDesc, rtSRVStart);
+        rtSRVStart.ptr += rtSRVStride;
     }
 
 
@@ -204,6 +227,22 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
     stride = m_dsvAllocator.GetCPUStride();
     m_dsvStart = cpuHandle;
 
+    auto dsShaderResource = std::make_shared<DX12ShaderResource>();
+    dsShaderResource->m_resource.resource = m_renderTargets[0];
+    dsShaderResource->m_srvGroupStart = GetSRVAllocator()->AllocateCPU(NUM_GRAPHICS_BACK_BUFFERS);
+    dsShaderResource->m_srvGroupCount = NUM_GRAPHICS_BACK_BUFFERS;
+    dsShaderResource->m_srv = dsShaderResource->m_srvGroupStart;
+    m_currentDepthStencilBuffer.m_shaderResource = dsShaderResource;
+
+    auto dsSRVStart = dsShaderResource->m_srvGroupStart;
+    auto dsSRVStride = GetSRVAllocator()->GetCPUStride();
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC dsSRVDesc = {};
+    dsSRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    dsSRVDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    dsSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    dsSRVDesc.Texture2D.MipLevels = 1;
+
     for (size_t i = 0; i < NUM_GRAPHICS_BACK_BUFFERS; i++)
     {
         AllocateDX12Resource(
@@ -216,6 +255,9 @@ void DX12Graphics::InitSwapchain(void* _hwnd)
 
         m_device->CreateDepthStencilView(m_depthBuffers[i].resource.Get(), &dsvDesc, cpuHandle);
         cpuHandle.ptr += stride;
+
+        m_device->CreateShaderResourceView(m_depthBuffers[i].resource.Get(), &dsSRVDesc, dsSRVStart);
+        dsSRVStart.ptr += dsSRVStride;
     }
 
     m_backBufferViewport.TopLeftX = 0;
@@ -747,7 +789,84 @@ void DX12Graphics::StageCurrentRenderParams()
 
 SharedPtr<GraphicsRenderTarget> DX12Graphics::CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc)
 {
-	return SharedPtr<GraphicsRenderTarget>();
+	auto rt = std::make_shared<DX12RenderTarget>();
+    auto shaderResource = std::make_shared<DX12ShaderResource>();
+
+    D3D12_RESOURCE_DESC texture2DDesc = {};
+    texture2DDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texture2DDesc.Width = desc.width;
+    texture2DDesc.Height = desc.height;
+    texture2DDesc.DepthOrArraySize = 1;
+    texture2DDesc.MipLevels = desc.mipLevels;
+    texture2DDesc.Format = dx12utils::ConvertToDX12Format(desc.format);
+    texture2DDesc.SampleDesc.Count = 1;
+    texture2DDesc.SampleDesc.Quality = 0;
+    texture2DDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    
+    AllocateDX12Resource(
+        &texture2DDesc,
+        D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_RESOURCE_STATE_RENDER_TARGET,
+        nullptr,
+        &rt->m_dx12Resource
+    );
+
+    auto dx12resource = rt->m_dx12Resource.resource.Get();
+
+    auto rtvStart = GetRTVAllocator()->AllocateCPU(1);
+    m_device->CreateRenderTargetView(dx12resource, 0, rtvStart);
+    rt->m_rtv = rtvStart;
+
+    auto rtSRVStart = GetSRVAllocator()->AllocateCPU(1);
+    m_device->CreateShaderResourceView(dx12resource, 0, rtSRVStart);
+    shaderResource->m_srvGroupStart = rtSRVStart;
+    shaderResource->m_srvGroupCount = 1;
+    shaderResource->m_srv = rtSRVStart;
+    shaderResource->m_resource = rt->m_dx12Resource;
+
+    rt->m_shaderResource = shaderResource;
+    return rt;
+}
+
+SharedPtr<GraphicsDepthStencilBuffer> DX12Graphics::CreateDepthStencilBuffer(const GRAPHICS_DEPTH_STENCIL_BUFFER_DESC& desc)
+{
+    auto ds = std::make_shared<DX12DepthStencilBuffer>();
+    auto shaderResource = std::make_shared<DX12ShaderResource>();
+
+    D3D12_RESOURCE_DESC texture2DDesc = {};
+    texture2DDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texture2DDesc.Width = desc.width;
+    texture2DDesc.Height = desc.height;
+    texture2DDesc.DepthOrArraySize = 1;
+    texture2DDesc.MipLevels = desc.mipLevels;
+    texture2DDesc.Format = dx12utils::ConvertToDX12Format(desc.format);
+    texture2DDesc.SampleDesc.Count = 1;
+    texture2DDesc.SampleDesc.Quality = 0;
+    texture2DDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+
+    AllocateDX12Resource(
+        &texture2DDesc,
+        D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        nullptr,
+        &ds->m_dx12Resource
+    );
+
+    auto dx12resource = ds->m_dx12Resource.resource.Get();
+
+    auto dsvStart = GetDSVAllocator()->AllocateCPU(1);
+    m_device->CreateDepthStencilView(dx12resource, 0, dsvStart);
+    ds->m_dsv = dsvStart;
+
+    auto dsSRVStart = GetSRVAllocator()->AllocateCPU(1);
+    m_device->CreateShaderResourceView(dx12resource, 0, dsSRVStart);
+    shaderResource->m_srvGroupStart = dsSRVStart;
+    shaderResource->m_srvGroupCount = 1;
+    shaderResource->m_srv = dsSRVStart;
+    shaderResource->m_resource = ds->m_dx12Resource;
+
+    ds->m_shaderResource = shaderResource;
+    return ds;
 }
 
 SharedPtr<GraphicsVertexBuffer> DX12Graphics::CreateVertexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc)
@@ -834,6 +953,11 @@ void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer
     cmdList->IASetPrimitiveTopology(m_currentGraphicsPipeline->m_primitiveTopology);
     cmdList->IASetVertexBuffers(0, numVertexBuffers, m_vertexBufferViews);
     cmdList->DrawInstanced(vertexCountPerInstance, instanceCount, startVertexLocation, startInstanceLocation);
+
+    if ((++m_renderCallCount) % NUM_RENDER_CALL_PER_DISPATCH_CMD_LIST == 0)
+    {
+        ExecuteCurrentCmdList();
+    }
 }
 
 void DX12Graphics::DrawIndexedInstanced(GraphicsIndexBuffer* indexBuffer, uint32_t indexCountPerInstance, uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, uint32_t vertexCountPerInstance, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation)
@@ -913,7 +1037,12 @@ void DX12Graphics::BeginFrame()
 
     m_currentRenderTarget.m_dx12Resource.resource = m_renderTargets[m_currentBackBufferId];
     m_currentRenderTarget.m_rtv.ptr = m_rtvStart.ptr + m_currentBackBufferId * m_rtvAllocator.GetCPUStride();
+    auto rtSRVStart = m_currentRenderTarget.GetDX12ShaderResource()->m_srvGroupStart;
+    m_currentRenderTarget.GetDX12ShaderResource()->m_srv.ptr = rtSRVStart.ptr + m_currentBackBufferId * GetSRVAllocator()->GetCPUStride();
+
     m_currentDepthStencilBuffer.m_dsv.ptr = m_dsvStart.ptr + m_currentBackBufferId * m_dsvAllocator.GetCPUStride();
+    auto dsSRVStart = m_currentDepthStencilBuffer.GetDX12ShaderResource()->m_srvGroupStart;
+    m_currentDepthStencilBuffer.GetDX12ShaderResource()->m_srv.ptr = dsSRVStart.ptr + m_currentBackBufferId * GetSRVAllocator()->GetCPUStride();
 
     WaitForDX12FenceValue(m_frameFenceValues[m_currentBackBufferId]);
 

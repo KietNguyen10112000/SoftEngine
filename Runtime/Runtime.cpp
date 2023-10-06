@@ -73,7 +73,10 @@ Handle<Runtime> Runtime::Initialize()
 void Runtime::Finalize()
 {
 	mheap::internal::FreeStableObjects(Runtime::STABLE_VALUE, 0, 0);
-	gc::Run(-1);
+	for (size_t i = 0; i < 5; i++)
+	{
+		gc::Run(-1);
+	}
 	resource::internal::Finalize();
 
 	Graphics::Finalize();
@@ -84,8 +87,6 @@ void Runtime::Finalize()
 Runtime::Runtime()
 {
 	m_eventArgv[0] = this;
-
-	
 
 	InitNetwork();
 	InitGraphics();
@@ -201,6 +202,11 @@ void Runtime::Run()
 	}
 
 	TaskWorker::Get()->IsRunning() = false;
+
+	while (m_gcIsRunning.load(std::memory_order_relaxed))
+	{
+		Thread::Sleep(100);
+	}
 }
 
 void Runtime::Iteration()

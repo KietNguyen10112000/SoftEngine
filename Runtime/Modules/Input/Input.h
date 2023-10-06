@@ -33,13 +33,13 @@ protected:
 
 	// ms
 	size_t m_currentTime = 0;
-	size_t m_keysDownTime[NUM_KEYS] = {};
-	uint32_t m_keysDownCount[NUM_KEYS] = {};
-	uint32_t m_keysUpCount[NUM_KEYS] = {};
-	//size_t m_keysUpTime[NUM_KEYS] = {};
+	bool m_isKeysDownInFrame[NUM_KEYS] = {};
+	bool m_isKeysUpInFrame[NUM_KEYS] = {};
 
-	bool m_prevKeys[NUM_KEYS] = {};
-	bool m_curKeys[NUM_KEYS] = {};
+	uint64_t m_keysDownCount[NUM_KEYS] = {};
+	uint64_t m_keysUpCount[NUM_KEYS] = {};
+
+	uint64_t m_lastKeysDownTime[NUM_KEYS] = {};
 
 	Cursor m_prevCursors[NUM_CURSORS] = {};
 	Cursor m_curCursors[NUM_CURSORS] = {};
@@ -50,20 +50,27 @@ protected:
 protected:
 	inline void DownKey(byte keyCode)
 	{
-		m_keysDownCount[keyCode]++;
-		if (m_curKeys[keyCode] == false)
+		m_isKeysDownInFrame[keyCode] = true;
+
+		if (m_keysDownCount[keyCode] > m_keysUpCount[keyCode])
 		{
-			//m_prevKeys[keyCode] = m_curKeys[keyCode];
-			m_keysDownTime[keyCode] = m_currentTime;
+			return;
 		}
-		m_curKeys[keyCode] = true;
+
+		m_keysDownCount[keyCode]++;
+
+		m_lastKeysDownTime[keyCode] = m_currentTime;
 	}
 
 	inline void UpKey(byte keyCode)
 	{
-		//m_prevKeys[keyCode] = m_curKeys[keyCode];
+		if (m_keysDownCount[keyCode] == m_keysUpCount[keyCode])
+		{
+			return;
+		}
+
+		m_isKeysUpInFrame[keyCode] = true;
 		m_keysUpCount[keyCode]++;
-		m_curKeys[keyCode] = false;
 	}
 
 	inline void SetCursor(int id, int x, int y, int active)
@@ -98,9 +105,10 @@ public:
 	inline void RollEvent()
 	{
 		m_currentTime = Clock::ms::now();
-		::memset(m_keysDownCount, 0, sizeof(uint32_t) * NUM_KEYS);
-		::memset(m_keysUpCount, 0, sizeof(uint32_t) * NUM_KEYS);
-		::memcpy(m_prevKeys, m_curKeys, sizeof(bool) * NUM_KEYS);
+
+		::memset(m_isKeysDownInFrame, 0, sizeof(m_isKeysDownInFrame));
+		::memset(m_isKeysUpInFrame, 0, sizeof(m_isKeysUpInFrame));
+
 		::memcpy(m_prevCursors, m_curCursors, sizeof(Cursor) * NUM_CURSORS);
 		
 		for (auto& c : m_curCursors)
@@ -112,18 +120,18 @@ public:
 
 	inline bool IsKeyDown(byte keyCode)
 	{
-		return m_curKeys[keyCode] || m_keysDownCount[keyCode] != 0;
+		return m_isKeysDownInFrame[keyCode] || m_keysDownCount[keyCode] > m_keysUpCount[keyCode];
 	}
 
 	inline bool IsKeyUp(byte keyCode)
 	{
-		return m_keysUpCount[keyCode] != 0 || (m_prevKeys[keyCode] == true && m_curKeys[keyCode] == false);
+		return m_isKeysUpInFrame[keyCode] || m_keysDownCount[keyCode] == m_keysUpCount[keyCode];
 	}
 
 	// pressDuration in ms
-	inline bool IsKeyPressed(byte keyCode, size_t pressDuration = 500)
+	inline bool IsKeyPressed(byte keyCode, size_t pressDuration = 200)
 	{
-		return IsKeyUp(keyCode) && ((m_currentTime - m_keysDownTime[keyCode]) < pressDuration);
+		return IsKeyUp(keyCode) && ((m_currentTime - m_lastKeysDownTime[keyCode]) < pressDuration);
 	}
 
 public:

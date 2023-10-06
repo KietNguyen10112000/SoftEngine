@@ -10,6 +10,8 @@ NAMESPACE_BEGIN
 
 Scene::Scene(Runtime* runtime)
 {
+	m_input = runtime->GetInput();
+
 	m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
 

@@ -80,7 +80,9 @@ struct GRAPHICS_SHADER_RESOURCE_DESC
 	};
 };
 
-using GRAPHICS_RENDER_TARGET_DESC = GRAPHICS_SHADER_RESOURCE_DESC;
+using GRAPHICS_RENDER_TARGET_DESC = GRAPHICS_SHADER_RESOURCE_TYPE_TEXTURE2D_DESC;
+
+using GRAPHICS_DEPTH_STENCIL_BUFFER_DESC = GRAPHICS_SHADER_RESOURCE_TYPE_TEXTURE2D_DESC;
 
 struct GRAPHICS_PARAMS_DESC
 {
@@ -219,27 +221,27 @@ public:
 
 class GraphicsRenderTarget
 {
-//protected:
-//	GraphicsShaderResource* m_shaderResource = nullptr;
-//
-//public:
-//	inline auto GetShaderResource()
-//	{
-//		return m_shaderResource;
-//	}
+protected:
+	SharedPtr<GraphicsShaderResource> m_shaderResource = nullptr;
+
+public:
+	inline const SharedPtr<GraphicsShaderResource>& GetShaderResource()
+	{
+		return m_shaderResource;
+	}
 
 };
 
 class GraphicsDepthStencilBuffer
 {
-//protected:
-//	GraphicsShaderResource* m_shaderResource = nullptr;
-//
-//public:
-//	inline auto GetShaderResource()
-//	{
-//		return m_shaderResource;
-//	}
+protected:
+	SharedPtr<GraphicsShaderResource> m_shaderResource = nullptr;
+
+public:
+	inline const SharedPtr<GraphicsShaderResource>& GetShaderResource()
+	{
+		return m_shaderResource;
+	}
 
 };
 

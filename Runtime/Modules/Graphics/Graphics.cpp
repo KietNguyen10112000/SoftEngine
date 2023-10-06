@@ -7,6 +7,7 @@
 #include "Platform/Platform.h"
 
 #include "Network/TCPConnector.h"
+#include "Runtime/StartupConfig.h"
 
 NAMESPACE_BEGIN
 
@@ -103,7 +104,8 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 		((dx12::DX12Graphics*)ret)->FirstInit();
 
 		// show maximized before init d3d12 cause screen flickering when drag and drop application window ????
-		ShowWindow((HWND)windowNativeHandle, SW_SHOWMAXIMIZED);
+		if (StartupConfig::Get().windowWidth == -1 || StartupConfig::Get().windowHeight == -1)
+			ShowWindow((HWND)windowNativeHandle, SW_SHOWMAXIMIZED);
 		break;
 #endif
 

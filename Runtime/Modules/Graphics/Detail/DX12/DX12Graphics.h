@@ -79,6 +79,8 @@ public:
 
 	String m_compiledShadersPath = "";
 
+	size_t m_renderCallCount = 0;
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
@@ -112,6 +114,8 @@ public:
 	) override;
 
 	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) override;
+
+	virtual SharedPtr<GraphicsDepthStencilBuffer> CreateDepthStencilBuffer(const GRAPHICS_DEPTH_STENCIL_BUFFER_DESC& desc) override;
 
 	virtual SharedPtr<GraphicsVertexBuffer> CreateVertexBuffer(const GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC& desc) override;
 

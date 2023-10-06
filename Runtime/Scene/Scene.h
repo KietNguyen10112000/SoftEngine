@@ -12,6 +12,7 @@
 NAMESPACE_BEGIN
 
 class GameObject;
+class Input;
 
 // manage game objects and notify for main systems whenever game object add to scene, remove from scene, changed transform,...
 class Scene final : Traceable<Scene>
@@ -54,6 +55,8 @@ private:
 	std::atomic<size_t>		m_numMainSystemEndReconstruct = 0;
 	TaskWaitingHandle		m_endReconstructWaitingHandle = { 0,0 };
 	Task					m_endReconstructTask = {};
+
+	Input* m_input = nullptr;
 
 public:
 	Scene(Runtime* runtime);
@@ -174,6 +177,11 @@ public:
 	inline AudioSystem* GetAudioSystem()
 	{
 		return (AudioSystem*)m_mainSystems[MainSystemInfo::AUDIO_ID];
+	}
+
+	inline auto* GetInput()
+	{
+		return m_input;
 	}
 
 };
