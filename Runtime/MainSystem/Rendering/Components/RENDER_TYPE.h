@@ -1,0 +1,13 @@
+#pragma once
+
+#include "Core/TypeDef.h"
+
+NAMESPACE_BEGIN
+
+enum RENDER_TYPE
+{
+	CAMERA = 0,
+	MODEL3D_BASIC_RENDERER
+};
+
+NAMESPACE_END

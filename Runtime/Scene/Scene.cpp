@@ -2,8 +2,10 @@
 
 #include "Runtime.h"
 #include "GameObject.h"
+
 #include "MainSystem/MainSystem.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
+#include "MainSystem/Scripting/ScriptingSystem.h"
 
 
 NAMESPACE_BEGIN
@@ -15,18 +17,13 @@ Scene::Scene(Runtime* runtime)
 	m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
 
-	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
+	m_mainSystems[MainSystemInfo::RENDERING_ID] = mheap::New<RenderingSystem>(this);
+	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = mheap::New<ScriptingSystem>(this);
 }
 
 Scene::~Scene()
 {
-	for (auto& system : m_mainSystems)
-	{
-		if (system)
-		{
-			delete system;
-		}
-	}
+
 }
 
 void Scene::BakeAllMainSystems()

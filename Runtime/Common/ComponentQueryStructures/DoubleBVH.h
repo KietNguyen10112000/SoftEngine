@@ -64,6 +64,16 @@ public:
 	void RecordRemoveComponent(MainComponent* comp);
 	void RecordRefreshComponent(MainComponent* comp);
 
+	inline auto NewQuerySession()
+	{
+		return m_bvt[0].NewSession();
+	}
+
+	inline void DeleteQuerySession(AABBQuerySession* querySession)
+	{
+		m_bvt[0].DeleteSession(querySession);
+	}
+
 };
 
 NAMESPACE_END

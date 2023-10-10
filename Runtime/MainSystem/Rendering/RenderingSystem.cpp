@@ -159,6 +159,7 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
 
 RenderingSystem::~RenderingSystem()
 {
+
 }
 
 void RenderingSystem::AddCamera(Camera* camera)

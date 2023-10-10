@@ -67,7 +67,7 @@ private:
 	template <typename Comp>
 	GameObject* AddMainComponent(const Handle<Comp>& component)
 	{
-		auto& slot = m_subSystemComponents[Comp::COMPONENT_ID];
+		auto& slot = m_mainComponents[Comp::COMPONENT_ID];
 		if (slot.Get() != nullptr)
 		{
 			return nullptr;

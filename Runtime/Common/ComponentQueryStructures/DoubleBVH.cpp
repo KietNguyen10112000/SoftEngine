@@ -66,7 +66,7 @@ void DoubleBVH::ProcessAddList()
 
 	auto& list2 = m_splitAddList[1][0];
 	list2.begin = list1.end;
-	list2.end = &(*m_addList.end());
+	list2.end = &(*m_addList.rbegin()) + 1;
 
 	void (*taskFn)(void*) = [](void* p)
 	{
@@ -232,7 +232,7 @@ void DoubleBVH::ProcessRefreshList()
 		p2AddList[0].begin = p2->data();
 		p2AddList[0].end = p2->data() + p2->size();
 		p2AddList[1].begin = p1AddList[0].end;
-		p2AddList[1].end = &(*p1->end());
+		p2AddList[1].end = &(*p1->rbegin()) + 1;
 		p2AddList[2].begin = 0;
 		p2AddList[2].end = 0;
 	}

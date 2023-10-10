@@ -225,6 +225,8 @@ private:
     using Base = glm::vec3;
 
 public:
+    const static Vec3 ZERO;
+
     // Vec3(1, 0, 0)
     const static Vec3 X_AXIS;
     // Vec3(0, 1, 0)
@@ -385,6 +387,8 @@ public:
     }
 
 };
+
+inline constexpr const Vec3 Vec3::ZERO     = Vec3(0, 0, 0);
 
 // Vec3(1, 0, 0)
 inline constexpr const Vec3 Vec3::X_AXIS   = Vec3(1, 0, 0);

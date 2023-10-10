@@ -1,21 +1,21 @@
 #pragma once
 
 #include "RenderingComponent.h"
+#include "Resources/Model3DBasic.h"
+#include "Resources/Texture2D.h"
 
 NAMESPACE_BEGIN
 
-class Camera : public RenderingComponent
+class Model3DBasicRenderer : public RenderingComponent
 {
-private:
+public:
 	friend class RenderingSystem;
 
-	ID m_activeID = INVALID_ID;
-
-	Mat4 m_proj;
-	Mat4 m_view;
+	Resource<Model3DBasic>	m_model;
+	Resource<Texture2D>		m_texture;
 
 public:
-	Camera();
+	Model3DBasicRenderer(String modelPath, String texture2DPath);
 
 	// Inherited via RenderingComponent
 	virtual void Serialize(ByteStream& stream) override;
@@ -34,6 +34,15 @@ public:
 
 	virtual AABox GetGlobalAABB() override;
 
+	inline auto& GetModel()
+	{
+		return m_model;
+	}
+
+	inline auto& GetTexture2D()
+	{
+		return m_texture;
+	}
 };
 
 NAMESPACE_END

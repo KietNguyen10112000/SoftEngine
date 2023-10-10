@@ -31,6 +31,8 @@ protected:
 	virtual void Iteration(float dt) = 0;
 	virtual void PostIteration() = 0;
 
+	inline virtual void Finalize() {};
+
 };
 
 NAMESPACE_END

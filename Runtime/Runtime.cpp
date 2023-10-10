@@ -37,6 +37,8 @@
 
 #include "FileSystem/FileSystem.h"
 
+#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -186,6 +188,15 @@ void Runtime::Setup()
 
 	auto scene = mheap::New<Scene>(this);
 	m_scenes.Push(scene);
+
+	if (scene->BeginSetupLongLifeObject())
+	{
+		scene->EndSetupLongLifeObject();
+	}
+
+	auto object = mheap::New<GameObject>();
+	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+	scene->AddObject(object);
 }
 
 void Runtime::Run()

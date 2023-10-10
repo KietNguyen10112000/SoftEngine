@@ -7,6 +7,10 @@
 
 NAMESPACE_BEGIN
 
+Camera::Camera() : RenderingComponent(RENDER_TYPE::CAMERA)
+{
+}
+
 void Camera::Serialize(ByteStream& stream)
 {
 }
@@ -38,17 +42,9 @@ void Camera::OnComponentRemoved()
 	GameObject()->Scene()->GetRenderingSystem()->RemoveCamera(this);
 }
 
-void Camera::OnTransformChanged()
-{
-}
-
 AABox Camera::GetGlobalAABB()
 {
 	return AABox();
-}
-
-void Camera::Render()
-{
 }
 
 NAMESPACE_END

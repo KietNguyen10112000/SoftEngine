@@ -20,7 +20,7 @@ Texture2D::Texture2D(String path) : ResourceBase(path)
 	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
 	{
 		CreateCache(path);
-		assert(FileSystem::Get()->ReadStream(streamPath.c_str(), &stream));
+		FileSystem::Get()->ReadStream(streamPath.c_str(), &stream);
 	}
 
 	LoadCache(&stream);
