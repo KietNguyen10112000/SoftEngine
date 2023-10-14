@@ -12,6 +12,8 @@
 
 #include "CAMERA_PRIORITY.h"
 
+#include "BuiltinConstantBuffers.h"
+
 NAMESPACE_BEGIN
 
 class BaseCamera;
@@ -46,13 +48,15 @@ private:
 	// camera that scene will be rendered to (that maybe not displayed to screen but still visiable somewhere)
 	std::vector<BaseCamera*> m_activeCamera[CAMERA_PRIORITY::CAMERA_PRIORITY_COUNT];
 
-	SharedPtr<GraphicsPipeline>				m_testPipeline;
+	/*SharedPtr<GraphicsPipeline>				m_testPipeline;
 	SharedPtr<GraphicsVertexBuffer>			m_testVertexBuffer;
 	SharedPtr<GraphicsConstantBuffer>		m_testCameraConstantBuffer;
 	SharedPtr<GraphicsConstantBuffer>		m_testObjectConstantBuffer;
-	Resource<Texture2D>						m_testTexture2D;
+	Resource<Texture2D>						m_testTexture2D;*/
 
 	GRAPHICS_VIEWPORT m_defaultViewport = {};
+
+	BuiltinConstantBuffers m_builtinConstantBuffers;
 
 public:
 	RenderingSystem(Scene* scene);
@@ -86,6 +90,10 @@ public:
 		return m_defaultViewport;
 	}
 
+	inline auto* GetBuiltinConstantBuffers()
+	{
+		return &m_builtinConstantBuffers;
+	}
 };
 
 NAMESPACE_END

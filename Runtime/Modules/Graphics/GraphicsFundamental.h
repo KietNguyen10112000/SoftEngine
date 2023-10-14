@@ -206,10 +206,10 @@ class GraphicsShaderResource
 {
 public:
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_BUFFER
-	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) = 0;
 
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_TEXTURE2D
-	virtual void UpdateTexture2D(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endUpdateChain = true) = 0;
+	virtual void UpdateTexture2D(const void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endUpdateChain = true) = 0;
 
 	virtual void GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output) = 0;
 
@@ -218,7 +218,7 @@ public:
 class GraphicsConstantBuffer
 {
 public:
-	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) = 0;
 
 };
 
@@ -265,7 +265,7 @@ public:
 class GraphicsVertexBuffer
 {
 public:
-	virtual void UpdateBuffer(void* buffer, size_t bufferSize) = 0;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) = 0;
 
 };
 

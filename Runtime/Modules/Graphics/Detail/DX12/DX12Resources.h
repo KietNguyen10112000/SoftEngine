@@ -31,7 +31,7 @@ public:
 	~DX12ConstantBuffer();
 
 	// Inherited via GraphicsConstantBuffer
-	virtual void UpdateBuffer(void* buffer, size_t bufferSize);
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize);
 
 	inline byte* GetCurrentUploadAddress()
 	{
@@ -57,7 +57,7 @@ public:
 
 	~DX12VertexBuffer();
 
-	virtual void UpdateBuffer(void* buffer, size_t bufferSize) override;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) override;
 
 };
 

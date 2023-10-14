@@ -20,6 +20,12 @@ NAMESPACE_DX12_BEGIN
 class DX12Graphics : public Graphics, public DX12_CONFIG
 {
 public:
+	struct WaitForFreeDX12Resource
+	{
+		DX12Resource resource;
+		UINT64 fenceValue;
+	};
+
 	ComPtr<IDXGISwapChain3>                 m_swapChain;
 	ComPtr<ID3D12Device2>                   m_device;
 	ComPtr<IDXGIFactory4>                   m_dxgiFactory;
@@ -68,6 +74,8 @@ public:
 	uint32_t m_CBV_SRV_UAV_CPUdescriptorHandleStride = 0;
 
 	DX12GraphicsPipeline* m_currentGraphicsPipeline = nullptr;
+	ComPtr<ID3D12PipelineState> m_currentDX12GraphicsPipeline;
+
 	uint32_t m_renderRoomIdx = 0;
 
 	uint64_t m_renderRoomFenceValues[NUM_RENDER_ROOM] = {};
@@ -88,6 +96,8 @@ public:
 	DX12DepthStencilBuffer* m_currentDS = nullptr;
 #endif // _DEBUG
 
+	std::vector<WaitForFreeDX12Resource> m_waitForFreeResources;
+	spinlock m_waitForFreeResourcesLock;
 
 public:
 	DX12Graphics(void* hwnd);
@@ -179,6 +189,10 @@ public:
 
 public:
 	void ExecuteCurrentCmdList();
+
+	void ThreadSafeFreeDX12Resource(const DX12Resource& resource, UINT64 fenceValue);
+	void ThreadSafeFreeDX12Resource(ComPtr<ID3D12Resource> resource, UINT64 fenceValue);
+	void ProcessFreeDX12ResourceList();
 
 	inline static DX12Graphics* GetDX12()
 	{

@@ -9,6 +9,8 @@
 
 #include "Runtime/StartupConfig.h"
 
+#include "Core/Thread/Thread.h"
+
 
 NAMESPACE_DX12_BEGIN
 
@@ -30,10 +32,18 @@ DX12Graphics::~DX12Graphics()
     m_currentRenderTarget.m_rtv.ptr = 0;
     m_currentRenderTarget.m_fenceValue = 0;
     ((DX12ShaderResource*)m_currentRenderTarget.m_shaderResource.get())->m_srvGroupStart.ptr = 0;
+    ((DX12ShaderResource*)m_currentRenderTarget.m_shaderResource.get())->m_lastFenceValue = 0;
 
     m_currentDepthStencilBuffer.m_fenceValue = 0;
     m_currentDepthStencilBuffer.m_dsv.ptr = 0;
     ((DX12ShaderResource*)m_currentDepthStencilBuffer.m_shaderResource.get())->m_srvGroupStart.ptr = 0;
+    ((DX12ShaderResource*)m_currentDepthStencilBuffer.m_shaderResource.get())->m_lastFenceValue = 0;
+
+    while (!m_waitForFreeResources.empty())
+    {
+        ProcessFreeDX12ResourceList();
+        Thread::Sleep(60);
+    }
 
     SignalCurrentDX12FenceValue();
     if (m_currentFenceValue != 0)
@@ -311,6 +321,59 @@ void DX12Graphics::ExecuteCurrentCmdList()
     cmdList->SetGraphicsRootSignature(m_rootSignature.Get());
     ID3D12DescriptorHeap* ppHeaps[] = { m_gpuVisibleHeap.Get() };
     cmdList->SetDescriptorHeaps(1, ppHeaps);
+
+    if (m_currentGraphicsPipeline)
+        cmdList->SetPipelineState(m_currentDX12GraphicsPipeline.Get());
+}
+
+void DX12Graphics::ThreadSafeFreeDX12Resource(const DX12Resource& resource, UINT64 fenceValue)
+{
+    m_waitForFreeResourcesLock.lock();
+    m_waitForFreeResources.push_back({ resource, fenceValue });
+    m_waitForFreeResourcesLock.unlock();
+}
+
+void DX12Graphics::ThreadSafeFreeDX12Resource(ComPtr<ID3D12Resource> resource, UINT64 fenceValue)
+{
+    DX12Resource rc;
+    rc.allocation = nullptr;
+    rc.resource = resource;
+
+    m_waitForFreeResourcesLock.lock();
+    m_waitForFreeResources.push_back({ rc, fenceValue });
+    m_waitForFreeResourcesLock.unlock();
+}
+
+void DX12Graphics::ProcessFreeDX12ResourceList()
+{
+    if (m_waitForFreeResources.empty()) return;
+    
+    m_waitForFreeResourcesLock.lock();
+
+    std::sort(m_waitForFreeResources.begin(), m_waitForFreeResources.end(),
+        [](const WaitForFreeDX12Resource& a, const WaitForFreeDX12Resource& b)
+        {
+            return a.fenceValue > b.fenceValue;
+        }
+    );
+
+    auto completedValue = m_fence->GetCompletedValue();
+    int i = m_waitForFreeResources.size() - 1;
+    for (; i != -1; i--)
+    {
+        auto& rc = m_waitForFreeResources[i];
+
+        if (completedValue < rc.fenceValue)
+        {
+            // no wait
+            break;
+        }
+
+        rc.resource = {};
+        m_waitForFreeResources.pop_back();
+    }
+    
+    m_waitForFreeResourcesLock.unlock();
 }
 
 SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHICS_PIPELINE_DESC& desc)
@@ -952,6 +1015,7 @@ void DX12Graphics::SetGraphicsPipeline(GraphicsPipeline* graphicsPipeline)
     auto dx12pipeline = (DX12GraphicsPipeline*)graphicsPipeline;
     GetCmdList()->SetPipelineState(dx12pipeline->m_pipelineState.Get());
     m_currentGraphicsPipeline = dx12pipeline;
+    m_currentDX12GraphicsPipeline = dx12pipeline->m_pipelineState;
 }
 
 void DX12Graphics::SetDrawParams(GraphicsParams* params)
@@ -1209,12 +1273,16 @@ void DX12Graphics::EndFrame(bool vsync)
 {
     auto cmdList = GetCmdList();
     D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = m_renderTargets[m_currentBackBufferId].Get();
-    barrier.Transition.StateBefore = m_currentRenderTarget.m_currentState;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-    cmdList->ResourceBarrier(1, &barrier);
-    m_currentRenderTarget.m_currentState = barrier.Transition.StateAfter;
+
+    if (m_currentRenderTarget.m_currentState != D3D12_RESOURCE_STATE_PRESENT)
+    {
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = m_renderTargets[m_currentBackBufferId].Get();
+        barrier.Transition.StateBefore = m_currentRenderTarget.m_currentState;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+        cmdList->ResourceBarrier(1, &barrier);
+        m_currentRenderTarget.m_currentState = barrier.Transition.StateAfter;
+    }
 
     if (m_currentDepthStencilBuffer.m_currentState != D3D12_RESOURCE_STATE_DEPTH_WRITE)
     {
@@ -1239,6 +1307,10 @@ void DX12Graphics::EndFrame(bool vsync)
     );*/
 
     m_currentBackBufferId = (m_currentBackBufferId + 1) % NUM_GRAPHICS_BACK_BUFFERS;
+
+    m_currentGraphicsPipeline = nullptr;
+    m_currentDX12GraphicsPipeline = nullptr;
+    ProcessFreeDX12ResourceList();
 }
 
 NAMESPACE_DX12_END

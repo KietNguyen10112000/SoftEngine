@@ -57,12 +57,12 @@ private:
 	MemoryKeeper::Block* AllocateBlock(size_t size);
 
 public:
-	void UploadBuffer(ID3D12Resource* destResource, size_t destOffset, void* buffer, size_t bufferSize, bool endUploadChain);
+	void UploadBuffer(ID3D12Resource* destResource, size_t destOffset, const void* buffer, size_t bufferSize, bool endUploadChain);
 	void UploadTexture2D(
 		ID3D12Resource* destResource,
 		uint32_t destOffsetX,
 		uint32_t destOffsetY,
-		void* srcBuffer,
+		const void* srcBuffer,
 		uint32_t srcWidth,
 		uint32_t srcheight,
 		uint32_t pixelStride,

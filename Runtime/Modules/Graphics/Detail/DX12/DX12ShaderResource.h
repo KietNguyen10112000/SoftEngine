@@ -18,14 +18,14 @@ public:
 	uint32_t						m_srvGroupCount;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_srv;
 
-	UINT64							m_fenceValue = 0;
+	UINT64							m_lastFenceValue = 0;
 
 	~DX12ShaderResource();
 
 	// Inherited via GraphicsShaderResource
-	virtual void UpdateBuffer(void* buffer, size_t bufferSize) override;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) override;
 
-	virtual void UpdateTexture2D(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endChain) override;
+	virtual void UpdateTexture2D(const void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endChain) override;
 
 	virtual void GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output) override;
 };

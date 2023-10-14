@@ -31,6 +31,11 @@ public:
 		return m_RENDER_TYPE;
 	}
 
+	inline auto& GlobalTransform() const
+	{
+		return m_globalTransform;
+	}
+
 };
 
 NAMESPACE_END

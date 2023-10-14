@@ -2,15 +2,68 @@
 
 #include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
 #include "MainSystem/Rendering/Components/RENDER_TYPE.h"
+#include "MainSystem/Rendering/RenderingSystem.h"
 
 NAMESPACE_BEGIN
 
 class BasicRenderingPass : public RenderingPass
 {
 public:
-	SharedPtr<GraphicsDepthStencilBuffer> m_depthBuffer;
+	struct ObjectData
+	{
+		Mat4 transform;
+	};
 
+	SharedPtr<GraphicsDepthStencilBuffer>	m_depthBuffer;
 
+	SharedPtr<GraphicsPipeline>				m_pipeline;
+	SharedPtr<GraphicsConstantBuffer>		m_objectBuffer;
+	SharedPtr<GraphicsConstantBuffer>		m_cameraBuffer;
+
+	ObjectData								m_objectData;
+
+	BasicRenderingPass()
+	{
+		auto graphics = Graphics::Get();
+
+		GRAPHICS_CONSTANT_BUFFER_DESC cbDesc = {};
+		cbDesc.bufferSize = sizeof(ObjectData);
+		cbDesc.perferNumRoom = 4096;
+		graphics->CreateConstantBuffers(1, &cbDesc, &m_objectBuffer);
+
+		GRAPHICS_PIPELINE_DESC pipelineDesc = {};
+		pipelineDesc.preferRenderCallPerFrame = 4096;
+		pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		pipelineDesc.vs = "Test.vs";
+		pipelineDesc.ps = "Test.ps";
+
+		pipelineDesc.inputDesc.numElements = 2;
+		pipelineDesc.inputDesc.elements[0] = { 
+			"POSITION", 
+			0, 
+			GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
+			0, 
+			0, 
+			GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 
+			0 
+		};
+		pipelineDesc.inputDesc.elements[1] = { 
+			"TEXTCOORD", 
+			0, 
+			GRAPHICS_DATA_FORMAT::FORMAT_R32G32_FLOAT, 
+			0, 
+			sizeof(Vec3), 
+			GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0 
+		};
+
+		pipelineDesc.outputDesc.numRenderTarget = 1;
+		pipelineDesc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
+
+		m_pipeline = graphics->CreateRasterizerPipeline(pipelineDesc);
+
+		m_objectData.transform = Mat4::Identity();
+	}
 
 	// Inherited via RenderingPass
 	virtual void Initialize(RenderingPipeline* pipeline, RenderingPass* prevPass, RenderingPass* nextPass) override
@@ -28,6 +81,9 @@ public:
 		depthBufferDesc.width = outputDesc.texture2D.width;
 		depthBufferDesc.height = outputDesc.texture2D.height;
 		m_depthBuffer = graphics->CreateDepthStencilBuffer(depthBufferDesc);
+
+		auto builtinCBs = pipeline->GetRenderingSystem()->GetBuiltinConstantBuffers();
+		m_cameraBuffer = builtinCBs->GetCameraBuffer();
 	}
 
 	virtual void Run(RenderingPipeline* pipeline) override
@@ -41,11 +97,26 @@ public:
 		auto graphics = Graphics::Get();
 		graphics->SetRenderTargets(1, &output, m_depthBuffer.get());
 
+		graphics->ClearRenderTarget(output, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
+		graphics->ClearDepthStencil(m_depthBuffer.get(), 0, 0);
+		graphics->SetGraphicsPipeline(m_pipeline.get());
+
 		for (auto& comp : input)
 		{
 			auto model = (Model3DBasicRenderer*)comp;
-			
+
+			m_objectBuffer->UpdateBuffer(&model->GlobalTransform(), sizeof(Mat4));
+
+			auto params = m_pipeline->PrepareRenderParams();
+			params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_cameraBuffer);
+			params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_objectBuffer);
+			params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &model->GetTexture2D()->GetGraphicsShaderResource());
+
+			auto vb = model->GetModel()->GetVertexBuffer().get();
+			graphics->DrawInstanced(1, &vb, model->GetModel()->GetVertexCount(), 1, 0, 0);
 		}
+
+		graphics->UnsetRenderTargets(1, &output, m_depthBuffer.get());
 	}
 
 };

@@ -81,7 +81,7 @@ MemoryKeeper::Block* DX12ResourceUploader::AllocateBlock(size_t size)
 	return block;
 }
 
-void DX12ResourceUploader::UploadBuffer(ID3D12Resource* destResource, size_t destOffset, void* buffer, size_t size, bool endUploadChain)
+void DX12ResourceUploader::UploadBuffer(ID3D12Resource* destResource, size_t destOffset, const void* buffer, size_t size, bool endUploadChain)
 {
 	auto dx12 = DX12Graphics::GetDX12();
 	auto cmdList = dx12->GetCmdList();
@@ -143,7 +143,7 @@ void DX12ResourceUploader::UploadTexture2D(
 	ID3D12Resource* destResource,
 	uint32_t destOffsetX,
 	uint32_t destOffsetY,
-	void* srcBuffer,
+	const void* srcBuffer,
 	uint32_t srcWidth,
 	uint32_t srcHeight,
 	uint32_t pixelStride,

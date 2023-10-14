@@ -75,7 +75,7 @@ void DX12GraphicsParams::SetShaderResources(soft::GRAPHICS_SHADER_SPACE::SPACE s
 
 Begin:
 	auto dx12SRV = (DX12ShaderResource*)shaderResources[startIdx++].get();
-	dx12SRV->m_fenceValue = fenceValue;
+	dx12SRV->m_lastFenceValue = fenceValue;
 	auto baseCPUHandle = dx12SRV->m_srv;
 
 	auto range = &paramsSpace.m_shaderResourceDescriptorRanges[paramsSpace.m_shaderResourceDescriptorRangesIdx++];
@@ -88,7 +88,7 @@ Begin:
 	{
 		auto prevDx12SRV = dx12SRV;
 		dx12SRV = (DX12ShaderResource*)shaderResources[i].get();
-		dx12SRV->m_fenceValue = fenceValue;
+		dx12SRV->m_lastFenceValue = fenceValue;
 
 		if (dx12SRV->m_srvGroupStart.ptr != prevDx12SRV->m_srvGroupStart.ptr)
 		{

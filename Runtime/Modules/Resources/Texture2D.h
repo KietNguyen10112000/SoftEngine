@@ -25,6 +25,11 @@ public:
 	static void ReadCache(ByteStream* stream, byte** output, size_t* outputSize, uint32_t* pWidths, uint32_t* pHeights, uint32_t* pChannels, uint32_t* pMipLevel);
 	static GRAPHICS_DATA_FORMAT::FORMAT ConvertChannelsToGraphicsFormat(uint32_t channels);
 
+
+	inline auto& GetGraphicsShaderResource()
+	{
+		return m_shaderResource;
+	}
 };
 
 NAMESPACE_END

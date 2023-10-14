@@ -7,10 +7,10 @@ DX12ConstantBuffer::~DX12ConstantBuffer()
 	std::cout << "~DX12ConstantBuffer()\n";
 	std::free(m_fenceValues);
 
-	DX12Graphics::GetDX12()->WaitForDX12FenceValue(m_lastFenceValue);
+	DX12Graphics::GetDX12()->ThreadSafeFreeDX12Resource(m_resource, m_lastFenceValue);
 }
 
-void DX12ConstantBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
+void DX12ConstantBuffer::UpdateBuffer(const void* buffer, size_t bufferSize)
 {
 	assert(m_vaddressBytesStride >= bufferSize);
 
@@ -27,10 +27,10 @@ void DX12ConstantBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
 DX12VertexBuffer::~DX12VertexBuffer()
 {
 	std::cout << "~DX12VertexBuffer()\n";
-	DX12Graphics::GetDX12()->WaitForDX12FenceValue(m_lastFenceValue);
+	DX12Graphics::GetDX12()->ThreadSafeFreeDX12Resource(m_resource, m_lastFenceValue);
 }
 
-void DX12VertexBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
+void DX12VertexBuffer::UpdateBuffer(const void* buffer, size_t bufferSize)
 {
 	auto dx12 = DX12Graphics::GetDX12();
 	auto uploader = dx12->GetResourceUploader();

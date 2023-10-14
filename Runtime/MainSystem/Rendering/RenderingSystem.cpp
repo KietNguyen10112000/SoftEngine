@@ -31,133 +31,133 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
     m_defaultViewport.topLeft = { 0,0 };
     m_defaultViewport.size = { Graphics::Get()->GetWindowWidth(), Graphics::Get()->GetWindowHeight() };
 
-    struct Vertex
-    {
-        Vec3 position;
-        Vec2 textcoord;
-    };
+ //   struct Vertex
+ //   {
+ //       Vec3 position;
+ //       Vec2 textcoord;
+ //   };
 
-    Vertex cubeVertices[] =
-    {
-        { Vec3(-1.0f, -1.0f, -1.0f), Vec2(0, 1) },
-        { Vec3(-1.0f,  1.0f, -1.0f), Vec2(0, 0) },
-        { Vec3(1.0f,  1.0f, -1.0f), Vec2(1, 0) },
-        { Vec3(1.0f, -1.0f, -1.0f), Vec2(1, 1) },
+ //   Vertex cubeVertices[] =
+ //   {
+ //       { Vec3(-1.0f, -1.0f, -1.0f), Vec2(0, 1) },
+ //       { Vec3(-1.0f,  1.0f, -1.0f), Vec2(0, 0) },
+ //       { Vec3(1.0f,  1.0f, -1.0f), Vec2(1, 0) },
+ //       { Vec3(1.0f, -1.0f, -1.0f), Vec2(1, 1) },
 
-        { Vec3(-1.0f, -1.0f, 1.0f), Vec2(1, 1) },
-        { Vec3(1.0f, -1.0f, 1.0f), Vec2(0, 1) },
-        { Vec3(1.0f,  1.0f, 1.0f), Vec2(0, 0) },
-        { Vec3(-1.0f,  1.0f, 1.0f), Vec2(1, 0) },
+ //       { Vec3(-1.0f, -1.0f, 1.0f), Vec2(1, 1) },
+ //       { Vec3(1.0f, -1.0f, 1.0f), Vec2(0, 1) },
+ //       { Vec3(1.0f,  1.0f, 1.0f), Vec2(0, 0) },
+ //       { Vec3(-1.0f,  1.0f, 1.0f), Vec2(1, 0) },
 
-        { Vec3(-1.0f, 1.0f, -1.0f), Vec2(0, 1) },
-        { Vec3(-1.0f, 1.0f,  1.0f), Vec2(0, 0) },
-        { Vec3(1.0f, 1.0f,  1.0f), Vec2(1, 0) },
-        { Vec3(1.0f, 1.0f, -1.0f), Vec2(1, 1) },
+ //       { Vec3(-1.0f, 1.0f, -1.0f), Vec2(0, 1) },
+ //       { Vec3(-1.0f, 1.0f,  1.0f), Vec2(0, 0) },
+ //       { Vec3(1.0f, 1.0f,  1.0f), Vec2(1, 0) },
+ //       { Vec3(1.0f, 1.0f, -1.0f), Vec2(1, 1) },
 
-        { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
-        { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
-        { Vec3(1.0f, -1.0f,  1.0f), Vec2(0, 0) },
-        { Vec3(-1.0f, -1.0f,  1.0f), Vec2(1, 0) },
+ //       { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
+ //       { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
+ //       { Vec3(1.0f, -1.0f,  1.0f), Vec2(0, 0) },
+ //       { Vec3(-1.0f, -1.0f,  1.0f), Vec2(1, 0) },
 
-        { Vec3(-1.0f, -1.0f,  1.0f), Vec2(0, 1) },
-        { Vec3(-1.0f,  1.0f,  1.0f), Vec2(0, 0) },
-        { Vec3(-1.0f,  1.0f, -1.0f), Vec2(1, 0) },
-        { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
+ //       { Vec3(-1.0f, -1.0f,  1.0f), Vec2(0, 1) },
+ //       { Vec3(-1.0f,  1.0f,  1.0f), Vec2(0, 0) },
+ //       { Vec3(-1.0f,  1.0f, -1.0f), Vec2(1, 0) },
+ //       { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
 
-        { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
-        { Vec3(1.0f,  1.0f, -1.0f), Vec2(0, 0) },
-        { Vec3(1.0f,  1.0f,  1.0f), Vec2(1, 0) },
-        { Vec3(1.0f, -1.0f,  1.0f), Vec2(1, 1) },
-    };
+ //       { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
+ //       { Vec3(1.0f,  1.0f, -1.0f), Vec2(0, 0) },
+ //       { Vec3(1.0f,  1.0f,  1.0f), Vec2(1, 0) },
+ //       { Vec3(1.0f, -1.0f,  1.0f), Vec2(1, 1) },
+ //   };
 
-    // Create index buffer:
-    unsigned short cubeIndices[] =
-    {
-        0,  1,  2,
-        0,  2,  3,
+ //   // Create index buffer:
+ //   unsigned short cubeIndices[] =
+ //   {
+ //       0,  1,  2,
+ //       0,  2,  3,
 
-        // Back Face
-        4,  5,  6,
-        4,  6,  7,
+ //       // Back Face
+ //       4,  5,  6,
+ //       4,  6,  7,
 
-        // Top Face
-        8,  9, 10,
-        8, 10, 11,
+ //       // Top Face
+ //       8,  9, 10,
+ //       8, 10, 11,
 
-        // Bottom Face
-        12, 13, 14,
-        12, 14, 15,
+ //       // Bottom Face
+ //       12, 13, 14,
+ //       12, 14, 15,
 
-        // Left Face
-        16, 17, 18,
-        16, 18, 19,
+ //       // Left Face
+ //       16, 17, 18,
+ //       16, 18, 19,
 
-        // Right Face
-        20, 21, 22,
-        20, 22, 23
-    };
+ //       // Right Face
+ //       20, 21, 22,
+ //       20, 22, 23
+ //   };
 
-    Vertex vList[36] = {};
-    const int vBufferSize = sizeof(vList);
+ //   Vertex vList[36] = {};
+ //   const int vBufferSize = sizeof(vList);
 
-    for (size_t i = 0; i < 36; i++)
-    {
-        vList[i] = cubeVertices[cubeIndices[i]];
-    }
+ //   for (size_t i = 0; i < 36; i++)
+ //   {
+ //       vList[i] = cubeVertices[cubeIndices[i]];
+ //   }
 
-	GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC vbDesc = {};
-    vbDesc.count = 36;
-    vbDesc.stride = sizeof(Vertex);
-    m_testVertexBuffer = graphics->CreateVertexBuffer(vbDesc);
-    m_testVertexBuffer->UpdateBuffer(vList, sizeof(vList));
+	//GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC vbDesc = {};
+ //   vbDesc.count = 36;
+ //   vbDesc.stride = sizeof(Vertex);
+ //   m_testVertexBuffer = graphics->CreateVertexBuffer(vbDesc);
+ //   m_testVertexBuffer->UpdateBuffer(vList, sizeof(vList));
 
-    GRAPHICS_CONSTANT_BUFFER_DESC cbDesc1 = {};
-    cbDesc1.bufferSize = sizeof(CameraData);
-    cbDesc1.perferNumRoom = 3;
-    graphics->CreateConstantBuffers(1, &cbDesc1, &m_testCameraConstantBuffer);
+ //   GRAPHICS_CONSTANT_BUFFER_DESC cbDesc1 = {};
+ //   cbDesc1.bufferSize = sizeof(CameraData);
+ //   cbDesc1.perferNumRoom = 3;
+ //   graphics->CreateConstantBuffers(1, &cbDesc1, &m_testCameraConstantBuffer);
 
-    GRAPHICS_CONSTANT_BUFFER_DESC cbDesc2 = {};
-    cbDesc2.bufferSize = sizeof(ObjectData);
-    cbDesc2.perferNumRoom = 4096;
-    graphics->CreateConstantBuffers(1, &cbDesc2, &m_testObjectConstantBuffer);
+ //   GRAPHICS_CONSTANT_BUFFER_DESC cbDesc2 = {};
+ //   cbDesc2.bufferSize = sizeof(ObjectData);
+ //   cbDesc2.perferNumRoom = 4096;
+ //   graphics->CreateConstantBuffers(1, &cbDesc2, &m_testObjectConstantBuffer);
 
-    GRAPHICS_PIPELINE_DESC pipelineDesc = {};
-    pipelineDesc.preferRenderCallPerFrame = 4096;
-    pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    pipelineDesc.vs = "Test.vs";
-    pipelineDesc.ps = "Test.ps";
+ //   GRAPHICS_PIPELINE_DESC pipelineDesc = {};
+ //   pipelineDesc.preferRenderCallPerFrame = 4096;
+ //   pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+ //   pipelineDesc.vs = "Test.vs";
+ //   pipelineDesc.ps = "Test.ps";
 
-    pipelineDesc.inputDesc.numElements = 2;
-    pipelineDesc.inputDesc.elements[0] = { 
-        "POSITION", 
-        0, 
-        GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
-        0, 
-        0, 
-        GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 
-        0 
-    };
-    pipelineDesc.inputDesc.elements[1] = { 
-        "TEXTCOORD", 
-        0, 
-        GRAPHICS_DATA_FORMAT::FORMAT_R32G32_FLOAT, 
-        0, 
-        sizeof(Vec3), 
-        GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
-        0 
-    };
+ //   pipelineDesc.inputDesc.numElements = 2;
+ //   pipelineDesc.inputDesc.elements[0] = { 
+ //       "POSITION", 
+ //       0, 
+ //       GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
+ //       0, 
+ //       0, 
+ //       GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 
+ //       0 
+ //   };
+ //   pipelineDesc.inputDesc.elements[1] = { 
+ //       "TEXTCOORD", 
+ //       0, 
+ //       GRAPHICS_DATA_FORMAT::FORMAT_R32G32_FLOAT, 
+ //       0, 
+ //       sizeof(Vec3), 
+ //       GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+ //       0 
+ //   };
 
-    pipelineDesc.outputDesc.numRenderTarget = 1;
-    pipelineDesc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
+ //   pipelineDesc.outputDesc.numRenderTarget = 1;
+ //   pipelineDesc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
 
-    m_testPipeline = graphics->CreateRasterizerPipeline(pipelineDesc);
+ //   m_testPipeline = graphics->CreateRasterizerPipeline(pipelineDesc);
 
-    g_objectData.transform = Mat4::Identity();
+ //   g_objectData.transform = Mat4::Identity();
 
-    // buildings/victory_tower_0.png
-    // rain1.jpg
-    // 2.png
-    m_testTexture2D = resource::Load<Texture2D>("2.png");
+ //   // buildings/victory_tower_0.png
+ //   // rain1.jpg
+ //   // 2.png
+ //   m_testTexture2D = resource::Load<Texture2D>("2.png");
 }
 
 RenderingSystem::~RenderingSystem()
@@ -269,32 +269,32 @@ void RenderingSystem::Iteration(float dt)
         cameraPos.z += cameraSpeed * dt;
     }
 
-	auto screenRT = graphics->GetScreenRenderTarget();
-	auto screenDS = graphics->GetScreenDepthStencilBuffer();
+	//auto screenRT = graphics->GetScreenRenderTarget();
+	//auto screenDS = graphics->GetScreenDepthStencilBuffer();
 
-    graphics->SetRenderTargets(1, &screenRT, screenDS);
+ //   graphics->SetRenderTargets(1, &screenRT, screenDS);
 
-	//graphics->SetRenderTarget(1, &screenRT, screenDS);
-	graphics->ClearRenderTarget(screenRT, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
-	graphics->ClearDepthStencil(screenDS, 0, 0);
+	////graphics->SetRenderTarget(1, &screenRT, screenDS);
+	//graphics->ClearRenderTarget(screenRT, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
+	//graphics->ClearDepthStencil(screenDS, 0, 0);
 
-    g_cameraData.vp = Mat4::Identity().SetLookAtLH(cameraPos, cameraPos + Vec3(-1,0,0), Vec3::UP)
-        * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 
-           StartupConfig::Get().windowWidth / (float)StartupConfig::Get().windowHeight, 0.5f, 1000.0f);
-    g_objectData.transform *= Mat4::Rotation(Vec3::UP, dt * PI / 3.0f) * Mat4::Rotation(Vec3::RIGHT, dt * PI / 4.0f);
-    m_testCameraConstantBuffer->UpdateBuffer(&g_cameraData, sizeof(g_cameraData));
-    m_testObjectConstantBuffer->UpdateBuffer(&g_objectData, sizeof(g_objectData));
+ //   g_cameraData.vp = Mat4::Identity().SetLookAtLH(cameraPos, cameraPos + Vec3(-1,0,0), Vec3::UP)
+ //       * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 
+ //          StartupConfig::Get().windowWidth / (float)StartupConfig::Get().windowHeight, 0.5f, 1000.0f);
+ //   g_objectData.transform *= Mat4::Rotation(Vec3::UP, dt * PI / 3.0f) * Mat4::Rotation(Vec3::RIGHT, dt * PI / 4.0f);
+ //   m_testCameraConstantBuffer->UpdateBuffer(&g_cameraData, sizeof(g_cameraData));
+ //   m_testObjectConstantBuffer->UpdateBuffer(&g_objectData, sizeof(g_objectData));
 
-    auto params = m_testPipeline->PrepareRenderParams();
-    params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_testCameraConstantBuffer);
-    params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_testObjectConstantBuffer);
-    params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_testTexture2D->m_shaderResource);
-    graphics->SetGraphicsPipeline(m_testPipeline.get());
-    
-    auto vb = m_testVertexBuffer.get();
-    graphics->DrawInstanced(1, &vb, 36, 1, 0, 0);
+ //   auto params = m_testPipeline->PrepareRenderParams();
+ //   params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_testCameraConstantBuffer);
+ //   params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_testObjectConstantBuffer);
+ //   params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_testTexture2D->m_shaderResource);
+ //   graphics->SetGraphicsPipeline(m_testPipeline.get());
+ //   
+ //   auto vb = m_testVertexBuffer.get();
+ //   graphics->DrawInstanced(1, &vb, 36, 1, 0, 0);
 
-    graphics->UnsetRenderTargets(1, &screenRT, screenDS);
+ //   graphics->UnsetRenderTargets(1, &screenRT, screenDS);
 	//Thread::Sleep(10);
 
 	graphics->EndFrame(true);
