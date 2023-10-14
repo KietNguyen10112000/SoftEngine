@@ -2,17 +2,53 @@
 
 #include "RenderingComponent.h"
 
+#include "MainSystem/Rendering/RenderingPipeline/RenderingPipeline.h"
+
 NAMESPACE_BEGIN
 
-class Camera : public RenderingComponent
+class BaseCamera : public RenderingComponent
 {
 private:
 	friend class RenderingSystem;
 
 	ID m_activeID = INVALID_ID;
+	uint32_t m_isDisplaying = false;
+	uint32_t m_priority = 0;
 
 	Mat4 m_proj;
 	Mat4 m_view;
+
+protected:
+	SharedPtr<GraphicsRenderTarget> m_renderTarget = nullptr;
+	RenderingPipeline* m_pipeline = nullptr;
+
+public:
+	inline BaseCamera(RENDER_TYPE type) : RenderingComponent(type) {};
+
+	inline virtual ~BaseCamera()
+	{
+		if (m_pipeline)
+		{
+			delete m_pipeline;
+		}
+	}
+
+	inline auto& Projection()
+	{
+		return m_proj;
+	}
+
+	inline auto& View()
+	{
+		return m_view;
+	}
+
+};
+
+class Camera : public BaseCamera
+{
+private:
+	friend class RenderingSystem;
 
 public:
 	Camera();

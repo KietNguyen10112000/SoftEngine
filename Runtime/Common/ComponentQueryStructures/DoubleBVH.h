@@ -74,6 +74,35 @@ public:
 		m_bvt[0].DeleteSession(querySession);
 	}
 
+	inline void QueryAABox(const AABox& aabox, AABBQuerySession* session)
+	{
+		m_bvt[0].QueryAABox(aabox, session);
+		m_bvt[1].QueryAABox(aabox, session);
+	}
+
+	inline void QuerySphere(const Sphere& sphere, AABBQuerySession* session)
+	{
+		m_bvt[0].QuerySphere(sphere, session);
+		m_bvt[1].QuerySphere(sphere, session);
+	}
+
+	inline void QueryBox(const Box& box, AABBQuerySession* session)
+	{
+		m_bvt[0].QueryBox(box, session);
+		m_bvt[1].QueryBox(box, session);
+	}
+
+	inline void QueryFrustum(const Frustum& frustum, AABBQuerySession* session)
+	{
+		m_bvt[0].QueryFrustum(frustum, session);
+		m_bvt[1].QueryFrustum(frustum, session);
+	}
+
+	inline void Query(AABBQueryTester* tester, AABBQuerySession* session)
+	{
+		m_bvt[0].Query(tester, session);
+		m_bvt[1].Query(tester, session);
+	}
 };
 
 NAMESPACE_END

@@ -21,6 +21,10 @@ public:
 	// view
 	D3D12_CPU_DESCRIPTOR_HANDLE m_rtv;
 
+	D3D12_RESOURCE_STATES m_currentState = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+
+	UINT64 m_fenceValue = 0;
+
 	~DX12RenderTarget();
 
 	inline auto GetDX12ShaderResource()
@@ -40,6 +44,10 @@ public:
 
 	// view
 	D3D12_CPU_DESCRIPTOR_HANDLE m_dsv;
+
+	D3D12_RESOURCE_STATES m_currentState = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COMMON;
+
+	UINT64 m_fenceValue = 0;
 
 	~DX12DepthStencilBuffer();
 

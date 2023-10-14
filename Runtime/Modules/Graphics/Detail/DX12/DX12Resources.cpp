@@ -6,6 +6,8 @@ DX12ConstantBuffer::~DX12ConstantBuffer()
 {
 	std::cout << "~DX12ConstantBuffer()\n";
 	std::free(m_fenceValues);
+
+	DX12Graphics::GetDX12()->WaitForDX12FenceValue(m_lastFenceValue);
 }
 
 void DX12ConstantBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
@@ -25,6 +27,7 @@ void DX12ConstantBuffer::UpdateBuffer(void* buffer, size_t bufferSize)
 DX12VertexBuffer::~DX12VertexBuffer()
 {
 	std::cout << "~DX12VertexBuffer()\n";
+	DX12Graphics::GetDX12()->WaitForDX12FenceValue(m_lastFenceValue);
 }
 
 void DX12VertexBuffer::UpdateBuffer(void* buffer, size_t bufferSize)

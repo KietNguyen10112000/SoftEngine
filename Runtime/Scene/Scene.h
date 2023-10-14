@@ -38,7 +38,7 @@ private:
 	std::vector<GameObject*> m_removeList			[NUM_DEFER_LIST] = {};
 	std::vector<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
 
-	Handle<MainSystem> m_mainSystems[MainSystemInfo::COUNT] = {};
+	MainSystem*				 m_mainSystems[MainSystemInfo::COUNT] = {};
 
 	bool m_isSettingUpLongLifeObjects = false;
 	byte m_stableValue = 0;
@@ -69,7 +69,7 @@ private:
 		//tracer->Trace(m_longLifeObjects);
 		tracer->Trace(m_shortLifeObjects);
 		tracer->Trace(m_trashObjects);
-		tracer->Trace(m_mainSystems);
+		//tracer->Trace(m_mainSystems);
 		//tracer->Trace(m_removeList);
 	}
 
@@ -162,22 +162,22 @@ public:
 public:
 	inline RenderingSystem* GetRenderingSystem()
 	{
-		return (RenderingSystem*)m_mainSystems[MainSystemInfo::RENDERING_ID].Get();
+		return (RenderingSystem*)m_mainSystems[MainSystemInfo::RENDERING_ID];
 	}
 
 	inline PhysicsSystem* GetPhysicsSystem()
 	{
-		return (PhysicsSystem*)m_mainSystems[MainSystemInfo::PHYSICS_ID].Get();
+		return (PhysicsSystem*)m_mainSystems[MainSystemInfo::PHYSICS_ID];
 	}
 
 	inline ScriptingSystem* GetScriptingSystem()
 	{
-		return (ScriptingSystem*)m_mainSystems[MainSystemInfo::SCRIPTING_ID].Get();
+		return (ScriptingSystem*)m_mainSystems[MainSystemInfo::SCRIPTING_ID];
 	}
 
 	inline AudioSystem* GetAudioSystem()
 	{
-		return (AudioSystem*)m_mainSystems[MainSystemInfo::AUDIO_ID].Get();
+		return (AudioSystem*)m_mainSystems[MainSystemInfo::AUDIO_ID];
 	}
 
 	inline auto* GetInput()

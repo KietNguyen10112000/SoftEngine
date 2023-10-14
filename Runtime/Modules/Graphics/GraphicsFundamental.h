@@ -28,9 +28,11 @@ struct GRAPHICS_DATA_FORMAT
 {
 	enum FORMAT
 	{
+		FORMAT_R32_FLOAT,
 		FORMAT_R32G32_FLOAT,
 		FORMAT_R32G32B32_FLOAT,
 		FORMAT_R32G32B32A32_FLOAT,
+
 		FORMAT_R8_UNORM,
 		FORMAT_R8G8B8_UNORM,
 		FORMAT_R8G8B8A8_UNORM,
@@ -208,6 +210,8 @@ public:
 
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_TEXTURE2D
 	virtual void UpdateTexture2D(void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endUpdateChain = true) = 0;
+
+	virtual void GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output) = 0;
 
 };
 

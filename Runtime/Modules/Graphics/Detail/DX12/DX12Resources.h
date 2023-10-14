@@ -26,6 +26,8 @@ public:
 
 	uint64_t*								m_fenceValues = nullptr;
 
+	UINT64									m_lastFenceValue = 0;
+
 	~DX12ConstantBuffer();
 
 	// Inherited via GraphicsConstantBuffer
@@ -50,6 +52,8 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW m_view;
 
 	DX12Resource m_resource;
+
+	UINT64 m_lastFenceValue = 0;
 
 	~DX12VertexBuffer();
 

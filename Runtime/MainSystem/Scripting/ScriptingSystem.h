@@ -6,18 +6,11 @@
 
 NAMESPACE_BEGIN
 
-class ScriptingSystem : Traceable<ScriptingSystem>, public MainSystem
+class ScriptingSystem : public MainSystem
 {
 public:
 	ScriptingSystem(Scene* scene);
 	~ScriptingSystem();
-
-protected:
-	TRACEABLE_FRIEND();
-	void Trace(Tracer* tracer)
-	{
-
-	}
 
 public:
 	// Inherited via MainSystem

@@ -20,4 +20,9 @@ void DX12ShaderResource::UpdateTexture2D(void* buffer, size_t bufferSize, const 
 	uploader->UploadTexture2D(m_resource.resource.Get(), region.x, region.y, buffer, region.width, region.height, region.pixelStride, region.mipLevel, endChain);
 }
 
+void DX12ShaderResource::GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output)
+{
+	*output = m_desc;
+}
+
 NAMESPACE_DX12_END

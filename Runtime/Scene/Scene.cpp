@@ -17,13 +17,27 @@ Scene::Scene(Runtime* runtime)
 	m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
 
-	m_mainSystems[MainSystemInfo::RENDERING_ID] = mheap::New<RenderingSystem>(this);
-	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = mheap::New<ScriptingSystem>(this);
+	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
+	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = new ScriptingSystem(this);
 }
 
 Scene::~Scene()
 {
+	for (auto& system : m_mainSystems)
+	{
+		if (system)
+		{
+			system->Finalize();
+		}
+	}
 
+	for (auto& system : m_mainSystems)
+	{
+		if (system)
+		{
+			delete system;
+		}
+	}
 }
 
 void Scene::BakeAllMainSystems()

@@ -24,6 +24,9 @@ public:
 
 	RenderingSystem* m_bindedRdSys = nullptr;
 
+	uint32_t m_windowWidth;
+	uint32_t m_windowHeight;
+
 public:
 	virtual ~Graphics() {};
 
@@ -46,7 +49,12 @@ public:
 		SharedPtr<GraphicsConstantBuffer>* output
 	) = 0;
 
-	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) = 0;
+	virtual void CreateRenderTargets(
+		uint32_t numRenderTargets, 
+		const GRAPHICS_RENDER_TARGET_DESC* desc, 
+		SharedPtr<GraphicsRenderTarget> * output
+	) = 0;
+
 	virtual SharedPtr<GraphicsDepthStencilBuffer> CreateDepthStencilBuffer(const GRAPHICS_DEPTH_STENCIL_BUFFER_DESC& desc) = 0;
 
 	//virtual SharedPtr<GraphicsPipelineInput> CreatePipelineInput(const GRAPHICS_PIPELINE_INPUT_DESC& desc) = 0;
@@ -58,7 +66,8 @@ public:
 
 	virtual void SetDrawParams(GraphicsParams* params) = 0;
 
-	virtual void SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) = 0;
+	virtual void SetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) = 0;
+	virtual void UnsetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) = 0;
 
 	virtual void ClearRenderTarget(GraphicsRenderTarget* rtv, Vec4 clearColor, uint32_t numRect, const AARect* rects) = 0;
 	virtual void ClearDepthStencil(GraphicsDepthStencilBuffer* dsv, uint32_t numRect, const AARect* rects) = 0;
@@ -108,6 +117,16 @@ public:
 	inline auto GetRenderingSystem()
 	{
 		return m_bindedRdSys;
+	}
+
+	inline auto GetWindowWidth()
+	{
+		return m_windowWidth;
+	}
+
+	inline auto GetWindowHeight()
+	{
+		return m_windowHeight;
 	}
 
 };

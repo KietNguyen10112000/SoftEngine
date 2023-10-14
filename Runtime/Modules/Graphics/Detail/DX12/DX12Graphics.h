@@ -81,6 +81,14 @@ public:
 
 	size_t m_renderCallCount = 0;
 
+#ifdef _DEBUG
+	DX12RenderTarget* m_currentRTs[8] = {};
+	uint32_t m_numCurrentRT = 0;
+
+	DX12DepthStencilBuffer* m_currentDS = nullptr;
+#endif // _DEBUG
+
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
@@ -113,7 +121,11 @@ public:
 		SharedPtr<GraphicsConstantBuffer>* output
 	) override;
 
-	virtual SharedPtr<GraphicsRenderTarget> CreateRenderTarget(const GRAPHICS_RENDER_TARGET_DESC& desc) override;
+	virtual void CreateRenderTargets(
+		uint32_t numRenderTargets,
+		const GRAPHICS_RENDER_TARGET_DESC* desc,
+		SharedPtr<GraphicsRenderTarget>* output
+	) override;
 
 	virtual SharedPtr<GraphicsDepthStencilBuffer> CreateDepthStencilBuffer(const GRAPHICS_DEPTH_STENCIL_BUFFER_DESC& desc) override;
 
@@ -125,7 +137,8 @@ public:
 
 	virtual void SetDrawParams(GraphicsParams* params) override;
 
-	virtual void SetRenderTarget(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) override;
+	virtual void SetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) override;
+	virtual void UnsetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv) override;
 
 	virtual void DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, uint32_t vertexCountPerInstance, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation) override;
 

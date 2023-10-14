@@ -33,6 +33,8 @@ private:
 	D3D12_DESCRIPTOR_HEAP_DESC m_desc;
 	ID3D12Device2* m_device;
 
+	spinlock m_lock;
+
 public:
 	DX12DescriptorAllocator() {};
 
@@ -76,6 +78,8 @@ public:
 
 	inline D3D12_CPU_DESCRIPTOR_HANDLE AllocateCPU(uint32_t count)
 	{
+		m_lock.lock();
+
 		auto controlSize = count * HANDLE_CONTROL_BLOCK_SIZE - sizeof(AllocatedBlock);
 		D3D12_CPU_DESCRIPTOR_HANDLE ret = {};
 
@@ -91,6 +95,8 @@ public:
 				assert(offset % HANDLE_CONTROL_BLOCK_SIZE == 0);
 
 				ret.ptr += (offset / HANDLE_CONTROL_BLOCK_SIZE) * m_cpuHandleSize;
+
+				m_lock.unlock();
 				return ret;
 			}
 		}
@@ -101,6 +107,8 @@ public:
 
 	inline void DeallocateCPU(D3D12_CPU_DESCRIPTOR_HANDLE handle, uint32_t _count)
 	{
+		m_lock.lock();
+
 		for (auto& heap : m_descriptorHeaps)
 		{
 			auto heapOffset = handle.ptr - heap.cpuHandleStart.ptr;
@@ -112,6 +120,8 @@ public:
 				
 				auto pageOffset = count * HANDLE_CONTROL_BLOCK_SIZE;
 				heap.page.Free(heap.page.GetBuffer() + pageOffset + sizeof(AllocatedBlock));
+
+				m_lock.unlock();
 				return;
 			}
 		}

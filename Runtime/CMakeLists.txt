@@ -52,6 +52,8 @@ file(
     "MainSystem/Rendering/*.cpp"
     "MainSystem/Rendering/Components/*.h"
     "MainSystem/Rendering/Components/*.cpp"
+    "MainSystem/Rendering/RenderingPipeline/*.h"
+    "MainSystem/Rendering/RenderingPipeline/*.cpp"
     "MainSystem/Physics/*.h"
     "MainSystem/Physics/*.cpp"
     "MainSystem/Scripting/*.h"

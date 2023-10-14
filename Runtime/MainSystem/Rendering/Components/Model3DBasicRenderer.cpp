@@ -2,7 +2,7 @@
 
 NAMESPACE_BEGIN
 
-Model3DBasicRenderer::Model3DBasicRenderer(String modelPath, String texture2DPath) : RenderingComponent(RENDER_TYPE::MODEL3D_BASIC_RENDERER)
+Model3DBasicRenderer::Model3DBasicRenderer(String modelPath, String texture2DPath) : RenderingComponent(RENDER_TYPE_MODEL3D_BASIC_RENDERER)
 {
 	m_model		= resource::Load<Model3DBasic>(modelPath);
 	m_texture	= resource::Load<Texture2D>(texture2DPath);

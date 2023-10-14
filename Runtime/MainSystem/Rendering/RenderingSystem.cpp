@@ -28,6 +28,9 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
 {
 	auto graphics = Graphics::Get();
 
+    m_defaultViewport.topLeft = { 0,0 };
+    m_defaultViewport.size = { Graphics::Get()->GetWindowWidth(), Graphics::Get()->GetWindowHeight() };
+
     struct Vertex
     {
         Vec3 position;
@@ -162,29 +165,47 @@ RenderingSystem::~RenderingSystem()
 
 }
 
-void RenderingSystem::AddCamera(Camera* camera)
+void RenderingSystem::AddCamera(BaseCamera* camera, CAMERA_PRIORITY priority)
 {
 	assert(camera->m_activeID == INVALID_ID);
 
-	camera->m_activeID = m_activeCamera.size();
-	m_activeCamera.push_back(camera);
+    auto& activeCamera = m_activeCamera[priority];
+
+    camera->m_priority = priority;
+	camera->m_activeID = activeCamera.size();
+    activeCamera.push_back(camera);
+
+    if (camera->m_pipeline)
+    {
+        camera->m_pipeline->Bake(camera->m_renderTarget.get(), this);
+    }
 }
 
-void RenderingSystem::RemoveCamera(Camera* camera)
+void RenderingSystem::RemoveCamera(BaseCamera* camera)
 {
 	assert(camera->m_activeID != INVALID_ID);
 
-	STD_VECTOR_ROLL_TO_FILL_BLANK(m_activeCamera, camera, m_activeID);
+    auto& activeCamera = m_activeCamera[camera->m_priority];
+
+    if (camera->m_isDisplaying)
+    {
+        HideCamera(camera);
+    }
+
+	STD_VECTOR_ROLL_TO_FILL_BLANK(activeCamera, camera, m_activeID);
 	camera->m_activeID = INVALID_ID;
 }
 
-void RenderingSystem::DisplayCamera(Camera* camera, const GRAPHICS_VIEWPORT& viewport)
+void RenderingSystem::DisplayCamera(BaseCamera* camera, const GRAPHICS_VIEWPORT& viewport)
 {
+    camera->m_isDisplaying = true;
 	m_displayingCamera.push_back({ camera, viewport });
 }
 
-void RenderingSystem::HideCamera(Camera* camera)
+void RenderingSystem::HideCamera(BaseCamera* camera)
 {
+    camera->m_isDisplaying = false;
+
 	size_t i = 0;
 Begin:
 	i = 0;
@@ -251,11 +272,11 @@ void RenderingSystem::Iteration(float dt)
 	auto screenRT = graphics->GetScreenRenderTarget();
 	auto screenDS = graphics->GetScreenDepthStencilBuffer();
 
+    graphics->SetRenderTargets(1, &screenRT, screenDS);
+
 	//graphics->SetRenderTarget(1, &screenRT, screenDS);
 	graphics->ClearRenderTarget(screenRT, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
 	graphics->ClearDepthStencil(screenDS, 0, 0);
-
-    graphics->SetRenderTarget(1, &screenRT, screenDS);
 
     g_cameraData.vp = Mat4::Identity().SetLookAtLH(cameraPos, cameraPos + Vec3(-1,0,0), Vec3::UP)
         * Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 
@@ -273,7 +294,7 @@ void RenderingSystem::Iteration(float dt)
     auto vb = m_testVertexBuffer.get();
     graphics->DrawInstanced(1, &vb, 36, 1, 0, 0);
 
-
+    graphics->UnsetRenderTargets(1, &screenRT, screenDS);
 	//Thread::Sleep(10);
 
 	graphics->EndFrame(true);
