@@ -1,4 +1,4 @@
-#define D3DCOMPILE_DEBUG 1
+//#define D3DCOMPILE_DEBUG 1
 
 #include "Common/TypeDef.hlsli"
 

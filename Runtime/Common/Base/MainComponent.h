@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/TypeDef.h"
+#include "Core/Memory/Memory.h"
 
 #include "Common/Base/Serializable.h"
 

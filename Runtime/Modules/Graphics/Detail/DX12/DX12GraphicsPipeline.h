@@ -58,6 +58,8 @@ public:
 
 	D3D12_PRIMITIVE_TOPOLOGY m_primitiveTopology;
 
+	UINT64 m_lastFenceValue = 0;
+
 	DX12GraphicsPipeline(size_t preferRenderCallPerFrame, const GRAPHICS_PIPELINE_DESC& desc);
 	~DX12GraphicsPipeline();
 

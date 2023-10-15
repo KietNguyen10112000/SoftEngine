@@ -7,7 +7,7 @@ void GameObject::RecalculateTransform(size_t idx)
 	auto& localMat = m_localTransformMat[idx];
 	auto& globalMat = m_globalTransformMat[idx];
 	localMat = m_localTransform[idx].ToTransformMatrix();
-	globalMat = m_parent->m_globalTransformMat[idx] * localMat;
+	globalMat = m_parent.Get() ? m_parent->m_globalTransformMat[idx] : Mat4::Identity() * localMat;
 
 	for (auto& child : m_children)
 	{

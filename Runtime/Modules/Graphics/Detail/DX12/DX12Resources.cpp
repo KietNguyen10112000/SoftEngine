@@ -4,7 +4,7 @@ NAMESPACE_DX12_BEGIN
 
 DX12ConstantBuffer::~DX12ConstantBuffer()
 {
-	std::cout << "~DX12ConstantBuffer()\n";
+	//std::cout << "~DX12ConstantBuffer()\n";
 	std::free(m_fenceValues);
 
 	DX12Graphics::GetDX12()->ThreadSafeFreeDX12Resource(m_resource, m_lastFenceValue);
@@ -26,7 +26,7 @@ void DX12ConstantBuffer::UpdateBuffer(const void* buffer, size_t bufferSize)
 
 DX12VertexBuffer::~DX12VertexBuffer()
 {
-	std::cout << "~DX12VertexBuffer()\n";
+	//std::cout << "~DX12VertexBuffer()\n";
 	DX12Graphics::GetDX12()->ThreadSafeFreeDX12Resource(m_resource, m_lastFenceValue);
 }
 

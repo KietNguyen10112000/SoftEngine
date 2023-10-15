@@ -166,7 +166,7 @@ void DX12ResourceUploader::UploadTexture2D(
 		assert(pixelStride <= 4);
 		auto copyFunc = m_texture2dCopyFunc[pixelStride - 1];
 		assert(copyFunc != nullptr);
-		copyFunc(block->mem, srcBuffer, srcWidth, srcHeight, rowPitch);
+		copyFunc(block->mem, (void*)srcBuffer, srcWidth, srcHeight, rowPitch);
 	}
 
 	// move gpu shared memory to gpu owned memory

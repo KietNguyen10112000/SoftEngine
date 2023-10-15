@@ -22,7 +22,9 @@ class DX12Graphics : public Graphics, public DX12_CONFIG
 public:
 	struct WaitForFreeDX12Resource
 	{
-		DX12Resource resource;
+		//DX12Resource resource;
+		ComPtr<ID3D12Object> dx12Object;
+		ComPtr<D3D12MA::Allocation> allocation;
 		UINT64 fenceValue;
 	};
 
@@ -95,6 +97,10 @@ public:
 
 	DX12DepthStencilBuffer* m_currentDS = nullptr;
 #endif // _DEBUG
+
+	uint32_t m_numBoundRTVs = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_currentBoundRTVs[8] = {};
+	D3D12_CPU_DESCRIPTOR_HANDLE m_currentBoundDSV = {};
 
 	std::vector<WaitForFreeDX12Resource> m_waitForFreeResources;
 	spinlock m_waitForFreeResourcesLock;
@@ -191,7 +197,7 @@ public:
 	void ExecuteCurrentCmdList();
 
 	void ThreadSafeFreeDX12Resource(const DX12Resource& resource, UINT64 fenceValue);
-	void ThreadSafeFreeDX12Resource(ComPtr<ID3D12Resource> resource, UINT64 fenceValue);
+	void ThreadSafeFreeDX12Resource(ComPtr<ID3D12Object> resource, UINT64 fenceValue);
 	void ProcessFreeDX12ResourceList();
 
 	inline static DX12Graphics* GetDX12()

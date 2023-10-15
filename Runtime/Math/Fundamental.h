@@ -524,6 +524,12 @@ public:
         return *((Vec3*)this);
     }
 
+    // take xyz component as Vec2
+    inline Vec2& xy() const
+    {
+        return *((Vec2*)this);
+    }
+
 public:
     inline float Length() const
     {
@@ -839,6 +845,11 @@ private:
 
 public:
     using Base::Base;
+
+    Mat4()
+    {
+        SetIdentity();
+    }
 
     inline Vec4& operator[](size_t rowId) const
     {

@@ -97,9 +97,19 @@ public:
 		auto graphics = Graphics::Get();
 		graphics->SetRenderTargets(1, &output, m_depthBuffer.get());
 
-		graphics->ClearRenderTarget(output, { 0.1f, 0.5f, 0.5f, 1.0f }, 0, 0);
+		graphics->ClearRenderTarget(output, { 0.0f, 0.0f, 0.0f, 0.0f }, 0, 0);
 		graphics->ClearDepthStencil(m_depthBuffer.get(), 0, 0);
 		graphics->SetGraphicsPipeline(m_pipeline.get());
+
+		//assert(input.size() == 2);
+
+		//static size_t count = 0;
+		////std::cout << ++count << "\n";
+		//++count;
+		//if (count >= 86)
+		//{
+		//	int x = 3;
+		//}
 
 		for (auto& comp : input)
 		{

@@ -13,6 +13,8 @@
 #include "Scene/Scene.h"
 #include "Input/Input.h"
 
+#include "DisplayService.h"
+
 NAMESPACE_BEGIN
 
 //struct TestConstantBuffer
@@ -158,11 +160,25 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
  //   // rain1.jpg
  //   // 2.png
  //   m_testTexture2D = resource::Load<Texture2D>("2.png");
+
+	m_cameras.resize(8 * KB);
+	m_collectInputForCameraTasks.resize(8 * KB);
+	m_collectInputForCameraParams.resize(8 * KB);
+
+	m_collectInputForCameraRets.resize(128);
+	for (auto& ss : m_collectInputForCameraRets)
+	{
+		ss = m_bvh.NewQuerySession();
+	}
 }
 
 RenderingSystem::~RenderingSystem()
 {
-
+	for (auto& ss : m_collectInputForCameraRets)
+	{
+		m_bvh.DeleteQuerySession(ss);
+	}
+	m_collectInputForCameraRets.clear();
 }
 
 void RenderingSystem::AddCamera(BaseCamera* camera, CAMERA_PRIORITY priority)
@@ -194,6 +210,106 @@ void RenderingSystem::RemoveCamera(BaseCamera* camera)
 
 	STD_VECTOR_ROLL_TO_FILL_BLANK(activeCamera, camera, m_activeID);
 	camera->m_activeID = INVALID_ID;
+}
+
+void RenderingSystem::CollectInputForEachCamera()
+{
+	size_t totalCamera = 0;
+	m_cameras.clear();
+	for (auto& chunk : m_activeCamera)
+	{
+		totalCamera += chunk.size();
+		m_cameras.insert(m_cameras.end(), chunk.begin(), chunk.end());
+	}
+
+	if (totalCamera == 0)
+	{
+		return;
+	}
+
+	auto numSS = m_collectInputForCameraRets.size();
+	if (totalCamera > numSS)
+	{
+		m_collectInputForCameraRets.resize(totalCamera);
+		for (uint32_t i = numSS; i < totalCamera; i++)
+		{
+			m_collectInputForCameraRets[i] = m_bvh.NewQuerySession();
+		}
+	}
+
+	m_collectInputForCameraTasks.resize(totalCamera);
+	m_collectInputForCameraParams.resize(totalCamera);
+	for (size_t i = 0; i < totalCamera; i++)
+	{
+		auto& task = m_collectInputForCameraTasks[i];
+		auto& params = m_collectInputForCameraParams[i];
+
+		params.camera = m_cameras[i];
+		params.renderingSystem = this;
+		params.querySession = m_collectInputForCameraRets[i];
+
+		task.Entry() = [](void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_3(CollectInputForCameraParams, p, renderingSystem, camera, querySession);
+
+			auto frustum = Frustum(camera->Projection());
+			frustum.Transform(camera->GlobalTransform());
+			auto queryStructure = &renderingSystem->m_bvh;
+
+			querySession->ClearPrevQueryResult();
+			queryStructure->QueryFrustum(frustum, querySession);
+
+			int x = 3;
+		};
+
+		task.Params() = &params;
+	}
+
+	TaskSystem::SubmitAndWait(m_collectInputForCameraTasks.data(), totalCamera, Task::CRITICAL);
+}
+
+void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
+{
+	m_cameraData.proj = camera->Projection();
+	m_cameraData.view = camera->View();
+	m_cameraData.vp = camera->View() * camera->Projection();
+
+	/*m_cameraData.vp = Mat4::Identity().SetLookAtLH({0,0,0}, Vec3(0, 0, -5), Vec3::UP)
+		* Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 
+			StartupConfig::Get().windowWidth / (float)StartupConfig::Get().windowHeight, 0.5f, 1000.0f);*/
+
+	auto& camCBuffer = GetBuiltinConstantBuffers()->GetCameraBuffer();
+	camCBuffer->UpdateBuffer(&m_cameraData, sizeof(m_cameraData));
+}
+
+void RenderingSystem::RenderForEachCamera()
+{
+	auto numCamera = m_cameras.size();
+	for (size_t i = 0; i < numCamera; i++)
+	{
+		auto& cam = m_cameras[i];
+		auto& pipeline = cam->m_pipeline;
+		auto& input = m_collectInputForCameraRets[i]->Result();
+
+		SetBuiltinConstantBufferForCamera(cam);
+
+		pipeline->SetInput((RenderingComponent**)input.data(), input.size());
+		pipeline->Run();
+	}
+}
+
+void RenderingSystem::DisplayAllCamera()
+{
+	auto displayService = DisplayService::Get();
+	displayService->Begin();
+
+	for (auto& cam : m_displayingCamera)
+	{
+		auto rc = cam.camera->m_renderTarget->GetShaderResource();
+		displayService->Display(rc, cam.viewport);
+	}
+
+	displayService->End();
 }
 
 void RenderingSystem::DisplayCamera(BaseCamera* camera, const GRAPHICS_VIEWPORT& viewport)
@@ -245,30 +361,6 @@ void RenderingSystem::Iteration(float dt)
 	graphics->BeginFrame();
 
 	// do render
-
-    static Vec3 cameraPos = { 5,0,0 };
-    constexpr float cameraSpeed = 10.0f;
-
-    if (m_scene->GetInput()->IsKeyDown('W'))
-    {
-        cameraPos.x -= cameraSpeed * dt;
-    }
-
-    if (m_scene->GetInput()->IsKeyDown('S'))
-    {
-        cameraPos.x += cameraSpeed * dt;
-    }
-
-    if (m_scene->GetInput()->IsKeyDown('A'))
-    {
-        cameraPos.z -= cameraSpeed * dt;
-    }
-
-    if (m_scene->GetInput()->IsKeyDown('D'))
-    {
-        cameraPos.z += cameraSpeed * dt;
-    }
-
 	//auto screenRT = graphics->GetScreenRenderTarget();
 	//auto screenDS = graphics->GetScreenDepthStencilBuffer();
 
@@ -296,6 +388,12 @@ void RenderingSystem::Iteration(float dt)
 
  //   graphics->UnsetRenderTargets(1, &screenRT, screenDS);
 	//Thread::Sleep(10);
+
+	CollectInputForEachCamera();
+
+	RenderForEachCamera();
+
+	DisplayAllCamera();
 
 	graphics->EndFrame(true);
 }

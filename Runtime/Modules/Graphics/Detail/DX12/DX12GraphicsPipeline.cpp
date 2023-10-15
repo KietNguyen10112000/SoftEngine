@@ -125,6 +125,8 @@ DX12GraphicsPipeline::DX12GraphicsPipeline(size_t preferRenderCallPerFrame, cons
 
 DX12GraphicsPipeline::~DX12GraphicsPipeline()
 {
+	DX12Graphics::GetDX12()->ThreadSafeFreeDX12Resource(m_pipelineState, m_lastFenceValue);
+
 	for (size_t i = 0; i < m_renderRoomParamsCount; i++)
 	{
 		auto& room = m_renderRoomParams[i];

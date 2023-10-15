@@ -324,23 +324,36 @@ void DX12Graphics::ExecuteCurrentCmdList()
 
     if (m_currentGraphicsPipeline)
         cmdList->SetPipelineState(m_currentDX12GraphicsPipeline.Get());
+
+    if (m_numBoundRTVs)
+    {
+        cmdList->OMSetRenderTargets(m_numBoundRTVs, m_currentBoundRTVs, 0, m_currentBoundDSV.ptr == 0 ? 0 : &m_currentBoundDSV);
+        cmdList->RSSetViewports(1, &m_backBufferViewport); // set the viewports
+        cmdList->RSSetScissorRects(1, &m_backBufferScissorRect); // set the scissor rects
+    }
 }
 
 void DX12Graphics::ThreadSafeFreeDX12Resource(const DX12Resource& resource, UINT64 fenceValue)
 {
+    WaitForFreeDX12Resource rc;
+    rc.allocation = resource.allocation;
+    rc.dx12Object = resource.resource;
+    rc.fenceValue = fenceValue;
+
     m_waitForFreeResourcesLock.lock();
-    m_waitForFreeResources.push_back({ resource, fenceValue });
+    m_waitForFreeResources.push_back(rc);
     m_waitForFreeResourcesLock.unlock();
 }
 
-void DX12Graphics::ThreadSafeFreeDX12Resource(ComPtr<ID3D12Resource> resource, UINT64 fenceValue)
+void DX12Graphics::ThreadSafeFreeDX12Resource(ComPtr<ID3D12Object> resource, UINT64 fenceValue)
 {
-    DX12Resource rc;
+    WaitForFreeDX12Resource rc;
     rc.allocation = nullptr;
-    rc.resource = resource;
+    rc.dx12Object = resource;
+    rc.fenceValue = fenceValue;
 
     m_waitForFreeResourcesLock.lock();
-    m_waitForFreeResources.push_back({ rc, fenceValue });
+    m_waitForFreeResources.push_back(rc);
     m_waitForFreeResourcesLock.unlock();
 }
 
@@ -369,7 +382,7 @@ void DX12Graphics::ProcessFreeDX12ResourceList()
             break;
         }
 
-        rc.resource = {};
+        rc = {};
         m_waitForFreeResources.pop_back();
     }
     
@@ -858,6 +871,8 @@ void DX12Graphics::StageCurrentRenderParams()
         stageIndex++;
         gpuDescriptorHandle.ptr += spaceStride;
     }
+
+    m_currentGraphicsPipeline->m_lastFenceValue = GetCurrentDX12FenceValue();
 }
 
 void DX12Graphics::CreateRenderTargets(
@@ -888,14 +903,19 @@ void DX12Graphics::CreateRenderTargets(
         texture2DDesc.SampleDesc.Count = 1;
         texture2DDesc.SampleDesc.Quality = 0;
         texture2DDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        texture2DDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
         rt->m_currentState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+        D3D12_CLEAR_VALUE clearValue = {};
+        clearValue.Format = texture2DDesc.Format;
+        std::memcpy(clearValue.Color, &desc.clearColor, sizeof(Vec4));
 
         AllocateDX12Resource(
             &texture2DDesc,
             D3D12_HEAP_TYPE_DEFAULT,
             D3D12_RESOURCE_STATE_RENDER_TARGET,
-            nullptr,
+            &clearValue,
             &rt->m_dx12Resource
         );
 
@@ -914,8 +934,8 @@ void DX12Graphics::CreateRenderTargets(
         srvDesc.type = GRAPHICS_SHADER_RESOURCE_DESC::SHADER_RESOURCE_TYPE_TEXTURE2D;
         srvDesc.texture2D.format = desc.format;
         srvDesc.texture2D.mipLevels = desc.mipLevels;
-        srvDesc.texture2D.width = desc.width;
-        srvDesc.texture2D.height = desc.height;
+        srvDesc.texture2D.width = texture2DDesc.Width;
+        srvDesc.texture2D.height = texture2DDesc.Height;
 
         rt->m_shaderResource = shaderResource;
 
@@ -941,14 +961,20 @@ SharedPtr<GraphicsDepthStencilBuffer> DX12Graphics::CreateDepthStencilBuffer(con
     texture2DDesc.SampleDesc.Count = 1;
     texture2DDesc.SampleDesc.Quality = 0;
     texture2DDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    texture2DDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
     ds->m_currentState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+    D3D12_CLEAR_VALUE clearValue = {};
+    clearValue.Format = texture2DDesc.Format;
+    clearValue.DepthStencil.Depth = 1.0f;
+    clearValue.DepthStencil.Stencil = 0;
 
     AllocateDX12Resource(
         &texture2DDesc,
         D3D12_HEAP_TYPE_DEFAULT,
         D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        nullptr,
+        &clearValue,
         &ds->m_dx12Resource
     );
 
@@ -958,8 +984,14 @@ SharedPtr<GraphicsDepthStencilBuffer> DX12Graphics::CreateDepthStencilBuffer(con
     m_device->CreateDepthStencilView(dx12resource, 0, dsvStart);
     ds->m_dsv = dsvStart;
 
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvView = {};
+    srvView.Format = dx12utils::ConvertToDX12Format(desc.format);
+    srvView.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    srvView.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvView.Texture2D.MipLevels = 1;
+
     auto dsSRVStart = GetSRVAllocator()->AllocateCPU(1);
-    m_device->CreateShaderResourceView(dx12resource, 0, dsSRVStart);
+    m_device->CreateShaderResourceView(dx12resource, &srvView, dsSRVStart);
     shaderResource->m_srvGroupStart = dsSRVStart;
     shaderResource->m_srvGroupCount = 1;
     shaderResource->m_srv = dsSRVStart;
@@ -971,8 +1003,8 @@ SharedPtr<GraphicsDepthStencilBuffer> DX12Graphics::CreateDepthStencilBuffer(con
     srvDesc.type = GRAPHICS_SHADER_RESOURCE_DESC::SHADER_RESOURCE_TYPE_TEXTURE2D;
     srvDesc.texture2D.format = desc.format;
     srvDesc.texture2D.mipLevels = desc.mipLevels;
-    srvDesc.texture2D.width = desc.width;
-    srvDesc.texture2D.height = desc.height;
+    srvDesc.texture2D.width = texture2DDesc.Width;
+    srvDesc.texture2D.height = texture2DDesc.Height;
     return ds;
 }
 
@@ -1026,7 +1058,7 @@ void DX12Graphics::SetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, 
 {
     auto dx12dsv = (DX12DepthStencilBuffer*)dsv;
 
-    D3D12_CPU_DESCRIPTOR_HANDLE RTVs[8] = {};
+    auto& RTVs = m_currentBoundRTVs;
 
     auto cmdList = GetCmdList();
 
@@ -1081,6 +1113,8 @@ void DX12Graphics::SetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, 
         }
         
         cmdList->OMSetRenderTargets(numRT, RTVs, 0, &dx12dsv->m_dsv);
+
+        m_currentBoundDSV = dx12dsv->m_dsv;
     }
     else
     {
@@ -1089,6 +1123,8 @@ void DX12Graphics::SetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, 
 
     cmdList->RSSetViewports(1, &m_backBufferViewport); // set the viewports
     cmdList->RSSetScissorRects(1, &m_backBufferScissorRect); // set the scissor rects
+
+    m_numBoundRTVs = numRT;
 }
 
 void DX12Graphics::UnsetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv, GraphicsDepthStencilBuffer* dsv)
@@ -1140,19 +1176,25 @@ void DX12Graphics::UnsetRenderTargets(uint32_t numRT, GraphicsRenderTarget** rtv
     assert(m_currentDS == dsv);
     m_currentDS = 0;
 #endif // _DEBUG
+
+    m_numBoundRTVs = 0;
+    m_currentBoundDSV.ptr = 0;
 }
 
 void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer** vertexBuffers, 
     uint32_t vertexCountPerInstance, uint32_t instanceCount, uint32_t startVertexLocation, uint32_t startInstanceLocation)
 {
+    m_renderRoomIdx = (m_renderRoomIdx + 1) % NUM_RENDER_ROOM;
     WaitForDX12FenceValue(m_renderRoomFenceValues[m_renderRoomIdx]);
     m_renderRoomFenceValues[m_renderRoomIdx] = GetCurrentDX12FenceValue();
+    //std::cout << m_renderRoomIdx << '\n';
 
     auto cmdList = GetCmdList();
 
     StageCurrentRenderParams();
 
     // set up vertex views
+    if (numVertexBuffers)
     {
         for (uint32_t i = 0; i < numVertexBuffers; i++)
         {
@@ -1160,14 +1202,15 @@ void DX12Graphics::DrawInstanced(uint32_t numVertexBuffers, GraphicsVertexBuffer
             dx12vertexBuffer->m_lastFenceValue = GetCurrentDX12FenceValue();
             m_vertexBufferViews[i] = dx12vertexBuffer->m_view;
         }
+        cmdList->IASetVertexBuffers(0, numVertexBuffers, m_vertexBufferViews);
     }
 
     cmdList->IASetPrimitiveTopology(m_currentGraphicsPipeline->m_primitiveTopology);
-    cmdList->IASetVertexBuffers(0, numVertexBuffers, m_vertexBufferViews);
     cmdList->DrawInstanced(vertexCountPerInstance, instanceCount, startVertexLocation, startInstanceLocation);
 
     if ((++m_renderCallCount) % NUM_RENDER_CALL_PER_DISPATCH_CMD_LIST == 0)
     {
+        //std::cout << "Dispatched\n";
         ExecuteCurrentCmdList();
     }
 }

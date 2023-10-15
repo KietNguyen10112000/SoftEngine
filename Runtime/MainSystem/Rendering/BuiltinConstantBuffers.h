@@ -4,7 +4,7 @@
 
 NAMESPACE_BEGIN
 
-class BuiltinConstantBuffers
+class BuiltinConstantBuffers : public Singleton<BuiltinConstantBuffers>
 {
 public:
 #include "BuiltinConstantBuffers.inl"
@@ -23,7 +23,7 @@ public:
 
 	inline auto& GetCameraBuffer()
 	{
-		return m_sceneBuffer;
+		return m_cameraBuffer;
 	}
 
 };

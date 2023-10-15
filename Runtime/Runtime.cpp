@@ -37,7 +37,10 @@
 
 #include "FileSystem/FileSystem.h"
 
+#include "MainSystem/Rendering/Components/Camera.h"
 #include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+#include "MainSystem/Rendering/BuiltinConstantBuffers.h"
+#include "MainSystem/Rendering/DisplayService.h"
 
 NAMESPACE_BEGIN
 
@@ -93,10 +96,16 @@ Runtime::Runtime()
 	InitNetwork();
 	InitGraphics();
 	InitPlugins();
+
+	BuiltinConstantBuffers::SingletonInitialize();
+	DisplayService::SingletonInitialize();
 }
 
 Runtime::~Runtime()
 {
+	DisplayService::SingletonFinalize();
+	BuiltinConstantBuffers::SingletonFinalize();
+
 	FinalPlugins();
 	FinalGraphics();
 	FinalNetwork();
@@ -194,7 +203,32 @@ void Runtime::Setup()
 		scene->EndSetupLongLifeObject();
 	}
 
+	auto cameraObj = mheap::New<GameObject>();
+	auto camera = cameraObj->NewComponent<Camera>();
+	camera->Projection().SetPerspectiveFovLH(
+		PI / 3.0f,
+		Graphics::Get()->GetWindowWidth() / (float)Graphics::Get()->GetWindowHeight(),
+		0.5f,
+		1000.0f
+	);
+	scene->AddObject(cameraObj);
+
+	Transform transform = {};
+	transform.Position() = { 0,0,5 };
 	auto object = mheap::New<GameObject>();
+	object->SetTransform(transform);
+	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+	scene->AddObject(object);
+
+	transform.Position() = { -5,0,5 };
+	object = mheap::New<GameObject>();
+	object->SetTransform(transform);
+	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+	scene->AddObject(object);
+
+	transform.Position() = { 5,0,5 };
+	object = mheap::New<GameObject>();
+	object->SetTransform(transform);
 	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
 	scene->AddObject(object);
 }

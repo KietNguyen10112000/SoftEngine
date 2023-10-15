@@ -4,14 +4,25 @@
 
 NAMESPACE_BEGIN
 
-class DisplayService
+class DisplayService : public Singleton<DisplayService>
 {
 public:
+	struct CBuffer
+	{
+		Vec4 vertices[36];
+	};
+
+	SharedPtr<GraphicsPipeline> m_pipeline;
+
+	SharedPtr<GraphicsConstantBuffer> m_constantBuffer;
+
+	CBuffer m_cbuffer;
+
 	DisplayService();
 
 	void Begin();
 	void End();
-	void Display(const SharedPtr<GraphicsShaderResource>& resource, GRAPHICS_VIEWPORT viewport);
+	void Display(SharedPtr<GraphicsShaderResource>& resource, GRAPHICS_VIEWPORT viewport);
 
 };
 

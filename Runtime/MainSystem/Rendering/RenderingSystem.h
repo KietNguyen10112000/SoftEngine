@@ -3,6 +3,8 @@
 #include "../MainSystem.h"
 
 #include "Core/Structures/STD/STDContainers.h"
+#include "TaskSystem/TaskSystem.h"
+
 #include "Modules/Graphics/GraphicsFundamental.h"
 
 #include "Common/ComponentQueryStructures/DoubleBVH.h"
@@ -40,6 +42,13 @@ private:
 		GRAPHICS_VIEWPORT viewport;
 	};
 
+	struct CollectInputForCameraParams
+	{
+		RenderingSystem* renderingSystem;
+		BaseCamera* camera;
+		AABBQuerySession* querySession;
+	};
+
 	DoubleBVH m_bvh;
 
 	// camera that is displaying to screen
@@ -48,15 +57,16 @@ private:
 	// camera that scene will be rendered to (that maybe not displayed to screen but still visiable somewhere)
 	std::vector<BaseCamera*> m_activeCamera[CAMERA_PRIORITY::CAMERA_PRIORITY_COUNT];
 
-	/*SharedPtr<GraphicsPipeline>				m_testPipeline;
-	SharedPtr<GraphicsVertexBuffer>			m_testVertexBuffer;
-	SharedPtr<GraphicsConstantBuffer>		m_testCameraConstantBuffer;
-	SharedPtr<GraphicsConstantBuffer>		m_testObjectConstantBuffer;
-	Resource<Texture2D>						m_testTexture2D;*/
+	std::vector<BaseCamera*>					m_cameras;
+	std::vector<Task>							m_collectInputForCameraTasks;
+	std::vector<CollectInputForCameraParams>	m_collectInputForCameraParams;
+	std::vector<AABBQuerySession*>				m_collectInputForCameraRets;
 
 	GRAPHICS_VIEWPORT m_defaultViewport = {};
 
-	BuiltinConstantBuffers m_builtinConstantBuffers;
+	BuiltinConstantBuffers* m_builtinConstantBuffers = BuiltinConstantBuffers::Get();
+
+	BuiltinConstantBuffers::CameraData m_cameraData;
 
 public:
 	RenderingSystem(Scene* scene);
@@ -65,6 +75,11 @@ public:
 private:
 	void AddCamera(BaseCamera* camera, CAMERA_PRIORITY priority);
 	void RemoveCamera(BaseCamera* camera);
+
+	void CollectInputForEachCamera();
+	void SetBuiltinConstantBufferForCamera(BaseCamera* camera);
+	void RenderForEachCamera();
+	void DisplayAllCamera();
 
 public:
 	void DisplayCamera(BaseCamera* camera, const GRAPHICS_VIEWPORT& viewport);
@@ -92,7 +107,7 @@ public:
 
 	inline auto* GetBuiltinConstantBuffers()
 	{
-		return &m_builtinConstantBuffers;
+		return m_builtinConstantBuffers;
 	}
 };
 
