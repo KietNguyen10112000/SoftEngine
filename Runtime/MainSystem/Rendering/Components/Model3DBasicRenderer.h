@@ -15,6 +15,9 @@ public:
 	Resource<Texture2D>		m_texture;
 
 public:
+	COMPONENT_CLASS(Model3DBasicRenderer);
+
+	Model3DBasicRenderer();
 	Model3DBasicRenderer(String modelPath, String texture2DPath);
 
 	// Inherited via RenderingComponent

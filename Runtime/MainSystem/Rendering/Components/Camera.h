@@ -16,7 +16,7 @@ private:
 	uint32_t m_priority = 0;
 
 	Mat4 m_proj;
-	Mat4 m_view;
+	//Mat4 m_view;
 
 protected:
 	SharedPtr<GraphicsRenderTarget> m_renderTarget = nullptr;
@@ -38,10 +38,14 @@ public:
 		return m_proj;
 	}
 
-	inline auto& View()
+	inline auto GetView() const
+	{
+		return GlobalTransform().GetInverse();
+	}
+	/*inline auto& View()
 	{
 		return m_view;
-	}
+	}*/
 
 };
 
@@ -51,6 +55,8 @@ private:
 	friend class RenderingSystem;
 
 public:
+	COMPONENT_CLASS(Camera);
+
 	Camera();
 
 	// Inherited via RenderingComponent

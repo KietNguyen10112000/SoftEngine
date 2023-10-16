@@ -28,6 +28,8 @@ public:
 		}
 	};
 
+	SERIALIZABLE_CLASS(GameObject);
+
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 

@@ -8,13 +8,13 @@ NAMESPACE_BEGIN
 class Scene;
 class Runtime;
 
-#define DECLARE_PLUGIN(name)						\
+#define DECLARE_PLUGIN(name)							\
 EXTERN_C EXPORT Plugin* ___plugin(Runtime*);			\
-EXTERN_C EXPORT void ___pluginInit(Runtime*);		\
+EXTERN_C EXPORT void ___pluginInit(Runtime*);			\
 EXTERN_C EXPORT void ___pluginFinal(Runtime*);
 
-#define IMPL_PLUGIN(name)															\
-Plugin* ___plugin(Runtime*) { return new name(); };									\
+#define IMPL_PLUGIN(name)																\
+Plugin* ___plugin(Runtime*) { static auto instance = new name(); return instance; };	\
 void ___pluginInit(Runtime*) { Thread::InitializeForThisThreadInThisModule(); };		\
 void ___pluginFinal(Runtime*) { Thread::FinalizeForThisThreadInThisModule(); };
 

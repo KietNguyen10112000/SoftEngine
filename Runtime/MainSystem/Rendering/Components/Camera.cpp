@@ -49,7 +49,23 @@ void Camera::OnComponentAdded()
 {
 	auto rdrSys = GameObject()->Scene()->GetRenderingSystem();
 	rdrSys->AddCamera(this, CAMERA_PRIORITY_LOWEST);
-	rdrSys->DisplayCamera(this, rdrSys->GetDefaultViewport());
+	//rdrSys->DisplayCamera(this, rdrSys->GetDefaultViewport());
+
+	static int count = 0;
+
+	if (count++)
+	{
+		auto vp = rdrSys->GetDefaultViewport();
+		vp.size /= 2.0f;
+		rdrSys->DisplayCamera(this, vp);
+	}
+	else
+	{
+		auto vp = rdrSys->GetDefaultViewport();
+		vp.size /= 2.0f;
+		vp.topLeft += vp.size;
+		rdrSys->DisplayCamera(this, vp);
+	}
 }
 
 void Camera::OnComponentRemoved()

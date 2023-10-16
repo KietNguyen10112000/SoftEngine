@@ -7,6 +7,8 @@
 
 NAMESPACE_BEGIN
 
+#define COMPONENT_CLASS(className) SERIALIZABLE_CLASS(className)
+
 class MainComponent : public Serializable
 {
 protected:

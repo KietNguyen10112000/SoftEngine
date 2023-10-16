@@ -271,8 +271,8 @@ void RenderingSystem::CollectInputForEachCamera()
 void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
 {
 	m_cameraData.proj = camera->Projection();
-	m_cameraData.view = camera->View();
-	m_cameraData.vp = camera->View() * camera->Projection();
+	m_cameraData.view = camera->GetView();
+	m_cameraData.vp = m_cameraData.view * m_cameraData.proj;
 
 	/*m_cameraData.vp = Mat4::Identity().SetLookAtLH({0,0,0}, Vec3(0, 0, -5), Vec3::UP)
 		* Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 

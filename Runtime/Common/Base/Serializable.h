@@ -6,6 +6,15 @@
 
 NAMESPACE_BEGIN
 
+#define SERIALIZABLE_CLASS(className)										\
+private: friend class MainComponentDB;										\
+inline static const char* ___GetClassName() {return # className;};			\
+public: inline virtual const char* GetClassName() override					\
+{																			\
+	static_assert(std::is_base_of_v<Serializable, className>);				\
+	return  # className; 													\
+};
+
 class Serializable
 {
 public:
@@ -67,6 +76,8 @@ public:
 	/// notify whenever property changed from ClassMetadata
 	/// 
 	virtual void OnPropertyChanged(const UnknownAddress& var) = 0;
+
+	virtual const char* GetClassName() = 0;
 
 };
 

@@ -2,6 +2,7 @@
 
 #include "Core/TypeDef.h"
 
+#include "Core/Pattern/Singleton.h"
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/STD/STDContainers.h"
 
@@ -22,7 +23,7 @@ public:
 
 };
 
-class API Runtime : Traceable<Runtime>
+class API Runtime : Traceable<Runtime>, public Singleton<Runtime>
 {
 public:
 	constexpr static byte STABLE_VALUE	= 127;

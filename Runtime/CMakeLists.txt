@@ -48,6 +48,8 @@ file(
     "Common/QueryStructures/*.cpp"
 
 
+    "MainSystem/*.h"
+    "MainSystem/*.cpp"
     "MainSystem/Rendering/*.h"
     "MainSystem/Rendering/*.cpp"
     "MainSystem/Rendering/Components/*.h"

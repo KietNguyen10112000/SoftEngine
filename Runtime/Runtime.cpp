@@ -42,6 +42,9 @@
 #include "MainSystem/Rendering/BuiltinConstantBuffers.h"
 #include "MainSystem/Rendering/DisplayService.h"
 
+#include "MainSystem/MainComponentDB.h"
+#include "MainSystem/MainComponentList.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -72,11 +75,15 @@ Handle<Runtime> Runtime::Initialize()
 	auto ret = mheap::New<Runtime>();
 	mheap::internal::SetStableValue(old);
 	ret->Setup();
+
+	Runtime::s_instance.reset(ret.Get());
+
 	return ret;
 }
 
 void Runtime::Finalize()
 {
+	Runtime::s_instance.release();
 	mheap::internal::FreeStableObjects(Runtime::STABLE_VALUE, 0, 0);
 	for (size_t i = 0; i < 5; i++)
 	{
@@ -99,10 +106,14 @@ Runtime::Runtime()
 
 	BuiltinConstantBuffers::SingletonInitialize();
 	DisplayService::SingletonInitialize();
+	MainComponentDB::SingletonInitialize();
+
+	MainComponentList::Initialize();
 }
 
 Runtime::~Runtime()
 {
+	MainComponentDB::SingletonFinalize();
 	DisplayService::SingletonFinalize();
 	BuiltinConstantBuffers::SingletonFinalize();
 
@@ -203,6 +214,8 @@ void Runtime::Setup()
 		scene->EndSetupLongLifeObject();
 	}
 
+	Transform transform = {};
+
 	auto cameraObj = mheap::New<GameObject>();
 	auto camera = cameraObj->NewComponent<Camera>();
 	camera->Projection().SetPerspectiveFovLH(
@@ -213,7 +226,21 @@ void Runtime::Setup()
 	);
 	scene->AddObject(cameraObj);
 
-	Transform transform = {};
+	auto rotationMat = Mat4::Rotation(Vec3::UP, PI / 3.0f);
+	transform.Position() = { -5,-5,-5 };
+	transform.Rotation() = Quaternion(rotationMat);
+	cameraObj = mheap::New<GameObject>();
+	cameraObj->SetTransform(transform);
+	camera = cameraObj->NewComponent<Camera>();
+	camera->Projection().SetPerspectiveFovLH(
+		PI / 3.0f,
+		Graphics::Get()->GetWindowWidth() / (float)Graphics::Get()->GetWindowHeight(),
+		0.5f,
+		1000.0f
+	);
+	scene->AddObject(cameraObj);
+
+	transform = {};
 	transform.Position() = { 0,0,5 };
 	auto object = mheap::New<GameObject>();
 	object->SetTransform(transform);
