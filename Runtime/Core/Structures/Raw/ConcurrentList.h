@@ -501,10 +501,10 @@ public:
 		return m_buffer.size();
 	}
 
-	inline void Resize(size_t size)
+	/*inline void Resize(size_t size)
 	{
 		m_size.exchange(size, std::memory_order_relaxed);
-	}
+	}*/
 
 	inline size_t GetChunks(T** output)
 	{

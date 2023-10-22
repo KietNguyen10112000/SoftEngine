@@ -1,5 +1,7 @@
 #include "GameObject.h"
 
+#include "Scene.h"
+
 NAMESPACE_BEGIN
 
 void GameObject::RecalculateTransform(size_t idx)
@@ -13,6 +15,14 @@ void GameObject::RecalculateTransform(size_t idx)
 	{
 		child->RecalculateTransform(idx);
 	}
+}
+
+void GameObject::IndirectSetLocalTransform(const Transform& transform)
+{
+	if (transform.Equals(ReadLocalTransform())) return;
+
+	WriteLocalTransform() = transform;
+	m_scene->OnObjectTransformChanged(this);
 }
 
 void GameObject::RemoveFromParent()
@@ -54,7 +64,7 @@ void GameObject::OnPropertyChanged(const UnknownAddress& var)
 {
 	if (var.Is(&m_localTransform[0]))
 	{
-		SetTransform(m_localTransform[0]);
+		SetLocalTransform(m_localTransform[0]);
 	}
 }
 

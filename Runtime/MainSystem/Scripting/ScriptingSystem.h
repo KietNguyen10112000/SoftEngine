@@ -4,11 +4,17 @@
 
 #include "Core/Memory/Memory.h"
 
+#include "Core/Structures/Raw/UnorderedList.h"
+
 NAMESPACE_BEGIN
+
+class ScriptScheduler;
 
 class ScriptingSystem : public MainSystem
 {
 public:
+	std::vector<ScriptScheduler*> m_schedulers;
+
 	ScriptingSystem(Scene* scene);
 	~ScriptingSystem();
 

@@ -22,8 +22,8 @@ public:
 		bool isActive = true;
 		bool isLocked = true;
 
-		Position minPos = { -INT_MAX, INT_MAX };
-		Position maxPos = { -INT_MAX, INT_MAX };
+		Position minPos = { -INT_MAX, -INT_MAX };
+		Position maxPos = { INT_MAX, INT_MAX };
 		size_t numClampPos = 0;
 	};
 
@@ -99,6 +99,8 @@ protected:
 
 		cursor.position.x = x;
 		cursor.position.y = y;
+
+		//std::cout << "cursor.offset = (" << cursor.offset.x << ", " << cursor.offset.y << ")\n";
 	}
 
 public:
@@ -125,7 +127,7 @@ public:
 
 	inline bool IsKeyUp(byte keyCode)
 	{
-		return m_isKeysUpInFrame[keyCode] || m_keysDownCount[keyCode] == m_keysUpCount[keyCode];
+		return m_isKeysUpInFrame[keyCode];// || m_keysDownCount[keyCode] == m_keysUpCount[keyCode];
 	}
 
 	// pressDuration in ms

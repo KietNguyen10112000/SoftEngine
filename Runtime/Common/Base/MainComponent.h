@@ -36,7 +36,7 @@ public:
 	virtual AABox GetGlobalAABB() = 0;
 
 public:
-	inline GameObject* GameObject()
+	inline GameObject* GetGameObject()
 	{
 		return m_object;
 	}

@@ -50,16 +50,22 @@ file(
 
     "MainSystem/*.h"
     "MainSystem/*.cpp"
+
     "MainSystem/Rendering/*.h"
     "MainSystem/Rendering/*.cpp"
     "MainSystem/Rendering/Components/*.h"
     "MainSystem/Rendering/Components/*.cpp"
     "MainSystem/Rendering/RenderingPipeline/*.h"
     "MainSystem/Rendering/RenderingPipeline/*.cpp"
+
     "MainSystem/Physics/*.h"
     "MainSystem/Physics/*.cpp"
+
     "MainSystem/Scripting/*.h"
     "MainSystem/Scripting/*.cpp"
+    "MainSystem/Scripting/Components/*.h"
+    "MainSystem/Scripting/Components/*.cpp"
+
     "MainSystem/Audio/*.h"
     "MainSystem/Audio/*.cpp"
     "MainSystem/Animation/*.h"

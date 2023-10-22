@@ -8,10 +8,10 @@
 
 using namespace soft;
 
-void Initialize(Runtime* engine);
-void Finalize(Runtime* engine);
+void Initialize(Runtime* runtime);
+void Finalize(Runtime* runtime);
 
-class ScriptBridge : public Plugin
+class PluginImpl : public Plugin
 {
 public:
 	virtual void GetDesc(PLUGIN_DESC* output) override
@@ -24,19 +24,19 @@ public:
 
 	}
 
-	virtual void Initialize(Runtime* engine)
+	virtual void Initialize(Runtime* runtime)
 	{
 		ImGuiBridge::InitializeImGui();
-		::Initialize(engine);
+		::Initialize(runtime);
 	}
 
-	virtual void Finalize(Runtime* engine)
+	virtual void Finalize(Runtime* runtime)
 	{
-		::Finalize(engine);
+		::Finalize(runtime);
 		ImGuiBridge::FinalizeImGui();
 	}
 
 };
 
-DECLARE_PLUGIN(ScriptBridge);
-IMPL_PLUGIN(ScriptBridge);
+DECLARE_PLUGIN(PluginImpl);
+IMPL_PLUGIN(PluginImpl);

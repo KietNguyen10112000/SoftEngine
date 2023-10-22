@@ -16,6 +16,7 @@ Scene::Scene(Runtime* runtime)
 
 	m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
+	SetupDeferLists();
 
 	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
 	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = new ScriptingSystem(this);
@@ -81,6 +82,21 @@ void Scene::SetupMainSystemIterationTasks()
 		auto scene = (Scene*)p;
 		scene->EndReconstructForAllMainSystems();
 	};
+
+	// output systems
+	m_mainOutputSystemIterationTasks[m_numMainOutputSystem++]			= m_mainSystemIterationTasks[MainSystemInfo::RENDERING_ID];
+
+	// processing systems
+	//m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::PHYSICS_ID];
+	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::SCRIPTING_ID];
+}
+
+void Scene::SetupDeferLists()
+{
+	for (auto& list : m_changedTransformList)
+	{
+		list.ReserveNoSafe(8 * KB);
+	}
 }
 
 void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
@@ -99,6 +115,8 @@ void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 					comp->OnComponentAdded();
 					comp->OnTransformChanged();
 				}
+
+				return false;
 			}
 		);
 	}
@@ -126,32 +144,26 @@ void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 
 void Scene::OnObjectTransformChanged(GameObject* obj)
 {
-	if (obj->m_isChangedTransform)
+	if (obj->m_isRecoredChangeTransformIteration.exchange(m_iterationCount, std::memory_order_acquire) == m_iterationCount)
 	{
 		return;
 	}
 
-	obj->m_isChangedTransform = true;
-	GetCurrentChangedTransformList().push_back(obj);
+	GetCurrentChangedTransformList().Add(obj);
 }
 
 void Scene::ProcessChangedTransformListForMainSystem(ID mainSystemId)
 {
-	auto& list = GetPrevChangedTransformList();
 	auto& system = m_mainSystems[mainSystemId];
+	auto& list = GetPrevStagedChangeTransformList();
 	for (auto& obj : list)
 	{
-		obj->PreTraversal(
-			[system, mainSystemId](GameObject* obj)
-			{
-				auto& comp = obj->m_mainComponents[mainSystemId];
-				if (comp)
-				{
-					comp->OnTransformChanged();
-					system->OnObjectTransformChanged(comp);
-				}
-			}
-		);
+		auto& comp = obj->m_mainComponents[mainSystemId];
+		if (comp)
+		{
+			comp->OnTransformChanged();
+			system->OnObjectTransformChanged(comp);
+		}
 	}
 }
 
@@ -173,6 +185,96 @@ void Scene::EndReconstructForAllMainSystems()
 		obj->m_scene = nullptr;
 		obj->m_sceneId = INVALID_ID;
 	}
+}
+
+void Scene::SynchMainProcessingSystems()
+{
+	StageAllChangedTransformObjects();
+}
+
+void Scene::SynchMainProcessingSystemForMainOutputSystems()
+{
+	auto& list = GetCurrentStagedChangeTransformList();
+	for (auto& obj : list)
+	{
+		obj->UpdateTransformReadWrite();
+	}
+}
+
+void Scene::StageAllChangedTransformObjects()
+{
+	static TaskWaitingHandle handle = { 0,0 };
+
+	auto& destList = GetCurrentStagedChangeTransformList();
+	destList.clear();
+	auto& list = GetCurrentChangedTransformList();
+
+	TaskSystem::PrepareHandle(&handle);
+	for (auto& obj : list)
+	{
+		if (obj->m_updatedTransformIteration == m_iterationCount)
+		{
+			continue;
+		}
+
+		auto root = obj;
+		GameObject* nearestRootChangedTransform = nullptr;
+		while (true)
+		{
+			if (root->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
+			{
+				nearestRootChangedTransform = root;
+			}
+
+			auto parent = root->Parent().Get();
+			if (!parent)
+			{
+				break;
+			}
+
+			root = parent;
+		}
+
+		if (!nearestRootChangedTransform)
+		{
+			continue;
+		}
+
+		Task recalculateTransformTask;
+		recalculateTransformTask.Entry() = [](void* p)
+		{
+			auto gameObject = (GameObject*)p;
+			auto numTransformContributors = gameObject->m_numTransformContributors.load(std::memory_order_relaxed);
+			gameObject->m_numTransformContributors.store(0, std::memory_order_relaxed);
+
+			auto& contributors = gameObject->m_transformContributors;
+			for (uint32_t i = 0; i < numTransformContributors; i++)
+			{
+				contributors[i].func(gameObject, contributors[i].comp);
+			}
+
+			gameObject->RecalculateWriteTransform();
+		};
+		recalculateTransformTask.Params() = nearestRootChangedTransform;
+
+		TaskSystem::Submit(&handle, recalculateTransformTask, Task::CRITICAL);
+
+		nearestRootChangedTransform->PreTraversal(
+			[&](GameObject* cur)
+			{
+				if (cur->m_updatedTransformIteration == m_iterationCount)
+				{
+					return true;
+				}
+
+				cur->m_updatedTransformIteration = m_iterationCount;
+				destList.push_back(cur);
+				return false;
+			}
+		);
+	}
+
+	TaskSystem::WaitForHandle(&handle);
 }
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
@@ -261,7 +363,7 @@ void Scene::Iteration(float dt)
 	m_iterationCount++;
 	GetCurrentAddList().clear();
 	GetCurrentRemoveList().clear();
-	GetCurrentChangedTransformList().clear();
+	GetCurrentChangedTransformList().Clear();
 	GetCurrentTrash().clear();
 
 	//m_numMainSystemEndReconstruct.store(MainSystemInfo::COUNT, std::memory_order_relaxed);
@@ -274,8 +376,24 @@ void Scene::Iteration(float dt)
 			sys->PrevIteration();
 		}
 	}
+
+	Task tasks[2];
+	tasks[0].Entry() = [](void* p)
+	{
+		auto scene = (Scene*)p;
+		TaskSystem::SubmitAndWait(scene->m_mainOutputSystemIterationTasks, scene->m_numMainOutputSystem, Task::CRITICAL);
+	};
+	tasks[0].Params() = this;
+
+	tasks[1].Entry() = [](void* p)
+	{
+		auto scene = (Scene*)p;
+		TaskSystem::SubmitAndWait(scene->m_mainProcessingSystemIterationTasks, scene->m_numMainProcessingSystem, Task::CRITICAL);
+		scene->SynchMainProcessingSystems();
+	};
+	tasks[1].Params() = this;
 	
-	TaskSystem::SubmitAndWait(m_mainSystemIterationTasks, MainSystemInfo::COUNT, Task::CRITICAL);
+	TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
 
 	//TaskSystem::WaitForHandle(&m_endReconstructWaitingHandle);
 
@@ -288,6 +406,8 @@ void Scene::Iteration(float dt)
 			sys->PostIteration();
 		}
 	}
+
+	SynchMainProcessingSystemForMainOutputSystems();
 }
 
 NAMESPACE_END

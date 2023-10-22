@@ -30,6 +30,12 @@ public:
 
 	SERIALIZABLE_CLASS(GameObject);
 
+	struct TransformContributor
+	{
+		void* comp;
+		void (*func)(GameObject* object, void* comp);
+	};
+
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
@@ -43,17 +49,23 @@ private:
 
 	Scene* m_scene = nullptr;
 	bool m_isLongLife = true;
-	bool m_isChangedTransform = false;
-	bool m_padd[6];
+	bool m_padd[7];
+
+	std::atomic<size_t> m_isRecoredChangeTransformIteration = { 0 };
+	size_t m_updatedTransformIteration = 0;
+
 	ID m_sceneId = INVALID_ID;
 
 	String m_indexedName;
 	String m_name;
 
+	TransformContributor m_transformContributors[MainSystemInfo::COUNT] = {};
+	std::atomic<uint32_t> m_numTransformContributors = { 0 };
+
 	Mat4		m_globalTransformMat	[NUM_TRANSFORM_BUFFERS] = {};
 	Mat4		m_localTransformMat		[NUM_TRANSFORM_BUFFERS] = {};
 	Transform	m_localTransform		[NUM_TRANSFORM_BUFFERS] = {};
-	size_t		m_transformReadIdx								= 0;
+	uint32_t	m_transformReadIdx								= 0;
 
 private:
 	TRACEABLE_FRIEND();
@@ -126,6 +138,16 @@ private:
 	inline void RecalculateWriteTransform()
 	{
 		RecalculateTransform((m_transformReadIdx + 1) % NUM_TRANSFORM_BUFFERS);
+	}
+
+	void IndirectSetLocalTransform(const Transform& transform);
+
+	inline void ContributeLocalTransform(void* p, void (*func)(GameObject*, void*))
+	{
+		auto idx = m_numTransformContributors++;
+		assert(idx < MainSystemInfo::COUNT);
+		m_transformContributors[idx].comp = p;
+		m_transformContributors[idx].func = func;
 	}
 
 public:
@@ -213,7 +235,7 @@ public:
 	template <typename Func>
 	void PreTraversal(Func func)
 	{
-		func(this);
+		if (func(this)) return;
 		for (auto& child : m_children)
 		{
 			child->PreTraversal(func);
@@ -278,19 +300,36 @@ public:
 		return m_name;
 	}
 
-	inline auto Scene()
+	inline auto GetScene()
 	{
 		return m_scene;
 	}
 
-	inline void SetTransform(const Transform& transform)
+	inline bool IsInAnyScene()
 	{
-		for (auto& trans : m_localTransform)
+		return m_scene && m_sceneId != INVALID_ID;
+	}
+
+	inline const auto& GetLocalTransform()
+	{
+		return ReadLocalTransform();
+	}
+
+	inline void SetLocalTransform(const Transform& transform)
+	{
+		if (!IsInAnyScene()) 
 		{
-			trans = transform;
+			// no need multithread, direct update
+			for (auto& trans : m_localTransform)
+			{
+				trans = transform;
+			}
+			RecalculateReadTransform();
+			RecalculateWriteTransform();
+			return;
 		}
-		RecalculateReadTransform();
-		RecalculateWriteTransform();
+		
+		IndirectSetLocalTransform(transform);
 	}
 
 };

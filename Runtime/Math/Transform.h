@@ -20,7 +20,7 @@ public:
 		return Mat4::Scaling(m_scale.xyz()) * Mat4::Rotation(m_rotation) * Mat4::Translation(m_translation.xyz());
 	}
 
-	inline bool Equals(const Transform& transform)
+	inline bool Equals(const Transform& transform) const
 	{
 		return m_scale			== transform.m_scale 
 			&& m_translation	== transform.m_translation

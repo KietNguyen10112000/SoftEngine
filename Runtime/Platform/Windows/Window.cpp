@@ -49,10 +49,16 @@ public:
         POINT point;
         GetCursorPos(&point);
 
-        input->SetCursor(0, point.x, point.y, true);
-
         auto& cursor = input->m_curCursors[0];
         auto& prev = input->m_prevCursors[0];
+
+        if (cursor.position.x == point.x && cursor.position.y == point.y)
+        {
+            return;
+        }
+
+        input->SetCursor(0, point.x, point.y, true);
+
         if (cursor.isLocked)
         {
             SetCursorPos(prev.position.x, prev.position.y);

@@ -6,6 +6,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Structures/String.h"
 #include "Core/Structures/Managed/Array.h"
+#include "Core/Structures/Raw/ConcurrentList.h"
+
 #include "TaskSystem/TaskSystem.h"
 #include "MainSystem/MainSystemInfo.h"
 
@@ -18,6 +20,7 @@ class Input;
 class Scene final : Traceable<Scene>
 {
 private:
+	friend class GameObject;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 	constexpr static size_t NUM_TRASH_ARRAY = 2;
@@ -34,9 +37,13 @@ private:
 
 	Array<Handle<GameObject>> m_trashObjects[NUM_TRASH_ARRAY];
 
-	std::vector<GameObject*> m_addList				[NUM_DEFER_LIST] = {};
-	std::vector<GameObject*> m_removeList			[NUM_DEFER_LIST] = {};
-	std::vector<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
+	std::vector<GameObject*> m_addList								[NUM_DEFER_LIST] = {};
+	std::vector<GameObject*> m_removeList							[NUM_DEFER_LIST] = {};
+	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
+
+	// no child, no parent, just an order to call MainComponent::OnTransformChanged
+	std::vector<GameObject*> m_stagedChangeTransformList			[NUM_DEFER_LIST] = {};
+	//std::vector<GameObject*> m_changedTransformRoots;
 
 	MainSystem*				 m_mainSystems[MainSystemInfo::COUNT] = {};
 
@@ -50,7 +57,10 @@ private:
 
 	IterationTaskParam	m_taskParams							[MainSystemInfo::COUNT] = {};
 	Task				m_mainSystemIterationTasks				[MainSystemInfo::COUNT] = {};
-
+	Task				m_mainOutputSystemIterationTasks		[MainSystemInfo::COUNT] = {};
+	uint32_t			m_numMainOutputSystem											= 0;
+	Task				m_mainProcessingSystemIterationTasks	[MainSystemInfo::COUNT] = {};
+	uint32_t			m_numMainProcessingSystem										= 0;
 
 	std::atomic<size_t>		m_numMainSystemEndReconstruct = 0;
 	TaskWaitingHandle		m_endReconstructWaitingHandle = { 0,0 };
@@ -76,6 +86,8 @@ private:
 	void BakeAllMainSystems();
 	void SetupMainSystemIterationTasks();
 
+	void SetupDeferLists();
+
 	/// 
 	/// add all object's components to main system
 	/// 
@@ -91,6 +103,10 @@ private:
 	/// 
 	void OnObjectTransformChanged(GameObject* obj);
 	void ProcessChangedTransformListForMainSystem(ID mainSystemId);
+
+	void StageAllChangedTransformObjects();
+	void SynchMainProcessingSystems();
+	void SynchMainProcessingSystemForMainOutputSystems();
 
 	void EndReconstructForMainSystem(ID mainSystemId);
 	void EndReconstructForAllMainSystems();
@@ -115,6 +131,11 @@ private:
 		return m_changedTransformList[m_iterationCount % NUM_DEFER_LIST];
 	}
 
+	inline auto& GetCurrentStagedChangeTransformList()
+	{
+		return m_stagedChangeTransformList[m_iterationCount % NUM_DEFER_LIST];
+	}
+
 	inline auto& GetPrevTrash()
 	{
 		return m_trashObjects[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
@@ -133,6 +154,11 @@ private:
 	inline auto& GetPrevChangedTransformList()
 	{
 		return m_changedTransformList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+	}
+
+	inline auto& GetPrevStagedChangeTransformList()
+	{
+		return m_stagedChangeTransformList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
 	}
 
 public:

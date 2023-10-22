@@ -622,6 +622,8 @@ public:
     {
         return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
     }
+
+    inline void SetFromMat4(const Mat4& mat);
 };
 
 class Mat3 : glm::mat3
@@ -1136,6 +1138,12 @@ inline Mat4 Quaternion::ToMat4() const
 }
 
 inline Quaternion::Quaternion(const Mat4& mat4)
+{
+    GLMQuat() = glm::quat(mat4.GLMMatConst());
+    Normalize();
+}
+
+inline void Quaternion::SetFromMat4(const Mat4& mat4)
 {
     GLMQuat() = glm::quat(mat4.GLMMatConst());
     Normalize();

@@ -45,6 +45,9 @@
 #include "MainSystem/MainComponentDB.h"
 #include "MainSystem/MainComponentList.h"
 
+#include "MainSystem/Scripting/ScriptMeta.h"
+#include "MainSystem/Scripting/Components/Script.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -107,12 +110,14 @@ Runtime::Runtime()
 	BuiltinConstantBuffers::SingletonInitialize();
 	DisplayService::SingletonInitialize();
 	MainComponentDB::SingletonInitialize();
+	ScriptMeta::SingletonInitialize();
 
 	MainComponentList::Initialize();
 }
 
 Runtime::~Runtime()
 {
+	ScriptMeta::SingletonFinalize();
 	MainComponentDB::SingletonFinalize();
 	DisplayService::SingletonFinalize();
 	BuiltinConstantBuffers::SingletonFinalize();
@@ -136,6 +141,9 @@ void Runtime::InitGraphics()
 		{
 			m_isRunning = false;
 		}
+
+		platform::ProcessPlatformMsg(m_window);
+		platform::ProcessPlatformMsg(m_window);
 	}
 }
 
@@ -198,6 +206,88 @@ void Runtime::FinalPlugins()
 	PluginLoader::UnloadAll(this, m_plugins);
 }
 
+class FPPCameraScript : public Script
+{
+private:
+	SCRIPT_DEFAULT_METHOD(FPPCameraScript);
+
+	float m_rotateX = 0;
+	float m_rotateY = 0;
+	float m_rotateZ = 0;
+	Vec3 m_position = {};
+
+	float m_speed = 10;
+	float m_rotationSensi = 0.12f;
+
+protected:
+	virtual void OnStart() override
+	{
+		auto transform = GetGameObject()->GetLocalTransform().ToTransformMatrix();
+
+		m_position = transform.Position();
+		Vec3 direction = transform.Forward().Normal();
+		m_rotateX = asin(direction.y);
+		m_rotateY = atan2(direction.x, direction.z);
+	}
+
+	virtual void OnUpdate(float dt) override
+	{
+		auto trans = Mat4::Identity();
+		trans *= Mat4::Rotation(Vec3::Y_AXIS, m_rotateY);
+
+		auto right = trans.Right().Normal();
+		trans *= Mat4::Rotation(right, -m_rotateX);
+
+		auto forward = trans.Forward().Normal();
+
+		if (m_rotateZ != 0)
+		{
+			trans *= Mat4::Rotation(forward, m_rotateZ);
+		}
+
+		auto d = m_speed * dt;
+		if (Input()->IsKeyDown('W'))
+		{
+			m_position += forward * d;
+		}
+
+		if (Input()->IsKeyDown('S'))
+		{
+			m_position -= forward * d;
+		}
+
+		if (Input()->IsKeyDown('A'))
+		{
+			m_position -= right * d;
+		}
+
+		if (Input()->IsKeyDown('D'))
+		{
+			m_position += right * d;
+		}
+
+		if (Input()->IsKeyUp(KEYBOARD::ESC))
+		{
+			std::cout << "ESC pressed\n";
+			Input()->SetCursorLock(!Input()->GetCursorLock());
+		}
+
+		if (/*Input()->GetCursorLock() &&*/ Input()->IsCursorMoved())
+		{
+			auto& delta = Input()->GetDeltaCursorPosition();
+			m_rotateY += delta.x * dt * m_rotationSensi;
+			m_rotateX += delta.y * dt * m_rotationSensi;
+
+			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
+		}
+
+		auto transform = Transform();
+		transform.Position() = m_position;
+		transform.Rotation().SetFromMat4(trans);
+		SetLocalTransform(transform);
+	}
+
+};
 
 void Runtime::Setup()
 {
@@ -217,6 +307,7 @@ void Runtime::Setup()
 	Transform transform = {};
 
 	auto cameraObj = mheap::New<GameObject>();
+	cameraObj->NewComponent<FPPCameraScript>();
 	auto camera = cameraObj->NewComponent<Camera>();
 	camera->Projection().SetPerspectiveFovLH(
 		PI / 3.0f,
@@ -226,7 +317,7 @@ void Runtime::Setup()
 	);
 	scene->AddObject(cameraObj);
 
-	auto rotationMat = Mat4::Rotation(Vec3::UP, PI / 3.0f);
+	/*auto rotationMat = Mat4::Rotation(Vec3::UP, PI / 3.0f);
 	transform.Position() = { -5,-5,-5 };
 	transform.Rotation() = Quaternion(rotationMat);
 	cameraObj = mheap::New<GameObject>();
@@ -238,24 +329,26 @@ void Runtime::Setup()
 		0.5f,
 		1000.0f
 	);
-	scene->AddObject(cameraObj);
+	scene->AddObject(cameraObj);*/
 
 	transform = {};
 	transform.Position() = { 0,0,5 };
 	auto object = mheap::New<GameObject>();
-	object->SetTransform(transform);
+	object->SetLocalTransform(transform);
 	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
 	scene->AddObject(object);
 
+	transform = {};
 	transform.Position() = { -5,0,5 };
 	object = mheap::New<GameObject>();
-	object->SetTransform(transform);
+	object->SetLocalTransform(transform);
 	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
 	scene->AddObject(object);
 
+	transform = {};
 	transform.Position() = { 5,0,5 };
 	object = mheap::New<GameObject>();
-	object->SetTransform(transform);
+	object->SetLocalTransform(transform);
 	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
 	scene->AddObject(object);
 }

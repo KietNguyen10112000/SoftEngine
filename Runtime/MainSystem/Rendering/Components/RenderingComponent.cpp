@@ -6,7 +6,7 @@ NAMESPACE_BEGIN
 
 void RenderingComponent::OnTransformChanged()
 {
-	m_globalTransform = GameObject()->ReadGlobalTransformMat();
+	m_globalTransform = GetGameObject()->ReadGlobalTransformMat();
 }
 
 NAMESPACE_END
