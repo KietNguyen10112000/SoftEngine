@@ -4,6 +4,8 @@
 #include "Input/KEYBOARD.h"
 
 #include <Windows.h>
+#include <windowsx.h>
+#include <hidusage.h>
 
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_win32.h"
@@ -40,24 +42,50 @@ public:
         cursor.position = { point.x, point.y };
 
         prev = cursor;
+
+        RECT rect;
+        ::GetClientRect(w->hwnd, &rect);
+        input->m_clientWidth = rect.right - rect.left;
+        input->m_clientHeight = rect.bottom - rect.top;
+        input->m_clientPosition = { rect.top, rect.left };
+
+        ::GetWindowRect(w->hwnd, &rect);
+        input->m_windowWidth = rect.right - rect.left;
+        input->m_windowHeight = rect.bottom - rect.top;
+        input->m_windowPosition = { rect.top, rect.left };
+
+        /*RAWINPUTDEVICE Rid[1];
+        Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
+        Rid[0].usUsage = HID_USAGE_GENERIC_MOUSE;
+        Rid[0].dwFlags = RIDEV_INPUTSINK;
+        Rid[0].hwndTarget = w->hwnd;
+        RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));*/
     }
 
-    friend void PlatformInput_ProcessCursorPos(WindowsWindow* w)
+    friend void PlatformInput_ProcessCursorPos(WindowsWindow* w, int deltaX, int deltaY)
     {
         PlatformInput* input = (PlatformInput*)w->input;
 
         POINT point;
         GetCursorPos(&point);
 
+        int x = point.x;
+        int y = point.y;
+
+        //int x = 0;
+        //int y = 0;
+
         auto& cursor = input->m_curCursors[0];
         auto& prev = input->m_prevCursors[0];
 
-        if (cursor.position.x == point.x && cursor.position.y == point.y)
+        if (cursor.position.x == x && cursor.position.y == y)
         {
             return;
         }
 
-        input->SetCursor(0, point.x, point.y, true);
+        input->SetCursor(0, x, y, true);
+
+        //cursor.offset = { deltaX, deltaY };
 
         if (cursor.isLocked)
         {
@@ -83,9 +111,49 @@ public:
 
         switch (uMsg)
         {
+        case WM_MOVE:
+        case WM_SIZE:
+        {
+            RECT rect;
+            ::GetClientRect(w->hwnd, &rect);
+            input->m_clientWidth = rect.right - rect.left;
+            input->m_clientHeight = rect.bottom - rect.top;
+            input->m_clientPosition = { rect.top, rect.left };
+
+            ::GetWindowRect(w->hwnd, &rect);
+            input->m_windowWidth = rect.right - rect.left;
+            input->m_windowHeight = rect.bottom - rect.top;
+            input->m_windowPosition = { rect.top, rect.left };
+
+            break;
+        }
+        //case WM_INPUT:
+        //{
+        //    UINT dwSize = sizeof(RAWINPUT);
+        //    static BYTE lpb[sizeof(RAWINPUT)];
+
+        //    GetRawInputData((HRAWINPUT)lParam, RID_INPUT,
+        //        lpb, &dwSize, sizeof(RAWINPUTHEADER));
+
+        //    RAWINPUT* raw = (RAWINPUT*)lpb;
+
+        //    if (raw->header.dwType == RIM_TYPEMOUSE)
+        //    {
+        //        int xPosRelative = raw->data.mouse.lLastX;
+        //        int yPosRelative = raw->data.mouse.lLastY;
+        //        PlatformInput_ProcessCursorPos(w, xPosRelative, yPosRelative);
+
+        //        //std::cout << xPosRelative << ", " << yPosRelative << "\n";
+        //    }
+        //    break;
+        //}
         /*case WM_MOUSEMOVE:
-            PlatformInput_ProcessCursorPos(w);
-            break;*/
+        {
+            int xPos = GET_X_LPARAM(lParam);
+            int yPos = GET_Y_LPARAM(lParam);
+            PlatformInput_ProcessCursorPos(w, xPos + input->m_windowPosition.x, yPos + input->m_windowPosition.y);
+            break;
+        }*/
         case WM_KEYDOWN:
             //Input::lastKeyDown = wParam;
             input->DownKey(wParam);
@@ -267,7 +335,7 @@ bool ProcessPlatformMsg(WindowNative* window)
         DispatchMessage(&msg);
     }
 
-    PlatformInput_ProcessCursorPos(w);
+    PlatformInput_ProcessCursorPos(w, 0, 0);
 
     return w->close == true;
 }

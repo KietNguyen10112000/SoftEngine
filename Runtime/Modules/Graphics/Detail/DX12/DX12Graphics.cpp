@@ -1312,7 +1312,7 @@ void DX12Graphics::BeginFrame()
     cmdList->ResourceBarrier(1, &barrier);*/
 }
 
-void DX12Graphics::EndFrame(bool vsync)
+void DX12Graphics::EndFrame()
 {
     auto cmdList = GetCmdList();
     D3D12_RESOURCE_BARRIER barrier = {};
@@ -1339,8 +1339,6 @@ void DX12Graphics::EndFrame(bool vsync)
 
     ExecuteCurrentCmdList();
 
-    ThrowIfFailed(m_swapChain->Present(vsync ? 1 : 0, 0));
-
     m_frameFenceValues[m_currentBackBufferId] = GetCurrentDX12FenceValue() - 1;
     /*ThrowIfFailed(
         m_commandQueue->Signal(
@@ -1354,6 +1352,11 @@ void DX12Graphics::EndFrame(bool vsync)
     m_currentGraphicsPipeline = nullptr;
     m_currentDX12GraphicsPipeline = nullptr;
     ProcessFreeDX12ResourceList();
+}
+
+void DX12Graphics::Present(bool vsync)
+{
+    ThrowIfFailed(m_swapChain->Present(vsync ? 1 : 0, 0));
 }
 
 NAMESPACE_DX12_END

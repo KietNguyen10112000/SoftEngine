@@ -11,8 +11,8 @@ class Input
 public:
 	struct Position
 	{
-		int x;
-		int y;
+		int x = 0;
+		int y = 0;
 	};
 
 	struct Cursor
@@ -46,6 +46,11 @@ protected:
 
 	int m_windowWidth = 0;
 	int m_windowHeight = 0;
+	Position m_windowPosition;
+
+	int m_clientWidth = 0;
+	int m_clientHeight = 0;
+	Position m_clientPosition;
 
 protected:
 	inline void DownKey(byte keyCode)
@@ -100,7 +105,11 @@ protected:
 		cursor.position.x = x;
 		cursor.position.y = y;
 
-		//std::cout << "cursor.offset = (" << cursor.offset.x << ", " << cursor.offset.y << ")\n";
+		//prevCursor.position.x = x;
+		//prevCursor.position.y = y;
+
+		//std::cout << "cursor.position = (" << cursor.position.x << ", " << cursor.position.y << ")\n";
+		//std::cout << "winpos = (" << m_windowPosition.x << ", " << m_windowPosition.y << ")\n";
 	}
 
 public:
@@ -196,6 +205,26 @@ public:
 	inline int GetWindowHeight()
 	{
 		return m_windowHeight;
+	}
+
+	inline const auto& GetWindowPosition()
+	{
+		return m_windowPosition;
+	}
+
+	inline int GetClientWidth()
+	{
+		return m_clientWidth;
+	}
+
+	inline int GetClientHeight()
+	{
+		return m_clientHeight;
+	}
+
+	inline const auto& GetClientPosition()
+	{
+		return m_clientPosition;
 	}
 };
 

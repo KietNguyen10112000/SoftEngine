@@ -101,7 +101,9 @@ public:
 	virtual void WaitForFenceValue(uint64_t value) = 0;
 
 	virtual void BeginFrame() = 0;
-	virtual void EndFrame(bool vsync) = 0;
+	virtual void EndFrame() = 0;
+
+	virtual void Present(bool vsyn) = 0;
 
 public:
 	inline auto GetDebugGraphics()

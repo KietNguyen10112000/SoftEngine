@@ -395,7 +395,7 @@ void RenderingSystem::Iteration(float dt)
 
 	DisplayAllCamera();
 
-	graphics->EndFrame(true);
+	graphics->EndFrame();
 }
 
 void RenderingSystem::PrevIteration()

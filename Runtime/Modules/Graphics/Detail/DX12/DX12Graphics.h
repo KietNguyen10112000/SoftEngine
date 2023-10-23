@@ -174,7 +174,9 @@ public:
 
 	virtual void BeginFrame() override;
 
-	virtual void EndFrame(bool vsync) override;
+	virtual void EndFrame() override;
+
+	virtual void Present(bool vsyn) override;
 
 public:
 	void AllocateDX12Resource(

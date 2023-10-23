@@ -217,7 +217,7 @@ private:
 	Vec3 m_position = {};
 
 	float m_speed = 10;
-	float m_rotationSensi = 0.12f;
+	float m_rotationSensi = 0.06f;
 
 protected:
 	virtual void OnStart() override
@@ -272,7 +272,7 @@ protected:
 			Input()->SetCursorLock(!Input()->GetCursorLock());
 		}
 
-		if (/*Input()->GetCursorLock() &&*/ Input()->IsCursorMoved())
+		if (Input()->GetCursorLock() && Input()->IsCursorMoved())
 		{
 			auto& delta = Input()->GetDeltaCursorPosition();
 			m_rotateY += delta.x * dt * m_rotationSensi;
@@ -415,7 +415,19 @@ void Runtime::Iteration()
 	processInput.Params() = this;
 	processInput.Entry() = [](void* e)
 	{
+		static bool isFirstIteration = true;
+
 		auto engine = (Runtime*)e;
+
+		if (isFirstIteration) 
+		{
+			isFirstIteration = false;
+		}
+		else 
+		{
+			Graphics::Get()->Present(true);
+		}
+
 		engine->ProcessInput();
 
 		//std::cout << "ProcessInput [thread id: " << Thread::GetID() << ", fiber id: " << Thread::GetCurrentFiberID() << "]\n";
