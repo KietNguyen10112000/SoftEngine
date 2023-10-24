@@ -13,11 +13,11 @@ def assimp():
                 r' && cmake --build ../build/vcprojects/assimp --config Release'
     ))
     
-    copy_all_files('../build/vcprojects/assimp/lib/Debug', '../build/assimp/Debug', ['**/*.dll', '**/*.lib', '**/*.pdb'])
-    copy_all_files('../build/vcprojects/assimp/bin/Debug', '../build/assimp/Debug', ['**/*.dll', '**/*.lib', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/assimp/lib/Debug', '../../build/bin/Debug', ['**/*.dll', '**/*.lib', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/assimp/bin/Debug', '../../build/bin/Debug', ['**/*.dll', '**/*.lib', '**/*.pdb'])
     
-    copy_all_files('../build/vcprojects/assimp/lib/Release', '../build/assimp/Release', ['**/*.dll', '**/*.lib', '**/*.pdb'])
-    copy_all_files('../build/vcprojects/assimp/bin/Release', '../build/assimp/Release', ['**/*.dll', '**/*.lib', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/assimp/lib/Release', '../../build/bin/Release', ['**/*.dll', '**/*.lib', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/assimp/bin/Release', '../../build/bin/Release', ['**/*.dll', '**/*.lib', '**/*.pdb'])
     
 #=============================RUNNING=================================================
 assimp();

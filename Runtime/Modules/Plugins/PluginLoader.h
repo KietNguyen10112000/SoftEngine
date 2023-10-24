@@ -18,6 +18,8 @@ public:
 
 	static void Unload(Runtime* engine, Plugin* input, bool freeLib = false);
 
+	static Plugin* GetCurrentLoadingPlugin();
+
 };
 
 NAMESPACE_END

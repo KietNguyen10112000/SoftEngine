@@ -2,6 +2,10 @@
 
 #include "Core/TypeDef.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Structures/String.h"
+#include "Core/Structures/STD/STDContainers.h"
+
+#include "MainSystem/MainSystemInfo.h"
 
 NAMESPACE_BEGIN
 
@@ -40,6 +44,8 @@ class Plugin
 {
 private:
 	friend class PluginLoader;
+	friend class MainComponentDB;
+
 	size_t m_id = INVALID_ID;
 	void* m_nativeHandle = nullptr;
 
@@ -49,12 +55,21 @@ private:
 
 	friend Plugin* PluginLoader_LoadPluginNative(Runtime* engine, const wchar_t* path, void*& outputHandle);
 
+	// custom main components from plugin of each MainComponent type
+	std::vector<String> m_customComps[MainSystemInfo::COUNT];
+
 public:
 	virtual void GetDesc(PLUGIN_DESC* output) = 0;
 	virtual void Update() = 0;
 
 	virtual void Initialize(Runtime* engine) = 0;
 	virtual void Finalize(Runtime* engine) = 0;
+
+public:
+	inline const auto& GetComponentNameList(ID COMPONENT_ID) const
+	{
+		return m_customComps[COMPONENT_ID];
+	}
 };
 
 NAMESPACE_END

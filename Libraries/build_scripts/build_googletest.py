@@ -18,11 +18,11 @@ def googletest():
     #os.system('cmake --build ./build/googletest --config Debug')
     #os.system('cmake --build ./build/googletest --config Release')
     
-    copy_all_files('../build/vcprojects/googletest/lib/Debug', '../build/googletest/Debug', ['**/*.lib', '**/*.pdb'])
-    copy_all_files('../build/vcprojects/googletest/bin/Debug', '../build/googletest/Debug', ['**/*.dll', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/googletest/lib/Debug', '../../build/bin/Debug', ['**/*.lib', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/googletest/bin/Debug', '../../build/bin/Debug', ['**/*.dll', '**/*.pdb'])
     
-    copy_all_files('../build/vcprojects/googletest/lib/Release', '../build/googletest/Release', ['**/*.lib', '**/*.pdb'])
-    copy_all_files('../build/vcprojects/googletest/bin/Release', '../build/googletest/Release', ['**/*.dll', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/googletest/lib/Release', '../../build/bin/Release', ['**/*.lib', '**/*.pdb'])
+    copy_all_files('../build/vcprojects/googletest/bin/Release', '../../build/bin/Release', ['**/*.dll', '**/*.pdb'])
     
     #copy_all_files('./googletest/googletest/include', '../build/googletest/include', ['**/*.h'])
 

@@ -20,6 +20,8 @@ using PluginCtor = Plugin* (*)(Runtime*);
 struct PluginLoaderData
 {
 	std::vector<Plugin*, STDAllocatorMalloc<Plugin*>> loadedPlugins;
+
+	Plugin* currentLoadingPlugin = nullptr;
 };
 
 PluginLoaderData g_pluginData;
@@ -62,8 +64,6 @@ bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin
 
 	static TaskWaitingHandle taskHandle = { 0,0 };
 
-	TaskSystem::PrepareHandle(&taskHandle);
-
 	std::wstring_view ending = ENDING;
 
 	bool ret = true;
@@ -96,6 +96,10 @@ bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin
 
 			if (plugin)
 			{
+				TaskSystem::PrepareHandle(&taskHandle);
+
+				g_pluginData.currentLoadingPlugin = plugin;
+
 				plugin->m_id = g_pluginData.loadedPlugins.size();
 				plugin->m_nativeHandle = handle;
 				g_pluginData.loadedPlugins.push_back(plugin);
@@ -123,6 +127,8 @@ bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin
 				taskHandle.counter--;
 
 				plugin->Initialize(engine);
+
+				g_pluginData.currentLoadingPlugin = nullptr;
 			}
 			else
 			{
@@ -187,6 +193,11 @@ void PluginLoader::UnloadAll(Runtime* engine, std::Vector<Plugin*>& input, bool 
 	{
 		Unload(engine, plugin, freeLib);
 	}
+}
+
+Plugin* PluginLoader::GetCurrentLoadingPlugin()
+{
+	return nullptr;
 }
 
 NAMESPACE_END

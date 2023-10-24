@@ -30,6 +30,7 @@ friend class MainSystem;				\
 friend class RenderingSystem;			\
 friend class PhysicsSystem;				\
 friend class ScriptingSystem;			\
+friend class MainComponentDB;			\
 friend class AudioSystem;
 
 NAMESPACE_END

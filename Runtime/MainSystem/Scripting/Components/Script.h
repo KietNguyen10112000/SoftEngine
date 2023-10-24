@@ -23,9 +23,8 @@ private:																						\
 		static ScriptMetaData* metaData = nullptr;												\
 		if (metaData == nullptr)																\
 		{																						\
-			metaData = new ScriptMetaData();metaData->className = GetClassName();				\
+			metaData = ScriptMeta::Get()->AllocateMetaData(GetClassName());						\
 			_InitializeScriptMetaData<clazz>(metaData);											\
-			ScriptMeta::Get()->RegisterScriptMetaData(metaData);								\
 		}																						\
 		return 	metaData;																		\
 																								\
@@ -37,6 +36,7 @@ class Script : public MainComponent
 private:
 	friend class ScriptScheduler;
 	friend class GameObject;
+	friend class MainComponentDB;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 	constexpr static ID COMPONENT_ID = MainSystemInfo::SCRIPTING_ID;

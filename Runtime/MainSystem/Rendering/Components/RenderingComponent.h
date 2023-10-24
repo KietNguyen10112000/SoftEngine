@@ -13,6 +13,7 @@ class RenderingComponent : public MainComponent
 {
 private:
 	friend class GameObject;
+	MAIN_SYSTEM_FRIEND_CLASSES();
 	constexpr static ID COMPONENT_ID = MainSystemInfo::RENDERING_ID;
 
 protected:

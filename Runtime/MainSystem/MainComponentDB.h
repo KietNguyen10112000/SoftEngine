@@ -14,10 +14,11 @@ public:
 
 	struct ComponentRecord
 	{
+		ID COMPONENT_ID = INVALID_ID;
 		String name;
 
 		// managed memory, so just ctor is enough, no need dtor
-		ComponentCtor ctor;
+		ComponentCtor ctor = nullptr;
 
 		inline bool operator<(const ComponentRecord& another)
 		{
@@ -47,6 +48,7 @@ public:
 		static_assert(std::is_default_constructible<Component>::value);
 
 		ComponentRecord record;
+		record.COMPONENT_ID = Component::COMPONENT_ID;
 		record.name = Component::___GetClassName();
 		record.ctor = []() -> Handle<MainComponent>
 		{
@@ -60,6 +62,20 @@ public:
 	void UnregisterComponent()
 	{
 		RemoveRecord(Component::___GetClassName());
+	}
+
+	inline ComponentRecord GetComponentRecord(const char* className)
+	{
+		ComponentRecord record;
+		record.name = className;
+		
+		auto it = m_compRecords.find(record);
+		if (it != m_compRecords.end())
+		{
+			return *it;
+		}
+
+		return {};
 	}
 
 };
