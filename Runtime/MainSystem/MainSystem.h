@@ -22,10 +22,14 @@ public:
 	virtual ~MainSystem() {};
 
 protected:
+	virtual void BeginModification() = 0;
+
 	// direct implementation
 	virtual void AddComponent(MainComponent* comp) = 0;
 	virtual void RemoveComponent(MainComponent* comp) = 0;
 	virtual void OnObjectTransformChanged(MainComponent* comp) = 0;
+
+	virtual void EndModification() = 0;
 
 	virtual void PrevIteration() = 0;
 	virtual void Iteration(float dt) = 0;

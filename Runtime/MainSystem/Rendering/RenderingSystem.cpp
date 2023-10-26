@@ -336,6 +336,10 @@ Begin:
 	}
 }
 
+void RenderingSystem::BeginModification()
+{
+}
+
 void RenderingSystem::AddComponent(MainComponent* comp)
 {
 	m_bvh.RecordAddComponent(comp);
@@ -351,10 +355,13 @@ void RenderingSystem::OnObjectTransformChanged(MainComponent* comp)
 	m_bvh.RecordRefreshComponent(comp);
 }
 
-void RenderingSystem::Iteration(float dt)
+void RenderingSystem::EndModification()
 {
 	m_bvh.Reconstruct(5'000'000);
+}
 
+void RenderingSystem::Iteration(float dt)
+{
 	ProcessAllCmds(GetPrevServer(), this);
 
 	auto graphics = Graphics::Get();

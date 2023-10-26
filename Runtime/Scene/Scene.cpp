@@ -16,6 +16,7 @@ Scene::Scene(Runtime* runtime)
 
 	m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
+	SetupMainSystemModificationTasks();
 	SetupDeferLists();
 
 	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
@@ -66,9 +67,7 @@ void Scene::SetupMainSystemIterationTasks()
 				return;
 			}
 
-			scene->ProcessAddObjectListForMainSystem(mainSystemId);
-			scene->ProcessChangedTransformListForMainSystem(mainSystemId);
-			scene->ProcessRemoveObjectListForMainSystem(mainSystemId);
+			scene->ProcessModificationForMainSystem(mainSystemId);
 
 			//scene->EndReconstructForMainSystem(mainSystemId);
 
@@ -91,8 +90,41 @@ void Scene::SetupMainSystemIterationTasks()
 	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::SCRIPTING_ID];
 }
 
+void Scene::SetupMainSystemModificationTasks()
+{
+	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	{
+		auto& param = m_taskParams[i];
+		auto& iterationTask = m_mainSystemModificationTasks[i];
+		iterationTask.Params() = &param;
+		iterationTask.Entry() = [](void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_2(IterationTaskParam, p, scene, mainSystemId);
+
+			auto system = scene->m_mainSystems[mainSystemId];
+			if (!system)
+			{
+				//scene->EndReconstructForMainSystem(mainSystemId);
+				return;
+			}
+
+			scene->ProcessModificationForMainSystem(mainSystemId);
+		};
+	}
+}
+
 void Scene::SetupDeferLists()
 {
+	for (auto& list : m_addList)
+	{
+		list.ReserveNoSafe(8 * KB);
+	}
+
+	for (auto& list : m_removeList)
+	{
+		list.ReserveNoSafe(8 * KB);
+	}
+
 	for (auto& list : m_changedTransformList)
 	{
 		list.ReserveNoSafe(8 * KB);
@@ -167,6 +199,104 @@ void Scene::ProcessChangedTransformListForMainSystem(ID mainSystemId)
 	}
 }
 
+void Scene::ProcessModificationForMainSystem(ID mainSystemId)
+{
+	auto system = m_mainSystems[mainSystemId];
+	system->BeginModification();
+	ProcessAddObjectListForMainSystem(mainSystemId);
+	ProcessChangedTransformListForMainSystem(mainSystemId);
+	ProcessRemoveObjectListForMainSystem(mainSystemId);
+	system->EndModification();
+}
+
+void Scene::ProcessModificationForAllMainSystems()
+{
+	TaskSystem::SubmitAndWait(m_mainSystemModificationTasks, MainSystemInfo::COUNT, Task::CRITICAL);
+}
+
+void Scene::FilterAddList()
+{
+	auto scene = this;
+	auto& list = GetCurrentAddList();
+	for (auto& obj : list)
+	{
+		if (obj->m_modificationState != MODIFICATION_STATE::ADDING)
+		{
+			obj = nullptr;
+			continue;
+		}
+
+		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		if (!obj->m_indexedName.empty())
+		{
+			// implement indexing
+			assert(0);
+		}
+
+		if (m_isSettingUpLongLifeObjects)
+		{
+			obj->m_sceneId = m_longLifeObjects.size();
+			obj->m_isLongLife = true;
+			m_longLifeObjects.Push(obj);
+		}
+		else
+		{
+			obj->m_sceneId = m_shortLifeObjects.size();
+			obj->m_isLongLife = false;
+			m_shortLifeObjects.Push(obj);
+		}
+
+		obj->PostTraversal(
+			[scene](GameObject* cur)
+			{
+				cur->m_scene = scene;
+			}
+		);
+	}
+
+	m_addListHolder.Clear();
+}
+
+void Scene::FilterRemoveList()
+{
+	auto& list = GetCurrentAddList();
+	for (auto& obj : list)
+	{
+		if (obj->m_modificationState != MODIFICATION_STATE::REMOVING)
+		{
+			continue;
+		}
+
+		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		
+		if (obj->m_isLongLife)
+		{
+			MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_longLifeObjects, obj, m_sceneId);
+		}
+		else
+		{
+			MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_shortLifeObjects, obj, m_sceneId);
+			GetCurrentTrash().Push(obj);
+		}
+
+		//obj->m_sceneId = INVALID_ID;
+
+		if (!obj->m_indexedName.empty())
+		{
+			// do remove indexing
+		}
+
+		obj->PostTraversal(
+			[](GameObject* cur)
+			{
+				cur->m_sceneId = INVALID_ID;
+			}
+		);
+	}
+
+	m_removeListHolder.Clear();
+}
+
 void Scene::EndReconstructForMainSystem(ID mainSystemId)
 {
 	if (!((--m_numMainSystemEndReconstruct) == 0))
@@ -185,6 +315,41 @@ void Scene::EndReconstructForAllMainSystems()
 		obj->m_scene = nullptr;
 		obj->m_sceneId = INVALID_ID;
 	}
+}
+
+void Scene::BeginIteration()
+{
+	{
+		Task tasks[2];
+		auto& filterAdd = tasks[0];
+		filterAdd.Entry() = [](void* p)
+		{
+			auto scene = (Scene*)p;
+			scene->FilterAddList();
+		};
+		filterAdd.Params() = this;
+
+		auto& filterRemove = tasks[1];
+		filterRemove.Entry() = [](void* p)
+		{
+			auto scene = (Scene*)p;
+			scene->FilterRemoveList();
+		};
+		filterRemove.Params() = this;
+
+		TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
+	}
+
+	m_iterationCount++;
+	GetCurrentAddList().Clear();
+	GetCurrentRemoveList().Clear();
+	GetCurrentChangedTransformList().Clear();
+	GetCurrentTrash().clear();
+}
+
+void Scene::EndIteration()
+{
+	SynchMainProcessingSystemForMainOutputSystems();
 }
 
 void Scene::SynchMainProcessingSystems()
@@ -279,61 +444,65 @@ void Scene::StageAllChangedTransformObjects()
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 {
-	if (obj->m_scene != nullptr || obj->m_sceneId != INVALID_ID)
+	obj->m_modificationLock.lock();
+
+#ifdef _DEBUG
+	if (obj->m_scene != nullptr || obj->m_sceneId == INVALID_ID)
 	{
-		return;
+		assert(obj->m_modificationState == MODIFICATION_STATE::REMOVING || obj->m_modificationState == MODIFICATION_STATE::NONE);
+	}
+#endif // _DEBUG
+
+	if (obj->m_scene == this && obj->m_modificationState == MODIFICATION_STATE::REMOVING)
+	{
+		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		goto Return;
+	}
+
+	if (obj->m_scene != nullptr && obj->m_scene != this)
+	{
+		// cross the scenes, haven't implemented yet
+		assert(0);
 	}
 
 	obj->m_scene = this;
+	obj->m_modificationState = MODIFICATION_STATE::ADDING;
 
 	if (indexedName)
 	{
 		obj->m_indexedName = obj->m_name;
-		// do add indexing
 	}
 
-	if (m_isSettingUpLongLifeObjects)
-	{
-		obj->m_sceneId = m_longLifeObjects.size();
-		obj->m_isLongLife = true;
-		m_longLifeObjects.Push(obj);
-	}
-	else
-	{
-		obj->m_sceneId = m_shortLifeObjects.size();
-		obj->m_isLongLife = false;
-		m_shortLifeObjects.Push(obj);
-	}
+	m_addListHolder.Add(obj);
+	GetCurrentAddList().Add(obj);
 
-	GetCurrentAddList().push_back(obj);
+Return:
+	obj->m_modificationLock.unlock();
 }
 
 void Scene::RemoveObject(const Handle<GameObject>& obj)
 {
-	if (obj->m_scene != this || obj->m_sceneId == INVALID_ID)
+	assert(obj->m_scene == this);
+
+	obj->m_modificationLock.lock();
+
+#ifdef _DEBUG
+	assert(obj->m_modificationState == MODIFICATION_STATE::ADDING || obj->m_modificationState == MODIFICATION_STATE::NONE);
+#endif // _DEBUG
+
+	if (obj->m_modificationState == MODIFICATION_STATE::ADDING)
 	{
-		return;
+		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		goto Return;
 	}
 
-	if (obj->m_isLongLife)
-	{
-		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_longLifeObjects, obj, m_sceneId);
-	}
-	else
-	{
-		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_shortLifeObjects, obj, m_sceneId);
-		GetCurrentTrash().Push(obj);
-	}
+	obj->m_modificationState = MODIFICATION_STATE::REMOVING;
 
-	//obj->m_scene = nullptr;
-	obj->m_sceneId = INVALID_ID;
+	m_removeListHolder.Add(obj);
+	GetCurrentRemoveList().Add(obj);
 
-	if (!obj->m_indexedName.empty())
-	{
-		// do remove indexing
-	}
-
-	GetCurrentRemoveList().push_back(obj);
+Return:
+	obj->m_modificationLock.unlock();
 }
 
 Handle<GameObject> Scene::FindObjectByIndexedName(String name)
@@ -353,18 +522,18 @@ bool Scene::BeginSetupLongLifeObject()
 
 void Scene::EndSetupLongLifeObject()
 {
-	m_isSettingUpLongLifeObjects = false;
 	mheap::internal::SetStableValue(m_oldStableValue);
+
+	BeginIteration();
+	EndIteration();
+
+	m_isSettingUpLongLifeObjects = false;
 }
 
 void Scene::Iteration(float dt)
 {
 	m_dt = dt;
-	m_iterationCount++;
-	GetCurrentAddList().clear();
-	GetCurrentRemoveList().clear();
-	GetCurrentChangedTransformList().Clear();
-	GetCurrentTrash().clear();
+	BeginIteration();
 
 	//m_numMainSystemEndReconstruct.store(MainSystemInfo::COUNT, std::memory_order_relaxed);
 	//TaskSystem::PrepareHandle(&m_endReconstructWaitingHandle);
@@ -407,7 +576,7 @@ void Scene::Iteration(float dt)
 		}
 	}
 
-	SynchMainProcessingSystemForMainOutputSystems();
+	EndIteration();
 }
 
 NAMESPACE_END

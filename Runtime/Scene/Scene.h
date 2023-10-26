@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Structures/String.h"
 #include "Core/Structures/Managed/Array.h"
+#include "Core/Structures/Managed/ConcurrentList.h"
 #include "Core/Structures/Raw/ConcurrentList.h"
 
 #include "TaskSystem/TaskSystem.h"
@@ -37,8 +38,11 @@ private:
 
 	Array<Handle<GameObject>> m_trashObjects[NUM_TRASH_ARRAY];
 
-	std::vector<GameObject*> m_addList								[NUM_DEFER_LIST] = {};
-	std::vector<GameObject*> m_removeList							[NUM_DEFER_LIST] = {};
+	ConcurrentList<Handle<GameObject>> m_addListHolder;
+	ConcurrentList<Handle<GameObject>> m_removeListHolder;
+
+	raw::ConcurrentArrayList<GameObject*> m_addList					[NUM_DEFER_LIST] = {};
+	raw::ConcurrentArrayList<GameObject*> m_removeList				[NUM_DEFER_LIST] = {};
 	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
 
 	// no child, no parent, just an order to call MainComponent::OnTransformChanged
@@ -62,6 +66,8 @@ private:
 	Task				m_mainProcessingSystemIterationTasks	[MainSystemInfo::COUNT] = {};
 	uint32_t			m_numMainProcessingSystem										= 0;
 
+	Task				m_mainSystemModificationTasks			[MainSystemInfo::COUNT] = {};
+
 	std::atomic<size_t>		m_numMainSystemEndReconstruct = 0;
 	TaskWaitingHandle		m_endReconstructWaitingHandle = { 0,0 };
 	Task					m_endReconstructTask = {};
@@ -79,12 +85,15 @@ private:
 		//tracer->Trace(m_longLifeObjects);
 		tracer->Trace(m_shortLifeObjects);
 		tracer->Trace(m_trashObjects);
+		tracer->Trace(m_addListHolder);
+		tracer->Trace(m_removeListHolder);
 		//tracer->Trace(m_mainSystems);
 		//tracer->Trace(m_removeList);
 	}
 
 	void BakeAllMainSystems();
 	void SetupMainSystemIterationTasks();
+	void SetupMainSystemModificationTasks();
 
 	void SetupDeferLists();
 
@@ -104,12 +113,21 @@ private:
 	void OnObjectTransformChanged(GameObject* obj);
 	void ProcessChangedTransformListForMainSystem(ID mainSystemId);
 
+	void ProcessModificationForMainSystem(ID mainSystemId);
+	void ProcessModificationForAllMainSystems();
+
+	void FilterAddList();
+	void FilterRemoveList();
+
 	void StageAllChangedTransformObjects();
 	void SynchMainProcessingSystems();
 	void SynchMainProcessingSystemForMainOutputSystems();
 
 	void EndReconstructForMainSystem(ID mainSystemId);
 	void EndReconstructForAllMainSystems();
+
+	void BeginIteration();
+	void EndIteration();
 
 	inline auto& GetCurrentTrash()
 	{
@@ -162,10 +180,10 @@ private:
 	}
 
 public:
-	// defer implementation
+	// defer implementation, multithreaded
 	void AddObject(const Handle<GameObject>& obj, bool indexedName = false);
 
-	// defer implementation
+	// defer implementation, multithreaded
 	void RemoveObject(const Handle<GameObject>& obj);
 
 	Handle<GameObject> FindObjectByIndexedName(String name);

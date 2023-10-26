@@ -87,11 +87,15 @@ public:
 
 
 	// Inherited via MainSystem
+	virtual void BeginModification() override;
+
 	virtual void AddComponent(MainComponent* comp) override;
 
 	virtual void RemoveComponent(MainComponent* comp) override;
 
 	virtual void OnObjectTransformChanged(MainComponent* comp) override;
+
+	virtual void EndModification() override;
 
 	virtual void Iteration(float dt) override;
 

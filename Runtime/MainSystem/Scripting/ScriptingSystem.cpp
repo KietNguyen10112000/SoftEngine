@@ -32,6 +32,10 @@ ScriptingSystem::~ScriptingSystem()
 	m_schedulers.clear();
 }
 
+void ScriptingSystem::BeginModification()
+{
+}
+
 void ScriptingSystem::AddComponent(MainComponent* comp)
 {
 	if (comp->GetGameObject()->Parent().Get() != nullptr)
@@ -96,6 +100,10 @@ void ScriptingSystem::RemoveComponent(MainComponent* comp)
 }
 
 void ScriptingSystem::OnObjectTransformChanged(MainComponent* comp)
+{
+}
+
+void ScriptingSystem::EndModification()
 {
 }
 

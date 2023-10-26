@@ -4,6 +4,8 @@
 #include "MainSystem/MainSystemInfo.h"
 #include "Common/Base/MainComponent.h"
 
+#include "MODIFICATION_STATE.h"
+
 NAMESPACE_BEGIN
 
 class Scene;
@@ -49,7 +51,9 @@ private:
 
 	Scene* m_scene = nullptr;
 	bool m_isLongLife = true;
-	bool m_padd[7];
+	bool m_padd[2];
+	Spinlock m_modificationLock;
+	uint32_t m_modificationState = MODIFICATION_STATE::NONE;
 
 	std::atomic<size_t> m_isRecoredChangeTransformIteration = { 0 };
 	size_t m_updatedTransformIteration = 0;

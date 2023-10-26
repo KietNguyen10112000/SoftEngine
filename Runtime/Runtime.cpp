@@ -272,12 +272,35 @@ protected:
 			Input()->SetCursorLock(!Input()->GetCursorLock());
 		}
 
-		if (Input()->GetCursorLock() && Input()->IsCursorMoved())
+		if (/*Input()->GetCursorLock() &&*/ Input()->IsCursorMoved())
 		{
 			auto& delta = Input()->GetDeltaCursorPosition();
 			m_rotateY += delta.x * dt * m_rotationSensi;
 			m_rotateX += delta.y * dt * m_rotationSensi;
 
+			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
+		}
+
+		const auto MOUSE_SPEED = 20;
+		if (Input()->IsKeyDown('U'))
+		{
+			m_rotateY += MOUSE_SPEED * dt * m_rotationSensi;
+		}
+
+		if (Input()->IsKeyDown('I'))
+		{
+			m_rotateY += -MOUSE_SPEED * dt * m_rotationSensi;
+		}
+
+		if (Input()->IsKeyDown('O'))
+		{
+			m_rotateX += MOUSE_SPEED * dt * m_rotationSensi;
+			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
+		}
+
+		if (Input()->IsKeyDown('P'))
+		{
+			m_rotateX += -MOUSE_SPEED * dt * m_rotationSensi;
 			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 		}
 
