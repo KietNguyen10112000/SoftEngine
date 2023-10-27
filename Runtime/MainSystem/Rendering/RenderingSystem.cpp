@@ -26,7 +26,7 @@ NAMESPACE_BEGIN
 CameraData g_cameraData;
 ObjectData g_objectData;
 
-RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene)
+RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene), m_eventDispatcher(this)
 {
 	auto graphics = Graphics::Get();
 
@@ -291,10 +291,14 @@ void RenderingSystem::RenderForEachCamera()
 		auto& pipeline = cam->m_pipeline;
 		auto& input = m_collectInputForCameraRets[i]->Result();
 
+		EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_RENDER_CAMERA, cam);
+
 		SetBuiltinConstantBufferForCamera(cam);
 
 		pipeline->SetInput((RenderingComponent**)input.data(), input.size());
 		pipeline->Run();
+
+		EventDispatcher()->Dispatch(EVENT::EVENT_END_RENDER_CAMERA, cam);
 	}
 }
 
@@ -401,6 +405,8 @@ void RenderingSystem::Iteration(float dt)
 	RenderForEachCamera();
 
 	DisplayAllCamera();
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
 
 	graphics->EndFrame();
 }

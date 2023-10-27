@@ -37,6 +37,12 @@ protected:
 
 	inline virtual void Finalize() {};
 
+public:
+	inline auto GetScene()
+	{
+		return m_scene;
+	}
+
 };
 
 NAMESPACE_END

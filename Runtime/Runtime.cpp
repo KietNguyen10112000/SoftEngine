@@ -46,7 +46,7 @@
 #include "MainSystem/MainComponentList.h"
 
 #include "MainSystem/Scripting/ScriptMeta.h"
-#include "MainSystem/Scripting/Components/Script.h"
+#include "MainSystem/Scripting/Components/FPPCameraScript.h"
 
 NAMESPACE_BEGIN
 
@@ -205,112 +205,6 @@ void Runtime::FinalPlugins()
 	PluginLoader::UnloadAll(this, m_plugins);
 }
 
-class FPPCameraScript : public Script
-{
-private:
-	SCRIPT_DEFAULT_METHOD(FPPCameraScript);
-
-	float m_rotateX = 0;
-	float m_rotateY = 0;
-	float m_rotateZ = 0;
-	Vec3 m_position = {};
-
-	float m_speed = 10;
-	float m_rotationSensi = 0.12f;
-
-protected:
-	virtual void OnStart() override
-	{
-		auto transform = GetGameObject()->GetLocalTransform().ToTransformMatrix();
-
-		m_position = transform.Position();
-		Vec3 direction = transform.Forward().Normal();
-		m_rotateX = asin(direction.y);
-		m_rotateY = atan2(direction.x, direction.z);
-	}
-
-	virtual void OnUpdate(float dt) override
-	{
-		auto trans = Mat4::Identity();
-		trans *= Mat4::Rotation(Vec3::Y_AXIS, m_rotateY);
-
-		auto right = trans.Right().Normal();
-		trans *= Mat4::Rotation(right, -m_rotateX);
-
-		auto forward = trans.Forward().Normal();
-
-		if (m_rotateZ != 0)
-		{
-			trans *= Mat4::Rotation(forward, m_rotateZ);
-		}
-
-		auto d = m_speed * dt;
-		if (Input()->IsKeyDown('W'))
-		{
-			m_position += forward * d;
-		}
-
-		if (Input()->IsKeyDown('S'))
-		{
-			m_position -= forward * d;
-		}
-
-		if (Input()->IsKeyDown('A'))
-		{
-			m_position -= right * d;
-		}
-
-		if (Input()->IsKeyDown('D'))
-		{
-			m_position += right * d;
-		}
-
-		if (Input()->IsKeyUp(KEYBOARD::ESC))
-		{
-			std::cout << "ESC pressed\n";
-			Input()->SetCursorLock(!Input()->GetCursorLock());
-		}
-
-		if (/*Input()->GetCursorLock() &&*/ Input()->IsCursorMoved())
-		{
-			auto& delta = Input()->GetDeltaCursorPosition();
-			m_rotateY += delta.x * dt * m_rotationSensi;
-			m_rotateX += delta.y * dt * m_rotationSensi;
-
-			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
-		}
-
-		/*const auto MOUSE_SPEED = 20;
-		if (Input()->IsKeyDown('U'))
-		{
-			m_rotateY += MOUSE_SPEED * dt * m_rotationSensi;
-		}
-
-		if (Input()->IsKeyDown('I'))
-		{
-			m_rotateY += -MOUSE_SPEED * dt * m_rotationSensi;
-		}
-
-		if (Input()->IsKeyDown('O'))
-		{
-			m_rotateX += MOUSE_SPEED * dt * m_rotationSensi;
-			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
-		}
-
-		if (Input()->IsKeyDown('P'))
-		{
-			m_rotateX += -MOUSE_SPEED * dt * m_rotationSensi;
-			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
-		}*/
-
-		auto transform = Transform();
-		transform.Position() = m_position;
-		transform.Rotation().SetFromMat4(trans);
-		SetLocalTransform(transform);
-	}
-
-};
-
 // why need this function -> this function is allowed to use fiber-based task system (fiber context switching), 
 // meanwhile, Runtime::Initialize(), Runtime constructor is not allowed to do fiber context switching
 void Runtime::Setup()
@@ -321,12 +215,13 @@ void Runtime::Setup()
 	DeferredBufferTracker::Get()->Reset();
 
 	auto scene = mheap::New<Scene>(this);
-	m_scenes.Push(scene);
-
 	if (scene->BeginSetupLongLifeObject())
 	{
 		scene->EndSetupLongLifeObject();
 	}
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_RUNNING_SCENE_ADDED, scene.Get());
+	m_scenes.Push(scene);
 
 	Transform transform = {};
 

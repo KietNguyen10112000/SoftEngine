@@ -24,7 +24,10 @@ public:
 	inline ID Store(const Handle<T>& handle)
 	{
 		// multiple inheritance is not allowed
-		assert(dynamic_cast<void*>(handle.Get()) == (void*)handle.Get());
+		if constexpr (std::is_polymorphic_v<T>)
+		{
+			assert(dynamic_cast<void*>(handle.Get()) == (void*)handle.Get());
+		}
 
 		m_lock.lock();
 		auto ret = m_storage.Add(handle);

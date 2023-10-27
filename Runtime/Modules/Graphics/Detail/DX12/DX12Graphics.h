@@ -105,6 +105,9 @@ public:
 	std::vector<WaitForFreeDX12Resource> m_waitForFreeResources;
 	spinlock m_waitForFreeResourcesLock;
 
+	// for imgui
+	ComPtr<ID3D12DescriptorHeap>			m_ImGuiSrvDescHeap;
+
 public:
 	DX12Graphics(void* hwnd);
 	~DX12Graphics();
@@ -116,6 +119,7 @@ private:
 	void InitAllocators();
 	void InitSwapchain(void* _hwnd);
 	void InitFence();
+	void InitImGui(void* hwnd);
 
 	void InitRootSignature();
 	void InitGPUVisibleDescriptorHeap();

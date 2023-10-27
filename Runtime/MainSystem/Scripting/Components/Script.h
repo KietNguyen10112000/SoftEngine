@@ -1,7 +1,9 @@
 #pragma once
 
 #include "MainSystem/MainSystemInfo.h"
+
 #include "Common/Base/MainComponent.h"
+#include "Common/Base/AsyncTaskRunner.h"
 
 #include "../ScriptMeta.h"
 
@@ -31,12 +33,9 @@ private:																						\
 	};																							\
 public:
 
-class Script : public MainComponent
+class Script : Traceable<Script>, public MainComponent, public AsyncTaskRunner
 {
 private:
-	friend class ScriptScheduler;
-	friend class GameObject;
-	friend class MainComponentDB;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 	constexpr static ID COMPONENT_ID = MainSystemInfo::SCRIPTING_ID;
@@ -67,6 +66,13 @@ private:
 	virtual void OnTransformChanged() override;
 
 	virtual AABox GetGlobalAABB() override;
+
+protected:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		AsyncTaskRunner::Trace(tracer);
+	}
 
 protected:
 #define SET_VTB_OVERRIDDEN_IDX(_where, funcName, idxName)						\

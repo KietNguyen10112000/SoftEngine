@@ -11,15 +11,6 @@ NAMESPACE_BEGIN
 
 ScriptingSystem::ScriptingSystem(Scene* scene) : MainSystem(scene)
 {
-	if (ScriptMeta::Get()->onGUIVtbIdx == INVALID_ID)
-	{
-		ScriptMeta::Get()->onGUIVtbIdx				= VTableIndex<Script>(&Script::OnGUI);
-		//ScriptMeta::Get().onCollideVtbIdx			= VTableIndex<Script>(&Script::OnCollide);
-		//ScriptMeta::Get().onCollisionEnterVtbIdx	= VTableIndex<Script>(&Script::OnCollisionEnter);
-		//ScriptMeta::Get().onCollisionExitVtbIdx		= VTableIndex<Script>(&Script::OnCollisionExit);
-		ScriptMeta::Get()->onUpdateVtbIdx			= VTableIndex<Script>(&Script::OnUpdate);
-	}
-
 	m_schedulers.reserve(8 * KB);
 }
 

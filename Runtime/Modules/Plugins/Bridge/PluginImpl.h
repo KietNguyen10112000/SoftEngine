@@ -8,6 +8,7 @@
 
 using namespace soft;
 
+void RegisterCustomMainComponents();
 void Initialize(Runtime* runtime);
 void Finalize(Runtime* runtime);
 
@@ -28,6 +29,7 @@ public:
 	{
 		ImGuiBridge::InitializeImGui();
 		::Initialize(runtime);
+		::RegisterCustomMainComponents();
 	}
 
 	virtual void Finalize(Runtime* runtime)

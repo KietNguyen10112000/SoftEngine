@@ -7,7 +7,7 @@
 #include "Core/Structures/STD/STDContainers.h"
 
 #include "Common/Utils/GenericStorage.h"
-#include "Common/Base/EventDispatcher.h"
+#include "Common/Utils/EventDispatcher.h"
 
 #include <bitset>
 

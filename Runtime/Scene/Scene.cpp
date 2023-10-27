@@ -115,8 +115,8 @@ void Scene::SetupMainSystemModificationTasks()
 
 void Scene::SetupDeferLists()
 {
-	m_filtedAddList.reserve(8 * KB);
-	m_filtedRemoveList.reserve(8 * KB);
+	m_filteredAddList.reserve(8 * KB);
+	m_filteredRemoveList.reserve(8 * KB);
 	for (auto& list : m_addList)
 	{
 		list.ReserveNoSafe(8 * KB);
@@ -135,7 +135,7 @@ void Scene::SetupDeferLists()
 
 void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 {
-	auto& list = m_filtedAddList; // GetPrevAddList();
+	auto& list = m_filteredAddList; // GetPrevAddList();
 	auto system = m_mainSystems[mainSystemId];
 	for (auto& obj : list)
 	{
@@ -158,7 +158,7 @@ void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 
 void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 {
-	auto& list = m_filtedRemoveList; // GetPrevRemoveList();
+	auto& list = m_filteredRemoveList; // GetPrevRemoveList();
 	auto& system = m_mainSystems[mainSystemId];
 	for (auto& obj : list)
 	{
@@ -220,7 +220,7 @@ void Scene::FilterAddList()
 {
 	auto scene = this;
 	auto& list = GetCurrentAddList();
-	auto& destList = m_filtedAddList;
+	auto& destList = m_filteredAddList;
 	destList.clear();
 	for (auto& obj : list)
 	{
@@ -261,12 +261,14 @@ void Scene::FilterAddList()
 	}
 
 	m_addListHolder.Clear();
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_ADDED, &m_filteredAddList);
 }
 
 void Scene::FilterRemoveList()
 {
 	auto& list = GetCurrentRemoveList();
-	auto& destList = m_filtedRemoveList;
+	auto& destList = m_filteredRemoveList;
 	destList.clear();
 
 	auto& currentTrashes = GetCurrentTrash();
@@ -310,6 +312,8 @@ void Scene::FilterRemoveList()
 	}
 
 	m_removeListHolder.Clear();
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_REMOVED, &m_filteredRemoveList);
 }
 
 void Scene::EndReconstructForMainSystem(ID mainSystemId)
@@ -363,11 +367,15 @@ void Scene::BeginIteration()
 	GetCurrentRemoveList().Clear();
 	GetCurrentChangedTransformList().Clear();
 	//GetCurrentTrash().clear();
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_ITERATION);
 }
 
 void Scene::EndIteration()
 {
 	SynchMainProcessingSystemForMainOutputSystems();
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_END_ITERATION);
 }
 
 void Scene::SynchMainProcessingSystems()
@@ -534,6 +542,8 @@ bool Scene::BeginSetupLongLifeObject()
 
 	m_oldStableValue = mheap::internal::GetStableValue();
 	mheap::internal::SetStableValue(m_stableValue);
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_SETUP_LONGLIFE_OBJECTS);
 
 	return true;
 }

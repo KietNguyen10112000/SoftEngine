@@ -152,7 +152,7 @@ public:
 	template <typename T>
 	inline bool GetArray(T* buffer, uint32_t bufferSize, uint32_t& outputSize)
 	{
-		auto savedCur = m_cur;
+		auto savedCur = m_curRead;
 		auto count = Get<uint32_t>();
 
 		if (count > bufferSize)
@@ -231,17 +231,17 @@ protected:
 
 	byte* m_endWrite = nullptr;
 
-	inline auto& CurWrite()
+	inline byte*& CurWrite()
 	{
 		return m_endRead;
 	}
 
-	inline auto& BeginWrite()
+	inline byte*& BeginWrite()
 	{
 		return m_beginRead;
 	}
 
-	inline auto& EndWrite()
+	inline byte*& EndWrite()
 	{
 		return m_endWrite;
 	}

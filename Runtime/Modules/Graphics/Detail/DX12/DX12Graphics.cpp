@@ -11,6 +11,10 @@
 
 #include "Core/Thread/Thread.h"
 
+#include "imgui/imgui.h"
+#include "imgui/backends/imgui_impl_win32.h"
+#include "imgui/backends/imgui_impl_dx12.h"
+
 
 NAMESPACE_DX12_BEGIN
 
@@ -23,6 +27,7 @@ DX12Graphics::DX12Graphics(void* hwnd)
     m_ringBufferCmdList.Resize(m_device.Get(), NUM_GRAPHICS_COMMAND_LIST_ALLOCATORS);
     InitRootSignature(); 
     InitGPUVisibleDescriptorHeap();
+    InitImGui(hwnd);
 
     m_compiledShadersPath = StartupConfig::Get().compiledShadersPath;
 }
@@ -50,6 +55,11 @@ DX12Graphics::~DX12Graphics()
     {
         WaitForDX12FenceValue(m_currentFenceValue - 1);
     }
+
+    // ImGui Cleanup
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
 }
 
 void DX12Graphics::FirstInit()
@@ -596,6 +606,32 @@ void DX12Graphics::CreateShaderResources(
 
         out++;
     }
+}
+
+void DX12Graphics::InitImGui(void* hwnd)
+{
+    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+    desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    desc.NumDescriptors = 1;
+    desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_ImGuiSrvDescHeap)));
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX12_Init(m_device.Get(), NUM_GRAPHICS_BACK_BUFFERS,
+        BACK_BUFFER_FORMAT, m_ImGuiSrvDescHeap.Get(),
+        m_ImGuiSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
+        m_ImGuiSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 }
 
 void DX12Graphics::CreateConstantBuffers(
@@ -1310,12 +1346,33 @@ void DX12Graphics::BeginFrame()
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
     cmdList->ResourceBarrier(1, &barrier);*/
+
+    // Start the Dear ImGui frame
+    ImGui_ImplDX12_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
 }
 
 void DX12Graphics::EndFrame()
 {
     auto cmdList = GetCmdList();
+    ExecuteCurrentCmdList();
+
     D3D12_RESOURCE_BARRIER barrier = {};
+
+    {
+        auto screenRT = GetScreenRenderTarget();
+        SetRenderTargets(1, &screenRT, nullptr);
+
+        // Rendering
+        ImGui::Render();
+
+        ID3D12DescriptorHeap* heaps[] = { m_ImGuiSrvDescHeap.Get() };
+        cmdList->SetDescriptorHeaps(1, heaps);
+        ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdList);
+
+        UnsetRenderTargets(1, &screenRT, nullptr);
+    }
 
     if (m_currentRenderTarget.m_currentState != D3D12_RESOURCE_STATE_PRESENT)
     {

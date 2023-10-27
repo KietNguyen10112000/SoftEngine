@@ -414,7 +414,7 @@ public:
 	inline static void PrepareHandle(TaskWaitingHandle* handle)
 	{
 		handle->counter = 1;
-		//handle->waitingFiber = Thread::GetCurrentFiber();
+		handle->waitingFiber = Thread::GetCurrentFiber();
 	}
 
 	inline static void WaitForHandle(TaskWaitingHandle* handle)

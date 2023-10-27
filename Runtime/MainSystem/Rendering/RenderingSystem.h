@@ -9,6 +9,7 @@
 
 #include "Common/ComponentQueryStructures/DoubleBVH.h"
 #include "Common/Base/AsyncServer.h"
+#include "Common/Utils/EventDispatcher.h"
 
 #include "Resources/Texture2D.h"
 
@@ -30,8 +31,27 @@ public:
 	};
 };
 
-class RenderingSystem : public MainSystem, public AsyncServer2<RenderingSystem, RenderingSystemCommand::COUNT>
+class API RenderingSystem : public MainSystem, public AsyncServer2<RenderingSystem, RenderingSystemCommand::COUNT>
 {
+public:
+	enum EVENT
+	{
+		// no args
+		//EVENT_BEGIN_FRAME,
+		// no args
+		//EVENT_END_FRAME,
+
+		// args[0] = <camera>: Camera
+		EVENT_BEGIN_RENDER_CAMERA,
+		// args[0] = <camera>: Camera
+		EVENT_END_RENDER_CAMERA,
+
+		// no args
+		EVENT_RENDER_GUI,
+
+		COUNT
+	};
+
 private:
 	friend class BaseCamera;
 	friend class Camera;
@@ -67,6 +87,8 @@ private:
 	BuiltinConstantBuffers* m_builtinConstantBuffers = BuiltinConstantBuffers::Get();
 
 	BuiltinConstantBuffers::CameraData m_cameraData;
+
+	EventDispatcher<RenderingSystem, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
 public:
 	RenderingSystem(Scene* scene);
@@ -112,6 +134,11 @@ public:
 	inline auto* GetBuiltinConstantBuffers()
 	{
 		return m_builtinConstantBuffers;
+	}
+
+	inline auto* EventDispatcher()
+	{
+		return &m_eventDispatcher;
 	}
 };
 

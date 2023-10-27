@@ -46,6 +46,12 @@ public:
 		m_passes.push_back(pass);
 	}
 
+	inline void AddTopRenderingPass(RenderingPass* pass)
+	{
+		assert(pass != nullptr);
+		m_passes.insert(m_passes.begin(), pass);
+	}
+
 	inline void Bake(GraphicsRenderTarget* target, RenderingSystem* system)
 	{
 		if (m_output == target && m_renderingSystem == system) return;

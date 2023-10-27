@@ -13,7 +13,7 @@
 #include "MainSystem/MainSystemInfo.h"
 
 #include "Common/Utils/GenericStorage.h"
-#include "Common/Base/EventDispatcher.h"
+#include "Common/Utils/EventDispatcher.h"
 
 NAMESPACE_BEGIN
 
@@ -21,7 +21,7 @@ class GameObject;
 class Input;
 
 // manage game objects and notify for main systems whenever game object add to scene, remove from scene, changed transform,...
-class Scene final : Traceable<Scene>
+class API Scene final : Traceable<Scene>
 {
 public:
 	enum EVENT
@@ -69,9 +69,9 @@ private:
 	EventDispatcher<Scene, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
 	raw::ConcurrentArrayList<GameObject*> m_addList					[NUM_DEFER_LIST] = {};
-	std::vector<GameObject*>			  m_filtedAddList							 = {};
+	std::vector<GameObject*>			  m_filteredAddList							 = {};
 	raw::ConcurrentArrayList<GameObject*> m_removeList				[NUM_DEFER_LIST] = {};
-	std::vector<GameObject*>			  m_filtedRemoveList						 = {};
+	std::vector<GameObject*>			  m_filteredRemoveList						 = {};
 	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
 
 	// no child, no parent, just an order to call MainComponent::OnTransformChanged

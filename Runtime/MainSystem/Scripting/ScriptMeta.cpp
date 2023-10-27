@@ -1,10 +1,21 @@
 #include "ScriptMeta.h"
 
+#include "Components/Script.h"
+
 NAMESPACE_BEGIN
 
 ScriptMeta::ScriptMeta()
 {
 	m_freeSchedulerID.reserve(8 * KB);
+
+	if (onGUIVtbIdx == INVALID_ID)
+	{
+		onGUIVtbIdx = VTableIndex<Script>(&Script::OnGUI);
+		//onCollideVtbIdx			= VTableIndex<Script>(&Script::OnCollide);
+		//onCollisionEnterVtbIdx	= VTableIndex<Script>(&Script::OnCollisionEnter);
+		//onCollisionExitVtbIdx		= VTableIndex<Script>(&Script::OnCollisionExit);
+		onUpdateVtbIdx = VTableIndex<Script>(&Script::OnUpdate);
+	}
 }
 
 ScriptMeta::~ScriptMeta()

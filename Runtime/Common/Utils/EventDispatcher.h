@@ -11,7 +11,7 @@ template <typename T, size_t NUM_EVENT, typename _EventCodeEnumType, typename _U
 class EventDispatcher
 {
 public:
-	using Callback = void(*)(T* target, int argc, void** argv, _UserValueType userValue);
+	using Callback = void(*)(T* target, int argc, void** argv, _UserValueType userVar);
 
 private:
 	friend typename T;
@@ -19,7 +19,7 @@ private:
 	struct Listener
 	{
 		Callback callback;
-		_UserValueType userValue;
+		_UserValueType userVar;
 	};
 
 	struct ListenerID
@@ -45,13 +45,19 @@ public:
 private:
 	inline void Dispatch(_EventCodeEnumType evtCode, int argc, void** argv)
 	{
-		m_dispatcherLocks[listenerId.evtCode].lock();
+		if (m_dispatchers[evtCode].size() == 0)
+		{
+			return;
+		}
+
+		m_dispatcherLocks[evtCode].lock();
 		m_dispatchers[evtCode].ForEach(
 			[=](Listener& listener)
 			{
-				listener.callback(m_target, argc, argv, listener.userPtr);
+				listener.callback(m_target, argc, argv, listener.userVar);
 			}
 		);
+		m_dispatcherLocks[evtCode].unlock();
 	}
 
 	template <typename ...Args>
@@ -61,13 +67,18 @@ private:
 		Dispatch(evtCode, (int)(sizeof...(Args)), (void**)pointers);
 	}
 
+	inline void Dispatch(_EventCodeEnumType evtCode)
+	{
+		Dispatch(evtCode, 0, nullptr);
+	}
+
 public:
-	inline ID AddListener(_EventCodeEnumType evtCode, Callback cb, _UserValueType userValue = {})
+	inline ID AddListener(_EventCodeEnumType evtCode, Callback cb, _UserValueType userVar = {})
 	{
 		m_lock.lock();
 		auto& dispatcher = m_dispatchers[evtCode];
 		m_dispatcherLocks[evtCode].lock();
-		auto id = dispatcher.Add({ cb, userValue, evtCode });
+		auto id = dispatcher.Add({ cb, userVar });
 		m_dispatcherLocks[evtCode].unlock();
 		auto ret = m_listeners.Add({ evtCode, id });
 		m_lock.unlock();
