@@ -18,9 +18,11 @@ public:
 	struct Cursor
 	{
 		Position position;
+		Position lockPosition;
 		Position offset;
 		bool isActive = true;
 		bool isLocked = true;
+		bool show = true;
 
 		Position minPos = { -INT_MAX, -INT_MAX };
 		Position maxPos = { INT_MAX, INT_MAX };
@@ -93,8 +95,8 @@ protected:
 		//	//return;
 		//}
 
-		cursor.offset.x = x - prevCursor.position.x;
-		cursor.offset.y = y - prevCursor.position.y;
+		cursor.offset.x += x - prevCursor.position.x;
+		cursor.offset.y += y - prevCursor.position.y;
 
 		/*if (cursor.offset.x != 0)
 			cursor.offset.x = cursor.offset.x > 0 ? 1 : -1;
@@ -120,12 +122,12 @@ public:
 		::memset(m_isKeysDownInFrame, 0, sizeof(m_isKeysDownInFrame));
 		::memset(m_isKeysUpInFrame, 0, sizeof(m_isKeysUpInFrame));
 
-		::memcpy(m_prevCursors, m_curCursors, sizeof(Cursor) * NUM_CURSORS);
+		//::memcpy(m_prevCursors, m_curCursors, sizeof(Cursor) * NUM_CURSORS);
 		
 		for (auto& c : m_curCursors)
 		{
 			c.offset = { 0,0 };
-			c.position = { 0,0 };
+			//c.position = { 0,0 };
 		}
 	}
 

@@ -85,7 +85,7 @@ int main(int argc, const char** argv)
 
 		auto currentThreadId = Thread::GetID();
 
-		auto task = Task([](void* e) { ((Runtime*)e)->Run(); }, engine.Get());
+		auto task = Task([](void* e) { ((Runtime*)e)->Setup(); ((Runtime*)e)->Run(); }, engine.Get());
 		TaskSystem::SubmitForThread(task, currentThreadId);
 
 		//task = Task([](void*) { TaskWorker::Get()->IsRunning() = false; }, nullptr);

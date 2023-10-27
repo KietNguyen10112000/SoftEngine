@@ -12,6 +12,9 @@
 #include "TaskSystem/TaskSystem.h"
 #include "MainSystem/MainSystemInfo.h"
 
+#include "Common/Utils/GenericStorage.h"
+#include "Common/Base/EventDispatcher.h"
+
 NAMESPACE_BEGIN
 
 class GameObject;
@@ -20,6 +23,27 @@ class Input;
 // manage game objects and notify for main systems whenever game object add to scene, remove from scene, changed transform,...
 class Scene final : Traceable<Scene>
 {
+public:
+	enum EVENT
+	{
+		// no args
+		EVENT_SETUP_LONGLIFE_OBJECTS,
+
+		// args[0] = <list game objects>: std::vector<GameObject*>
+		EVENT_OBJECTS_ADDED,
+
+		// args[0] = <list game objects>: std::vector<GameObject*>
+		EVENT_OBJECTS_REMOVED,
+
+		// no args
+		EVENT_BEGIN_ITERATION,
+
+		// no args
+		EVENT_END_ITERATION,
+
+		COUNT
+	};
+
 private:
 	friend class GameObject;
 	MAIN_SYSTEM_FRIEND_CLASSES();
@@ -41,8 +65,13 @@ private:
 	ConcurrentList<Handle<GameObject>> m_addListHolder;
 	ConcurrentList<Handle<GameObject>> m_removeListHolder;
 
+	GenericStorage m_genericStorage;
+	EventDispatcher<Scene, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
+
 	raw::ConcurrentArrayList<GameObject*> m_addList					[NUM_DEFER_LIST] = {};
+	std::vector<GameObject*>			  m_filtedAddList							 = {};
 	raw::ConcurrentArrayList<GameObject*> m_removeList				[NUM_DEFER_LIST] = {};
+	std::vector<GameObject*>			  m_filtedRemoveList						 = {};
 	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
 
 	// no child, no parent, just an order to call MainComponent::OnTransformChanged
@@ -87,6 +116,7 @@ private:
 		tracer->Trace(m_trashObjects);
 		tracer->Trace(m_addListHolder);
 		tracer->Trace(m_removeListHolder);
+		tracer->Trace(m_genericStorage);
 		//tracer->Trace(m_mainSystems);
 		//tracer->Trace(m_removeList);
 	}
@@ -156,7 +186,7 @@ private:
 
 	inline auto& GetPrevTrash()
 	{
-		return m_trashObjects[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_trashObjects[(m_iterationCount + NUM_TRASH_ARRAY - 1) % NUM_TRASH_ARRAY];
 	}
 
 	inline auto& GetPrevAddList()
@@ -227,6 +257,21 @@ public:
 	inline auto* GetInput()
 	{
 		return m_input;
+	}
+
+	inline auto GetIterationCount() const
+	{
+		return m_iterationCount;
+	}
+
+	inline auto* GenericStorage()
+	{
+		return &m_genericStorage;
+	}
+
+	inline auto* EventDispatcher()
+	{
+		return &m_eventDispatcher;
 	}
 
 };

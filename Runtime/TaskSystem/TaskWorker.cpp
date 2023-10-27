@@ -85,7 +85,7 @@ void TaskWorker::Finalize()
 			);
 		}
 	}
-	
+
 
 	for (auto& w : s_workers)
 	{

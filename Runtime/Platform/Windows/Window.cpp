@@ -10,6 +10,9 @@
 #include "imgui/imgui.h"
 #include "imgui/backends/imgui_impl_win32.h"
 
+#include "Runtime/Runtime.h"
+#include "Scene/Scene.h"
+
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -40,19 +43,25 @@ public:
         cursor.isActive = true;
         cursor.offset = { 0,0 };
         cursor.position = { point.x, point.y };
+        cursor.lockPosition = { point.x, point.y };
 
         prev = cursor;
 
         RECT rect;
-        ::GetClientRect(w->hwnd, &rect);
-        input->m_clientWidth = rect.right - rect.left;
-        input->m_clientHeight = rect.bottom - rect.top;
-        input->m_clientPosition = { rect.top, rect.left };
-
         ::GetWindowRect(w->hwnd, &rect);
         input->m_windowWidth = rect.right - rect.left;
         input->m_windowHeight = rect.bottom - rect.top;
-        input->m_windowPosition = { rect.top, rect.left };
+        input->m_windowPosition = { rect.left, rect.top };
+
+        POINT clientPos = { 0,0 };
+        ::ClientToScreen(w->hwnd, &clientPos);
+        ::GetClientRect(w->hwnd, &rect);
+        input->m_clientWidth = rect.right - rect.left;
+        input->m_clientHeight = rect.bottom - rect.top;
+        input->m_clientPosition = {
+            clientPos.x,
+            clientPos.y
+        };
 
         /*RAWINPUTDEVICE Rid[1];
         Rid[0].usUsagePage = HID_USAGE_PAGE_GENERIC;
@@ -62,18 +71,78 @@ public:
         RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]));*/
     }
 
-    friend void PlatformInput_ProcessCursorPos(WindowsWindow* w, int deltaX, int deltaY)
+    friend void PlatformInput_ProcessCursorPos_PerFrame(WindowsWindow* w, int _x, int _y)
     {
-        PlatformInput* input = (PlatformInput*)w->input;
-
         POINT point;
         GetCursorPos(&point);
 
         int x = point.x;
         int y = point.y;
 
-        //int x = 0;
-        //int y = 0;
+        PlatformInput* input = (PlatformInput*)w->input;
+        auto& cursor = input->m_curCursors[0];
+        auto& prev = input->m_prevCursors[0];
+
+        auto centerX = input->m_clientPosition.x + input->m_clientWidth / 2;
+        auto centerY = input->m_clientPosition.y + input->m_clientHeight / 2;
+        if (cursor.isLocked && (x != centerX || y != centerY))
+        {
+            if (cursor.show)
+            {
+                /*RECT rect;
+                rect.left = input->m_windowPosition.x;
+                rect.top = input->m_windowPosition.y;
+                rect.right = rect.left + input->m_windowWidth;
+                rect.bottom = rect.top + input->m_windowHeight;
+                ClipCursor(&rect);*/
+
+                ShowCursor(false);
+                cursor.show = false;
+                SetCursorPos(centerX, centerY);
+                return;
+            }
+
+            SetCursorPos(centerX, centerY);
+            cursor.position = { centerX, centerY };
+            cursor.offset.x += x - centerX;
+            cursor.offset.y += y - centerY;
+            return;
+
+            /*prev.position = cursor.position;
+            cursor.position = { x, y };
+            cursor.offset.x += x - prev.position.x;
+            cursor.offset.y += y - prev.position.y;
+            return;*/
+        }
+
+        if (!cursor.isLocked)
+        {
+            if (!cursor.show)
+            {
+                ShowCursor(true);
+                cursor.show = true;
+                return;
+            }
+
+            prev.position = cursor.position;
+            cursor.position = { x, y };
+            cursor.offset.x += x - prev.position.x;
+            cursor.offset.y += y - prev.position.y;
+        }
+    }
+
+    friend void PlatformInput_ProcessCursorPos(WindowsWindow* w, int x, int y)
+    {
+        PlatformInput* input = (PlatformInput*)w->input;
+
+        //POINT point;
+        //GetCursorPos(&point);
+
+        //int x = point.x;
+        //int y = point.y;
+
+        ////int x = 0;
+        ////int y = 0;
 
         auto& cursor = input->m_curCursors[0];
         auto& prev = input->m_prevCursors[0];
@@ -83,14 +152,36 @@ public:
             return;
         }
 
-        input->SetCursor(0, x, y, true);
-
-        //cursor.offset = { deltaX, deltaY };
+        if (cursor.isLocked && cursor.lockPosition.x == x && cursor.lockPosition.y == y)
+        {
+            return;
+        }
 
         if (cursor.isLocked)
         {
-            SetCursorPos(prev.position.x, prev.position.y);
-            cursor.position = prev.position;
+            auto centerX = input->m_clientPosition.x + input->m_clientWidth / 2;
+            auto centerY = input->m_clientPosition.y + input->m_clientHeight / 2;
+
+            SetCursorPos(centerX, centerY);
+            cursor.position = { centerX, centerY };
+            
+            cursor.offset.x += x - centerX;
+            cursor.offset.y += y - centerY;
+            cursor.lockPosition = { x,y };
+
+            //assert(cursor.offset.x <= 0);
+
+            //std::cout << Runtime::Get()->GetScenes()[0]->GetIterationCount() << "\n";
+        }
+        else
+        {
+            prev.position = cursor.position;
+            cursor.position = { x, y };
+
+            cursor.offset.x += x - prev.position.x;
+            cursor.offset.y += y - prev.position.y;
+
+            //std::cout << Runtime::Get()->GetScenes()[0]->GetIterationCount() << "\n";
         }
     }
 
@@ -115,15 +206,21 @@ public:
         case WM_SIZE:
         {
             RECT rect;
-            ::GetClientRect(w->hwnd, &rect);
-            input->m_clientWidth = rect.right - rect.left;
-            input->m_clientHeight = rect.bottom - rect.top;
-            input->m_clientPosition = { rect.top, rect.left };
 
             ::GetWindowRect(w->hwnd, &rect);
             input->m_windowWidth = rect.right - rect.left;
             input->m_windowHeight = rect.bottom - rect.top;
-            input->m_windowPosition = { rect.top, rect.left };
+            input->m_windowPosition = { rect.left, rect.top };
+
+            POINT clientPos = { 0,0 };
+            ::ClientToScreen(w->hwnd, &clientPos);
+            ::GetClientRect(w->hwnd, &rect);
+            input->m_clientWidth = rect.right - rect.left;
+            input->m_clientHeight = rect.bottom - rect.top;
+            input->m_clientPosition = { 
+                clientPos.x,
+                clientPos.y
+            };
 
             break;
         }
@@ -151,8 +248,8 @@ public:
         {
             int xPos = GET_X_LPARAM(lParam);
             int yPos = GET_Y_LPARAM(lParam);
-            PlatformInput_ProcessCursorPos(w, xPos + input->m_windowPosition.x, yPos + input->m_windowPosition.y);
-            break;
+            PlatformInput_ProcessCursorPos(w, xPos + input->m_clientPosition.x, yPos + input->m_clientPosition.y);
+            return 0;
         }*/
         case WM_KEYDOWN:
             //Input::lastKeyDown = wParam;
@@ -335,7 +432,7 @@ bool ProcessPlatformMsg(WindowNative* window)
         DispatchMessage(&msg);
     }
 
-    PlatformInput_ProcessCursorPos(w, 0, 0);
+    PlatformInput_ProcessCursorPos_PerFrame(w, 0, 0);
 
     return w->close == true;
 }

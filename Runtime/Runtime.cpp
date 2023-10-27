@@ -77,7 +77,6 @@ Handle<Runtime> Runtime::Initialize()
 	mheap::internal::SetStableValue(Runtime::STABLE_VALUE);
 	auto ret = mheap::New<Runtime>();
 	mheap::internal::SetStableValue(old);
-	ret->Setup();
 
 	Runtime::s_instance.reset(ret.Get());
 
@@ -99,7 +98,7 @@ void Runtime::Finalize()
 	FileSystem::Finalize();
 }
 
-Runtime::Runtime()
+Runtime::Runtime() : m_eventDispatcher(this)
 {
 	m_eventArgv[0] = this;
 
@@ -217,7 +216,7 @@ private:
 	Vec3 m_position = {};
 
 	float m_speed = 10;
-	float m_rotationSensi = 0.06f;
+	float m_rotationSensi = 0.12f;
 
 protected:
 	virtual void OnStart() override
@@ -281,7 +280,7 @@ protected:
 			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 		}
 
-		const auto MOUSE_SPEED = 20;
+		/*const auto MOUSE_SPEED = 20;
 		if (Input()->IsKeyDown('U'))
 		{
 			m_rotateY += MOUSE_SPEED * dt * m_rotationSensi;
@@ -302,7 +301,7 @@ protected:
 		{
 			m_rotateX += -MOUSE_SPEED * dt * m_rotationSensi;
 			m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
-		}
+		}*/
 
 		auto transform = Transform();
 		transform.Position() = m_position;
@@ -312,6 +311,8 @@ protected:
 
 };
 
+// why need this function -> this function is allowed to use fiber-based task system (fiber context switching), 
+// meanwhile, Runtime::Initialize(), Runtime constructor is not allowed to do fiber context switching
 void Runtime::Setup()
 {
 	g_timer.Update();
@@ -523,7 +524,7 @@ void Runtime::SynchronizeAllSubSystems()
 
 	//Graphics::Get()->Present(1, 0);
 
-	auto tracker = DeferredBufferTracker::Get();
+	/*auto tracker = DeferredBufferTracker::Get();
 	tracker->UpdateCustomBegin();
 	TaskUtils::ForEachConcurrentList(
 		tracker->m_buffers, 
@@ -533,7 +534,7 @@ void Runtime::SynchronizeAllSubSystems()
 		}, 
 		TaskSystem::GetWorkerCount()
 	);
-	tracker->UpdateCustomEnd();
+	tracker->UpdateCustomEnd();*/
 }
 
 byte Runtime::GetNextStableValue()

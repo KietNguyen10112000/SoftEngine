@@ -104,6 +104,12 @@ public:
 		return m_head->value;
 	}
 
+	inline T& Get(ID id)
+	{
+		Node* node = (Node*)id;
+		return node->value;
+	}
+
 public:
 	template <typename F>
 	inline void ForEach(F callback)

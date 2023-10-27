@@ -410,15 +410,16 @@ public:
 
 
 
-	// use these 3 function to do dynamic submit-wait tasking
+	// use these 3 functions to do dynamic submit-wait tasking
 	inline static void PrepareHandle(TaskWaitingHandle* handle)
 	{
 		handle->counter = 1;
-		handle->waitingFiber = Thread::GetCurrentFiber();
+		//handle->waitingFiber = Thread::GetCurrentFiber();
 	}
 
 	inline static void WaitForHandle(TaskWaitingHandle* handle)
 	{
+		handle->waitingFiber = Thread::GetCurrentFiber();
 		if ((--handle->counter) != 0)
 		{
 			auto fiber = FiberPool::Take();
@@ -442,7 +443,7 @@ public:
 		task.m_handle = handle;
 		task.m_handle->counter++;
 
-		assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
+		//assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
 
 		auto& context = s_threadContext[threadId];
 		context.submittedTaskCount++;

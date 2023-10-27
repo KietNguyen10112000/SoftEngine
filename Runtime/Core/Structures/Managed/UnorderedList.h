@@ -101,4 +101,118 @@ public:
 
 };
 
+template<typename T>
+class UnorderedLinkedList : public Traceable<UnorderedLinkedList<T>>
+{
+private:
+	struct Node : public Traceable<Node>
+	{
+		Handle<Node> next;
+		Handle<Node> prev;
+		T value;
+
+		TRACEABLE_FRIEND();
+		void Trace(Tracer* tracer)
+		{
+			tracer->Trace(next);
+			tracer->Trace(prev);
+
+			if constexpr (std::is_base_of_v<Traceable<T>, T>)
+			{
+				tracer->Trace(value);
+			}
+		}
+	};
+
+	Handle<Node> m_head = nullptr;
+	size_t m_size = 0;
+
+	TRACEABLE_FRIEND();
+	void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_head);
+	}
+
+public:
+	inline ID Add(const T& v)
+	{
+		Handle<Node> node = mheap::New<Node>();
+
+		node->prev = nullptr;
+		node->next = m_head;
+
+		if (m_head)
+		{
+			m_head->prev = node;
+		}
+
+		m_head = node;
+
+		m_size++;
+
+		node->value = v;
+
+		return (ID)node.Get();
+	}
+
+	inline void Remove(ID id)
+	{
+		Node* node = (Node*)id;
+
+		auto prev = node->prev;
+		auto next = node->next;
+
+		if (prev)
+		{
+			prev->next = next;
+		}
+		else
+		{
+			m_head = next;
+		}
+
+		if (next)
+		{
+			next->prev = prev;
+		}
+
+		m_size--;
+	}
+
+	inline auto size() const
+	{
+		return m_size;
+	}
+
+
+	inline ID backId() const
+	{
+		return (ID)m_head.Get();
+	}
+
+	inline T& back() const
+	{
+		return m_head->value;
+	}
+
+	inline const T& Get(ID id) const
+	{
+		Node* node = (Node*)id;
+		return node->value;
+	}
+
+public:
+	template <typename F>
+	inline void ForEach(F callback)
+	{
+		auto it = m_head.Get();
+		while (it)
+		{
+			callback(it->value);
+			it = it->next.Get();
+		}
+	}
+
+};
+
 NAMESPACE_END

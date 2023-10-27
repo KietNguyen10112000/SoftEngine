@@ -10,7 +10,7 @@
 
 NAMESPACE_BEGIN
 
-Scene::Scene(Runtime* runtime)
+Scene::Scene(Runtime* runtime) : m_eventDispatcher(this)
 {
 	m_input = runtime->GetInput();
 
@@ -115,6 +115,8 @@ void Scene::SetupMainSystemModificationTasks()
 
 void Scene::SetupDeferLists()
 {
+	m_filtedAddList.reserve(8 * KB);
+	m_filtedRemoveList.reserve(8 * KB);
 	for (auto& list : m_addList)
 	{
 		list.ReserveNoSafe(8 * KB);
@@ -133,7 +135,7 @@ void Scene::SetupDeferLists()
 
 void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 {
-	auto& list = GetPrevAddList();
+	auto& list = m_filtedAddList; // GetPrevAddList();
 	auto system = m_mainSystems[mainSystemId];
 	for (auto& obj : list)
 	{
@@ -156,7 +158,7 @@ void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 
 void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 {
-	auto& list = GetPrevRemoveList();
+	auto& list = m_filtedRemoveList; // GetPrevRemoveList();
 	auto& system = m_mainSystems[mainSystemId];
 	for (auto& obj : list)
 	{
@@ -218,6 +220,8 @@ void Scene::FilterAddList()
 {
 	auto scene = this;
 	auto& list = GetCurrentAddList();
+	auto& destList = m_filtedAddList;
+	destList.clear();
 	for (auto& obj : list)
 	{
 		if (obj->m_modificationState != MODIFICATION_STATE::ADDING)
@@ -225,6 +229,8 @@ void Scene::FilterAddList()
 			obj = nullptr;
 			continue;
 		}
+
+		destList.push_back(obj);
 
 		obj->m_modificationState = MODIFICATION_STATE::NONE;
 		if (!obj->m_indexedName.empty())
@@ -259,13 +265,22 @@ void Scene::FilterAddList()
 
 void Scene::FilterRemoveList()
 {
-	auto& list = GetCurrentAddList();
+	auto& list = GetCurrentRemoveList();
+	auto& destList = m_filtedRemoveList;
+	destList.clear();
+
+	auto& currentTrashes = GetCurrentTrash();
+	currentTrashes.clear();
+
 	for (auto& obj : list)
 	{
 		if (obj->m_modificationState != MODIFICATION_STATE::REMOVING)
 		{
+			obj = nullptr;
 			continue;
 		}
+
+		destList.push_back(obj);
 
 		obj->m_modificationState = MODIFICATION_STATE::NONE;
 		
@@ -276,7 +291,7 @@ void Scene::FilterRemoveList()
 		else
 		{
 			MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_shortLifeObjects, obj, m_sceneId);
-			GetCurrentTrash().Push(obj);
+			currentTrashes.Push(obj);
 		}
 
 		//obj->m_sceneId = INVALID_ID;
@@ -319,7 +334,7 @@ void Scene::EndReconstructForAllMainSystems()
 
 void Scene::BeginIteration()
 {
-	{
+	/*{
 		Task tasks[2];
 		auto& filterAdd = tasks[0];
 		filterAdd.Entry() = [](void* p)
@@ -338,13 +353,16 @@ void Scene::BeginIteration()
 		filterRemove.Params() = this;
 
 		TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
-	}
+	}*/
+
+	FilterAddList();
+	FilterRemoveList();
 
 	m_iterationCount++;
 	GetCurrentAddList().Clear();
 	GetCurrentRemoveList().Clear();
 	GetCurrentChangedTransformList().Clear();
-	GetCurrentTrash().clear();
+	//GetCurrentTrash().clear();
 }
 
 void Scene::EndIteration()

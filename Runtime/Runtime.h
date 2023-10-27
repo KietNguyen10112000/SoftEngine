@@ -6,6 +6,9 @@
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/STD/STDContainers.h"
 
+#include "Common/Utils/GenericStorage.h"
+#include "Common/Base/EventDispatcher.h"
+
 #include <bitset>
 
 NAMESPACE_BEGIN
@@ -31,10 +34,21 @@ public:
 
 	constexpr static byte MAX_RUNNING_SCENES = 32;
 
+	enum EVENT
+	{
+		// args[0] = <added scene>
+		EVENT_RUNNING_SCENE_ADDED,
+
+		COUNT
+	};
+
 private:
 	friend class Scene;
 
 	Array<Handle<Scene>> m_scenes;
+
+	GenericStorage m_genericStorage;
+	EventDispatcher<Runtime, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
 	std::bitset<MAX_RUNNING_SCENES> m_runningSceneStableValue;
 
@@ -64,6 +78,7 @@ private:
 	void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_scenes);
+		tracer->Trace(m_genericStorage);
 	}
 
 	void InitGraphics();
@@ -104,6 +119,20 @@ public:
 		m_iterationHandler = handler;
 	}
 
+	inline auto& GetScenes() const
+	{
+		return m_scenes;
+	}
+
+	inline auto* GenericStorage()
+	{
+		return &m_genericStorage;
+	}
+
+	inline auto* EventDispatcher()
+	{
+		return &m_eventDispatcher;
+	}
 };
 
 
