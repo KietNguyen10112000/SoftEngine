@@ -1,13 +1,13 @@
 #include "Plugins/Bridge/PluginImpl.h"
 
-void RegisterCustomMainComponents()
+void RegisterSerializables()
 {
-	// registers all custom main components, includes all scripts
+	// registers all custom serializable classes, includes all scripts, all custom components like child classes of RenderingComponent,...
 	// eg:
-	//	MainComponentDB::Get()->RegisterComponent<MyScript1>();
-	//	MainComponentDB::Get()->RegisterComponent<MyScript2>();
+	//	SerializableDB::Get()->Register<MyScript1>();
+	//	SerializableDB::Get()->Register<MyScript2>();
 	//	...
-	//	MainComponentDB::Get()->RegisterComponent<<custom components ClassName>>();
+	//	SerializableDB::Get()->Register<<custom serializable classes ClassName>>();
 }
 
 void Initialize(Runtime* runtime)

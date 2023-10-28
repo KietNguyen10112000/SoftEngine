@@ -1,20 +1,20 @@
-#include "MainComponentDB.h"
+#include "SerializableDB.h"
 
-#include "MainSystemInfo.h"
+#include "MainSystem/MainSystemInfo.h"
 
 #include "Modules/Plugins/PluginLoader.h"
 #include "Modules/Plugins/Plugin.h"
 
-#include "Scripting/Components/Script.h"
-#include "Scripting/ScriptMeta.h"
+#include "MainSystem/Scripting/Components/Script.h"
+#include "MainSystem/Scripting/ScriptMeta.h"
 
 NAMESPACE_BEGIN
 
-void MainComponentDB::AddRecord(const ComponentRecord& record)
+void SerializableDB::AddRecord(const SerializableRecord& record)
 {
-	assert(m_compRecords.find(record) == m_compRecords.end());
+	assert(m_records.find(record) == m_records.end());
 
-	m_compRecords.insert(record);
+	m_records.insert(record);
 
 	if (record.COMPONENT_ID == MainSystemInfo::SCRIPTING_ID)
 	{
@@ -30,9 +30,9 @@ void MainComponentDB::AddRecord(const ComponentRecord& record)
 	}
 }
 
-void MainComponentDB::RemoveRecord(const char* name)
+void SerializableDB::RemoveRecord(const char* name)
 {
-	m_compRecords.erase({ 0, name, nullptr });
+	m_records.erase({ 0, name, nullptr });
 }
 
 NAMESPACE_END

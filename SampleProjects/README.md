@@ -1,0 +1,1 @@
+see "Tools/Editor" for example of using the game engine

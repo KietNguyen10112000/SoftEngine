@@ -14,6 +14,7 @@
 
 #include "Common/Utils/GenericStorage.h"
 #include "Common/Utils/EventDispatcher.h"
+#include "Common/Base/Serializable.h"
 
 NAMESPACE_BEGIN
 
@@ -41,10 +42,16 @@ public:
 		// no args
 		EVENT_END_ITERATION,
 
+		// args[0] = 
+		EVENT_SERIALIZE,
+
+		EVENT_DESERIALIZE,
+
 		COUNT
 	};
 
 private:
+	friend class Runtime;
 	friend class GameObject;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
@@ -102,9 +109,11 @@ private:
 	Task					m_endReconstructTask = {};
 
 	Input* m_input = nullptr;
+	ID m_runtimeID = INVALID_ID;
 
 public:
-	Scene(Runtime* runtime);
+	Scene();
+	//Scene(Runtime* runtime);
 	~Scene();
 
 private:
@@ -274,6 +283,14 @@ public:
 		return &m_eventDispatcher;
 	}
 
+private:
+	//SERIALIZABLE_CLASS(Scene);
+	void Serialize(Serializer* serializer);
+	void Deserialize(Serializer* serializer);
+	void CleanUp();
+	//virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
+	//virtual void OnPropertyChanged(const UnknownAddress& var) override;
+	
 };
 
 NAMESPACE_END

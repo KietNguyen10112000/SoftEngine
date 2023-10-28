@@ -56,6 +56,13 @@ public:
 		m_lock.unlock();
 	}
 
+	inline void Clear()
+	{
+		m_lock.lock();
+		m_storage.Clear();
+		m_lock.unlock();
+	}
+
 };
 
 NAMESPACE_END

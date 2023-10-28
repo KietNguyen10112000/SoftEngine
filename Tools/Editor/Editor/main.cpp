@@ -20,7 +20,7 @@ public:
 
 };
 
-void RegisterCustomMainComponents()
+void RegisterSerializables()
 {
 	
 }
@@ -30,7 +30,7 @@ void Initialize(Runtime* runtime)
 	auto editor		= mheap::New<Editor>();
 	auto editorId	= runtime->GenericStorage()->Store(editor);
 
-	runtime->EventDispatcher()->AddListener(Runtime::EVENT_RUNNING_SCENE_ADDED,
+	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
 		{
 			auto scene				= (Scene*)argv[0];

@@ -1,19 +1,22 @@
 #pragma once
 
 #include "Metadata.h"
+#include "Serializer.h"
 
 #include "../Stream/ByteStream.h"
 
 NAMESPACE_BEGIN
 
 #define SERIALIZABLE_CLASS(className)										\
-private: friend class MainComponentDB;										\
+private: friend class SerializableDB;										\
 inline static const char* ___GetClassName() {return # className;};			\
 public: inline virtual const char* GetClassName() override					\
 {																			\
 	static_assert(std::is_base_of_v<Serializable, className>);				\
 	return  # className; 													\
 };
+
+//class 
 
 class Serializable
 {
@@ -24,8 +27,8 @@ public:
 	/// 
 	/// for data serialization
 	/// 
-	virtual void Serialize(ByteStream& stream) = 0;
-	virtual void Deserialize(ByteStreamRead& stream) = 0;
+	virtual void Serialize(Serializer* serializer) = 0;
+	virtual void Deserialize(Serializer* serializer) = 0;
 
 	///
 	/// do something like destructor to start deserialize from byte stream source

@@ -33,11 +33,11 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 {
 }
 
-void GameObject::Serialize(ByteStream& stream)
+void GameObject::Serialize(Serializer* serializer)
 {
 }
 
-void GameObject::Deserialize(ByteStreamRead& stream)
+void GameObject::Deserialize(Serializer* serializer)
 {
 }
 

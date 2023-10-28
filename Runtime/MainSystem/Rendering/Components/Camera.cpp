@@ -24,11 +24,11 @@ Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
 	m_pipeline = new BasicRenderingPipeline();
 }
 
-void Camera::Serialize(ByteStream& stream)
+void Camera::Serialize(Serializer* serializer)
 {
 }
 
-void Camera::Deserialize(ByteStreamRead& stream)
+void Camera::Deserialize(Serializer* serializer)
 {
 }
 

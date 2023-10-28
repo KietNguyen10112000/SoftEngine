@@ -201,6 +201,12 @@ public:
 		return node->value;
 	}
 
+	inline void Clear()
+	{
+		m_head = nullptr;
+		m_size = 0;
+	}
+
 public:
 	template <typename F>
 	inline void ForEach(F callback)

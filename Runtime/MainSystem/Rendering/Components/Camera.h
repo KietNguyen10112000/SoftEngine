@@ -60,9 +60,9 @@ public:
 	Camera();
 
 	// Inherited via RenderingComponent
-	virtual void Serialize(ByteStream& stream) override;
+	virtual void Serialize(Serializer* serializer) override;
 
-	virtual void Deserialize(ByteStreamRead& stream) override;
+	virtual void Deserialize(Serializer* serializer) override;
 
 	virtual void CleanUp() override;
 

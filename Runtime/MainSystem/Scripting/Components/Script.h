@@ -47,9 +47,9 @@ private:
 	Scene* m_scene;
 
 	// Inherited via MainComponent
-	virtual void Serialize(ByteStream& stream) override;
+	virtual void Serialize(Serializer* serializer) override;
 
-	virtual void Deserialize(ByteStreamRead& stream) override;
+	virtual void Deserialize(Serializer* serializer) override;
 
 	virtual void CleanUp() override;
 
@@ -57,7 +57,7 @@ private:
 
 	virtual void OnPropertyChanged(const UnknownAddress& var) override;
 
-	virtual const char* GetClassName() override;
+	//virtual const char* GetClassName() override;
 
 	virtual void OnComponentAdded() override;
 

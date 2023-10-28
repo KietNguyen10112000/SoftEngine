@@ -26,6 +26,7 @@
 
 #include "Common/Base/MetadataUtils.h"
 #include "Common/Base/Metadata.h"
+#include "Common/Base/SerializableDB.h"
 
 //#include "Network/TCPAcceptor.h"
 //#include "Network/TCPConnector.h"
@@ -42,8 +43,7 @@
 #include "MainSystem/Rendering/BuiltinConstantBuffers.h"
 #include "MainSystem/Rendering/DisplayService.h"
 
-#include "MainSystem/MainComponentDB.h"
-#include "MainSystem/MainComponentList.h"
+#include "SerializableList.h"
 
 #include "MainSystem/Scripting/ScriptMeta.h"
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
@@ -108,16 +108,16 @@ Runtime::Runtime() : m_eventDispatcher(this)
 
 	BuiltinConstantBuffers::SingletonInitialize();
 	DisplayService::SingletonInitialize();
-	MainComponentDB::SingletonInitialize();
+	SerializableDB::SingletonInitialize();
 	ScriptMeta::SingletonInitialize();
 
-	MainComponentList::Initialize();
+	SerializableList::Initialize();
 }
 
 Runtime::~Runtime()
 {
 	ScriptMeta::SingletonFinalize();
-	MainComponentDB::SingletonFinalize();
+	SerializableDB::SingletonFinalize();
 	DisplayService::SingletonFinalize();
 	BuiltinConstantBuffers::SingletonFinalize();
 
@@ -214,14 +214,13 @@ void Runtime::Setup()
 
 	DeferredBufferTracker::Get()->Reset();
 
-	auto scene = mheap::New<Scene>(this);
+	auto scene = CreateScene();
 	if (scene->BeginSetupLongLifeObject())
 	{
 		scene->EndSetupLongLifeObject();
 	}
 
-	EventDispatcher()->Dispatch(EVENT::EVENT_RUNNING_SCENE_ADDED, scene.Get());
-	m_scenes.Push(scene);
+	SetRunningScene(scene.Get());
 
 	Transform transform = {};
 
@@ -274,15 +273,11 @@ void Runtime::Setup()
 
 void Runtime::Run()
 {
-	if (m_scenes.size() != 0)
+	while (m_isRunning)
 	{
-		auto mainScene = m_scenes[0].Get();
-
-		while (m_isRunning)
-		{
-			Iteration();
-			Thread::Sleep(1);
-		}
+		m_runningSceneIdx = m_nextRunningSceneIdx;
+		Iteration();
+		Thread::Sleep(1);
 	}
 
 	TaskWorker::Get()->IsRunning() = false;
@@ -319,8 +314,6 @@ void Runtime::Iteration()
 
 		TaskSystem::Submit(gcTask, Task::HIGH);
 	}
-
-	auto mainScene = m_scenes[0].Get();
 
 	//std::cout << "Iteration [thread id: " << Thread::GetID() << ", fiber id: " << Thread::GetCurrentFiberID() << "]\n";
 
@@ -359,6 +352,13 @@ void Runtime::Iteration()
 	TaskSystem::WaitForHandle(&taskHandle);
 
 	g_timer.Update();
+
+	if (m_runningSceneIdx == INVALID_ID)
+	{
+		return;
+	}
+
+	auto& mainScene = GetCurrentRunningScene();
 
 	g_sumDt += g_timer.dt;
 
@@ -445,6 +445,41 @@ byte Runtime::GetNextStableValue()
 
 	assert(0 && "Too much running scene");
 	return 256;
+}
+
+Handle<Scene> Runtime::CreateScene()
+{
+	m_createSceneLock.lock();
+
+	auto scene = mheap::New<Scene>();
+	auto id = GetNextStableValue();
+	scene->m_runtimeID = id;
+	scene->m_stableValue = id;
+
+	m_scenes[id] = scene;
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_SCENE_CREATED, scene.Get());
+
+	m_createSceneLock.unlock();
+	return scene;
+}
+
+void Runtime::DestroyScene(Scene* scene)
+{
+	m_createSceneLock.lock();
+
+	ID id = scene->m_runtimeID;
+	m_runningSceneStableValue.set(id, false);
+	scene->CleanUp();
+
+	m_scenes[id] = nullptr;
+
+	m_createSceneLock.unlock();
+}
+
+void Runtime::SetRunningScene(Scene* scene)
+{
+	m_nextRunningSceneIdx = scene->m_runtimeID;
 }
 
 NAMESPACE_END

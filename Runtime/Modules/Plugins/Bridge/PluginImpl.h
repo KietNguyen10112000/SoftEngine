@@ -6,9 +6,11 @@
 
 #include "Plugins/Bridge/ImGuiBridge.h"
 
+#include "Common/Base/SerializableDB.h"
+
 using namespace soft;
 
-void RegisterCustomMainComponents();
+void RegisterSerializables();
 void Initialize(Runtime* runtime);
 void Finalize(Runtime* runtime);
 
@@ -28,8 +30,8 @@ public:
 	virtual void Initialize(Runtime* runtime)
 	{
 		ImGuiBridge::InitializeImGui();
+		::RegisterSerializables();
 		::Initialize(runtime);
-		::RegisterCustomMainComponents();
 	}
 
 	virtual void Finalize(Runtime* runtime)

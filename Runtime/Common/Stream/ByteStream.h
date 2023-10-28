@@ -216,6 +216,11 @@ public:
 	{
 		return m_curRead - m_beginRead;
 	}
+
+	inline size_t GetRemainReadSize() const
+	{
+		return m_curRead - m_beginRead;
+	}
 };
 
 class ByteStream : public ByteStreamRead
@@ -419,6 +424,11 @@ public:
 		auto ret = CurWrite();
 		CurWrite() += bufferSize;
 		return ret;
+	}
+
+	inline size_t GetCurrentWriteSize()
+	{
+		return CurWrite() - BeginWrite();
 	}
 };
 

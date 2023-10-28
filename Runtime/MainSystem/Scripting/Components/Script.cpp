@@ -4,11 +4,11 @@
 
 NAMESPACE_BEGIN
 
-void Script::Serialize(ByteStream& stream)
+void Script::Serialize(Serializer* serializer)
 {
 }
 
-void Script::Deserialize(ByteStreamRead& stream)
+void Script::Deserialize(Serializer* serializer)
 {
 }
 
@@ -25,10 +25,10 @@ void Script::OnPropertyChanged(const UnknownAddress& var)
 {
 }
 
-const char* Script::GetClassName()
-{
-	return nullptr;
-}
+//const char* Script::GetClassName()
+//{
+//	return nullptr;
+//}
 
 void Script::OnComponentAdded()
 {

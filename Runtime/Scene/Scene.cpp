@@ -10,11 +10,12 @@
 
 NAMESPACE_BEGIN
 
-Scene::Scene(Runtime* runtime) : m_eventDispatcher(this)
+Scene::Scene() : m_eventDispatcher(this)
 {
+	auto runtime = Runtime::Get();
 	m_input = runtime->GetInput();
 
-	m_stableValue = runtime->GetNextStableValue();
+	//m_stableValue = runtime->GetNextStableValue();
 	SetupMainSystemIterationTasks();
 	SetupMainSystemModificationTasks();
 	SetupDeferLists();
@@ -605,6 +606,56 @@ void Scene::Iteration(float dt)
 	}
 
 	EndIteration();
+}
+
+void Scene::Serialize(Serializer* serializer)
+{
+}
+
+void Scene::Deserialize(Serializer* serializer)
+{
+}
+
+void Scene::CleanUp()
+{
+	m_longLifeObjects.clear();
+	m_shortLifeObjects.clear();
+
+	for (auto& list : m_addList)
+	{
+		list.Clear();
+	}
+
+	for (auto& list : m_removeList)
+	{
+		list.Clear();
+	}
+
+	for (auto& list : m_changedTransformList)
+	{
+		list.Clear();
+	}
+
+	m_addListHolder.Clear();
+	m_removeListHolder.Clear();
+	//m_genericStorage.Clear();
+	//m_eventDispatcher.Clear();
+
+	for (auto& list : m_trashObjects)
+	{
+		list.clear();
+	}
+
+	for (auto& list : m_stagedChangeTransformList)
+	{
+		list.clear();
+	}
+
+	mheap::internal::FreeStableObjects(m_stableValue, 0, 0);
+	for (size_t i = 0; i < 5; i++)
+	{
+		gc::Run(-1);
+	}
 }
 
 NAMESPACE_END

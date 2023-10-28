@@ -36,8 +36,11 @@ public:
 
 	enum EVENT
 	{
-		// args[0] = <added scene>
-		EVENT_RUNNING_SCENE_ADDED,
+		// args[0] = <scene>
+		EVENT_SCENE_CREATED,
+
+		// args[0] = <the scene will be destroyed>
+		EVENT_SCENE_DESTROYING,
 
 		COUNT
 	};
@@ -45,7 +48,7 @@ public:
 private:
 	friend class Scene;
 
-	Array<Handle<Scene>> m_scenes;
+	Handle<Scene> m_scenes[MAX_RUNNING_SCENES];
 
 	GenericStorage m_genericStorage;
 	EventDispatcher<Runtime, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
@@ -65,6 +68,10 @@ private:
 	void* m_eventArgv[NUM_ARGS] = {};
 
 	IterationHandler* m_iterationHandler = nullptr;
+
+	spinlock m_createSceneLock;
+	ID m_runningSceneIdx = INVALID_ID;
+	ID m_nextRunningSceneIdx = INVALID_ID;
 
 public:
 	static Handle<Runtime> Initialize();
@@ -103,6 +110,11 @@ public:
 
 	void SynchronizeAllSubSystems();
 
+	Handle<Scene> CreateScene();
+	void DestroyScene(Scene* scene);
+
+	void SetRunningScene(Scene* scene);
+
 public:
 	inline auto GetInput()
 	{
@@ -132,6 +144,13 @@ public:
 	inline auto* EventDispatcher()
 	{
 		return &m_eventDispatcher;
+	}
+
+	inline const Handle<Scene>& GetCurrentRunningScene() const
+	{
+		if (m_runningSceneIdx == INVALID_ID) return nullptr;
+
+		return m_scenes[m_runningSceneIdx];
 	}
 };
 

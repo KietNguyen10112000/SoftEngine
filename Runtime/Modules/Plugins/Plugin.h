@@ -44,7 +44,7 @@ class Plugin
 {
 private:
 	friend class PluginLoader;
-	friend class MainComponentDB;
+	friend class SerializableDB;
 
 	size_t m_id = INVALID_ID;
 	void* m_nativeHandle = nullptr;

@@ -12,11 +12,11 @@ Model3DBasicRenderer::Model3DBasicRenderer(String modelPath, String texture2DPat
 	m_texture	= resource::Load<Texture2D>(texture2DPath);
 }
 
-void Model3DBasicRenderer::Serialize(ByteStream& stream)
+void Model3DBasicRenderer::Serialize(Serializer* serializer)
 {
 }
 
-void Model3DBasicRenderer::Deserialize(ByteStreamRead& stream)
+void Model3DBasicRenderer::Deserialize(Serializer* serializer)
 {
 }
 

@@ -30,7 +30,7 @@ friend class MainSystem;				\
 friend class RenderingSystem;			\
 friend class PhysicsSystem;				\
 friend class ScriptingSystem;			\
-friend class MainComponentDB;			\
+friend class SerializableDB;			\
 friend class AudioSystem;				\
 friend class ScriptScheduler;			\
 friend class GameObject;				\
