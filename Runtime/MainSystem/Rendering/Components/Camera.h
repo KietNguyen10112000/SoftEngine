@@ -58,6 +58,7 @@ public:
 	COMPONENT_CLASS(Camera);
 
 	Camera();
+	//virtual ~Camera();
 
 	// Inherited via RenderingComponent
 	virtual void Serialize(Serializer* serializer) override;

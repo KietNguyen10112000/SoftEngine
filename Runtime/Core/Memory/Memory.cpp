@@ -82,6 +82,11 @@ ManagedHeap* mheap::internal::Get()
     return g_gcHeap;
 }
 
+ManagedHeap* mheap::internal::GetStableHeap()
+{
+    return g_stableHeap;
+}
+
 byte mheap::internal::GetStableValue()
 {
     return (byte)g_stableValue;

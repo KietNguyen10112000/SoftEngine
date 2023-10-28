@@ -275,9 +275,28 @@ void Runtime::Run()
 {
 	while (m_isRunning)
 	{
-		m_runningSceneIdx = m_nextRunningSceneIdx;
+		if (m_runningSceneIdx != m_nextRunningSceneIdx)
+		{
+			if (m_runningSceneIdx != INVALID_ID)
+			{
+				m_scenes[m_runningSceneIdx]->EndRunning();
+			}
+
+			m_runningSceneIdx = m_nextRunningSceneIdx;
+
+			if (m_runningSceneIdx != INVALID_ID)
+			{
+				m_scenes[m_runningSceneIdx]->BeginRunning();
+			}
+		}
+
+		if (m_destroyingScenesCount != 0)
+		{
+			ProcessDestroyScenes();
+		}
+
 		Iteration();
-		Thread::Sleep(1);
+		//Thread::Sleep(1);
 	}
 
 	TaskWorker::Get()->IsRunning() = false;
@@ -300,6 +319,8 @@ void Runtime::Iteration()
 		gcTask.Entry() = [](void* e)
 		{
 			Runtime* engine = (Runtime*)e;
+			auto rheap = rheap::internal::Get();
+			auto sheap = mheap::internal::GetStableHeap();
 			auto heap = mheap::internal::Get();
 			if (heap->IsNeedGC())
 			{
@@ -432,6 +453,24 @@ void Runtime::SynchronizeAllSubSystems()
 	tracker->UpdateCustomEnd();*/
 }
 
+void Runtime::ProcessDestroyScenes()
+{
+	for (size_t i = 0; i < m_destroyingScenesCount; i++)
+	{
+		Task task;
+		task.Entry() = [](void* p)
+		{
+			auto scene = (Scene*)p;
+			Runtime::Get()->DestroySceneImpl(scene);
+		};
+		task.Params() = m_scenes[m_destroyingScenes[i]].Get();
+
+		TaskSystem::Submit(task, Task::CRITICAL);
+	}
+
+	m_destroyingScenesCount = 0;
+}
+
 byte Runtime::GetNextStableValue()
 {
 	for (size_t i = 0; i < MAX_RUNNING_SCENES; i++)
@@ -445,6 +484,23 @@ byte Runtime::GetNextStableValue()
 
 	assert(0 && "Too much running scene");
 	return 256;
+}
+
+void Runtime::DestroySceneImpl(Scene* scene)
+{
+	ID id = scene->m_runtimeID;
+
+	scene->CleanUp();
+	scene->m_runtimeID = INVALID_ID;
+	scene->m_stableValue = 0;
+
+	m_createSceneLock.lock();
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_SCENE_DESTROYED, scene);
+	m_runningSceneStableValue.set(id, false);
+	m_scenes[id] = nullptr;
+
+	m_createSceneLock.unlock();
 }
 
 Handle<Scene> Runtime::CreateScene()
@@ -466,15 +522,22 @@ Handle<Scene> Runtime::CreateScene()
 
 void Runtime::DestroyScene(Scene* scene)
 {
+	if (scene->m_destroyed || scene->m_runtimeID == INVALID_ID)
+	{
+		return;
+	}
+
 	m_createSceneLock.lock();
 
-	ID id = scene->m_runtimeID;
-	m_runningSceneStableValue.set(id, false);
-	scene->CleanUp();
-
-	m_scenes[id] = nullptr;
+	scene->m_destroyed = true;
+	m_destroyingScenes[m_destroyingScenesCount++] = scene->m_runtimeID;
 
 	m_createSceneLock.unlock();
+
+	if (scene->m_runtimeID == m_runningSceneIdx)
+	{
+		m_nextRunningSceneIdx = INVALID_ID;
+	}
 }
 
 void Runtime::SetRunningScene(Scene* scene)

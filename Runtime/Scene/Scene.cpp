@@ -616,6 +616,16 @@ void Scene::Deserialize(Serializer* serializer)
 {
 }
 
+void Scene::BeginRunning()
+{
+	EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_RUNNING);
+}
+
+void Scene::EndRunning()
+{
+	EventDispatcher()->Dispatch(EVENT::EVENT_END_RUNNING);
+}
+
 void Scene::CleanUp()
 {
 	m_longLifeObjects.clear();
@@ -656,6 +666,8 @@ void Scene::CleanUp()
 	{
 		gc::Run(-1);
 	}
+
+	std::cout << "Scene::CleanUp()\n";
 }
 
 NAMESPACE_END

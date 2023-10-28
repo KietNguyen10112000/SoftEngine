@@ -36,6 +36,24 @@ public:
 		m_topBlock->next = nullptr;
 	}
 
+	~StackAllocator()
+	{
+		decltype(m_topBlock) its[] = { m_topBlock, m_reserveBlock };
+
+		for (auto& head : its)
+		{
+			auto it = head;
+			while (it)
+			{
+				auto next = it->next;
+				std::free(it);
+				it = next;
+			}
+
+			head = nullptr;
+		}
+	}
+
 private:
 	inline static size_t AlignSize(size_t totalBytes)
 	{

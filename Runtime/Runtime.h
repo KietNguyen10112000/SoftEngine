@@ -40,7 +40,7 @@ public:
 		EVENT_SCENE_CREATED,
 
 		// args[0] = <the scene will be destroyed>
-		EVENT_SCENE_DESTROYING,
+		EVENT_SCENE_DESTROYED,
 
 		COUNT
 	};
@@ -73,6 +73,9 @@ private:
 	ID m_runningSceneIdx = INVALID_ID;
 	ID m_nextRunningSceneIdx = INVALID_ID;
 
+	ID m_destroyingScenes[MAX_RUNNING_SCENES] = {};
+	size_t m_destroyingScenesCount = 0;
+
 public:
 	static Handle<Runtime> Initialize();
 	static void Finalize();
@@ -97,7 +100,11 @@ private:
 	void InitPlugins();
 	void FinalPlugins();
 
+	void ProcessDestroyScenes();
+
 	byte GetNextStableValue();
+
+	void DestroySceneImpl(Scene* scene);
 
 public:
 	void Setup();

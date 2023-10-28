@@ -2,6 +2,12 @@
 
 #include "Input/Input.h"
 
+#include "Runtime/Runtime.h"
+
+#include "Core/Random/Random.h"
+#include "MainSystem/Rendering/Components/Camera.h"
+#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+
 NAMESPACE_BEGIN
 
 void FPPCameraScript::OnStart()
@@ -63,6 +69,60 @@ void FPPCameraScript::OnUpdate(float dt)
 		m_rotateX += delta.y * dt * m_rotationSensi;
 
 		m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
+	}
+
+	//static size_t count = 0;
+	//if ((count++) % (60 * 5) == 0)
+	if (Input()->IsKeyUp('K'))
+	{
+		auto runtime = Runtime::Get();
+		auto scene = runtime->CreateScene();
+
+		Transform transform = {};
+
+		auto cameraObj = mheap::New<GameObject>();
+		cameraObj->NewComponent<FPPCameraScript>();
+		auto camera = cameraObj->NewComponent<Camera>();
+		camera->Projection().SetPerspectiveFovLH(
+			PI / 3.0f,
+			Input()->GetClientWidth() / (float)Input()->GetClientHeight(),
+			0.5f,
+			1000.0f
+		);
+		scene->AddObject(cameraObj);
+
+		Vec3 axises[] = {Vec3::X_AXIS, Vec3::Y_AXIS, Vec3::Z_AXIS};
+		auto num = Random::RangeInt64(10, 20);
+		for (size_t i = 0; i < num; i++)
+		{
+			transform = {};
+			transform.Position() = {
+				Random::RangeFloat(-20, 20),
+				Random::RangeFloat(-20, 20),
+				Random::RangeFloat(-20, 20) 
+			};
+
+			transform.Scale() = {
+				Random::RangeFloat(0.5, 5),
+				Random::RangeFloat(0.5, 5),
+				Random::RangeFloat(0.5, 5)
+			};
+
+			Mat4 mat =
+				Mat4::Rotation(axises[Random::RangeInt32(0, 2)], Random::RangeFloat(0, 2 * PI))
+				* Mat4::Rotation(axises[Random::RangeInt32(0, 2)], Random::RangeFloat(0, 2 * PI))
+				* Mat4::Rotation(axises[Random::RangeInt32(0, 2)], Random::RangeFloat(0, 2 * PI));
+
+			transform.Rotation() = { mat };
+
+			auto object = mheap::New<GameObject>();
+			object->SetLocalTransform(transform);
+			object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+			scene->AddObject(object);
+		}
+
+		runtime->DestroyScene(runtime->GetCurrentRunningScene().Get());
+		runtime->SetRunningScene(scene);
 	}
 
 	auto transform = Transform();

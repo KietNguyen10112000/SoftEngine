@@ -13,6 +13,11 @@
 
 #include "StartupConfig.h"
 
+//#include "windows.h"
+//#define _CRTDBG_MAP_ALLOC //to get more details
+//#include <stdlib.h>  
+//#include <crtdbg.h>   //for malloc and free
+
 namespace soft
 {
 	namespace gc
@@ -68,6 +73,11 @@ int main(int argc, const char** argv)
 {
 	using namespace soft;
 
+	//_CrtMemState sOld;
+	//_CrtMemState sNew;
+	//_CrtMemState sDiff;
+	//_CrtMemCheckpoint(&sOld); //take a snapshot
+
 	ManagedLocalScope::ClearStack();
 
 	ProcessArgs(argc, argv);
@@ -116,6 +126,17 @@ int main(int argc, const char** argv)
 	Thread::FinalizeForThisThreadInThisModule();
 	FiberPool::Finalize();
 	MemoryFinalize();
+
+	//_CrtMemCheckpoint(&sNew); //take a snapshot 
+	//if (_CrtMemDifference(&sDiff, &sOld, &sNew)) // if there is a difference
+	//{
+	//	OutputDebugString(L"-----------_CrtMemDumpStatistics ---------");
+	//	_CrtMemDumpStatistics(&sDiff);
+	//	OutputDebugString(L"-----------_CrtMemDumpAllObjectsSince ---------");
+	//	_CrtMemDumpAllObjectsSince(&sOld);
+	//	OutputDebugString(L"-----------_CrtDumpMemoryLeaks ---------");
+	//	_CrtDumpMemoryLeaks();
+	//}
 
 	return 0;
 }

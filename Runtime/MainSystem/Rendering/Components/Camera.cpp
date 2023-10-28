@@ -24,6 +24,11 @@ Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
 	m_pipeline = new BasicRenderingPipeline();
 }
 
+//Camera::~Camera()
+//{
+//	CleanUp();
+//}
+
 void Camera::Serialize(Serializer* serializer)
 {
 }
@@ -34,6 +39,8 @@ void Camera::Deserialize(Serializer* serializer)
 
 void Camera::CleanUp()
 {
+	delete m_pipeline;
+	m_pipeline = nullptr;
 }
 
 Handle<ClassMetadata> Camera::GetMetadata(size_t sign)

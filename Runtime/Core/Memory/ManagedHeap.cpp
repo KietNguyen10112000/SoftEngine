@@ -699,7 +699,9 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 	auto pools = &m_tinyObjectPools[0];
 	for (size_t i = 0; i < TOTAL_POOLS; i++)
 	{
-		pools[i]->ForEachAllocatedBlocks([&](ManagedHandle* handle)
+		auto& pool = pools[i];
+		pool->m_lock.lock();
+		pool->ForEachAllocatedBlocks([&](ManagedHandle* handle)
 			{
 				if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
 				{
@@ -714,27 +716,31 @@ void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callb
 						}
 					}
 
-					pools[i]->Deallocate(handle->GetUsableMemAddress());
+					pool->Deallocate(handle->GetUsableMemAddress());
 				}
 			}
 		);
+		pool->m_lock.unlock();
 	}
 
 
 	auto pages = &m_pages[0][0];
 	for (size_t i = 0; i < LARGE_OBJECT_PAGES_COUNT; i++)
 	{
-		if (pages[i])
+		auto& page = pages[i];
+		if (page)
 		{
-			pages[i]->ForEachAllocatedBlocks([&](ManagedHandle* handle)
+			page->m_lock.lock();
+			page->ForEachAllocatedBlocks([&](ManagedHandle* handle)
 				{
 					if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
 					{
 						if (callback) callback(userPtr, heap, handle);
-						pages[i]->Deallocate(handle->GetUsableMemAddress());
+						page->Deallocate(handle->GetUsableMemAddress());
 					}
 				}
 			);
+			page->m_lock.unlock();
 		}
 	}
 }

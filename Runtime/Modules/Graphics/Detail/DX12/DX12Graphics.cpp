@@ -34,6 +34,8 @@ DX12Graphics::DX12Graphics(void* hwnd)
 
 DX12Graphics::~DX12Graphics()
 {
+    ExecuteCurrentCmdList();
+
     m_currentRenderTarget.m_rtv.ptr = 0;
     m_currentRenderTarget.m_fenceValue = 0;
     ((DX12ShaderResource*)m_currentRenderTarget.m_shaderResource.get())->m_srvGroupStart.ptr = 0;
@@ -333,7 +335,10 @@ void DX12Graphics::ExecuteCurrentCmdList()
     cmdList->SetDescriptorHeaps(1, ppHeaps);
 
     if (m_currentGraphicsPipeline)
+    {
+        m_currentGraphicsPipeline->m_lastFenceValue = GetCurrentDX12FenceValue();
         cmdList->SetPipelineState(m_currentDX12GraphicsPipeline.Get());
+    }
 
     if (m_numBoundRTVs)
     {
@@ -1084,6 +1089,8 @@ void DX12Graphics::SetGraphicsPipeline(GraphicsPipeline* graphicsPipeline)
     GetCmdList()->SetPipelineState(dx12pipeline->m_pipelineState.Get());
     m_currentGraphicsPipeline = dx12pipeline;
     m_currentDX12GraphicsPipeline = dx12pipeline->m_pipelineState;
+
+    m_currentGraphicsPipeline->m_lastFenceValue = GetCurrentDX12FenceValue();
 }
 
 void DX12Graphics::SetDrawParams(GraphicsParams* params)

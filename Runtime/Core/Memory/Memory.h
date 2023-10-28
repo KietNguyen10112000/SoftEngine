@@ -24,6 +24,7 @@ namespace mheap
 		API void Deallocate(ManagedHandle* handle);
 
 		API ManagedHeap* Get();
+		API ManagedHeap* GetStableHeap();
 
 		API byte GetStableValue();
 		API void SetStableValue(byte value);

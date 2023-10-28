@@ -42,10 +42,17 @@ public:
 		// no args
 		EVENT_END_ITERATION,
 
-		// args[0] = 
+		// args[0] = serializer: Serializer
 		EVENT_SERIALIZE,
 
+		// args[0] = serializer: Serializer
 		EVENT_DESERIALIZE,
+
+		// no args
+		EVENT_BEGIN_RUNNING,
+
+		// no args
+		EVENT_END_RUNNING,
 
 		COUNT
 	};
@@ -90,7 +97,7 @@ private:
 	bool m_isSettingUpLongLifeObjects = false;
 	byte m_stableValue = 0;
 	byte m_oldStableValue = 0;
-	byte padd;
+	bool m_destroyed = false;
 
 	size_t m_iterationCount = 0;
 	float m_dt = 0;
@@ -283,10 +290,14 @@ public:
 		return &m_eventDispatcher;
 	}
 
-private:
+public:
 	//SERIALIZABLE_CLASS(Scene);
 	void Serialize(Serializer* serializer);
 	void Deserialize(Serializer* serializer);
+
+	void BeginRunning();
+	void EndRunning();
+
 	void CleanUp();
 	//virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	//virtual void OnPropertyChanged(const UnknownAddress& var) override;
