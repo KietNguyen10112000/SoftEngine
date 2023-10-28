@@ -80,11 +80,14 @@ Handle<Runtime> Runtime::Initialize()
 
 	Runtime::s_instance.reset(ret.Get());
 
+	Runtime::s_instance->InitializeModules();
+
 	return ret;
 }
 
 void Runtime::Finalize()
 {
+	Runtime::s_instance->FinalizeModules();
 	Runtime::s_instance.release();
 	mheap::internal::FreeStableObjects(Runtime::STABLE_VALUE, 0, 0);
 	for (size_t i = 0; i < 5; i++)
@@ -101,7 +104,14 @@ void Runtime::Finalize()
 Runtime::Runtime() : m_eventDispatcher(this)
 {
 	m_eventArgv[0] = this;
+}
 
+Runtime::~Runtime()
+{
+}
+
+void Runtime::InitializeModules()
+{
 	InitNetwork();
 	InitGraphics();
 	InitPlugins();
@@ -114,7 +124,7 @@ Runtime::Runtime() : m_eventDispatcher(this)
 	SerializableList::Initialize();
 }
 
-Runtime::~Runtime()
+void Runtime::FinalizeModules()
 {
 	ScriptMeta::SingletonFinalize();
 	SerializableDB::SingletonFinalize();
@@ -466,6 +476,7 @@ void Runtime::ProcessDestroyScenes()
 		task.Params() = m_scenes[m_destroyingScenes[i]].Get();
 
 		TaskSystem::Submit(task, Task::CRITICAL);
+		//DestroySceneImpl(m_scenes[m_destroyingScenes[i]].Get());
 	}
 
 	m_destroyingScenesCount = 0;
@@ -473,7 +484,7 @@ void Runtime::ProcessDestroyScenes()
 
 byte Runtime::GetNextStableValue()
 {
-	for (size_t i = 0; i < MAX_RUNNING_SCENES; i++)
+	for (size_t i = 1; i < MAX_RUNNING_SCENES + 1; i++)
 	{
 		if (!m_runningSceneStableValue.test(i))
 		{

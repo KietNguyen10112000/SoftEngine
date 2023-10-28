@@ -92,20 +92,22 @@ void FPPCameraScript::OnUpdate(float dt)
 		scene->AddObject(cameraObj);
 
 		Vec3 axises[] = {Vec3::X_AXIS, Vec3::Y_AXIS, Vec3::Z_AXIS};
-		auto num = Random::RangeInt64(10, 20);
+		auto num = Random::RangeInt64(1000, 5000);
+		const float range = 300;
+		const float srange = 10;
 		for (size_t i = 0; i < num; i++)
 		{
 			transform = {};
 			transform.Position() = {
-				Random::RangeFloat(-20, 20),
-				Random::RangeFloat(-20, 20),
-				Random::RangeFloat(-20, 20) 
+				Random::RangeFloat(-range, range),
+				Random::RangeFloat(-range, range),
+				Random::RangeFloat(-range, range)
 			};
 
 			transform.Scale() = {
-				Random::RangeFloat(0.5, 5),
-				Random::RangeFloat(0.5, 5),
-				Random::RangeFloat(0.5, 5)
+				Random::RangeFloat(0.5, srange),
+				Random::RangeFloat(0.5, srange),
+				Random::RangeFloat(0.5, srange)
 			};
 
 			Mat4 mat =

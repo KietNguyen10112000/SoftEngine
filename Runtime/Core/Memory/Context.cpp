@@ -87,6 +87,8 @@ void gc::Context::Mark()
 				continue;
 			}
 			handle->marked = MARK_COLOR::WHITE;
+
+			//g_system->m_markedObjectCount++;
 			//count++;
 			
 			//std::cout << "Mark\n";
@@ -301,7 +303,7 @@ void gc::Context::RemarkPhase()
 		while (m_localScopeAllocatedIdx != size && m_isPaused == false)
 		{
 			auto& r = buf[m_localScopeAllocatedIdx];
-			if (*r.pptr == r.ptr) // valid transaction
+			//if (*r.pptr == r.ptr) // valid transaction --> when I do my 2D final project, I uncomment this line, so when I come back to make it 3D, the engine crash many times, so never uncomment this line, because of raw address so redundant is acceptable, fuck,fuck,fuck for 6 hours of my life
 			{
 				m_stack.push_back({ 0, 0, 0, r.ptr, 0, 0 });
 				Mark();
@@ -401,6 +403,8 @@ void gc::Context::SweepPage()
 		else
 		{
 			handle->marked = MARK_COLOR::BLACK;
+
+			//g_system->m_unmarkObjectCount++;
 		}
 
 		assert(next == end || next->IsAllocated());
@@ -476,6 +480,8 @@ void gc::Context::SweepPool()
 		else
 		{
 			handle->marked = MARK_COLOR::BLACK;
+
+			//g_system->m_unmarkObjectCount++;
 		}
 
 		forward = next;
@@ -681,6 +687,9 @@ void ContextSharedHandle::EndSweep(Context* ctx)
 		//CONSOLE_LOG() 
 		//	<< "============ End GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
 		g_system->m_phase = GC_PHASE::IDLE_PHASE;
+
+		//std::cout << "Total marked objects: " << g_system->m_markedObjectCount << "\n";
+		//std::cout << "Total unmark objects: " << g_system->m_unmarkObjectCount << "\n";
 
 		auto evt = g_system->m_gcEvent;
 		if (evt)

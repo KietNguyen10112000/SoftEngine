@@ -25,6 +25,11 @@ void GameObject::IndirectSetLocalTransform(const Transform& transform)
 	m_scene->OnObjectTransformChanged(this);
 }
 
+//GameObject::~GameObject()
+//{
+//	std::cout << "GameObject::~GameObject()\n";
+//}
+
 void GameObject::RemoveFromParent()
 {
 }

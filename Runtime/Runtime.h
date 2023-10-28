@@ -29,7 +29,7 @@ public:
 class API Runtime : Traceable<Runtime>, public Singleton<Runtime>
 {
 public:
-	constexpr static byte STABLE_VALUE	= 127;
+	constexpr static byte STABLE_VALUE	= 0;
 	constexpr static byte NUM_ARGS		= 128;
 
 	constexpr static byte MAX_RUNNING_SCENES = 32;
@@ -53,7 +53,7 @@ private:
 	GenericStorage m_genericStorage;
 	EventDispatcher<Runtime, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
-	std::bitset<MAX_RUNNING_SCENES> m_runningSceneStableValue;
+	std::bitset<2 * MAX_RUNNING_SCENES> m_runningSceneStableValue;
 
 	Input* m_input = nullptr;
 	void* m_window = nullptr;
@@ -82,6 +82,9 @@ public:
 
 	Runtime();
 	~Runtime();
+
+	void InitializeModules();
+	void FinalizeModules();
 
 private:
 	TRACEABLE_FRIEND();

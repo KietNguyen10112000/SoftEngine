@@ -155,6 +155,8 @@ private:
 	}
 
 public:
+	//~GameObject();
+
 	// return null if object has one component has same type
 	template <typename Comp>
 	GameObject* AddComponent(const Handle<Comp>& component)

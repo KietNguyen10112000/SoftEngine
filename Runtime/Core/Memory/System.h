@@ -161,6 +161,9 @@ public:
 	GCEvent* m_gcEvent = nullptr;
 
 	ConcurrentQueue<byte*> m_crossBoundaries;
+
+	/*size_t m_markedObjectCount = 0;
+	size_t m_unmarkObjectCount = 0;*/
 public:
 	System()
 	{
@@ -265,6 +268,9 @@ public:
 		{
 			//CONSOLE_LOG()
 			//	<< "============ New GC cycle by ThreadID [" << ThreadID::Get() << "] =============\n";
+
+			/*m_markedObjectCount = 0;
+			m_unmarkObjectCount = 0;*/
 
 			if (!m_deferFreeList.empty())
 			{
@@ -671,7 +677,7 @@ public:
 	// stableValue must be tracked stable value
 	inline void ClearTrackedBoundariesOfStableValue(byte stableValue)
 	{
-		m_globalLock.lock();
+		//m_globalLock.lock();
 		for (size_t i = 0; i < m_trackedCrossBoundaries.size(); i++)
 		{
 			ManagedHandle* handle = (ManagedHandle*)m_trackedCrossBoundaries[i] - 1;
@@ -682,7 +688,7 @@ public:
 				i--;
 			}
 		}
-		m_globalLock.unlock();
+		//m_globalLock.unlock();
 	}
 };
 

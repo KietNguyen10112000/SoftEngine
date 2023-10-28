@@ -15,6 +15,7 @@ inline void ForEachTraceTable(size_t offsetFromStart, byte* addr, TraceTable* tr
 {
 	auto begin = traceTable->begin();
 	auto end = traceTable->end();
+	auto instanceSize = traceTable->instanceSize;
 
 	for (size_t i = 0; i < num; i++)
 	{
@@ -31,6 +32,9 @@ inline void ForEachTraceTable(size_t offsetFromStart, byte* addr, TraceTable* tr
 
 			callback(ptr, offsetFromStart + offset);
 		}
+
+		offsetFromStart += instanceSize;
+		addr += instanceSize;
 	}
 }
 

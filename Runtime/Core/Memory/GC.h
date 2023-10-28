@@ -28,6 +28,8 @@ API void SetGCEvent(GCEvent* evt);
 
 API void ClearTrackedBoundariesOfStableValue(byte value);
 
+API void BlockGC(bool block);
+
 class GC_RESUME_FLAG
 {
 public:

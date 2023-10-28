@@ -81,6 +81,26 @@ void gc::ClearTrackedBoundariesOfStableValue(byte value)
 	g_system->ClearTrackedBoundariesOfStableValue(value);
 }
 
+void BlockGC(bool block)
+{
+	if (block)
+	{
+	Loop:
+		g_system->m_globalLock.lock();
+
+		if (!g_system->IsEndGC())
+		{
+			g_system->m_globalLock.unlock();
+			std::this_thread::yield();
+			goto Loop;
+		}
+	}
+	else
+	{
+		g_system->m_globalLock.unlock();
+	}
+}
+
 void gc::internal::RegisterLocalScope(void* s)
 {
 	Initialize();
