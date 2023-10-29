@@ -97,6 +97,11 @@ void mheap::internal::SetStableValue(byte value)
     g_stableValue = (size_t)value;
 }
 
+void mheap::internal::ChangeStableValue(byte newValue, ManagedHandle* returnedByAllocate)
+{
+    returnedByAllocate->stableValue = newValue;
+}
+
 void mheap::internal::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
 {
     gc::BlockGC(true);

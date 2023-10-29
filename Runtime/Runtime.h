@@ -29,6 +29,7 @@ public:
 class API Runtime : Traceable<Runtime>, public Singleton<Runtime>
 {
 public:
+	constexpr static byte NONE_STABLE_VALUE = 127;
 	constexpr static byte STABLE_VALUE	= 0;
 	constexpr static byte NUM_ARGS		= 128;
 
@@ -76,6 +77,8 @@ private:
 	ID m_destroyingScenes[MAX_RUNNING_SCENES] = {};
 	size_t m_destroyingScenesCount = 0;
 
+	spinlock m_noneStableValueLock;
+
 public:
 	static Handle<Runtime> Initialize();
 	static void Finalize();
@@ -108,6 +111,11 @@ private:
 	byte GetNextStableValue();
 
 	void DestroySceneImpl(Scene* scene);
+
+	inline auto& NoneStableValueLock()
+	{
+		return m_noneStableValueLock;
+	}
 
 public:
 	void Setup();

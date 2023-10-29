@@ -631,6 +631,21 @@ void DX12Graphics::InitImGui(void* hwnd)
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsLight();
 
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    ImFontConfig config{};
+    //config.GlyphExtraSpacing.x = 1.0f;
+    //config.OversampleH = config.OversampleV = 1;
+    //config.PixelSnapH = true;
+    //config.SizePixels = 13.0f * 1.0f;
+    //config.EllipsisChar = (ImWchar)0x0085;
+    //config.GlyphOffset.y = 1.0f * ((float)(int)(((config.SizePixels / 13.0f)) + 0.5f));
+    config.GlyphRanges = io.Fonts->GetGlyphRangesVietnamese();
+    //config.GlyphExtraSpacing.x = 1.0f;
+
+    //io.Fonts->AddFontDefault(&config);
+    io.Fonts->AddFontFromFileTTF("Resources/segoeui.ttf", (int)(24.0f), &config);
+
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX12_Init(m_device.Get(), NUM_GRAPHICS_BACK_BUFFERS,

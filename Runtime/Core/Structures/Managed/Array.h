@@ -258,6 +258,11 @@ public:
 		Clear();
 	}
 
+	inline void reserve(size_t size)
+	{
+		Reserve(size);
+	}
+
 public:
 	inline T& operator[](size_t i) const
 	{
@@ -269,15 +274,25 @@ public:
 
 };
 
-#define MANAGED_ARRAY_ROLL_TO_FILL_BLANK(v, objName, idName)	\
-if (v.size() == 1)												\
+#define MANAGED_ARRAY_ROLL_TO_FILL_BLANK(arr, objName, idName)	\
+if (arr.size() == 1)											\
 {																\
-	v.clear();													\
+	arr.clear();												\
 } else {														\
-auto& blank = v[objName->idName];								\
-auto& back = v.back();											\
+auto& blank = arr[objName->idName];								\
+auto& back = arr.back();										\
 back->idName = objName->idName;									\
 blank = back;													\
-v.Pop();}
+arr.Pop();}
+
+#define MANAGED_ARRAY_ROLL_TO_FILL_BLANK_BY_ID(arr, id)			\
+if (arr.size() == 1)											\
+{																\
+	arr.clear();												\
+} else {														\
+auto& blank = arr[id];											\
+auto& back = arr.back();										\
+blank = back;													\
+arr.Pop();}
 
 NAMESPACE_END

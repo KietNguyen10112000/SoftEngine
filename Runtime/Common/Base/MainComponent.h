@@ -5,21 +5,27 @@
 
 #include "Common/Base/Serializable.h"
 
+#include "Scene/MODIFICATION_STATE.h"
+
 NAMESPACE_BEGIN
 
 #define COMPONENT_CLASS(className) SERIALIZABLE_CLASS(className)
 
 class MainComponent : public Serializable
 {
-protected:
+private:
 	friend class GameObject;
 	friend class DoubleBVH;
+	friend class Scene;
 
+protected:
 	struct DoubleBVHId
 	{
 		ID bvhId = INVALID_ID;
 		ID ulistId = INVALID_ID;
 	};
+
+	MODIFICATION_STATE::STATE m_modificationState = MODIFICATION_STATE::NONE;
 
 	DoubleBVHId m_doubleBVHId[2] = {};
 	GameObject* m_object = nullptr;

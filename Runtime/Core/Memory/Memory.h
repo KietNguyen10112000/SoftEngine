@@ -29,6 +29,8 @@ namespace mheap
 		API byte GetStableValue();
 		API void SetStableValue(byte value);
 
+		API void ChangeStableValue(byte newValue, ManagedHandle* returnedByAllocate);
+
 		API void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
 
 		API void Reset();

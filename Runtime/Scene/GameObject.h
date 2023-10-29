@@ -82,21 +82,53 @@ private:
 	}
 
 private:
-	template <typename Comp>
-	GameObject* AddMainComponent(const Handle<Comp>& component)
+	template <typename T>
+	ComponentDtor GetDtor() const
 	{
-		auto& slot = m_mainComponents[Comp::COMPONENT_ID];
-		if (slot.Get() != nullptr)
+		return [](void* ptr)
 		{
-			return nullptr;
-		}
+			((T*)ptr)->~T();
+		};
+	}
+
+	template <typename Comp>
+	GameObject* AddMainComponentDirect(const Handle<Comp>& component)
+	{
+		m_modificationLock.lock();
+
+		auto& slot = m_mainComponents[Comp::COMPONENT_ID];
+
+		assert(slot.Get() == nullptr);
 
 		slot = component;
 		component->m_object = this;
 		//component->OnComponentAdded();
 
+		m_modificationLock.unlock();
+
 		return this;
 	}
+
+	GameObject* AddMainComponentDefer(const Handle<MainComponent>& component);
+
+	template <typename Comp>
+	GameObject* RemoveMainComponentDirect(Comp* component)
+	{
+		m_modificationLock.lock();
+
+		auto& slot = m_mainComponents[Comp::COMPONENT_ID];
+
+		assert(slot.Get() != nullptr);
+
+		slot = nullptr;
+		component->m_object = nullptr;
+
+		m_modificationLock.unlock();
+
+		return this;
+	}
+
+	GameObject* RemoveMainComponentDefer(MainComponent* component);
 
 	auto FindComponentFromDtor(ComponentDtor dtor) const
 	{
@@ -111,11 +143,14 @@ private:
 	template <typename Comp>
 	GameObject* AddNormalComponent(const Handle<Comp>& component)
 	{
+		m_modificationLock.lock();
+
 		ComponentDtor dtor = GetDtor<Comp>();
 		auto it = FindComponentFromDtor(dtor);
 
 		if (it != m_components.end())
 		{
+			m_modificationLock.unlock();
 			return nullptr;
 		}
 
@@ -124,10 +159,32 @@ private:
 		slot.ptr = component;
 		m_components.Push(slot);
 
-		if constexpr (Has_OnCompentAdded<Comp>::value)
+		m_modificationLock.unlock();
+
+		return this;
+	}
+
+	template <typename Comp>
+	GameObject* RemoveNormalComponent(Comp* component)
+	{
+		m_modificationLock.lock();
+
+		ComponentDtor dtor = GetDtor<Comp>();
+		auto it = FindComponentFromDtor(dtor);
+
+		if ((void*)component != it->ptr.Get())
 		{
-			component->OnCompentAdded(this);
+			m_modificationLock.unlock();
+			return nullptr;
 		}
+
+		if (it != m_components.end())
+		{
+			auto idx = it - m_components.data();
+			MANAGED_ARRAY_ROLL_TO_FILL_BLANK_BY_ID(m_components, idx);
+		}
+
+		m_modificationLock.unlock();
 
 		return this;
 	}
@@ -163,11 +220,52 @@ public:
 	{
 		if constexpr (std::is_base_of_v<MainComponent, Comp>)
 		{
-			return AddMainComponent(component);
+			if (m_mainComponents[Comp::COMPONENT_ID].Get() != nullptr)
+			{
+				return nullptr;
+			}
+
+			if (IsInAnyScene())
+			{
+				return AddMainComponentDefer(component);
+			}
+
+			return AddMainComponentDirect(component);
 		}
 		else
 		{
 			return AddNormalComponent(component);
+		}
+	}
+
+	// return this if object has component, null on ow
+	template <typename Comp>
+	inline GameObject* RemoveComponent(const Handle<Comp>& component)
+	{
+		RemoveComponentRaw(component.Get());
+	}
+
+	// return this if object has component, null on ow
+	template <typename Comp>
+	inline GameObject* RemoveComponentRaw(Comp* component)
+	{
+		if constexpr (std::is_base_of_v<MainComponent, Comp>)
+		{
+			if ((void*)m_mainComponents[Comp::COMPONENT_ID].Get() != (void*)component)
+			{
+				return nullptr;
+			}
+
+			if (IsInAnyScene())
+			{
+				return RemoveMainComponentDefer(component);
+			}
+
+			return RemoveMainComponentDirect(component);
+		}
+		else
+		{
+			return RemoveNormalComponent(component);
 		}
 	}
 
@@ -225,6 +323,12 @@ public:
 		}
 	}
 
+	template <typename Comp>
+	inline bool HasComponent()
+	{
+		return GetComponentRaw<Comp>() != nullptr;
+	}
+
 public:
 	void AddChild(const Handle<GameObject>& obj);
 	void RemoveFromParent();
@@ -245,6 +349,16 @@ public:
 		for (auto& child : m_children)
 		{
 			child->PreTraversal(func);
+		}
+	}
+
+	template <typename Func>
+	void PreTraversal1(Func func)
+	{
+		func(this);
+		for (auto& child : m_children)
+		{
+			child->PreTraversal1(func);
 		}
 	}
 
@@ -313,7 +427,11 @@ public:
 
 	inline bool IsInAnyScene()
 	{
-		return m_scene && m_sceneId != INVALID_ID;
+		auto in1 = m_scene && m_modificationState == MODIFICATION_STATE::ADDING;
+		auto in2 = m_scene && m_sceneId != INVALID_ID;
+		//auto notIn = m_scene && m_modificationState == MODIFICATION_STATE::NONE && m_sceneId == INVALID_ID;
+		
+		return in1 || in2;
 	}
 
 	inline const auto& GetLocalTransform()

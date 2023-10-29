@@ -4,6 +4,20 @@
 
 NAMESPACE_BEGIN
 
+GameObject* GameObject::AddMainComponentDefer(const Handle<MainComponent>& component)
+{
+	// [TODO]: will implement
+	assert(0);
+	return this;
+}
+
+GameObject* GameObject::RemoveMainComponentDefer(MainComponent* component)
+{
+	// [TODO]: will implement
+	assert(0);
+	return this;
+}
+
 void GameObject::RecalculateTransform(size_t idx)
 {
 	auto& localMat = m_localTransformMat[idx];

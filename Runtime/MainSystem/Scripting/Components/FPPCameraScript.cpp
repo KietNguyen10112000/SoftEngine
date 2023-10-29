@@ -22,6 +22,17 @@ void FPPCameraScript::OnStart()
 
 void FPPCameraScript::OnUpdate(float dt)
 {
+	if (Input()->IsKeyUp(KEYBOARD::ESC))
+	{
+		std::cout << "ESC pressed\n";
+		Input()->SetCursorLock(!Input()->GetCursorLock());
+	}
+
+	if (!Input()->GetCursorLock())
+	{
+		return;
+	}
+
 	auto trans = Mat4::Identity();
 	trans *= Mat4::Rotation(Vec3::Y_AXIS, m_rotateY);
 
@@ -56,13 +67,7 @@ void FPPCameraScript::OnUpdate(float dt)
 		m_position += right * d;
 	}
 
-	if (Input()->IsKeyUp(KEYBOARD::ESC))
-	{
-		std::cout << "ESC pressed\n";
-		Input()->SetCursorLock(!Input()->GetCursorLock());
-	}
-
-	if (Input()->GetCursorLock() && Input()->IsCursorMoved())
+	if (Input()->IsCursorMoved())
 	{
 		auto& delta = Input()->GetDeltaCursorPosition();
 		m_rotateY += delta.x * dt * m_rotationSensi;

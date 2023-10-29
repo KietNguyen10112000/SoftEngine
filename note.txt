@@ -45,9 +45,3 @@ Các bước để render với dx12:
 + Tạo 1 GraphicsRootSignature cố định, 16 srv, 16 cbv, 16 sampler (+16 uav)
 + Tạo 1 gpu DescriptorHeap cố định (capacity rất lớn), allocate Descriptors cho mỗi 1 Pipeline với số lượng như trên
 + Mỗi Pipeline sẽ chứa 1 cpu descriptor heap riêng
-
-
-
-
-***Bug:
-+ correct marked objects count >= 6009

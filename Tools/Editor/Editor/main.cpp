@@ -4,21 +4,7 @@
 #include "Scene/Scene.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
 
-class Editor
-{
-
-};
-
-class EditorContext
-{
-public:
-	void OnGUI()
-	{
-		bool show = true;
-		ImGui::ShowDemoWindow(&show);
-	}
-
-};
+#include "EditorContext.h"
 
 void RegisterSerializables()
 {
@@ -27,9 +13,6 @@ void RegisterSerializables()
 
 void Initialize(Runtime* runtime)
 {
-	auto editor		= mheap::New<Editor>();
-	auto editorId	= runtime->GenericStorage()->Store(editor);
-
 	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
 		{
@@ -37,16 +20,38 @@ void Initialize(Runtime* runtime)
 			auto editorContext		= mheap::New<EditorContext>();
 			auto editorContextId	= scene->GenericStorage()->Store(editorContext);
 
+			editorContext->m_scene = scene;
+
 			scene->GetRenderingSystem()->EventDispatcher()->AddListener(RenderingSystem::EVENT_RENDER_GUI,
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{
 					auto editorContext = renderingSystem->GetScene()->GenericStorage()->Access<EditorContext>(editorContextId);
-					editorContext->OnGUI();
+					editorContext->OnRenderGUI();
+				},
+				editorContextId
+			);
+
+			scene->EventDispatcher()->AddListener(Scene::EVENT_OBJECTS_ADDED,
+				[](Scene* scene, int argc, void** argv, ID editorContextId)
+				{
+					auto objs = (std::vector<GameObject*>*)argv[0];
+					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
+					editorContext->OnObjectsAdded(*objs);
+				},
+				editorContextId
+			);
+
+			scene->EventDispatcher()->AddListener(Scene::EVENT_OBJECTS_REMOVED,
+				[](Scene* scene, int argc, void** argv, ID editorContextId)
+				{
+					auto objs = (std::vector<GameObject*>*)argv[0];
+					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
+					editorContext->OnObjectsRemoved(*objs);
 				},
 				editorContextId
 			);
 		},
-		editorId
+		0
 	);
 }
 

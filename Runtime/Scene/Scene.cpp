@@ -116,64 +116,62 @@ void Scene::SetupMainSystemModificationTasks()
 
 void Scene::SetupDeferLists()
 {
-	m_filteredAddList.reserve(8 * KB);
-	m_filteredRemoveList.reserve(8 * KB);
-	for (auto& list : m_addList)
+	constexpr size_t RESERVE_SIZE = 16 * KB;
+
+	decltype(m_addList)* listss[] = { &m_addList, &m_removeList, &m_changedTransformList };
+
+	for (auto& _lists : listss)
 	{
-		list.ReserveNoSafe(8 * KB);
+		auto& lists = *_lists;
+		for (auto& list : lists)
+		{
+			list.ReserveNoSafe(RESERVE_SIZE);
+		}
 	}
 
-	for (auto& list : m_removeList)
+	for (auto& list : m_objectsHolder)
 	{
-		list.ReserveNoSafe(8 * KB);
+		list.ReserveNoSafe(RESERVE_SIZE);
 	}
 
-	for (auto& list : m_changedTransformList)
+	for (auto& list : m_componentsHolder)
 	{
-		list.ReserveNoSafe(8 * KB);
+		list.ReserveNoSafe(RESERVE_SIZE);
 	}
 }
 
 void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 {
-	auto& list = m_filteredAddList; // GetPrevAddList();
+	auto& list = GetPrevComponentsAddList(mainSystemId); // GetPrevAddList();
 	auto system = m_mainSystems[mainSystemId];
-	for (auto& obj : list)
+	for (auto& comp : list)
 	{
-		obj->PreTraversal(
-			[system, mainSystemId](GameObject* obj)
-			{
-				auto& comp = obj->m_mainComponents[mainSystemId];
-				if (comp)
-				{
-					system->AddComponent(comp);
-					comp->OnComponentAdded();
-					comp->OnTransformChanged();
-				}
+		if (comp->m_modificationState != MODIFICATION_STATE::ADDING)
+		{
+			continue;
+		}
 
-				return false;
-			}
-		);
+		comp->m_modificationState = MODIFICATION_STATE::NONE;
+		system->AddComponent(comp);
+		comp->OnComponentAdded();
+		comp->OnTransformChanged();
 	}
 }
 
 void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 {
-	auto& list = m_filteredRemoveList; // GetPrevRemoveList();
+	auto& list = GetPrevComponentsRemoveList(mainSystemId); // GetPrevRemoveList();
 	auto& system = m_mainSystems[mainSystemId];
-	for (auto& obj : list)
+	for (auto& comp : list)
 	{
-		obj->PostTraversal(
-			[system, mainSystemId](GameObject* obj)
-			{
-				auto& comp = obj->m_mainComponents[mainSystemId];
-				if (comp)
-				{
-					comp->OnComponentRemoved();
-					system->RemoveComponent(comp);
-				}
-			}
-		);
+		if (comp->m_modificationState != MODIFICATION_STATE::REMOVING)
+		{
+			continue;
+		}
+
+		comp->m_modificationState = MODIFICATION_STATE::NONE;
+		comp->OnComponentRemoved();
+		system->RemoveComponent(comp);
 	}
 }
 
@@ -219,8 +217,10 @@ void Scene::ProcessModificationForAllMainSystems()
 
 void Scene::FilterAddList()
 {
+	//assert(m_isSettingUpLongLifeObjects == false);
+
 	auto scene = this;
-	auto& list = GetCurrentAddList();
+	auto& list = GetPrevAddList();
 	auto& destList = m_filteredAddList;
 	destList.clear();
 	for (auto& obj : list)
@@ -240,13 +240,6 @@ void Scene::FilterAddList()
 			assert(0);
 		}
 
-		if (m_isSettingUpLongLifeObjects)
-		{
-			obj->m_sceneId = m_longLifeObjects.size();
-			obj->m_isLongLife = true;
-			m_longLifeObjects.Push(obj);
-		}
-		else
 		{
 			obj->m_sceneId = m_shortLifeObjects.size();
 			obj->m_isLongLife = false;
@@ -261,14 +254,15 @@ void Scene::FilterAddList()
 		);
 	}
 
-	m_addListHolder.Clear();
-
-	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_ADDED, &m_filteredAddList);
+	if (m_filteredAddList.size() != 0)
+	{
+		EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_ADDED, &m_filteredAddList);
+	}
 }
 
 void Scene::FilterRemoveList()
 {
-	auto& list = GetCurrentRemoveList();
+	auto& list = GetPrevRemoveList();
 	auto& destList = m_filteredRemoveList;
 	destList.clear();
 
@@ -312,9 +306,10 @@ void Scene::FilterRemoveList()
 		);
 	}
 
-	m_removeListHolder.Clear();
-
-	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_REMOVED, &m_filteredRemoveList);
+	if (m_filteredRemoveList.size() != 0)
+	{
+		EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_REMOVED, &m_filteredRemoveList);
+	}
 }
 
 void Scene::EndReconstructForMainSystem(ID mainSystemId)
@@ -360,14 +355,33 @@ void Scene::BeginIteration()
 		TaskSystem::SubmitAndWait(tasks, 2, Task::CRITICAL);
 	}*/
 
-	FilterAddList();
-	FilterRemoveList();
-
 	m_iterationCount++;
 	GetCurrentAddList().Clear();
 	GetCurrentRemoveList().Clear();
 	GetCurrentChangedTransformList().Clear();
+
+	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	{
+		GetCurrrentComponentsAddList(i).Clear();
+		GetCurrrentComponentsRemoveList(i).Clear();
+	}
+
+	GetCurrrentObjectsHolderList().Clear();
+	GetCurrrentComponentsHolderList().Clear();
+
 	//GetCurrentTrash().clear();
+
+	Task task;
+	task.Entry() = [](void* p)
+	{
+		auto scene = (Scene*)p;
+		scene->FilterAddList();
+		scene->FilterRemoveList();
+	};
+	task.Params() = this;
+
+	TaskSystem::PrepareHandle(&m_objectsModificationTaskWaitingHandle);
+	TaskSystem::Submit(&m_objectsModificationTaskWaitingHandle, task, Task::CRITICAL);
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_ITERATION);
 }
@@ -375,6 +389,8 @@ void Scene::BeginIteration()
 void Scene::EndIteration()
 {
 	SynchMainProcessingSystemForMainOutputSystems();
+
+	TaskSystem::WaitForHandle(&m_objectsModificationTaskWaitingHandle);
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_END_ITERATION);
 }
@@ -469,8 +485,80 @@ void Scene::StageAllChangedTransformObjects()
 	TaskSystem::WaitForHandle(&handle);
 }
 
+void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
+{
+	obj->m_modificationLock.lock();
+
+	obj->m_sceneId = m_longLifeObjects.size();
+	obj->m_isLongLife = true;
+
+	mheap::internal::SetStableValue(Runtime::NONE_STABLE_VALUE);
+	m_longLifeObjects.Push(obj);
+	mheap::internal::SetStableValue(m_stableValue);
+
+	obj->PreTraversal1(
+		[&](GameObject* cur)
+		{
+			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				auto& comp = cur->m_mainComponents[i];
+				if (comp.Get())
+				{
+					AddLongLifeComponent(i, comp);
+				}
+			}
+		}
+	);
+
+	obj->m_modificationLock.unlock();
+}
+
+void Scene::AddLongLifeComponent(ID COMPONENT_ID, const Handle<MainComponent>& component)
+{
+	auto system = m_mainSystems[COMPONENT_ID];
+	system->AddComponent(component.Get());
+	component->OnComponentAdded();
+	component->OnTransformChanged();
+}
+
+void Scene::AddComponent(ID COMPONENT_ID, const Handle<MainComponent>& component)
+{
+	assert(component->m_modificationState == MODIFICATION_STATE::NONE || component->m_modificationState == MODIFICATION_STATE::REMOVING);
+
+	if (component->m_modificationState == MODIFICATION_STATE::REMOVING)
+	{
+		component->m_modificationState = MODIFICATION_STATE::NONE;
+		return;
+	}
+
+	component->m_modificationState = MODIFICATION_STATE::ADDING;
+	GetCurrrentComponentsAddList(COMPONENT_ID).Add(component);
+}
+
+void Scene::RemoveComponent(ID COMPONENT_ID, const Handle<MainComponent>& component)
+{
+	assert(component->m_modificationState == MODIFICATION_STATE::NONE || component->m_modificationState == MODIFICATION_STATE::ADDING);
+
+	if (component->m_modificationState == MODIFICATION_STATE::ADDING)
+	{
+		component->m_modificationState = MODIFICATION_STATE::NONE;
+		return;
+	}
+
+	component->m_modificationState = MODIFICATION_STATE::REMOVING;
+	GetCurrrentComponentsRemoveList(COMPONENT_ID).Add(component);
+}
+
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 {
+	assert(obj->Parent().Get() == nullptr);
+
+	if (m_isSettingUpLongLifeObjects)
+	{
+		AddLongLifeObject(obj, indexedName);
+		return;
+	}
+
 	obj->m_modificationLock.lock();
 
 #ifdef _DEBUG
@@ -500,15 +588,31 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 		obj->m_indexedName = obj->m_name;
 	}
 
-	m_addListHolder.Add(obj);
+	GetCurrrentObjectsHolderList().Add(obj);
 	GetCurrentAddList().Add(obj);
 
 Return:
+	obj->PreTraversal1(
+		[&](GameObject* cur)
+		{
+			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				auto& comp = cur->m_mainComponents[i];
+				if (comp.Get())
+				{
+					AddComponent(i, comp);
+				}
+			}
+		}
+	);
+
 	obj->m_modificationLock.unlock();
 }
 
 void Scene::RemoveObject(const Handle<GameObject>& obj)
 {
+	assert(m_isSettingUpLongLifeObjects == false);
+	assert(obj->Parent().Get() == nullptr);
 	assert(obj->m_scene == this);
 
 	obj->m_modificationLock.lock();
@@ -525,10 +629,24 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 
 	obj->m_modificationState = MODIFICATION_STATE::REMOVING;
 
-	m_removeListHolder.Add(obj);
+	GetCurrrentObjectsHolderList().Add(obj);
 	GetCurrentRemoveList().Add(obj);
 
 Return:
+	obj->PostTraversal(
+		[&](GameObject* cur)
+		{
+			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				auto& comp = cur->m_mainComponents[i];
+				if (comp.Get())
+				{
+					RemoveComponent(i, comp);
+				}
+			}
+		}
+	);
+
 	obj->m_modificationLock.unlock();
 }
 
@@ -539,10 +657,20 @@ Handle<GameObject> Scene::FindObjectByIndexedName(String name)
 
 bool Scene::BeginSetupLongLifeObject()
 {
+	Runtime::Get()->NoneStableValueLock().lock();
+
 	m_isSettingUpLongLifeObjects = true;
 
 	m_oldStableValue = mheap::internal::GetStableValue();
 	mheap::internal::SetStableValue(m_stableValue);
+
+	for (auto& system : m_mainSystems)
+	{
+		if (system)
+		{
+			system->BeginModification();
+		}
+	}
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_SETUP_LONGLIFE_OBJECTS);
 
@@ -552,6 +680,23 @@ bool Scene::BeginSetupLongLifeObject()
 void Scene::EndSetupLongLifeObject()
 {
 	mheap::internal::SetStableValue(m_oldStableValue);
+
+	if (m_longLifeObjects.size() != 0)
+	{
+		mheap::internal::ChangeStableValue(m_stableValue, ((ManagedHandle*)m_longLifeObjects.data()) - 1);
+		mheap::internal::FreeStableObjects(Runtime::NONE_STABLE_VALUE, 0, 0);
+	}
+	
+
+	Runtime::Get()->NoneStableValueLock().unlock();
+
+	for (auto& system : m_mainSystems)
+	{
+		if (system)
+		{
+			system->EndModification();
+		}
+	}
 
 	BeginIteration();
 	EndIteration();
@@ -631,23 +776,27 @@ void Scene::CleanUp()
 	m_longLifeObjects.clear();
 	m_shortLifeObjects.clear();
 
-	for (auto& list : m_addList)
+	decltype(m_addList)* listss[] = { &m_addList, &m_removeList, &m_changedTransformList };
+
+	for (auto& _lists : listss)
+	{
+		auto& lists = *_lists;
+		for (auto& list : lists)
+		{
+			list.Clear();
+		}
+	}
+
+	for (auto& list : m_objectsHolder)
 	{
 		list.Clear();
 	}
 
-	for (auto& list : m_removeList)
+	for (auto& list : m_componentsHolder)
 	{
 		list.Clear();
 	}
 
-	for (auto& list : m_changedTransformList)
-	{
-		list.Clear();
-	}
-
-	m_addListHolder.Clear();
-	m_removeListHolder.Clear();
 	//m_genericStorage.Clear();
 	//m_eventDispatcher.Clear();
 

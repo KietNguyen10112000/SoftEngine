@@ -31,7 +31,7 @@ private:
 public:
 	StackAllocator(size_t sizeOfEachBlock = 8 * MB) : m_sizeOfEachBlock(sizeOfEachBlock)
 	{
-		m_topBlock = (Block*)std::malloc(sizeOfEachBlock);
+		m_topBlock = (Block*)rheap::malloc(sizeOfEachBlock);
 		m_topBlock->allocatedBytes = 0;
 		m_topBlock->next = nullptr;
 	}
@@ -46,7 +46,7 @@ public:
 			while (it)
 			{
 				auto next = it->next;
-				std::free(it);
+				rheap::free(it);
 				it = next;
 			}
 
@@ -81,7 +81,7 @@ private:
 		}
 		else
 		{
-			block = (Block*)std::malloc(m_sizeOfEachBlock);
+			block = (Block*)rheap::malloc(m_sizeOfEachBlock);
 		}
 
 		block->allocatedBytes = 0;
