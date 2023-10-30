@@ -235,6 +235,7 @@ void Runtime::Setup()
 	Transform transform = {};
 
 	auto cameraObj = mheap::New<GameObject>();
+	cameraObj->Name() = "#camera";
 	cameraObj->NewComponent<FPPCameraScript>();
 	auto camera = cameraObj->NewComponent<Camera>();
 	camera->Projection().SetPerspectiveFovLH(

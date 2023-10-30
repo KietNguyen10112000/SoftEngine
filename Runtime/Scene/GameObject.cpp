@@ -64,7 +64,23 @@ Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 {
 	auto metadata = mheap::New<ClassMetadata>("GameObject", this);
 
-	metadata->AddProperty(Accessor::For("Local Transform", m_localTransform[0], this));
+	auto accessor = Accessor(
+		"Local Transform",
+		this,
+		[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+		{
+
+		},
+
+		[](UnknownAddress& var, Serializable* instance) -> Variant
+		{
+			auto& obj = var.As<GameObject>();
+			return Variant::Of(obj.ReadLocalTransform());
+		},
+		this
+	);
+
+	metadata->AddProperty(accessor);
 
 	size_t i = 0;
 	for (auto& comp : m_mainComponents)
@@ -79,11 +95,11 @@ Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 	return metadata;
 }
 
-void GameObject::OnPropertyChanged(const UnknownAddress& var)
+void GameObject::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
-	if (var.Is(&m_localTransform[0]))
+	if (var.Is(this))
 	{
-		SetLocalTransform(m_localTransform[0]);
+		SetLocalTransform(newValue.As<Transform>());
 	}
 }
 

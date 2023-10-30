@@ -48,7 +48,7 @@ Handle<ClassMetadata> Camera::GetMetadata(size_t sign)
 	return Handle<ClassMetadata>();
 }
 
-void Camera::OnPropertyChanged(const UnknownAddress& var)
+void Camera::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 

@@ -83,8 +83,18 @@ void Scene::SetupMainSystemIterationTasks()
 		scene->EndReconstructForAllMainSystems();
 	};
 
+	if (StartupConfig::Get().isEnableGUIEditing)
+	{
+		m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++] = m_mainSystemIterationTasks[MainSystemInfo::RENDERING_ID];
+	}
+	else
+	{
+		// output systems
+		m_mainOutputSystemIterationTasks[m_numMainOutputSystem++] = m_mainSystemIterationTasks[MainSystemInfo::RENDERING_ID];
+	}
+
 	// output systems
-	m_mainOutputSystemIterationTasks[m_numMainOutputSystem++]			= m_mainSystemIterationTasks[MainSystemInfo::RENDERING_ID];
+	//m_mainOutputSystemIterationTasks[m_numMainOutputSystem++] = m_mainSystemIterationTasks[MainSystemInfo::AUDIO_ID];
 
 	// processing systems
 	//m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::PHYSICS_ID];
@@ -250,6 +260,7 @@ void Scene::FilterAddList()
 			[scene](GameObject* cur)
 			{
 				cur->m_scene = scene;
+				cur->m_UID = scene->m_UIDCounter++;
 			}
 		);
 	}
@@ -724,15 +735,21 @@ void Scene::Iteration(float dt)
 	tasks[0].Entry() = [](void* p)
 	{
 		auto scene = (Scene*)p;
-		TaskSystem::SubmitAndWait(scene->m_mainOutputSystemIterationTasks, scene->m_numMainOutputSystem, Task::CRITICAL);
+		if (scene->m_numMainOutputSystem)
+		{
+			TaskSystem::SubmitAndWait(scene->m_mainOutputSystemIterationTasks, scene->m_numMainOutputSystem, Task::CRITICAL);
+		}
 	};
 	tasks[0].Params() = this;
 
 	tasks[1].Entry() = [](void* p)
 	{
 		auto scene = (Scene*)p;
-		TaskSystem::SubmitAndWait(scene->m_mainProcessingSystemIterationTasks, scene->m_numMainProcessingSystem, Task::CRITICAL);
-		scene->SynchMainProcessingSystems();
+		if (scene->m_numMainProcessingSystem)
+		{
+			TaskSystem::SubmitAndWait(scene->m_mainProcessingSystemIterationTasks, scene->m_numMainProcessingSystem, Task::CRITICAL);
+			scene->SynchMainProcessingSystems();
+		}
 	};
 	tasks[1].Params() = this;
 	

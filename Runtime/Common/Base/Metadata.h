@@ -7,6 +7,8 @@
 
 #include "Math/Math.h"
 
+#include "Variant.h"
+
 NAMESPACE_BEGIN
 
 class Serializable;
@@ -56,6 +58,8 @@ private:
 
 	void* m_ptr = nullptr;
 
+	ID m_hasTag = 0;
+
 public:
 	UnknownAddress() {};
 
@@ -67,6 +71,15 @@ public:
 		m_ptr((void*)ptr)
 	{
 
+	}
+
+	UnknownAddress(size_t tag) :
+#ifdef _DEBUG_METADATA
+		m_classIndex(INVALID_ID),
+#endif
+		m_ptr((void*)tag)
+	{
+		m_hasTag = 1;
 	}
 
 	bool HasDestination() const
@@ -92,16 +105,20 @@ public:
 	{
 		return m_ptr == p;
 	}
+
+	bool Is(size_t tag) const
+	{
+		return (size_t)m_ptr == tag && m_hasTag != 0;
+	}
 };
 
-using SetAccessor = void (*)(const String& input, UnknownAddress& var, Serializable* instance);
-using GetAccessor = String (*)(UnknownAddress& var, Serializable* instance);
+using SetAccessor = void (*)(const Variant& input, UnknownAddress& var, Serializable* instance);
+using GetAccessor = Variant (*)(UnknownAddress& var, Serializable* instance);
 
 class API Accessor
 {
 private:
 	const char* m_name = nullptr;
-	const char* m_editFormat = nullptr;
 	UnknownAddress m_var = {};
 	SetAccessor m_setter = nullptr;
 	GetAccessor m_getter = nullptr;
@@ -112,43 +129,44 @@ public:
 
 	Accessor(
 		const char* name,
-		const char* editFormat,
 		const UnknownAddress& var, 
 		SetAccessor setter, 
 		GetAccessor getter, 
 		Serializable* instance
-	) : m_name(name), m_editFormat(editFormat), m_var(var), m_setter(setter), m_getter(getter), m_instance(instance) {};
+	) : m_name(name), m_var(var), m_setter(setter), m_getter(getter), m_instance(instance) {};
 
-	template<typename T>
-	Accessor(const char* name, T& var, Serializable* instance) : m_name(name), m_var(&var), m_instance(instance)
+	template<bool DIRECT_MODIFY_VAR = true, typename T>
+	inline static Accessor For(const char* name, T& var, Serializable* instance)
 	{
-		static_assert(std::is_fundamental_v<T> == true);
+		return Accessor(
+			name,
+			&var,
 
-		m_setter = [](const String& input, UnknownAddress& var, Serializable* instance) -> void
-		{
-			auto v = std::stod(input.c_str());
-			var.As<T>() = static_cast<T>(v);
-		};
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				if constexpr (DIRECT_MODIFY_VAR)
+				{
+					var.As<T>() = input.As<T>();
+				}
+			},
 
-		m_getter = [](UnknownAddress& var, Serializable* instance) -> String
-		{
-			return String::Format("{}", var.As<T>());
-		};
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				Variant ret = Variant::Of<T>();
+				ret.As<T>() = var.As<T>();
+				return ret;
+			},
 
-		m_editFormat = "%number";
+			instance
+		);
 	}
 
 public:
-	void Set(const String& input);
+	void Set(const Variant& input);
 
-	inline String Get()
+	inline Variant Get()
 	{
 		return m_getter(m_var, m_instance);
-	}
-
-	inline auto GetEditFormat()
-	{
-		return m_editFormat;
 	}
 
 	inline auto GetName()
@@ -162,12 +180,7 @@ public:
 	}
 
 public:
-	static Accessor For(const char* name, float& var, Serializable* instance)
-	{
-		return Accessor(name, var, instance);
-	}
-
-	static Accessor For(const char* name, double& var, Serializable* instance)
+	/*static Accessor For(const char* name, double& var, Serializable* instance)
 	{
 		return Accessor(name, var, instance);
 	}
@@ -200,7 +213,7 @@ public:
 	static Accessor For(const char* name, Vec3& vec, Serializable* instance);
 	static Accessor For(const char* name, Quaternion& quad, Serializable* instance);
 	static Accessor For(const char* name, Mat4& mat, Serializable* instance);
-	static Accessor For(const char* name, Transform& transform, Serializable* instance);
+	static Accessor For(const char* name, Transform& transform, Serializable* instance);*/
 
 };
 
@@ -240,7 +253,7 @@ private:
 		for (auto& a : m_properties)
 		{
 			// param: (current class type, current class instance name, property name)
-			fn(this, name, a);
+			fn(this, a.GetName(), a);
 		}
 
 		if constexpr (RECURSIVE)
@@ -272,7 +285,7 @@ private:
 public:
 	void AddProperty(const Accessor& accessor)
 	{
-		assert(accessor.Var().Ptr() == (void*)m_instance);
+		//assert(accessor.Var().Ptr() == (void*)m_instance);
 		m_properties.push_back(accessor);
 	}
 
@@ -293,6 +306,8 @@ public:
 
 	void AddProperty(const char* name, const Handle<ClassMetadata>& subClass)
 	{
+		if (subClass.Get() == nullptr) return;
+
 		m_subClasses.Push(subClass);
 		m_subClassesPropertyNames.push_back(name);
 	}

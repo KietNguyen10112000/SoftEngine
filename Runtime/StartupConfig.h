@@ -17,6 +17,9 @@ struct API StartupConfig
 	bool isEnableScript		= true;
 	bool isEnableNetwork	= true;
 
+	bool isEnableGUIEditing	= true;
+	bool padd[3];
+
 	const char* pluginsPath			= "Plugins/";
 	const char* resourcesPath		= "Resources/";
 	const char* compiledShadersPath = "Shaders/";

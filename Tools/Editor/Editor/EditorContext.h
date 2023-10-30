@@ -28,6 +28,8 @@ public:
 	GameObject* m_renameObject = nullptr;
 	char m_nameInputTxt[NAME_INPUT_MAX_LEN] = {};
 
+	spinlock m_lock;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -36,13 +38,23 @@ private:
 		tracer->Trace(m_inspectingObjectData);
 	}
 
+	void OnObjectSelected(GameObject* obj);
+
 	void RenderHierarchyPanel();
 	void RenderInspectorPanel();
+
+	void DisplayTransform(Accessor& accessor, const Variant& variant);
 
 public:
 	void OnObjectsAdded(std::vector<GameObject*>& objects);
 	void OnObjectsRemoved(std::vector<GameObject*>& objects);
 	void OnRenderGUI();
+
+public:
+	inline auto& Lock()
+	{
+		return m_lock;
+	}
 
 };
 

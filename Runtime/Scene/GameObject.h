@@ -10,7 +10,7 @@ NAMESPACE_BEGIN
 
 class Scene;
 
-class GameObject final : Traceable<GameObject>, public Serializable
+class API GameObject final : Traceable<GameObject>, public Serializable
 {
 public:
 	// one for read, one for write, then swap between them
@@ -59,6 +59,7 @@ private:
 	size_t m_updatedTransformIteration = 0;
 
 	ID m_sceneId = INVALID_ID;
+	ID m_UID = INVALID_ID;
 
 	String m_indexedName;
 	String m_name;
@@ -377,7 +378,7 @@ public:
 	virtual void Deserialize(Serializer* serializer) override;
 	virtual void CleanUp() override {}
 	virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
-	virtual void OnPropertyChanged(const UnknownAddress& var) override;
+	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
 	inline const Transform& ReadLocalTransform() const
@@ -423,6 +424,11 @@ public:
 	inline auto GetScene()
 	{
 		return m_scene;
+	}
+
+	inline const auto& UID() const
+	{
+		return m_UID;
 	}
 
 	inline bool IsInAnyScene()

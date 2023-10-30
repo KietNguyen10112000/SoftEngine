@@ -29,7 +29,7 @@ Handle<ClassMetadata> Model3DBasicRenderer::GetMetadata(size_t sign)
 	return Handle<ClassMetadata>();
 }
 
-void Model3DBasicRenderer::OnPropertyChanged(const UnknownAddress& var)
+void Model3DBasicRenderer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 

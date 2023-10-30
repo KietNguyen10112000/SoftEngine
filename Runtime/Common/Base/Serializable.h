@@ -78,7 +78,7 @@ public:
 	/// 
 	/// notify whenever property changed from ClassMetadata
 	/// 
-	virtual void OnPropertyChanged(const UnknownAddress& var) = 0;
+	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) = 0;
 
 	virtual const char* GetClassName() = 0;
 

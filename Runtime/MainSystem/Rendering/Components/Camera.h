@@ -69,7 +69,7 @@ public:
 
 	virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
-	virtual void OnPropertyChanged(const UnknownAddress& var) override;
+	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 	virtual void OnComponentAdded() override;
 

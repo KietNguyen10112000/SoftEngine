@@ -26,7 +26,9 @@ void Initialize(Runtime* runtime)
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{
 					auto editorContext = renderingSystem->GetScene()->GenericStorage()->Access<EditorContext>(editorContextId);
+					editorContext->Lock().lock();
 					editorContext->OnRenderGUI();
+					editorContext->Lock().unlock();
 				},
 				editorContextId
 			);
@@ -36,7 +38,9 @@ void Initialize(Runtime* runtime)
 				{
 					auto objs = (std::vector<GameObject*>*)argv[0];
 					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
+					editorContext->Lock().lock();
 					editorContext->OnObjectsAdded(*objs);
+					editorContext->Lock().unlock();
 				},
 				editorContextId
 			);
@@ -46,7 +50,9 @@ void Initialize(Runtime* runtime)
 				{
 					auto objs = (std::vector<GameObject*>*)argv[0];
 					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
+					editorContext->Lock().lock();
 					editorContext->OnObjectsRemoved(*objs);
+					editorContext->Lock().unlock();
 				},
 				editorContextId
 			);

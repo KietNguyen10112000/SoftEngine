@@ -124,6 +124,7 @@ private:
 
 	Input* m_input = nullptr;
 	ID m_runtimeID = INVALID_ID;
+	ID m_UIDCounter = 0;
 
 public:
 	Scene();

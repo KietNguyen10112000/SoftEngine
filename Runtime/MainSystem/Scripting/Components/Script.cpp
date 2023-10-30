@@ -21,7 +21,7 @@ Handle<ClassMetadata> Script::GetMetadata(size_t sign)
 	return Handle<ClassMetadata>();
 }
 
-void Script::OnPropertyChanged(const UnknownAddress& var)
+void Script::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 
