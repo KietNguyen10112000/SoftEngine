@@ -261,7 +261,7 @@ void Runtime::Setup()
 	scene->AddObject(cameraObj);*/
 
 	transform = {};
-	transform.Position() = { 0,0,5 };
+	transform.Position() = { 0,5,5 };
 	auto object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
 	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");

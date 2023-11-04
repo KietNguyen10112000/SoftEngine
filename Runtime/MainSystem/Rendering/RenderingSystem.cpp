@@ -17,149 +17,12 @@
 
 NAMESPACE_BEGIN
 
-//struct TestConstantBuffer
-//{
-//    Mat4 vp;
-//    Mat4 dummy;
-//};
-
-CameraData g_cameraData;
-ObjectData g_objectData;
-
 RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene), m_eventDispatcher(this)
 {
 	auto graphics = Graphics::Get();
 
     m_defaultViewport.topLeft = { 0,0 };
     m_defaultViewport.size = { Graphics::Get()->GetWindowWidth(), Graphics::Get()->GetWindowHeight() };
-
- //   struct Vertex
- //   {
- //       Vec3 position;
- //       Vec2 textcoord;
- //   };
-
- //   Vertex cubeVertices[] =
- //   {
- //       { Vec3(-1.0f, -1.0f, -1.0f), Vec2(0, 1) },
- //       { Vec3(-1.0f,  1.0f, -1.0f), Vec2(0, 0) },
- //       { Vec3(1.0f,  1.0f, -1.0f), Vec2(1, 0) },
- //       { Vec3(1.0f, -1.0f, -1.0f), Vec2(1, 1) },
-
- //       { Vec3(-1.0f, -1.0f, 1.0f), Vec2(1, 1) },
- //       { Vec3(1.0f, -1.0f, 1.0f), Vec2(0, 1) },
- //       { Vec3(1.0f,  1.0f, 1.0f), Vec2(0, 0) },
- //       { Vec3(-1.0f,  1.0f, 1.0f), Vec2(1, 0) },
-
- //       { Vec3(-1.0f, 1.0f, -1.0f), Vec2(0, 1) },
- //       { Vec3(-1.0f, 1.0f,  1.0f), Vec2(0, 0) },
- //       { Vec3(1.0f, 1.0f,  1.0f), Vec2(1, 0) },
- //       { Vec3(1.0f, 1.0f, -1.0f), Vec2(1, 1) },
-
- //       { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
- //       { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
- //       { Vec3(1.0f, -1.0f,  1.0f), Vec2(0, 0) },
- //       { Vec3(-1.0f, -1.0f,  1.0f), Vec2(1, 0) },
-
- //       { Vec3(-1.0f, -1.0f,  1.0f), Vec2(0, 1) },
- //       { Vec3(-1.0f,  1.0f,  1.0f), Vec2(0, 0) },
- //       { Vec3(-1.0f,  1.0f, -1.0f), Vec2(1, 0) },
- //       { Vec3(-1.0f, -1.0f, -1.0f), Vec2(1, 1) },
-
- //       { Vec3(1.0f, -1.0f, -1.0f), Vec2(0, 1) },
- //       { Vec3(1.0f,  1.0f, -1.0f), Vec2(0, 0) },
- //       { Vec3(1.0f,  1.0f,  1.0f), Vec2(1, 0) },
- //       { Vec3(1.0f, -1.0f,  1.0f), Vec2(1, 1) },
- //   };
-
- //   // Create index buffer:
- //   unsigned short cubeIndices[] =
- //   {
- //       0,  1,  2,
- //       0,  2,  3,
-
- //       // Back Face
- //       4,  5,  6,
- //       4,  6,  7,
-
- //       // Top Face
- //       8,  9, 10,
- //       8, 10, 11,
-
- //       // Bottom Face
- //       12, 13, 14,
- //       12, 14, 15,
-
- //       // Left Face
- //       16, 17, 18,
- //       16, 18, 19,
-
- //       // Right Face
- //       20, 21, 22,
- //       20, 22, 23
- //   };
-
- //   Vertex vList[36] = {};
- //   const int vBufferSize = sizeof(vList);
-
- //   for (size_t i = 0; i < 36; i++)
- //   {
- //       vList[i] = cubeVertices[cubeIndices[i]];
- //   }
-
-	//GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC vbDesc = {};
- //   vbDesc.count = 36;
- //   vbDesc.stride = sizeof(Vertex);
- //   m_testVertexBuffer = graphics->CreateVertexBuffer(vbDesc);
- //   m_testVertexBuffer->UpdateBuffer(vList, sizeof(vList));
-
- //   GRAPHICS_CONSTANT_BUFFER_DESC cbDesc1 = {};
- //   cbDesc1.bufferSize = sizeof(CameraData);
- //   cbDesc1.perferNumRoom = 3;
- //   graphics->CreateConstantBuffers(1, &cbDesc1, &m_testCameraConstantBuffer);
-
- //   GRAPHICS_CONSTANT_BUFFER_DESC cbDesc2 = {};
- //   cbDesc2.bufferSize = sizeof(ObjectData);
- //   cbDesc2.perferNumRoom = 4096;
- //   graphics->CreateConstantBuffers(1, &cbDesc2, &m_testObjectConstantBuffer);
-
- //   GRAPHICS_PIPELINE_DESC pipelineDesc = {};
- //   pipelineDesc.preferRenderCallPerFrame = 4096;
- //   pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
- //   pipelineDesc.vs = "Test.vs";
- //   pipelineDesc.ps = "Test.ps";
-
- //   pipelineDesc.inputDesc.numElements = 2;
- //   pipelineDesc.inputDesc.elements[0] = { 
- //       "POSITION", 
- //       0, 
- //       GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT, 
- //       0, 
- //       0, 
- //       GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA, 
- //       0 
- //   };
- //   pipelineDesc.inputDesc.elements[1] = { 
- //       "TEXTCOORD", 
- //       0, 
- //       GRAPHICS_DATA_FORMAT::FORMAT_R32G32_FLOAT, 
- //       0, 
- //       sizeof(Vec3), 
- //       GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
- //       0 
- //   };
-
- //   pipelineDesc.outputDesc.numRenderTarget = 1;
- //   pipelineDesc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
-
- //   m_testPipeline = graphics->CreateRasterizerPipeline(pipelineDesc);
-
- //   g_objectData.transform = Mat4::Identity();
-
- //   // buildings/victory_tower_0.png
- //   // rain1.jpg
- //   // 2.png
- //   m_testTexture2D = resource::Load<Texture2D>("2.png");
 
 	m_cameras.resize(8 * KB);
 	m_collectInputForCameraTasks.resize(8 * KB);
@@ -274,7 +137,7 @@ void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
 	m_cameraData.view = camera->GetView();
 	m_cameraData.vp = m_cameraData.view * m_cameraData.proj;
 
-	/*m_cameraData.vp = Mat4::Identity().SetLookAtLH({0,0,0}, Vec3(0, 0, -5), Vec3::UP)
+	/*m_cameraData.vp = Mat4::Identity().SetLookAtLH({ 10,10,10 }, Vec3(0, 5, 5), Vec3::UP)
 		* Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 
 			StartupConfig::Get().windowWidth / (float)StartupConfig::Get().windowHeight, 0.5f, 1000.0f);*/
 
@@ -366,7 +229,8 @@ void RenderingSystem::EndModification()
 
 void RenderingSystem::Iteration(float dt)
 {
-	ProcessAllCmds(GetPrevServer(), this);
+	m_asyncTaskRunnerMT.ProcessAllTasksMT(this);
+	m_asyncTaskRunnerST.ProcessAllTasks(this);
 
 	auto graphics = Graphics::Get();
 	graphics->BeginFrame();
@@ -413,7 +277,6 @@ void RenderingSystem::Iteration(float dt)
 
 void RenderingSystem::PrevIteration()
 {
-	UpdateCurrentServer();
 }
 
 void RenderingSystem::PostIteration()

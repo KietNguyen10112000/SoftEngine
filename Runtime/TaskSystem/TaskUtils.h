@@ -15,7 +15,7 @@ template <class CList, typename Fn, size_t MAX_THREADS = 128, size_t EFFECTIVE_M
 inline void ForEachConcurrentListAsRingBuffer(CList& list, Fn callback,
 	const size_t N_THREADS, Task::PRIORITY priority = Task::CRITICAL)
 {
-	using Iteration = CList::RingIteration;
+	using Iteration = typename CList::RingIteration;
 	struct Param
 	{
 		Fn*						cb;
@@ -83,7 +83,7 @@ template <class CList, typename Fn, size_t MAX_THREADS = 128, size_t EFFECTIVE_M
 inline void ForEachConcurrentList(CList& list, Fn callback,
 	const size_t N_THREADS, Task::PRIORITY priority = Task::CRITICAL)
 {
-	using Iteration = CList::RingIteration;
+	using Iteration = typename CList::RingIteration;
 	struct Param
 	{
 		Fn*						cb;

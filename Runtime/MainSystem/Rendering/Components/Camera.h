@@ -60,6 +60,7 @@ public:
 	Camera();
 	//virtual ~Camera();
 
+protected:
 	// Inherited via RenderingComponent
 	virtual void Serialize(Serializer* serializer) override;
 
@@ -76,6 +77,9 @@ public:
 	virtual void OnComponentRemoved() override;
 
 	virtual AABox GetGlobalAABB() override;
+
+public:
+	void SetProjection(const Mat4& projMat);
 
 };
 

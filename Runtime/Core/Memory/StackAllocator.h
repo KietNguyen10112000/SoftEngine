@@ -31,7 +31,7 @@ private:
 public:
 	StackAllocator(size_t sizeOfEachBlock = 8 * MB) : m_sizeOfEachBlock(sizeOfEachBlock)
 	{
-		m_topBlock = (Block*)rheap::malloc(sizeOfEachBlock);
+		m_topBlock = (Block*)rheap::malloc(sizeOfEachBlock + sizeof(Block));
 		m_topBlock->allocatedBytes = 0;
 		m_topBlock->next = nullptr;
 	}
@@ -69,7 +69,7 @@ private:
 		auto idx = m_topBlock->allocatedBytes.fetch_add(nBytes);
 		if (idx <= m_sizeOfEachBlock)
 		{
-			ret = m_topBlock->FirstByte() + idx - nBytes;
+			ret = m_topBlock->FirstByte() + idx;
 			goto Return;
 		}
 
@@ -81,7 +81,7 @@ private:
 		}
 		else
 		{
-			block = (Block*)rheap::malloc(m_sizeOfEachBlock);
+			block = (Block*)rheap::malloc(m_sizeOfEachBlock + sizeof(Block));
 		}
 
 		block->allocatedBytes = 0;
@@ -103,9 +103,9 @@ public:
 		nBytes = AlignSize(nBytes);
 
 		auto idx = m_topBlock->allocatedBytes.fetch_add(nBytes);
-		if (idx <= m_sizeOfEachBlock)
+		if (idx < m_sizeOfEachBlock)
 		{
-			return m_topBlock->FirstByte() + idx - nBytes;
+			return m_topBlock->FirstByte() + idx;
 		}
 
 		return GrowthAllocate(nBytes);

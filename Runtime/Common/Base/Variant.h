@@ -39,6 +39,7 @@ public:
 
 		MAT3,
 		MAT4,
+		PROJECTION_MAT4,
 
 		TRANSFORM3D,
 
@@ -266,7 +267,7 @@ public:
 
 		if constexpr (std::is_same_v<T, Mat4>)
 		{
-			assert(Type() == VARIANT_TYPE::MAT4);
+			assert(Type() == VARIANT_TYPE::MAT4 || Type() == VARIANT_TYPE::PROJECTION_MAT4);
 			return Get<Mat4>();
 		}
 
@@ -314,6 +315,9 @@ public:
 			break;
 		case soft::VARIANT_TYPE::MAT4:
 			Get<Mat4>() = {};
+			break;
+		case soft::VARIANT_TYPE::PROJECTION_MAT4:
+			Get<Mat4>().SetPerspectiveFovLH(PI / 3.0f, 1, 0.5f, 1000.0f);
 			break;
 		case soft::VARIANT_TYPE::TRANSFORM3D:
 			Get<Transform>() = {};

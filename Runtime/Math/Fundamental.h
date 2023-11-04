@@ -2,6 +2,7 @@
 #pragma warning(disable:26495)
 
 #define GLM_FORCE_RADIANS
+//#define GLM_FORCE_LEFT_HANDED
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"
@@ -620,7 +621,7 @@ public:
 
     inline friend bool operator==(const Quaternion& v1, const Quaternion& v2)
     {
-        return v1.x == v2.z && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
+        return v1.x == v2.x && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
     }
 
     inline void SetFromMat4(const Mat4& mat);

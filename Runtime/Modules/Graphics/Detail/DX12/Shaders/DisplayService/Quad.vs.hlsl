@@ -13,11 +13,11 @@ cbuffer CameraCBuffer : register(b0, SPACE_VS)
 
 const static float2 UV[] = {
 	float2(0, 0),
-	float2(0, 1),
-	float2(1, 0),
 	float2(1, 0),
 	float2(0, 1),
-	float2(1, 1)
+	float2(1, 0),
+	float2(1, 1),
+	float2(0, 1)
 };
 
 VS_OUTPUT main(uint vertexId : SV_VertexID)

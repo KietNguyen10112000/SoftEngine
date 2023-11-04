@@ -97,6 +97,7 @@ private:
 		}
 
 		p1.normal = -n1;
+		p1.d = -p1.d;
 	}
 
 public:

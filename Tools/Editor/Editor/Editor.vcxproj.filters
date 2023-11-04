@@ -13,10 +13,22 @@
     <ClCompile Include="EditorContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DataInspector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="DataInspector.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImGuiExtern.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis" />
   </ItemGroup>
 </Project>

@@ -45,11 +45,37 @@ void Camera::CleanUp()
 
 Handle<ClassMetadata> Camera::GetMetadata(size_t sign)
 {
-	return Handle<ClassMetadata>();
+	auto metadata = mheap::New<ClassMetadata>("Camera", this);
+
+	auto accessor = Accessor(
+		"Projection",
+		&Projection(),
+		[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+		{
+
+		},
+
+		[](UnknownAddress& var, Serializable* instance) -> Variant
+		{
+			auto& mat = var.As<Mat4>();
+			auto ret = Variant(VARIANT_TYPE::PROJECTION_MAT4);
+			ret.As<Mat4>() = mat;
+			return ret;
+		},
+		this
+	);
+
+	metadata->AddProperty(accessor);
+
+	return metadata;
 }
 
 void Camera::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
+	if (var.Is(&Projection()))
+	{
+		SetProjection(newValue.As<Mat4>());
+	}
 }
 
 void Camera::OnComponentAdded()
@@ -84,6 +110,38 @@ void Camera::OnComponentRemoved()
 AABox Camera::GetGlobalAABB()
 {
 	return AABox();
+}
+
+void Camera::SetProjection(const Mat4& projMat)
+{
+	struct SetPerspectiveParam
+	{
+		Camera* camera;
+		Mat4 projMat;
+	};
+
+	if (!GetGameObject()->IsInAnyScene())
+	{
+		Projection() = projMat;
+		return;
+	}
+
+	auto system = GetGameObject()->GetScene()->GetRenderingSystem();
+	auto taskRunner = system->AsyncTaskRunnerMT();
+
+	auto task = taskRunner->CreateTask(
+		[](RenderingSystem* system, void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_2(SetPerspectiveParam, p, camera, projMat);
+			camera->Projection() = projMat;
+		}
+	);
+
+	auto param = taskRunner->CreateParam<SetPerspectiveParam>(&task);
+	param->camera = this;
+	param->projMat = projMat;
+
+	taskRunner->RunAsync(&task);
 }
 
 NAMESPACE_END

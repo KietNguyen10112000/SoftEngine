@@ -53,16 +53,19 @@ void DisplayService::Display(SharedPtr<GraphicsShaderResource>& resource, GRAPHI
 	auto baseDims = Vec2(graphics->GetWindowWidth(), graphics->GetWindowHeight());
 
 	m_cbuffer.vertices[0].xy() = (viewport.topLeft);
-	m_cbuffer.vertices[1].xy() = (viewport.topLeft + Vec2(0, viewport.size.y));
-	m_cbuffer.vertices[2].xy() = (viewport.topLeft + Vec2(viewport.size.x, 0));
+	m_cbuffer.vertices[1].xy() = (viewport.topLeft + Vec2(viewport.size.x, 0));
+	m_cbuffer.vertices[2].xy() = (viewport.topLeft + Vec2(0, viewport.size.y));
 
 	m_cbuffer.vertices[3].xy() = (viewport.topLeft + Vec2(viewport.size.x, 0));
-	m_cbuffer.vertices[4].xy() = (viewport.topLeft + Vec2(0, viewport.size.y));
-	m_cbuffer.vertices[5].xy() = (viewport.topLeft + Vec2(viewport.size.x, viewport.size.y));
+	m_cbuffer.vertices[4].xy() = (viewport.topLeft + Vec2(viewport.size.x, viewport.size.y));
+	m_cbuffer.vertices[5].xy() = (viewport.topLeft + Vec2(0, viewport.size.y));
 
 	for (size_t i = 0; i < 6; i++)
 	{
-		m_cbuffer.vertices[i].xy() = ((m_cbuffer.vertices[i].xy() / baseDims) - 0.5f) * 2.0f;
+		auto& v = m_cbuffer.vertices[i];
+		v.xy() /= baseDims;
+		v.y = 1 - v.y;
+		v.xy() = (v.xy() - 0.5f) * 2.0f;
 	}
 
 	m_constantBuffer->UpdateBuffer(&m_cbuffer, sizeof(m_cbuffer));

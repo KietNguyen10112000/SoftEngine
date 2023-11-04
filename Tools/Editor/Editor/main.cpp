@@ -5,6 +5,7 @@
 #include "MainSystem/Rendering/RenderingSystem.h"
 
 #include "EditorContext.h"
+#include "DataInspector.h"
 
 void RegisterSerializables()
 {
@@ -13,6 +14,8 @@ void RegisterSerializables()
 
 void Initialize(Runtime* runtime)
 {
+	DataInspector::Initialize();
+
 	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
 		{

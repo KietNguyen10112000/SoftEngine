@@ -22,6 +22,9 @@ public:
 	Handle<GameObject> m_inspectingObject;
 	Handle<ClassMetadata> m_inspectingObjectData;
 
+	std::vector<bool> m_inspectPropertiesIsOpenStack;
+	std::vector<size_t> m_inspectInlinePropertiesCountStack;
+
 	size_t m_selectionIdx = -1;
 
 	bool m_openInputNamePopup = false;
@@ -43,7 +46,6 @@ private:
 	void RenderHierarchyPanel();
 	void RenderInspectorPanel();
 
-	void DisplayTransform(Accessor& accessor, const Variant& variant);
 
 public:
 	void OnObjectsAdded(std::vector<GameObject*>& objects);

@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-	<Type Name="soft::ManagedPtr&lt;*&gt;">
+	<Type Name="soft::ManagedPointer&lt;*&gt;">
+		<DisplayString Condition="m_ptr == 0">nullptr</DisplayString>
+		<DisplayString Condition="m_ptr != 0">{*m_ptr}</DisplayString>
+
+		<Expand>
+			<Item Condition="m_ptr != 0" Name="[ptr]">m_ptr</Item>
+		</Expand>
+	</Type>
+
+	
+	<Type Name="soft::ManagedLocalPtr&lt;*&gt;">
 		<DisplayString Condition="m_ptr == 0">nullptr</DisplayString>
 		<DisplayString Condition="m_ptr != 0">{*m_ptr}</DisplayString>
 

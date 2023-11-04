@@ -71,7 +71,7 @@ void FPPCameraScript::OnUpdate(float dt)
 	{
 		auto& delta = Input()->GetDeltaCursorPosition();
 		m_rotateY += delta.x * dt * m_rotationSensi;
-		m_rotateX += delta.y * dt * m_rotationSensi;
+		m_rotateX -= delta.y * dt * m_rotationSensi;
 
 		m_rotateX = std::max(std::min(m_rotateX, PI / 2.0f), -PI / 2.0f);
 	}

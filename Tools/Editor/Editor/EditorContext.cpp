@@ -1,6 +1,7 @@
 #include "EditorContext.h"
 
 #include "imgui/imgui.h"
+#include "DataInspector.h"
 
 void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects)
 {
@@ -115,6 +116,9 @@ Return:
 
 void EditorContext::RenderInspectorPanel()
 {
+	size_t currentDepth = -1; 
+	bool _open = false;
+
 	auto& metaData = m_inspectingObjectData;
 
 	ImGui::Begin("Inspector", 0, ImGuiWindowFlags_NoMove);
@@ -126,37 +130,53 @@ void EditorContext::RenderInspectorPanel()
 	}
 
 	metaData->ForEachProperties(
-		[&](ClassMetadata*, const char* propertyName, Accessor& accessor)
+		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
 		{
-			ImGui::Text(propertyName);
-			DisplayTransform(accessor, accessor.Get());
-			ImGui::Separator();
+			if (depth == 0)
+			{
+				ImGui::SetNextItemOpen(true);
+			}
+
+			if (currentDepth + 1 == depth)
+			{
+				auto open = ImGui::TreeNode(metadata->GetName());
+				m_inspectPropertiesIsOpenStack.push_back(open);
+				m_inspectInlinePropertiesCountStack.push_back(metadata->GetInlinePropertiesCount());
+				currentDepth++;
+			}
+
+			bool open = m_inspectPropertiesIsOpenStack.back();
+			if (open)
+			{
+				ImGui::Text(propertyName);
+				DataInspector::Inspect(metadata, accessor, propertyName);
+				ImGui::Separator();
+				return true;
+			}
+
+			return false;
+		},
+
+		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+		{
+			if (currentDepth == depth)
+			{
+				bool open = m_inspectPropertiesIsOpenStack.back();
+				m_inspectPropertiesIsOpenStack.pop_back();
+				m_inspectInlinePropertiesCountStack.pop_back();
+
+				if (open)
+					ImGui::TreePop();
+
+				currentDepth--;
+			}
 		}
 	);
 
+	assert(m_inspectPropertiesIsOpenStack.empty());
+
 Return:
 	ImGui::End();
-}
-
-void EditorContext::DisplayTransform(Accessor& accessor, const Variant& variant)
-{
-	Transform transform = variant.As<Transform>();
-
-	Vec3 euler = transform.Rotation().ToEulerAngles();
-
-	bool modified = false;
-	modified |= ImGui::DragFloat3("Scale", &transform.Scale()[0], 0.01f, -INFINITY, INFINITY);
-	modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.01f, -INFINITY, INFINITY);
-	modified |= ImGui::DragFloat3("Position", &transform.Position()[0], 0.01f, -INFINITY, INFINITY);
-
-	if (modified)
-	{
-		transform.Rotation() = Quaternion(euler);
-
-		auto input = Variant::Of<Transform>();
-		input.As<Transform>() = transform;
-		accessor.Set(input);
-	}
 }
 
 void EditorContext::OnRenderGUI()

@@ -8,7 +8,7 @@
 #include "Modules/Graphics/GraphicsFundamental.h"
 
 #include "Common/ComponentQueryStructures/DoubleBVH.h"
-#include "Common/Base/AsyncServer.h"
+#include "Common/Base/AsyncTaskRunnerRaw.h"
 #include "Common/Utils/EventDispatcher.h"
 
 #include "Resources/Texture2D.h"
@@ -21,17 +21,7 @@ NAMESPACE_BEGIN
 
 class BaseCamera;
 
-class RenderingSystemCommand
-{
-public:
-	enum CmdID
-	{
-		CMD0,
-		COUNT
-	};
-};
-
-class API RenderingSystem : public MainSystem, public AsyncServer2<RenderingSystem, RenderingSystemCommand::COUNT>
+class API RenderingSystem : public MainSystem
 {
 public:
 	enum EVENT
@@ -90,6 +80,9 @@ private:
 
 	EventDispatcher<RenderingSystem, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
+	raw::AsyncTaskRunner<RenderingSystem> m_asyncTaskRunnerST = {};
+	raw::AsyncTaskRunner<RenderingSystem> m_asyncTaskRunnerMT = {};
+
 public:
 	RenderingSystem(Scene* scene);
 	~RenderingSystem();
@@ -139,6 +132,16 @@ public:
 	inline auto* EventDispatcher()
 	{
 		return &m_eventDispatcher;
+	}
+
+	inline auto* AsyncTaskRunnerST()
+	{
+		return &m_asyncTaskRunnerST;
+	}
+
+	inline auto* AsyncTaskRunnerMT()
+	{
+		return &m_asyncTaskRunnerMT;
 	}
 };
 

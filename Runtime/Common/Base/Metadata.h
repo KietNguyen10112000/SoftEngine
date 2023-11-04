@@ -2,12 +2,12 @@
 
 #include "Core/TypeDef.h"
 #include "Core/Structures/String.h"
-
 #include "Core/Structures/Managed/Array.h"
 
 #include "Math/Math.h"
 
 #include "Variant.h"
+#include "../Utils/GenericDictionary.h"
 
 NAMESPACE_BEGIN
 
@@ -226,6 +226,8 @@ private:
 
 	std::vector<Accessor> m_properties;
 
+	GenericDictionary m_dict;
+
 	// class contains class
 	Array<Handle<ClassMetadata>> m_subClasses;
 	std::vector<const char*> m_subClassesPropertyNames;
@@ -235,6 +237,7 @@ private:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
+		tracer->Trace(m_dict);
 		tracer->Trace(m_subClasses);
 	}
 
@@ -245,27 +248,51 @@ public:
 		: m_className(className), m_instance(instance) {};
 
 private:
-	template<bool RECURSIVE = true, typename Fn>
-	void ForEachPropertiesImpl(Fn fn, const char* name)
+	template<bool RECURSIVE, bool PREV_CALL, bool POST_CALL, typename Fn1, typename Fn2>
+	void ForEachPropertiesImpl(Fn1 fn1, Fn2 fn2, const char* name, size_t depth)
 	{
 		SetVisited(true);
 
-		for (auto& a : m_properties)
+		bool recursive = true;
+		if constexpr (PREV_CALL)
 		{
-			// param: (current class type, current class instance name, property name)
-			fn(this, a.GetName(), a);
+			for (auto& a : m_properties)
+			{
+				if constexpr (std::is_void_v<std::invoke_result_t<Fn1, ClassMetadata*, const char*, Accessor&, size_t>>)
+				{
+					// param: (current class type, current class instance name, property name)
+					fn1(this, a.GetName(), a, depth);
+				}
+				else
+				{
+					recursive &= (fn1(this, a.GetName(), a, depth));
+				}
+				
+			}
 		}
 
 		if constexpr (RECURSIVE)
 		{
-			size_t i = 0;
-			for (auto& c : m_subClasses)
+			if (recursive)
 			{
-				if (!c->IsVisited()) 
+				size_t i = 0;
+				for (auto& c : m_subClasses)
 				{
-					c->ForEachPropertiesImpl<RECURSIVE>(fn, m_subClassesPropertyNames[i]);
+					if (!c->IsVisited())
+					{
+						c->ForEachPropertiesImpl<RECURSIVE, PREV_CALL, POST_CALL>(fn1, fn2, m_subClassesPropertyNames[i], depth + 1);
+					}
+					i++;
 				}
-				i++;
+			}
+		}
+
+		if constexpr (POST_CALL)
+		{
+			for (auto& a : m_properties)
+			{
+				// param: (current class type, current class instance name, property name)
+				fn2(this, a.GetName(), a, depth);
 			}
 		}
 	}
@@ -322,16 +349,32 @@ public:
 		m_visited = (size_t)v;
 	}
 
-	template<bool RECURSIVE = true, typename Fn>
-	void ForEachProperties(Fn fn, const char* currentIntanceName = "")
+	template<typename Fn1, typename Fn2, bool RECURSIVE = true>
+	void ForEachProperties(Fn1 fnPrevCall, Fn2 fnPostCall, const char* currentIntanceName = "")
 	{
-		ForEachPropertiesImpl<RECURSIVE>(fn, currentIntanceName);
+		ForEachPropertiesImpl<RECURSIVE, true, true>(fnPrevCall, fnPostCall, currentIntanceName, 0);
 
 		if constexpr (RECURSIVE)
 		{
 			UnsetVisited();
 		}
 	}
+
+	inline auto* GenericDictionary()
+	{
+		return &m_dict;
+	}
+
+	inline auto GetName()
+	{
+		return m_className;
+	}
+
+	inline auto GetInlinePropertiesCount()
+	{
+		return m_properties.size();
+	}
+
 };
 
 NAMESPACE_END

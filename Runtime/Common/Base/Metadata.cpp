@@ -14,7 +14,8 @@ ID MetadataClassCounter::s_count = 0;
 
 void Accessor::Set(const Variant& input)
 {
-	m_setter(input, m_var, m_instance);
+	if (m_setter)
+		m_setter(input, m_var, m_instance);
 
 	if (m_instance)
 		m_instance->OnPropertyChanged(m_var, input);
