@@ -10,7 +10,7 @@ struct GameObjectEditorComponent
 	ID id;
 };
 
-class EditorContext : Traceable<EditorContext>
+class EditorContext
 {
 public:
 	constexpr static size_t NAME_INPUT_MAX_LEN = 2048;

@@ -6,7 +6,7 @@
 NAMESPACE_BEGIN
 
 // all public methods are thread safe
-class GenericStorage : public Traceable<GenericStorage>
+class GenericStorage
 {
 private:
 	UnorderedLinkedList<Handle<void>> m_storage;

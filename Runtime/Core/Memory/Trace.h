@@ -20,9 +20,9 @@
 
 NAMESPACE_MEMORY_BEGIN
 
-#define TRACEABLE_FRIEND()		\
-friend class Tracer;			\
-friend struct TraceTable;
+#define TRACEABLE_FRIEND()				\
+friend class Tracer;					\
+friend struct TraceTable;				
 
 using Dtor = void (*)(void*);
 struct TraceTable;
@@ -131,21 +131,6 @@ struct TraceTable
 		CONSOLE_LOG() << s_allocator->TotalAllocatedBytes() << " bytes for all TraceTables\n";
 	}
 
-#define DefineHasClassMethod(method) 										\
-	template <typename T>													\
-	class Has_##method														\
-	{																		\
-		typedef char one;													\
-		struct two { char x[2]; };											\
-		template <typename C> static one test( decltype(&C::method) ) ;		\
-		template <typename C> static two test(...); 						\
-	public:																	\
-		enum { value = sizeof(test<T>(0)) == sizeof(char) };				\
-	};
-
-	DefineHasClassMethod(Trace);
-#undef DefineHasClassMethod
-
 	template <typename T>
 	static TraceTable* Get();
 };
@@ -180,6 +165,21 @@ class ManagedPointer;
 class Tracer
 {
 public:
+#define DefineHasClassMethod(method) 										\
+	template <typename T>													\
+	class Has_##method														\
+	{																		\
+		typedef char one;													\
+		struct two { char x[2]; };											\
+		template <typename C> static one test( decltype(&C::method) ) ;		\
+		template <typename C> static two test(...); 						\
+	public:																	\
+		enum { value = sizeof(test<T>(0)) == sizeof(char) };				\
+	};
+
+	DefineHasClassMethod(Trace);
+#undef DefineHasClassMethod
+
 	// to placeholder, same memory layout with TraceTable
 #ifdef _TRACE_DEBUG
 	TraceTableView* m_view;
@@ -250,8 +250,15 @@ public:
 	template <typename T>
 	void Mimic(void* p)
 	{
-		static_assert(std::is_base_of_v<Traceable<T>, T>);
+		//static_assert(std::is_base_of_v<Traceable<T>, T>);
+		static_assert(Tracer::IsTraceable<T>(), "Tracer::Trace() must be called on Traceable object");
 		reinterpret_cast<T*>(p)->Trace(this);
+	}
+
+	template <typename T>
+	inline constexpr static bool IsTraceable()
+	{
+		return Has_Trace<T>::value;
 	}
 
 	template <typename T, bool TRACE = true>
@@ -346,7 +353,7 @@ public:
 };
 
 template <typename T>
-class Traceable
+class Traceable final
 {
 private:
 	TRACEABLE_FRIEND();
@@ -478,7 +485,8 @@ inline void Tracer::TraceManagedPtr(P<T>& ptr)
 template <typename T>
 inline void Tracer::Trace(T& ptr)
 {
-	static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
+	//static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
+	static_assert(Tracer::IsTraceable<T>(), "Tracer::Trace() must be called on Traceable object");
 
 	if constexpr (std::is_base_of_v<TraceableNoExpand<T>, T>)
 	{
@@ -493,7 +501,8 @@ inline void Tracer::Trace(T& ptr)
 template<typename T>
 inline void Tracer::TraceNoExpand(T& ptr)
 {
-	static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
+	//static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
+	static_assert(Tracer::IsTraceable<T>(), "Tracer::Trace() must be called on Traceable object");
 
 	auto t = m_cId++;
 	m_table[t].offset = (byte*)&ptr - (byte*)m_current;
@@ -505,7 +514,8 @@ inline void Tracer::TraceNoExpand(T& ptr)
 template<typename T, std::size_t N>
 inline void Tracer::Trace(T (&arr)[N])
 {
-	static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
+	//static_assert(std::is_base_of_v<Traceable<T>, T>, "Type check!");
+	static_assert(Tracer::IsTraceable<T>(), "Tracer::Trace() must be called on Traceable object");
 
 	auto t = m_cId++;
 	m_table[t].offset = (byte*)&arr - (byte*)m_current;
@@ -516,9 +526,9 @@ inline void Tracer::Trace(T (&arr)[N])
 template <typename T>
 inline static TraceTable* TraceTable::Get()
 {
-	if constexpr (std::is_base_of_v<Traceable<T>, T>)
+	if constexpr (Tracer::IsTraceable<T>()) //(std::is_base_of_v<Traceable<T>, T>)
 	{
-		static_assert(Has_Trace<T>::value, "Traceable must provides trace method \"void Trace(Tracer* tracer);\"");
+		//static_assert(Has_Trace<T>::value, "Traceable must provides trace method \"void Trace(Tracer* tracer);\"");
 		return Traceable<T>::GetTraceTable();
 	}
 	else if constexpr (std::is_pod_v<T> || std::is_base_of_v<TraceablePOD, T>)

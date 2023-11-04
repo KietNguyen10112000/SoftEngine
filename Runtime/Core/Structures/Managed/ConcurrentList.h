@@ -10,7 +10,7 @@
 NAMESPACE_BEGIN
 
 template <typename T, size_t N_SPACES = 4>
-class ConcurrentList : Traceable<ConcurrentList<T, N_SPACES>>
+class ConcurrentList
 {
 private:
 	Array<T> m_lists[N_SPACES] = {};
@@ -84,7 +84,7 @@ public:
 };
 
 template <typename Container, size_t N_SPACES = 4>
-class ConcurrentListC : Traceable<ConcurrentListC<Container, N_SPACES>>
+class ConcurrentListC
 {
 private:
 	Container m_lists[N_SPACES];
@@ -156,7 +156,7 @@ public:
 };
 
 template <typename T>
-class ConcurrentArrayList : Traceable<ConcurrentArrayList<T>>
+class ConcurrentArrayList
 {
 public:
 	struct RingIteration

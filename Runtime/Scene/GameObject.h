@@ -10,14 +10,14 @@ NAMESPACE_BEGIN
 
 class Scene;
 
-class API GameObject final : Traceable<GameObject>, public Serializable
+class API GameObject final : public Serializable
 {
 public:
 	// one for read, one for write, then swap between them
 	constexpr static size_t NUM_TRANSFORM_BUFFERS = 2;
 
 	using ComponentDtor = void(*)(void*);
-	struct ComponentSlot : Traceable<ComponentSlot>
+	struct ComponentSlot
 	{
 		ID identifier = 0;
 		Handle<void> ptr;

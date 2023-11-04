@@ -46,7 +46,7 @@ namespace tupleHelper
 template <typename _Elm>                                                                \
 void TraceToElm(Tracer* tracer, _Elm& e)                                                \
 {                                                                                       \
-    if constexpr (std::is_base_of_v<Traceable<_Elm>, _Elm>)                             \
+    if constexpr (Tracer::IsTraceable<_Elm>())                                          \
     {                                                                                   \
         tracer->Trace(e);                                                               \
     }                                                                                   \
@@ -71,7 +71,7 @@ void traceToElm(Tracer* tracer, std::tuple<Tp...>& t) {                         
 template <typename _Elm>                                                                                            \
 void TraceToElm(Tracer* tracer, _Elm* e)                                                                            \
 {                                                                                                                   \
-    if constexpr (std::is_base_of_v<Traceable<_Elm>, _Elm>)                                                         \
+    if constexpr (Tracer::IsTraceable<_Elm>())                                                                      \
     {                                                                                                               \
         tracer->Trace(*e);                                                                                          \
     }                                                                                                               \
@@ -108,7 +108,7 @@ public:
 };
 
 template <typename _Fn, typename... _Ts>
-class Function final : private Traceable<Function<_Fn, _Ts...>>, public FunctionBase
+class Function final : public FunctionBase
 {
 private:
     _Fn m_fn;
@@ -141,7 +141,7 @@ public:
 };
 
 template <typename R, typename... Args>
-class AsyncFunction final : private Traceable<AsyncFunction<R, Args...>>, public FunctionBase
+class AsyncFunction final : public FunctionBase
 {
 private:
     class CallbackBase
@@ -152,7 +152,7 @@ private:
     };
 
     template <typename _Fn, typename... _Ts>
-    class Callback final : private Traceable<Callback<_Fn, _Ts...>>, public CallbackBase
+    class Callback final : public CallbackBase
     {
     private:
         _Fn m_fn;
@@ -238,7 +238,7 @@ public:
 };
 
 template <typename _Fn, typename... _Ts>
-class AsyncFunctionVoidReturn final : private Traceable<AsyncFunctionVoidReturn<_Fn, _Ts...>>, public FunctionBase
+class AsyncFunctionVoidReturn final : public FunctionBase
 {
 private:
     Handle<FunctionBase> m_callback = nullptr;
@@ -315,7 +315,7 @@ public:
 };
 
 template <typename T, typename R, typename... Args>
-class AsyncMemberFunction final : private Traceable<AsyncMemberFunction<T, R, Args...>>, public FunctionBase
+class AsyncMemberFunction final : public FunctionBase
 {
 private:
     class CallbackBase
@@ -326,7 +326,7 @@ private:
     };
 
     template <typename _Fn, typename... _Ts>
-    class Callback final : private Traceable<Callback<_Fn, _Ts...>>, public CallbackBase
+    class Callback final : public CallbackBase
     {
     private:
         _Fn m_fn;
@@ -412,7 +412,7 @@ public:
 };
 
 template <typename T, typename... Args>
-class AsyncMemberFunctionVoidReturn final : private Traceable<AsyncMemberFunctionVoidReturn<T, Args...>>, public FunctionBase
+class AsyncMemberFunctionVoidReturn final : public FunctionBase
 {
 private:
     using Fn = void (T::*)(Args...);

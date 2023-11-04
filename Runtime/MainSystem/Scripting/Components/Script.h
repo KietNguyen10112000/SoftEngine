@@ -33,7 +33,7 @@ private:																						\
 	};																							\
 public:
 
-class Script : Traceable<Script>, public MainComponent, public AsyncTaskRunner
+class Script : public MainComponent, public AsyncTaskRunner
 {
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();

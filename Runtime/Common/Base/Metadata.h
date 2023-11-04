@@ -218,7 +218,7 @@ public:
 };
 
 
-class ClassMetadata : Traceable<ClassMetadata>
+class ClassMetadata
 {
 private:
 	const char* m_className = nullptr;

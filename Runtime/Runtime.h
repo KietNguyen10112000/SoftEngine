@@ -26,7 +26,7 @@ public:
 
 };
 
-class API Runtime : Traceable<Runtime>, public Singleton<Runtime>
+class API Runtime : public Singleton<Runtime>
 {
 public:
 	constexpr static byte NONE_STABLE_VALUE = 127;

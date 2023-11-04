@@ -7,7 +7,7 @@
 NAMESPACE_BEGIN
 
 template<typename T, size_t GROWTH_SIZE = 128>
-class UnorderedList : Traceable<UnorderedList<T, GROWTH_SIZE>>
+class UnorderedList
 {
 private:
 	struct Sign
@@ -102,10 +102,10 @@ public:
 };
 
 template<typename T>
-class UnorderedLinkedList : public Traceable<UnorderedLinkedList<T>>
+class UnorderedLinkedList
 {
 private:
-	struct Node : public Traceable<Node>
+	struct Node
 	{
 		Handle<Node> next;
 		Handle<Node> prev;
@@ -117,7 +117,7 @@ private:
 			tracer->Trace(next);
 			tracer->Trace(prev);
 
-			if constexpr (std::is_base_of_v<Traceable<T>, T>)
+			if constexpr (Tracer::IsTraceable<T>())
 			{
 				tracer->Trace(value);
 			}

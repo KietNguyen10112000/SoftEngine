@@ -23,7 +23,7 @@ class GameObject;
 class Input;
 
 // manage game objects and notify for main systems whenever game object add to scene, remove from scene, changed transform,...
-class API Scene final : Traceable<Scene>
+class API Scene final
 {
 public:
 	enum EVENT

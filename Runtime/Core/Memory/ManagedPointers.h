@@ -51,7 +51,7 @@ template <															\
 
 // change member of ManagedPointer need to change SIZE_OF_MANAGED_PTR (Memory/TypeDef.h)
 template <typename T>
-class ManagedPointer : public Traceable<ManagedPointer<T>>
+class ManagedPointer
 {
 protected:
 	template<typename _T>

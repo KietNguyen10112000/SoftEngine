@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN
 
-class AsyncTaskRunner : Traceable<AsyncTaskRunner>
+class AsyncTaskRunner
 {
 public:
 	ConcurrentList<Handle<FunctionBase>> m_functions;

@@ -11,7 +11,7 @@ class ArrayTraceableElement
 {
 public:
 	friend class Tracer;
-	class Element : public Traceable<Element>
+	class Element
 	{
 		TRACEABLE_FRIEND();
 
@@ -32,7 +32,7 @@ public:
 			// no destuctor call on this block
 			tracer->BindDestructor(0);
 
-			if constexpr (std::is_base_of_v<Traceable<T>, T>)
+			if constexpr (Tracer::IsTraceable<T>())//(std::is_base_of_v<Traceable<T>, T>)
 			{
 				//T::Trace(tracer);
 				tracer->Mimic<T>(this);
@@ -57,13 +57,13 @@ public:
 
 // gc dynamic array
 template <typename T>
-class Array : Traceable<Array<T>>
+class Array
 {
 public:
 	friend class Tracer;
 
 	using Element = typename std::conditional<
-		std::is_base_of_v<Traceable<T>, T>,
+		Tracer::IsTraceable<T>(),
 		typename ArrayTraceableElement<T, Array<T>>::Element,
 		typename ArrayPODElement<T>::Element
 	>::type;
@@ -120,6 +120,10 @@ protected:
 		auto currentSize = Size();
 		if (newSize <= currentSize)
 		{
+			for (size_t i = newSize; i < currentSize; i++) 
+			{
+				m_buffer[i] = nullptr;
+			}
 			m_size = newSize;
 			return;
 		}
@@ -218,6 +222,7 @@ public:
 		{
 			buf[i] = buf[i + 1];
 		}
+		buf[m_size - 1] = nullptr;
 		m_size--;
 	}
 
