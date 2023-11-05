@@ -16,9 +16,17 @@ protected:
 		Script::Trace(tracer);
 	}
 
+	GameObject* m_obj = nullptr;
+
+	Transform m_childTransform;
+	size_t m_childCount = 0;
+
 public:
 	virtual void OnStart() override;
 	virtual void OnUpdate(float dt) override;
+
+protected:
+	virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 };
 

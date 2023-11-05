@@ -37,6 +37,65 @@ void EditorContext::OnObjectSelected(GameObject* obj)
 	m_inspectingObjectData = obj->GetMetadata(0);
 }
 
+void EditorContext::RenderHierarchyPanelOf(GameObject* _obj)
+{
+	auto preFunc = [&](GameObject* obj)
+	{
+		ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth;
+
+		if (m_selectionIdx == obj->UID())
+		{
+			nodeFlags |= ImGuiTreeNodeFlags_Selected;
+		}
+
+		auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj->UID(),
+			nodeFlags, obj->Name().empty() ? "<Unnamed>" : obj->Name().c_str());
+
+		// right-click popup menu on object name
+		if (ImGui::BeginPopupContextItem())
+		{
+			if (ImGui::Button("Rename"))
+			{
+				m_nameInputTxt[0] = 0;
+				m_renameObject = obj;
+				m_openInputNamePopup = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+		{
+			m_selectionIdx = obj->UID();
+			OnObjectSelected(obj);
+		}
+
+		/*if (open)
+		{
+			ImGui::TreePop();
+		}*/
+
+		return open;
+	};
+
+	bool open = preFunc(_obj);
+
+	if (open)
+	{
+		auto& children = _obj->Children();
+		for (auto& child : children)
+		{
+			RenderHierarchyPanelOf(child.Get());
+		}
+	}
+
+	if (open)
+	{
+		ImGui::TreePop();
+	}
+}
+
 void EditorContext::RenderHierarchyPanel()
 {
 	ImGui::Begin("Hierarchy", 0, ImGuiWindowFlags_NoMove);
@@ -47,46 +106,7 @@ void EditorContext::RenderHierarchyPanel()
 	for (size_t i = 0; i < numObjects; i++)
 	{
 		auto _obj = m_objects[i];
-
-		_obj->PreTraversal1(
-			[&](GameObject* obj) 
-			{
-				ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth;
-
-				if (m_selectionIdx == i)
-				{
-					nodeFlags |= ImGuiTreeNodeFlags_Selected;
-				}
-
-				auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj->UID(),
-					nodeFlags, obj->Name().empty() ? "<Unnamed>" : obj->Name().c_str());
-
-				// right-click popup menu on object name
-				if (ImGui::BeginPopupContextItem())
-				{
-					if (ImGui::Button("Rename"))
-					{
-						m_nameInputTxt[0] = 0;
-						m_renameObject = obj;
-						m_openInputNamePopup = true;
-						ImGui::CloseCurrentPopup();
-					}
-
-					ImGui::EndPopup();
-				}
-
-				if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
-				{
-					m_selectionIdx = i;
-					OnObjectSelected(obj);
-				}
-
-				if (open)
-				{
-					ImGui::TreePop();
-				}
-			}
-		);
+		RenderHierarchyPanelOf(_obj);
 	}
 
 	if (m_openInputNamePopup)
@@ -130,12 +150,17 @@ void EditorContext::RenderInspectorPanel()
 	ImGui::Begin("Inspector", 0, wflags);
 
 	ImGui::Checkbox("Pin Inspector", &m_pinInspectPanel);
-
+	
 	if (m_inspectingObject.Get() == nullptr)
 	{
 		ImGui::Text("No object selected to inspect");
 		goto Return;
 	}
+
+	if (!m_inspectingObject->Name().empty())
+		ImGui::Text("Object: %s", m_inspectingObject->Name().c_str());
+
+	ImGui::Separator();
 
 	metaData->ForEachProperties(
 		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)

@@ -222,7 +222,7 @@ class ClassMetadata
 {
 private:
 	const char* m_className = nullptr;
-	Serializable* m_instance = nullptr;
+	Handle<Serializable> m_instance = nullptr;
 
 	std::vector<Accessor> m_properties;
 
@@ -237,6 +237,7 @@ private:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
+		tracer->Trace(m_instance);
 		tracer->Trace(m_dict);
 		tracer->Trace(m_subClasses);
 	}
@@ -244,8 +245,7 @@ private:
 public:
 	//ClassMetadata() {};
 
-	ClassMetadata(const char* className, Serializable* instance) 
-		: m_className(className), m_instance(instance) {};
+	ClassMetadata(const char* className, Serializable* instance);
 
 private:
 	template<bool RECURSIVE, bool PREV_CALL, bool POST_CALL, typename Fn1, typename Fn2>

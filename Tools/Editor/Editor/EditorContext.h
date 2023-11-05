@@ -45,6 +45,7 @@ private:
 
 	void OnObjectSelected(GameObject* obj);
 
+	void RenderHierarchyPanelOf(GameObject* obj);
 	void RenderHierarchyPanel();
 	void RenderInspectorPanel();
 

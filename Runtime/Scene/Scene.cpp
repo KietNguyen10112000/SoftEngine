@@ -162,6 +162,13 @@ void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 		}
 
 		comp->m_modificationState = MODIFICATION_STATE::NONE;
+
+		auto& comps = comp->GetGameObject()->m_mainComponents;
+		if (comp != comps[mainSystemId].Get())
+		{
+			comps[mainSystemId] = comp;
+		}
+
 		system->AddComponent(comp);
 		comp->OnComponentAdded();
 		comp->OnTransformChanged();
@@ -180,6 +187,13 @@ void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 		}
 
 		comp->m_modificationState = MODIFICATION_STATE::NONE;
+
+		auto& comps = comp->GetGameObject()->m_mainComponents;
+		if (comp == comps[mainSystemId].Get())
+		{
+			comps[mainSystemId] = nullptr;
+		}
+
 		comp->OnComponentRemoved();
 		system->RemoveComponent(comp);
 	}
@@ -256,7 +270,7 @@ void Scene::FilterAddList()
 			m_shortLifeObjects.Push(obj);
 		}
 
-		obj->PostTraversal(
+		obj->PostTraversalUpToDate(
 			[scene](GameObject* cur)
 			{
 				cur->m_scene = scene;
@@ -309,10 +323,11 @@ void Scene::FilterRemoveList()
 			// do remove indexing
 		}
 
-		obj->PostTraversal(
+		obj->PostTraversalUpToDate(
 			[](GameObject* cur)
 			{
 				cur->m_sceneId = INVALID_ID;
+				cur->m_UID = INVALID_ID;
 			}
 		);
 	}
@@ -416,6 +431,8 @@ void Scene::SynchMainProcessingSystems()
 
 void Scene::SynchMainProcessingSystemForMainOutputSystems()
 {
+	StageAllChangedTreeStruct();
+
 	auto& list = GetCurrentStagedChangeTransformList();
 	for (auto& obj : list)
 	{
@@ -448,7 +465,7 @@ void Scene::StageAllChangedTransformObjects()
 				nearestRootChangedTransform = root;
 			}
 
-			auto parent = root->Parent().Get();
+			auto parent = root->ParentUpToDate().Get();
 			if (!parent)
 			{
 				break;
@@ -475,13 +492,13 @@ void Scene::StageAllChangedTransformObjects()
 				contributors[i].func(gameObject, contributors[i].comp);
 			}
 
-			gameObject->RecalculateWriteTransform();
+			gameObject->RecalculateUpToDateTransform(0);
 		};
 		recalculateTransformTask.Params() = nearestRootChangedTransform;
 
 		TaskSystem::Submit(&handle, recalculateTransformTask, Task::CRITICAL);
 
-		nearestRootChangedTransform->PreTraversal(
+		nearestRootChangedTransform->PreTraversalUpToDate(
 			[&](GameObject* cur)
 			{
 				if (cur->m_updatedTransformIteration == m_iterationCount)
@@ -499,6 +516,37 @@ void Scene::StageAllChangedTransformObjects()
 	TaskSystem::WaitForHandle(&handle);
 }
 
+void Scene::StageAllChangedTreeStruct()
+{
+	for (auto& obj : m_changedTreeStructList)
+	{
+		obj->UpdateTreeBuffer();
+
+		if (obj->m_modificationState == MODIFICATION_STATE::ADDING)
+		{
+			obj->PostTraversalUpToDate(
+				[&](GameObject* cur)
+				{
+					//cur->m_scene = this;
+					cur->m_UID = m_UIDCounter++;
+				}
+			);
+		}
+
+		if (obj->m_modificationState == MODIFICATION_STATE::REMOVING)
+		{
+			obj->PostTraversalUpToDate(
+				[&](GameObject* cur)
+				{
+					cur->m_scene = nullptr;
+					cur->m_UID = INVALID_ID;
+				}
+			);
+		}
+	}
+	m_changedTreeStructList.Clear();
+}
+
 void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
 {
 	obj->m_modificationLock.lock();
@@ -510,7 +558,7 @@ void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
 	m_longLifeObjects.Push(obj);
 	mheap::internal::SetStableValue(m_stableValue);
 
-	obj->PreTraversal1(
+	obj->PreTraversal1UpToDate(
 		[&](GameObject* cur)
 		{
 			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
@@ -547,6 +595,7 @@ void Scene::AddComponent(ID COMPONENT_ID, const Handle<MainComponent>& component
 
 	component->m_modificationState = MODIFICATION_STATE::ADDING;
 	GetCurrrentComponentsAddList(COMPONENT_ID).Add(component);
+	GetCurrrentComponentsHolderList().Add(component);
 }
 
 void Scene::RemoveComponent(ID COMPONENT_ID, const Handle<MainComponent>& component)
@@ -561,11 +610,75 @@ void Scene::RemoveComponent(ID COMPONENT_ID, const Handle<MainComponent>& compon
 
 	component->m_modificationState = MODIFICATION_STATE::REMOVING;
 	GetCurrrentComponentsRemoveList(COMPONENT_ID).Add(component);
+	GetCurrrentComponentsHolderList().Add(component);
+}
+
+void Scene::DoAddToParent(GameObject* parent, const Handle<GameObject>& child)
+{
+	assert(parent->IsInAnyScene() && parent->GetScene() == this);
+	assert(!child->IsInAnyScene());
+	
+	child->PreTraversal1UpToDate(
+		[&](GameObject* cur)
+		{
+			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				auto& comp = cur->m_mainComponents[i];
+				if (comp.Get())
+				{
+					AddComponent(i, comp);
+				}
+			}
+
+			cur->m_scene = this;
+		}
+	);
+
+	if (parent->m_lastChangeTreeIterationCount != GetIterationCount())
+	{
+		m_changedTreeStructList.Add(parent);
+	}
+
+	if (child->m_lastChangeTreeIterationCount != GetIterationCount())
+	{
+		m_changedTreeStructList.Add(child);
+	}
+	
+	GetCurrrentObjectsHolderList().Add(child);
+}
+
+void Scene::DoRemoveFromParent(GameObject* parent, const Handle<GameObject>& child)
+{
+	child->PreTraversal1UpToDate(
+		[&](GameObject* cur)
+		{
+			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				auto& comp = cur->m_mainComponents[i];
+				if (comp.Get())
+				{
+					RemoveComponent(i, comp);
+				}
+			}
+		}
+	);
+
+	if (parent->m_lastChangeTreeIterationCount != GetIterationCount())
+	{
+		m_changedTreeStructList.Add(parent);
+	}
+
+	if (child->m_lastChangeTreeIterationCount != GetIterationCount())
+	{
+		m_changedTreeStructList.Add(child);
+	}
+
+	GetCurrrentObjectsHolderList().Add(child);
 }
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 {
-	assert(obj->Parent().Get() == nullptr);
+	assert(obj->ParentUpToDate().Get() == nullptr);
 
 	if (m_isSettingUpLongLifeObjects)
 	{
@@ -606,7 +719,7 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 	GetCurrentAddList().Add(obj);
 
 Return:
-	obj->PreTraversal1(
+	obj->PreTraversal1UpToDate(
 		[&](GameObject* cur)
 		{
 			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
@@ -626,7 +739,7 @@ Return:
 void Scene::RemoveObject(const Handle<GameObject>& obj)
 {
 	assert(m_isSettingUpLongLifeObjects == false);
-	assert(obj->Parent().Get() == nullptr);
+	assert(obj->ParentUpToDate().Get() == nullptr);
 	assert(obj->m_scene == this);
 
 	obj->m_modificationLock.lock();
@@ -647,7 +760,7 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 	GetCurrentRemoveList().Add(obj);
 
 Return:
-	obj->PostTraversal(
+	obj->PostTraversalUpToDate(
 		[&](GameObject* cur)
 		{
 			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)

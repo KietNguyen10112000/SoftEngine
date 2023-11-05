@@ -88,4 +88,7 @@ public:
 
 };
 
+inline ClassMetadata::ClassMetadata(const char* className, Serializable* instance)
+	: m_className(className), m_instance(instance) {};
+
 NAMESPACE_END

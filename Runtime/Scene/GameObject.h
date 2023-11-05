@@ -6,6 +6,8 @@
 
 #include "MODIFICATION_STATE.h"
 
+#include "Runtime/Config.h"
+
 NAMESPACE_BEGIN
 
 class Scene;
@@ -46,13 +48,14 @@ private:
 	// external components
 	Array<ComponentSlot> m_components = {};
 
-	Handle<GameObject> m_parent = nullptr;
-	Array<Handle<GameObject>> m_children;
+	Handle<GameObject>			m_parent		[Config::NUM_DEFER_BUFFER] = {};
+	Array<Handle<GameObject>>	m_children		[Config::NUM_DEFER_BUFFER] = {};
 
 	Scene* m_scene = nullptr;
 	bool m_isLongLife = true;
-	bool m_padd[2];
+	bool m_padd1;
 	Spinlock m_modificationLock;
+	Spinlock m_treeLock;
 	uint32_t m_modificationState = MODIFICATION_STATE::NONE;
 
 	std::atomic<size_t> m_isRecoredChangeTransformIteration = { 0 };
@@ -71,6 +74,14 @@ private:
 	Mat4		m_localTransformMat		[NUM_TRANSFORM_BUFFERS] = {};
 	Transform	m_localTransform		[NUM_TRANSFORM_BUFFERS] = {};
 	uint32_t	m_transformReadIdx								= 0;
+
+	// parent and children array idx
+	uint32_t	m_treeIdx = 0;
+	uint32_t	m_childCopyIdx = 0;
+	// idx of this object in parent.children
+	uint32_t	m_childInParentIdx = INVALID_ID;
+
+	size_t m_lastChangeTreeIterationCount = 0;
 
 private:
 	TRACEABLE_FRIEND();
@@ -110,7 +121,7 @@ private:
 		return this;
 	}
 
-	GameObject* AddMainComponentDefer(const Handle<MainComponent>& component);
+	GameObject* AddMainComponentDefer(ID COMPONENT_ID, const Handle<MainComponent>& component);
 
 	template <typename Comp>
 	GameObject* RemoveMainComponentDirect(Comp* component)
@@ -129,7 +140,7 @@ private:
 		return this;
 	}
 
-	GameObject* RemoveMainComponentDefer(MainComponent* component);
+	GameObject* RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent* component);
 
 	auto FindComponentFromDtor(ComponentDtor dtor) const
 	{
@@ -192,14 +203,18 @@ private:
 
 	void RecalculateTransform(size_t idx);
 
-	inline void RecalculateReadTransform()
+	//void RecalculateReadTransform();
+
+	void RecalculateUpToDateTransform(ID parentIdx);
+
+	inline ID ReadTransformIdx()
 	{
-		RecalculateTransform(m_transformReadIdx);
+		return m_transformReadIdx;
 	}
 
-	inline void RecalculateWriteTransform()
+	inline ID WriteTransformIdx()
 	{
-		RecalculateTransform((m_transformReadIdx + 1) % NUM_TRANSFORM_BUFFERS);
+		return (m_transformReadIdx + 1) % NUM_TRANSFORM_BUFFERS;
 	}
 
 	void IndirectSetLocalTransform(const Transform& transform);
@@ -210,6 +225,34 @@ private:
 		assert(idx < MainSystemInfo::COUNT);
 		m_transformContributors[idx].comp = p;
 		m_transformContributors[idx].func = func;
+	}
+
+	inline const auto& ReadParent() const
+	{
+		return m_parent[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER];
+	}
+
+	inline auto& WriteParent()
+	{
+		return m_parent[m_treeIdx];
+	}
+
+	inline const auto& ReadChildren() const
+	{
+		return m_children[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER];
+	}
+
+	inline auto& WriteChildren()
+	{
+		return m_children[m_treeIdx];
+	}
+
+	void DuplicateTreeBuffer();
+	inline void UpdateTreeBuffer()
+	{
+		m_treeIdx = (m_treeIdx + 1) % Config::NUM_DEFER_BUFFER;
+		WriteChildren().Resize(m_childCopyIdx);
+		m_lastChangeTreeIterationCount = 0;
 	}
 
 public:
@@ -228,7 +271,7 @@ public:
 
 			if (IsInAnyScene())
 			{
-				return AddMainComponentDefer(component);
+				return AddMainComponentDefer(Comp::COMPONENT_ID, component);
 			}
 
 			return AddMainComponentDirect(component);
@@ -243,7 +286,7 @@ public:
 	template <typename Comp>
 	inline GameObject* RemoveComponent(const Handle<Comp>& component)
 	{
-		RemoveComponentRaw(component.Get());
+		return RemoveComponentRaw(component.Get());
 	}
 
 	// return this if object has component, null on ow
@@ -252,14 +295,20 @@ public:
 	{
 		if constexpr (std::is_base_of_v<MainComponent, Comp>)
 		{
-			if ((void*)m_mainComponents[Comp::COMPONENT_ID].Get() != (void*)component)
+			if (m_mainComponents[Comp::COMPONENT_ID].Get() == nullptr)
+			{
+				return nullptr;
+			}
+
+			if (component != nullptr && (void*)m_mainComponents[Comp::COMPONENT_ID].Get() != (void*)component)
 			{
 				return nullptr;
 			}
 
 			if (IsInAnyScene())
 			{
-				return RemoveMainComponentDefer(component);
+				MainComponent* _comp = component == nullptr ? m_mainComponents[Comp::COMPONENT_ID].Get() : component;
+				return RemoveMainComponentDefer(Comp::COMPONENT_ID, _comp);
 			}
 
 			return RemoveMainComponentDirect(component);
@@ -337,7 +386,7 @@ public:
 	template <typename Func>
 	void ForEachChildren(Func func)
 	{
-		for (auto& child : m_children)
+		for (auto& child : ReadChildren())
 		{
 			func(child.Get());
 		}
@@ -347,7 +396,7 @@ public:
 	void PreTraversal(Func func)
 	{
 		if (func(this)) return;
-		for (auto& child : m_children)
+		for (auto& child : ReadChildren())
 		{
 			child->PreTraversal(func);
 		}
@@ -357,7 +406,7 @@ public:
 	void PreTraversal1(Func func)
 	{
 		func(this);
-		for (auto& child : m_children)
+		for (auto& child : ReadChildren())
 		{
 			child->PreTraversal1(func);
 		}
@@ -366,9 +415,53 @@ public:
 	template <typename Func>
 	void PostTraversal(Func func)
 	{
-		for (auto& child : m_children)
+		for (auto& child : ReadChildren())
 		{
 			child->PostTraversal(func);
+		}
+		func(this);
+	}
+
+private:
+	template <typename Func>
+	void ForEachChildrenUpToDate(Func func)
+	{
+		auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
+		for (auto& child : children)
+		{
+			func(child.Get());
+		}
+	}
+
+	template <typename Func>
+	void PreTraversalUpToDate(Func func)
+	{
+		auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
+		if (func(this)) return;
+		for (auto& child : children)
+		{
+			child->PreTraversalUpToDate(func);
+		}
+	}
+
+	template <typename Func>
+	void PreTraversal1UpToDate(Func func)
+	{
+		auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
+		func(this);
+		for (auto& child : children)
+		{
+			child->PreTraversal1UpToDate(func);
+		}
+	}
+
+	template <typename Func>
+	void PostTraversalUpToDate(Func func)
+	{
+		auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
+		for (auto& child : children)
+		{
+			child->PostTraversalUpToDate(func);
 		}
 		func(this);
 	}
@@ -406,14 +499,21 @@ public:
 		m_transformReadIdx = (m_transformReadIdx + 1) % NUM_TRANSFORM_BUFFERS;
 	}
 
+	inline const auto& ParentUpToDate() const
+	{
+		return m_lastChangeTreeIterationCount == 0 ? 
+			m_parent[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER] :
+			m_parent[m_treeIdx];
+	}
+
 	inline const auto& Parent() const
 	{
-		return m_parent;
+		return m_parent[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER];
 	}
 
 	inline const auto& Children() const
 	{
-		return m_children;
+		return m_children[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER];
 	}
 
 	inline auto& Name()
@@ -433,11 +533,13 @@ public:
 
 	inline bool IsInAnyScene()
 	{
-		auto in1 = m_scene && m_modificationState == MODIFICATION_STATE::ADDING;
-		auto in2 = m_scene && m_sceneId != INVALID_ID;
+		//auto in1 = m_scene && m_modificationState == MODIFICATION_STATE::ADDING;
+		//auto in2 = m_scene && m_sceneId != INVALID_ID;
+		auto in3 = m_scene && m_UID != INVALID_ID;
+		//auto in4 = m_scene && m_modificationState == MODIFICATION_STATE::REMOVING;
 		//auto notIn = m_scene && m_modificationState == MODIFICATION_STATE::NONE && m_sceneId == INVALID_ID;
 		
-		return in1 || in2;
+		return in3;//in1 || in2 || in3 || in4;
 	}
 
 	inline const auto& GetLocalTransform()
@@ -454,8 +556,8 @@ public:
 			{
 				trans = transform;
 			}
-			RecalculateReadTransform();
-			RecalculateWriteTransform();
+			RecalculateTransform(0);
+			RecalculateTransform(1);
 			return;
 		}
 		

@@ -8,6 +8,11 @@ void RotateScript::OnUpdate(float dt)
 {
 	auto transform = GetLocalTransform();
 
+	/*if (GetGameObject()->Name() == "Child 1")
+	{
+		std::cout << transform.Position().x << "\n";
+	}*/
+
 	auto rot = transform.Rotation().ToMat4();
 	rot = rot
 		* Mat4::Rotation(Vec3::X_AXIS, m_rotationSpeed.x * dt)

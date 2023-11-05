@@ -89,6 +89,8 @@ private:
 	raw::ConcurrentArrayList<GameObject*> m_removeList				[NUM_DEFER_LIST] = {};
 	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
 
+	raw::ConcurrentArrayList<GameObject*> m_changedTreeStructList					= {};
+
 	// no child, no parent, just an order to call MainComponent::OnTransformChanged
 	std::vector<GameObject*> m_stagedChangeTransformList			[NUM_DEFER_LIST] = {};
 	//std::vector<GameObject*> m_changedTransformRoots;
@@ -179,6 +181,8 @@ private:
 	void FilterRemoveList();
 
 	void StageAllChangedTransformObjects();
+	void StageAllChangedTreeStruct();
+
 	void SynchMainProcessingSystems();
 	void SynchMainProcessingSystemForMainOutputSystems();
 
@@ -283,6 +287,9 @@ private:
 
 	void AddComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
 	void RemoveComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
+
+	void DoAddToParent(GameObject* parent, const Handle<GameObject>& child);
+	void DoRemoveFromParent(GameObject* parent, const Handle<GameObject>& child);
 
 public:
 	// defer implementation, multithreaded
