@@ -229,8 +229,8 @@ void RenderingSystem::EndModification()
 
 void RenderingSystem::Iteration(float dt)
 {
-	m_asyncTaskRunnerMT.ProcessAllTasksMT(this);
-	m_asyncTaskRunnerST.ProcessAllTasks(this);
+	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
+	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 
 	auto graphics = Graphics::Get();
 	graphics->BeginFrame();

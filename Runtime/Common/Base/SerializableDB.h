@@ -7,7 +7,7 @@
 
 NAMESPACE_BEGIN
 
-class SerializableDB : public Singleton<SerializableDB>
+class API SerializableDB : public Singleton<SerializableDB>
 {
 public:
 	using SerializableCtor = Handle<Serializable> (*)();

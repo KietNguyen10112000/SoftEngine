@@ -1,5 +1,9 @@
 #include "Plugins/Bridge/PluginImpl.h"
 
+#ifdef GetClassName
+#undef GetClassName
+#endif // GetClassName
+
 #include "Runtime/Runtime.h"
 #include "Scene/Scene.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
@@ -7,9 +11,12 @@
 #include "EditorContext.h"
 #include "DataInspector.h"
 
+#include "ScriptList.h"
+
+
 void RegisterSerializables()
 {
-	
+	InitializeScriptList();
 }
 
 void Initialize(Runtime* runtime)
@@ -24,6 +31,16 @@ void Initialize(Runtime* runtime)
 			auto editorContextId	= scene->GenericStorage()->Store(editorContext);
 
 			editorContext->m_scene = scene;
+
+			scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
+				[](Scene* scene, int argc, void** argv, ID editorContextId)
+				{
+					auto obj = mheap::New<GameObject>();
+					obj->Name() = "#editor_TestScript";
+					obj->NewComponent<TestScript>();
+					scene->AddObject(obj);
+				}
+			);
 
 			scene->GetRenderingSystem()->EventDispatcher()->AddListener(RenderingSystem::EVENT_RENDER_GUI,
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)

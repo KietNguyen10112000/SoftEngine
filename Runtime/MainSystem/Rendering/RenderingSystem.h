@@ -17,6 +17,8 @@
 
 #include "BuiltinConstantBuffers.h"
 
+#include "Scene/Scene.h"
+
 NAMESPACE_BEGIN
 
 class BaseCamera;
@@ -43,6 +45,8 @@ public:
 	};
 
 private:
+	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
+
 	friend class BaseCamera;
 	friend class Camera;
 
@@ -80,8 +84,8 @@ private:
 
 	EventDispatcher<RenderingSystem, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
-	raw::AsyncTaskRunner<RenderingSystem> m_asyncTaskRunnerST = {};
-	raw::AsyncTaskRunner<RenderingSystem> m_asyncTaskRunnerMT = {};
+	raw::AsyncTaskRunner<RenderingSystem> m_asyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
+	raw::AsyncTaskRunner<RenderingSystem> m_asyncTaskRunnerMT[NUM_DEFER_BUFFER] = {};
 
 public:
 	RenderingSystem(Scene* scene);
@@ -95,6 +99,26 @@ private:
 	void SetBuiltinConstantBufferForCamera(BaseCamera* camera);
 	void RenderForEachCamera();
 	void DisplayAllCamera();
+
+	inline auto* GetCurrentAsyncTaskRunnerST()
+	{
+		return &m_asyncTaskRunnerST[m_scene->GetCurrentDeferBufferIdx()];
+	}
+
+	inline auto* GetCurrentAsyncTaskRunnerMT()
+	{
+		return &m_asyncTaskRunnerMT[m_scene->GetCurrentDeferBufferIdx()];
+	}
+
+	inline auto* GetPrevAsyncTaskRunnerST()
+	{
+		return &m_asyncTaskRunnerST[m_scene->GetPrevDeferBufferIdx()];
+	}
+
+	inline auto* GetPrevAsyncTaskRunnerMT()
+	{
+		return &m_asyncTaskRunnerMT[m_scene->GetPrevDeferBufferIdx()];
+	}
 
 public:
 	void DisplayCamera(BaseCamera* camera, const GRAPHICS_VIEWPORT& viewport);
@@ -136,12 +160,12 @@ public:
 
 	inline auto* AsyncTaskRunnerST()
 	{
-		return &m_asyncTaskRunnerST;
+		return GetCurrentAsyncTaskRunnerST();
 	}
 
 	inline auto* AsyncTaskRunnerMT()
 	{
-		return &m_asyncTaskRunnerMT;
+		return GetCurrentAsyncTaskRunnerMT();
 	}
 };
 

@@ -30,6 +30,8 @@ protected:
 
 	virtual void OnUpdate(float dt) override;
 
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+
 };
 
 NAMESPACE_END

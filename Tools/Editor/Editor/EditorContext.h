@@ -27,6 +27,8 @@ public:
 
 	size_t m_selectionIdx = -1;
 
+	bool m_pinInspectPanel = true;
+
 	bool m_openInputNamePopup = false;
 	GameObject* m_renameObject = nullptr;
 	char m_nameInputTxt[NAME_INPUT_MAX_LEN] = {};

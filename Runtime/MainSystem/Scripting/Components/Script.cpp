@@ -2,6 +2,8 @@
 
 #include "Scene/GameObject.h"
 
+#include "../ScriptingSystem.h"
+
 NAMESPACE_BEGIN
 
 void Script::Serialize(Serializer* serializer)
@@ -47,6 +49,16 @@ void Script::OnTransformChanged()
 AABox Script::GetGlobalAABB()
 {
 	return AABox();
+}
+
+void Script::FlushAsync()
+{
+	m_taskRunners[m_scene->GetPrevDeferBufferIdx()].Flush();
+}
+
+void Script::OnRecordAsync()
+{
+	m_scene->GetScriptingSystem()->OnScriptRecordAsyncTask(this);
 }
 
 void Script::OnStart()

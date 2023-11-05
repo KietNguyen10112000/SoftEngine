@@ -367,6 +367,9 @@ void Scene::BeginIteration()
 	}*/
 
 	m_iterationCount++;
+	m_currentDeferBufferIdx = m_iterationCount % NUM_DEFER_LIST;
+	m_prevDeferBufferIdx = (m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST;
+
 	GetCurrentAddList().Clear();
 	GetCurrentRemoveList().Clear();
 	GetCurrentChangedTransformList().Clear();

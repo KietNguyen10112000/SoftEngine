@@ -9,7 +9,7 @@
 
 NAMESPACE_BEGIN
 
-class RenderingComponent : public MainComponent
+class API RenderingComponent : public MainComponent
 {
 private:
 	friend class GameObject;

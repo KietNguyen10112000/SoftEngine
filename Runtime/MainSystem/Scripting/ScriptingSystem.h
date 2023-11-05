@@ -9,11 +9,16 @@
 NAMESPACE_BEGIN
 
 class ScriptScheduler;
+class Script;
 
 class ScriptingSystem : public MainSystem
 {
 public:
+	friend class Script;
+
+	constexpr static size_t NUM_DEFER_BUFFER = 2;
 	std::vector<ScriptScheduler*> m_schedulers;
+	std::vector<ScriptScheduler*> m_callAsyncSchedulers[NUM_DEFER_BUFFER];
 
 	ScriptingSystem(Scene* scene);
 	~ScriptingSystem();
@@ -35,6 +40,9 @@ public:
 	virtual void Iteration(float dt) override;
 
 	virtual void PostIteration() override;
+
+private:
+	void OnScriptRecordAsyncTask(Script* script);
 
 };
 

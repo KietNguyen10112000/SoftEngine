@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef GetClassName
+#undef GetClassName
+#endif // GetClassName
+
 #include "Metadata.h"
 #include "Serializer.h"
 

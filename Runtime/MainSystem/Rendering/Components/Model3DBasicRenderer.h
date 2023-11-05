@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN
 
-class Model3DBasicRenderer : public RenderingComponent
+class API Model3DBasicRenderer : public RenderingComponent
 {
 public:
 	friend class RenderingSystem;

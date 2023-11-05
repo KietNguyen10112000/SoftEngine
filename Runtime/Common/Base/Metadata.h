@@ -135,7 +135,7 @@ public:
 		Serializable* instance
 	) : m_name(name), m_var(var), m_setter(setter), m_getter(getter), m_instance(instance) {};
 
-	template<bool DIRECT_MODIFY_VAR = true, typename T>
+	template<typename T, bool DIRECT_MODIFY_VAR = true>
 	inline static Accessor For(const char* name, T& var, Serializable* instance)
 	{
 		return Accessor(

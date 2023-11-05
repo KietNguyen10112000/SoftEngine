@@ -18,7 +18,8 @@ ScriptingSystem::~ScriptingSystem()
 {
 	for (auto& s : m_schedulers)
 	{
-		delete s;
+		if (s)
+			delete s;
 	}
 	m_schedulers.clear();
 }
@@ -42,6 +43,10 @@ void ScriptingSystem::AddComponent(MainComponent* comp)
 	if (m_schedulers.size() <= metaData->schedulerId)
 	{
 		m_schedulers.resize(metaData->schedulerId + 1);
+	}
+
+	if (!m_schedulers[metaData->schedulerId])
+	{
 		m_schedulers[metaData->schedulerId] = new ScriptScheduler();
 	}
 
@@ -104,6 +109,13 @@ void ScriptingSystem::PrevIteration()
 
 void ScriptingSystem::Iteration(float dt)
 {
+	auto& prevAsyncList = m_callAsyncSchedulers[m_scene->GetPrevDeferBufferIdx()];
+	for (auto& s : prevAsyncList)
+	{
+		s->FlushAsyncCalls(m_scene);
+	}
+	prevAsyncList.clear();
+
 	for (auto& scheduler : m_schedulers)
 	{
 		if (scheduler)
@@ -115,6 +127,15 @@ void ScriptingSystem::Iteration(float dt)
 
 void ScriptingSystem::PostIteration()
 {
+}
+
+void ScriptingSystem::OnScriptRecordAsyncTask(Script* script)
+{
+	auto metaData = script->GetScriptMetaData();
+	if (m_schedulers[metaData->schedulerId]->RecordAsyncCall(this, script))
+	{
+		m_callAsyncSchedulers[m_scene->GetCurrentDeferBufferIdx()].push_back(m_schedulers[metaData->schedulerId]);
+	}
 }
 
 NAMESPACE_END

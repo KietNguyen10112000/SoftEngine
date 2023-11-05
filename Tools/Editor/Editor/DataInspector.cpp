@@ -62,6 +62,30 @@ void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor
 	}
 }
 
+void DataInspector::InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+{
+	auto& v = variant.As<float>();
+	if (ImGui::DragFloat(propertyName, &v, 0.01f, -INFINITY, INFINITY))
+	{
+		auto input = Variant::Of<float>();
+		input.As<float>() = v;
+		accessor.Set(input);
+	}
+}
+
+void DataInspector::InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+{
+	//const static char* cacheNameFmt = "editor_InspectVec3_{}";
+
+	auto& vec = variant.As<Vec3>();
+	if (ImGui::DragFloat3(propertyName, &vec[0], 0.01f, -INFINITY, INFINITY))
+	{
+		auto input = Variant::Of<Vec3>();
+		input.As<Vec3>() = vec;
+		accessor.Set(input);
+	}
+}
+
 void DataInspector::InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	const static char* cacheNameFmt = "editor_InspectProjectionMat4_{}";
@@ -256,6 +280,8 @@ void DataInspector::Inspect(ClassMetadata* metadata, Accessor& accessor, const c
 
 void DataInspector::Initialize()
 {
+	s_inspectFunc[VARIANT_TYPE::FLOAT]						= InspectFloat;
+	s_inspectFunc[VARIANT_TYPE::VEC3]						= InspectVec3;
 	s_inspectFunc[VARIANT_TYPE::TRANSFORM3D]				= InspectTransform;
 	s_inspectFunc[VARIANT_TYPE::PROJECTION_MAT4]			= InspectProjectionMat4;
 }

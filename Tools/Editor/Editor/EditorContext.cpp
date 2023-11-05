@@ -121,7 +121,15 @@ void EditorContext::RenderInspectorPanel()
 
 	auto& metaData = m_inspectingObjectData;
 
-	ImGui::Begin("Inspector", 0, ImGuiWindowFlags_NoMove);
+	ImGuiWindowFlags wflags = ImGuiWindowFlags_None;
+	if (m_pinInspectPanel)
+	{
+		wflags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+	}
+
+	ImGui::Begin("Inspector", 0, wflags);
+
+	ImGui::Checkbox("Pin Inspector", &m_pinInspectPanel);
 
 	if (m_inspectingObject.Get() == nullptr)
 	{

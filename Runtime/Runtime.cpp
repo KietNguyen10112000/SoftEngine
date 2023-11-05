@@ -112,28 +112,30 @@ Runtime::~Runtime()
 
 void Runtime::InitializeModules()
 {
+	SerializableDB::SingletonInitialize();
+	ScriptMeta::SingletonInitialize();
+
 	InitNetwork();
 	InitGraphics();
 	InitPlugins();
 
 	BuiltinConstantBuffers::SingletonInitialize();
 	DisplayService::SingletonInitialize();
-	SerializableDB::SingletonInitialize();
-	ScriptMeta::SingletonInitialize();
 
 	SerializableList::Initialize();
 }
 
 void Runtime::FinalizeModules()
 {
-	ScriptMeta::SingletonFinalize();
-	SerializableDB::SingletonFinalize();
 	DisplayService::SingletonFinalize();
 	BuiltinConstantBuffers::SingletonFinalize();
 
 	FinalPlugins();
 	FinalGraphics();
 	FinalNetwork();
+
+	ScriptMeta::SingletonFinalize();
+	SerializableDB::SingletonFinalize();
 }
 
 void Runtime::InitGraphics()

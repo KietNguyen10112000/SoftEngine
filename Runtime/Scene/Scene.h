@@ -16,6 +16,8 @@
 #include "Common/Utils/EventDispatcher.h"
 #include "Common/Base/Serializable.h"
 
+#include "Runtime/Config.h"
+
 NAMESPACE_BEGIN
 
 class MainComponent;
@@ -64,7 +66,7 @@ private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 	constexpr static size_t NUM_TRASH_ARRAY = 2;
-	constexpr static size_t NUM_DEFER_LIST = 2;
+	constexpr static size_t NUM_DEFER_LIST = Config::NUM_DEFER_BUFFER;
 
 	struct IterationTaskParam
 	{
@@ -96,6 +98,9 @@ private:
 
 	std::vector<GameObject*> m_filteredAddList;
 	std::vector<GameObject*> m_filteredRemoveList;
+
+	ID m_currentDeferBufferIdx = 0;
+	ID m_prevDeferBufferIdx = 0;
 
 	MainSystem*				 m_mainSystems[MainSystemInfo::COUNT] = {};
 
@@ -190,42 +195,42 @@ private:
 
 	inline auto& GetCurrentAddList()
 	{
-		return m_addList[m_iterationCount % NUM_DEFER_LIST];
+		return m_addList[GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrentRemoveList()
 	{
-		return m_removeList[m_iterationCount % NUM_DEFER_LIST];
+		return m_removeList[GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrentChangedTransformList()
 	{
-		return m_changedTransformList[m_iterationCount % NUM_DEFER_LIST];
+		return m_changedTransformList[GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrentStagedChangeTransformList()
 	{
-		return m_stagedChangeTransformList[m_iterationCount % NUM_DEFER_LIST];
+		return m_stagedChangeTransformList[GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrrentObjectsHolderList()
 	{
-		return m_objectsHolder[m_iterationCount % NUM_DEFER_LIST];
+		return m_objectsHolder[GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrrentComponentsHolderList()
 	{
-		return m_componentsHolder[m_iterationCount % NUM_DEFER_LIST];
+		return m_componentsHolder[GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrrentComponentsAddList(ID COMPONENT_ID)
 	{
-		return m_addComponents[COMPONENT_ID][m_iterationCount % NUM_DEFER_LIST];
+		return m_addComponents[COMPONENT_ID][GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetCurrrentComponentsRemoveList(ID COMPONENT_ID)
 	{
-		return m_removeComponents[COMPONENT_ID][m_iterationCount % NUM_DEFER_LIST];
+		return m_removeComponents[COMPONENT_ID][GetCurrentDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevTrash()
@@ -235,42 +240,42 @@ private:
 
 	inline auto& GetPrevAddList()
 	{
-		return m_addList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_addList[GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevRemoveList()
 	{
-		return m_removeList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_removeList[GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevChangedTransformList()
 	{
-		return m_changedTransformList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_changedTransformList[GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevStagedChangeTransformList()
 	{
-		return m_stagedChangeTransformList[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_stagedChangeTransformList[GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevObjectsHolderList()
 	{
-		return m_objectsHolder[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_objectsHolder[GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevComponentsHolderList()
 	{
-		return m_componentsHolder[(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_componentsHolder[GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevComponentsAddList(ID COMPONENT_ID)
 	{
-		return m_addComponents[COMPONENT_ID][(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_addComponents[COMPONENT_ID][GetPrevDeferBufferIdx()];
 	}
 
 	inline auto& GetPrevComponentsRemoveList(ID COMPONENT_ID)
 	{
-		return m_removeComponents[COMPONENT_ID][(m_iterationCount + NUM_DEFER_LIST - 1) % NUM_DEFER_LIST];
+		return m_removeComponents[COMPONENT_ID][GetPrevDeferBufferIdx()];
 	}
 
 	void AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName);
@@ -302,6 +307,16 @@ public:
 	void EndSetupLongLifeObject();
 
 	void Iteration(float dt);
+
+	inline ID GetCurrentDeferBufferIdx()
+	{
+		return m_currentDeferBufferIdx;
+	}
+
+	inline ID GetPrevDeferBufferIdx()
+	{
+		return m_prevDeferBufferIdx;
+	}
 
 public:
 	inline RenderingSystem* GetRenderingSystem()

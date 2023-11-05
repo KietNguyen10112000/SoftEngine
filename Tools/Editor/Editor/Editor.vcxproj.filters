@@ -5,6 +5,9 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Source Files\TestScript">
+      <UniqueIdentifier>{7dcdedaa-f3b9-4c71-98e3-f04374b48c2b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -16,6 +19,12 @@
     <ClCompile Include="DataInspector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TestScript.cpp">
+      <Filter>Source Files\TestScript</Filter>
+    </ClCompile>
+    <ClCompile Include="RotateScript.cpp">
+      <Filter>Source Files\TestScript</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -26,6 +35,15 @@
     </ClInclude>
     <ClInclude Include="ImGuiExtern.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TestScript.h">
+      <Filter>Source Files\TestScript</Filter>
+    </ClInclude>
+    <ClInclude Include="RotateScript.h">
+      <Filter>Source Files\TestScript</Filter>
+    </ClInclude>
+    <ClInclude Include="ScriptList.h">
+      <Filter>Source Files\TestScript</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

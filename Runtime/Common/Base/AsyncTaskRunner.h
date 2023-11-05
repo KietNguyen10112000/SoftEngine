@@ -9,9 +9,9 @@ NAMESPACE_BEGIN
 class AsyncTaskRunner
 {
 public:
-	ConcurrentList<Handle<FunctionBase>> m_functions;
+	ConcurrentArrayList<Handle<FunctionBase>> m_functions;
 
-protected:
+public:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{

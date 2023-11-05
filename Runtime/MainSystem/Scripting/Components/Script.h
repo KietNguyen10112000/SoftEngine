@@ -33,12 +33,15 @@ private:																						\
 	};																							\
 public:
 
-class Script : public MainComponent, public AsyncTaskRunner
+class API Script : public MainComponent
 {
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 	constexpr static ID COMPONENT_ID = MainSystemInfo::SCRIPTING_ID;
+
+	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
+	AsyncTaskRunner m_taskRunners[NUM_DEFER_BUFFER] = {};
 
 	ID m_onGUIId		= INVALID_ID;
 	ID m_onUpdateId		= INVALID_ID;
@@ -67,11 +70,14 @@ private:
 
 	virtual AABox GetGlobalAABB() override;
 
+	void FlushAsync();
+	void OnRecordAsync();
+
 protected:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
-		AsyncTaskRunner::Trace(tracer);
+		tracer->Trace(m_taskRunners);
 	}
 
 protected:
@@ -126,6 +132,15 @@ protected:
 	inline auto SetLocalTransform(const Transform& transform)
 	{
 		GetGameObject()->SetLocalTransform(transform);
+	}
+
+public:
+	// thread-safe, use this function to do scripts communication
+	template <typename Fn, typename... Args>
+	inline auto RunAsync(Fn fn, Args&&... args)
+	{
+		OnRecordAsync();
+		return m_taskRunners[m_scene->GetCurrentDeferBufferIdx()].RunAsync(fn, args...);
 	}
 
 };
