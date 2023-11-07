@@ -632,6 +632,8 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 		auto id = ChooseAndLockLargeObjectPage(&m_contexts[tid], nBytes);
 		auto& page = (&m_pages[0][0])[id];
 
+		assert(page->m_lock.try_lock_no_check_own_thread_2() == false);
+
 		ret = page->Allocate(nBytes);
 		lock = &page->m_lock;
 

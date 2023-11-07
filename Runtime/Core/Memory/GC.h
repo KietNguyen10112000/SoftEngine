@@ -30,6 +30,9 @@ API void ClearTrackedBoundariesOfStableValue(byte value);
 
 API void BlockGC(bool block);
 
+// RESET_MARK_VALUES[0] for stableHeap, RESET_MARK_VALUES[1] for gcHeap
+API void PerformFullSystemGC(byte MARK_VALUE, byte* RESET_MARK_VALUES);
+
 class GC_RESUME_FLAG
 {
 public:

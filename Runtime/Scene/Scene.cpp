@@ -554,9 +554,9 @@ void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
 	obj->m_sceneId = m_longLifeObjects.size();
 	obj->m_isLongLife = true;
 
-	mheap::internal::SetStableValue(Runtime::NONE_STABLE_VALUE);
+	/*mheap::internal::SetStableValue(Runtime::NONE_STABLE_VALUE);
 	m_longLifeObjects.Push(obj);
-	mheap::internal::SetStableValue(m_stableValue);
+	mheap::internal::SetStableValue(m_stableValue);*/
 
 	obj->PreTraversal1UpToDate(
 		[&](GameObject* cur)
@@ -784,7 +784,7 @@ Handle<GameObject> Scene::FindObjectByIndexedName(String name)
 
 bool Scene::BeginSetupLongLifeObject()
 {
-	Runtime::Get()->NoneStableValueLock().lock();
+	//Runtime::Get()->NoneStableValueLock().lock();
 
 	m_isSettingUpLongLifeObjects = true;
 
@@ -808,14 +808,17 @@ void Scene::EndSetupLongLifeObject()
 {
 	mheap::internal::SetStableValue(m_oldStableValue);
 
-	if (m_longLifeObjects.size() != 0)
+	/*byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);*/
+
+	/*if (m_longLifeObjects.size() != 0)
 	{
 		mheap::internal::ChangeStableValue(m_stableValue, ((ManagedHandle*)m_longLifeObjects.data()) - 1);
 		mheap::internal::FreeStableObjects(Runtime::NONE_STABLE_VALUE, 0, 0);
-	}
+	}*/
 	
 
-	Runtime::Get()->NoneStableValueLock().unlock();
+	//Runtime::Get()->NoneStableValueLock().unlock();
 
 	for (auto& system : m_mainSystems)
 	{

@@ -51,7 +51,7 @@ void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 	writeLocalMat = readLocalTransform.ToTransformMatrix();
 	writeGlobalMat = writeLocalMat * (ParentUpToDate().Get() ? ParentUpToDate()->m_globalTransformMat[parentIdx] : Mat4::Identity());
 
-	auto& children = Children();
+	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
 	for (auto& child : children)
 	{
 		child->RecalculateUpToDateTransform(WriteTransformIdx());
@@ -90,6 +90,18 @@ void GameObject::DuplicateTreeBuffer()
 
 void GameObject::RemoveFromParent()
 {
+	/*if (!IsInAnyScene())
+	{
+		m_parent[0] = this;
+		obj->m_treeIdx = 1;
+		obj->m_childCopyIdx = 0;
+
+		m_children[0].Push(obj);
+		m_treeIdx = 1;
+		m_childCopyIdx = 0;
+
+		return;
+	}*/
 }
 
 void GameObject::AddChild(const Handle<GameObject>& obj)
@@ -98,13 +110,14 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 
 	if (!IsInAnyScene())
 	{
-		obj->m_parent[0] = this;
-		obj->m_treeIdx = 1;
-		obj->m_childCopyIdx = 0;
+		obj->ReadParent() = this;
+		//obj->m_treeIdx = 1;
+		//obj->m_childCopyIdx = 0;
+		obj->m_childInParentIdx = ReadChildren().size();
 
-		m_children[0].Push(obj);
-		m_treeIdx = 1;
-		m_childCopyIdx = 0;
+		ReadChildren().Push(obj);
+		//m_treeIdx = 1;
+		//m_childCopyIdx = 0;
 
 		return;
 	}
@@ -131,6 +144,7 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 	}
 
 	obj->WriteParent() = this;
+	obj->m_childInParentIdx = WriteChildren().size();
 	WriteChildren().Push(obj);
 
 	uint32_t newCopyIdx = ReadChildren().size();

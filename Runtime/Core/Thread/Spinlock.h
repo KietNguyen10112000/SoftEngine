@@ -97,6 +97,11 @@ public:
             !lock_.exchange(true, std::memory_order_acquire);
     }
 
+    inline bool try_lock_no_check_own_thread_2() noexcept {
+        return !lock_.load(std::memory_order_relaxed) &&
+            !lock_.exchange(true, std::memory_order_acquire);
+    }
+
     inline void lock_no_check_own_thread() noexcept {
         for (;;) {
             if (!lock_.exchange(true, std::memory_order_acquire)) {

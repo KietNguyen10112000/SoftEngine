@@ -227,7 +227,7 @@ private:
 		m_transformContributors[idx].func = func;
 	}
 
-	inline const auto& ReadParent() const
+	inline auto& ReadParent()
 	{
 		return m_parent[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER];
 	}
@@ -237,7 +237,7 @@ private:
 		return m_parent[m_treeIdx];
 	}
 
-	inline const auto& ReadChildren() const
+	inline auto& ReadChildren()
 	{
 		return m_children[(m_treeIdx + Config::NUM_DEFER_BUFFER - 1) % Config::NUM_DEFER_BUFFER];
 	}

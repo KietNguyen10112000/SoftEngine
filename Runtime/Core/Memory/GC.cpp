@@ -7,14 +7,21 @@
 
 #include "System.h"
 #include "NewMalloc.h"
+#include "ContextManual.h"
 
 NAMESPACE_MEMORY_BEGIN
+
+//extern ManagedHeap* g_rawHeap;
+extern ManagedHeap* g_stableHeap;
+extern ManagedHeap* g_gcHeap;
 
 namespace gc
 {
 
 gc::System* g_system = 0;
 spinlock g_lock;
+
+ContextManual* g_manualContext = nullptr;
 
 void gc::internal::InitializeNewSweepCycle()
 {
@@ -37,7 +44,11 @@ void gc::Initialize()
 	if (g_system) return;
 
 	g_lock.lock();
-	if (g_system == 0) g_system = NewMalloc<System>();
+	if (g_system == 0)
+	{
+		g_system		= NewMalloc<System>();
+		g_manualContext = NewMalloc<ContextManual>();
+	}
 	g_lock.unlock();
 }
 
@@ -46,7 +57,9 @@ void gc::Finalize()
 	if (g_system)
 	{
 		DeleteMalloc(g_system);
+		DeleteMalloc(g_manualContext);
 		g_system = 0;
+		g_manualContext = nullptr;
 	}
 }
 
@@ -99,6 +112,15 @@ void BlockGC(bool block)
 	{
 		g_system->m_globalLock.unlock();
 	}
+}
+
+void PerformFullSystemGC(byte MARK_VALUE, byte* RESET_MARK_VALUE)
+{
+	ManagedHeap* heaps[] = {
+		g_stableHeap,
+		g_gcHeap
+	};
+	g_manualContext->DoGC(MARK_VALUE, g_system, RESET_MARK_VALUE, heaps, 2);
 }
 
 void gc::internal::RegisterLocalScope(void* s)

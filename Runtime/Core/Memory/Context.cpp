@@ -49,10 +49,10 @@ bool gc::Context::Handle()
 
 Context::Context(ContextSharedHandle* hd)
 {
-	m_stack.reserve(16);
+	m_stack.reserve(KB);
 	m_sharedHandle = hd;
 
-	m_copiedLocals.reserve(1024);
+	m_copiedLocals.reserve(8 * KB);
 }
 
 Context::~Context()
