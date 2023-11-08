@@ -808,8 +808,8 @@ void Scene::EndSetupLongLifeObject()
 {
 	mheap::internal::SetStableValue(m_oldStableValue);
 
-	/*byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
-	gc::PerformFullSystemGC(255, resetValues);*/
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
 
 	/*if (m_longLifeObjects.size() != 0)
 	{

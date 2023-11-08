@@ -652,12 +652,23 @@ protected:
 public:
 	inline Node* Insert(Node* node)
 	{
+#ifdef _STRESS_DEBUG
+		auto ret = insert(m_root, node);
+		CheckAVL();
+		return ret;
+#else
 		return insert(m_root, node);
+#endif // _DEBUG
 	};
 	
 	inline void Erase(Node* node)
 	{
+#ifdef _STRESS_DEBUG
 		erase(node);
+		CheckAVL();
+#else
+		erase(node);
+#endif // _DEBUG
 	};
 	
 	inline Node* Find(KeyType key)

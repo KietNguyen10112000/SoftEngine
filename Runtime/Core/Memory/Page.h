@@ -170,14 +170,18 @@ public:
 
 	inline bool SplitMemory(size_t size, FreeBlock* memory, FreeBlock*& out)
 	{
-		int64_t numChunk = size / ALIGNMENT_SIZE + (size % ALIGNMENT_SIZE != 0);
-		auto numMemoyChunk = memory->TotalSize() / ALIGNMENT_SIZE;
-		auto remainChunk = numMemoyChunk - numChunk;
-		auto remainBytes = remainChunk * ALIGNMENT_SIZE;
+		assert(AlignSize(size) == size);
+		//int64_t numChunk = size / ALIGNMENT_SIZE + (size % ALIGNMENT_SIZE != 0);
+		//auto numMemoyChunk = memory->TotalSize() / ALIGNMENT_SIZE;
+		//auto remainChunk = numMemoyChunk - numChunk;
+		//auto remainBytes = remainChunk * ALIGNMENT_SIZE;
+
+		auto remainBytes = memory->TotalSize() - size;
 
 		if (remainBytes >= sizeof(FreeBlock))
 		{
-			out = InitFreeBlock((byte*)memory + (numChunk * ALIGNMENT_SIZE), remainChunk * ALIGNMENT_SIZE, (byte*)memory);
+			//out = InitFreeBlock((byte*)memory + (numChunk * ALIGNMENT_SIZE), remainChunk * ALIGNMENT_SIZE, (byte*)memory);
+			out = InitFreeBlock((byte*)memory + size, remainBytes, (byte*)memory);
 			return true;
 		}
 
@@ -356,6 +360,10 @@ public:
 
 			Insert(remain);
 		}
+		else
+		{
+			size = chosenBlock->TotalSize();
+		}
 
 		m_totalAllocatedBytes += size;
 
@@ -393,6 +401,8 @@ public:
 			next = joinedNext->NextBlock();
 			Erase(joinedNext);
 		}
+
+		assert((byte*)next <= m_buffer + m_size);
 
 		if ((byte*)next != m_buffer + m_size)
 		{

@@ -7,6 +7,8 @@
 #include "Core/Fiber/FiberPool.h"
 #include "Core/Random/Random.h"
 
+//#include "Core/Memory/Page.h"
+
 #include "TaskSystem/TaskWorker.h"
 
 #include "Runtime/Runtime.h"
@@ -86,6 +88,61 @@ int main(int argc, const char** argv)
 	Random::Initialize();
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
+
+	//struct AllocInfo
+	//{
+	//	void* ptr;
+	//	size_t size;
+	//};
+
+	//const size_t size = 3 * 1024 * MB;
+
+	//Page page(size);
+
+	//size_t allocSize = 0;
+
+	//std::Vector<AllocInfo> bufs;
+
+	//std::cout << "begin!!!\n";
+	//for (size_t i = 0; i < 10'000'000; i++)
+	//{
+	//	auto bSize = Random::RangeInt64(512, 64 * KB * KB);
+	//	auto ptr = page.Allocate(bSize);//std::malloc(bSize);//page.Allocate(bSize);
+
+	//	while (allocSize >= size / 2)
+	//	{
+	//		auto _v = Random::RangeInt64(0, bufs.size());
+	//		for (size_t j = 0; j < _v; j++)
+	//		{
+	//			allocSize -= bufs[j].size;
+	//			//std::free(bufs[j].ptr);
+	//			page.Free(bufs[j].ptr);
+
+	//			if (bufs.size() != 0)
+	//			{
+	//				bufs[j] = bufs.back();
+	//				bufs.pop_back();
+	//				j--;
+	//				_v--;
+
+	//				if (bufs.size() == 0) break;
+	//			}
+	//			else
+	//			{
+	//				bufs.clear();
+	//				break;
+	//			}
+	//		}
+	//	}
+
+	//	allocSize += bSize;
+	//	bufs.push_back({ ptr, (size_t)bSize });
+	//}
+
+	//std::cout << "Done!!!\n";
+
+	//return 0;
+
 	TaskWorker::Initalize(StartupConfig::Get().maxThreads, StartupConfig::Get().reservedThread);
 
 	auto sys = soft::gc::g_system;
@@ -114,14 +171,14 @@ int main(int argc, const char** argv)
 					(void*)0
 				},
 				currentThreadId
-			);
+						);
 			Thread::SwitchToFiber(FiberPool::Take(), true);
 		}
 	}
-	
+
 
 	Runtime::Finalize();
-	
+
 	TaskWorker::Finalize();
 	Thread::FinalizeForThisThreadInThisModule();
 	FiberPool::Finalize();
