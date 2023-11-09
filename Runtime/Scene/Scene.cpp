@@ -691,7 +691,10 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 #ifdef _DEBUG
 	if (obj->m_scene != nullptr || obj->m_sceneId == INVALID_ID)
 	{
-		assert(obj->m_modificationState == MODIFICATION_STATE::REMOVING || obj->m_modificationState == MODIFICATION_STATE::NONE);
+		assert(obj->m_modificationState == MODIFICATION_STATE::REMOVING 
+			|| obj->m_modificationState == MODIFICATION_STATE::NONE
+			|| obj->m_modificationState == MODIFICATION_STATE::REMOVING_FROM_PARENT
+		);
 	}
 #endif // _DEBUG
 

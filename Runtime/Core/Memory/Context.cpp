@@ -237,12 +237,13 @@ void gc::Context::MarkPhase()
 			//m_localScope->transactionLock.lock();
 
 
-			auto buf = stack.data();
+			//auto buf = stack.data();
 			///
 			/// std::vector::size() is not atomic operator
 			/// with MSVC std, vector::size() = vector::end() - vector::begin() => not atomic
 			/// 
 			m_localScope->stackPushLock.lock();
+			auto buf = stack.data();
 			auto size = stack.size();
 			m_localScope->stackPushLock.unlock();
 

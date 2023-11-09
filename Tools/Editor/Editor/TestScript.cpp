@@ -57,6 +57,13 @@ void TestScript::OnUpdate(float dt)
 		m_obj->AddChild(child);
 	}
 
+	if (Input()->IsKeyUp('T') && m_obj)
+	{
+		auto child = m_obj->Children()[0];
+		child->RemoveFromParent();
+		GetScene()->AddObject(child);
+	}
+
 }
 
 Handle<ClassMetadata> TestScript::GetMetadata(size_t sign)

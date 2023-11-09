@@ -637,6 +637,8 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 		ret = page->Allocate(nBytes);
 		lock = &page->m_lock;
 
+		assert(ret != nullptr);
+
 		if (page->GetTotalAllocatedBytes() / (float)page->GetSize() > MEMORY_THRESHOLD_TO_PERFORM_GC)
 		{
 			m_isNeedGC = true;

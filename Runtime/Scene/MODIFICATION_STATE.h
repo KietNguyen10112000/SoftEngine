@@ -12,6 +12,9 @@ public:
 		NONE,
 		ADDING,
 		REMOVING,
+
+		REMOVING_FROM_PARENT,
+
 		CROSS_SCENE
 	};
 

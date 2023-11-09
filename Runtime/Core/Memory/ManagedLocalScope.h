@@ -250,11 +250,11 @@ public:
 			return;
 		}
 
-		//scope->transactionLock.lock();
-		while (!scope->transactionLock.try_lock())
+		scope->transactionLock.lock();
+		/*while (!scope->transactionLock.try_lock())
 		{
 			gc::Run(GC_BREAK_TIME, gc::GC_RESUME_FLAG::RETURN_ON_EMPTY_TASK);
-		}
+		}*/
 
 		if (scope->isRecordingTransactions == true && handle->marked != MARK_COLOR::TRANSACTION_COLOR)
 		{

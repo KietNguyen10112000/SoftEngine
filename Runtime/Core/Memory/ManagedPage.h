@@ -164,7 +164,7 @@ public:
 public:
 	inline bool IsEnoughMemory(size_t size)
 	{
-		return m_maxSizeFreeBlock && m_maxSizeFreeBlock->TotalSize() >= size + sizeof(AllocatedBlock) + sizeof(Handle);
+		return m_maxSizeFreeBlock && m_maxSizeFreeBlock->TotalSize() >= AlignSize(size + sizeof(AllocatedBlock) + sizeof(Handle));
 	}
 
 	inline void SetupNewGCCycle()

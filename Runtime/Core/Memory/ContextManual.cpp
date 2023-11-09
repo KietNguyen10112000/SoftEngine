@@ -146,7 +146,7 @@ void ContextManual::DoGC(byte MARK_VALUE, System* system, byte* RESET_MARK_VALUE
 		localScope->transactionLock.lock();
 	}
 
-	assert(system->m_phase = GC_PHASE::IDLE_PHASE);
+	assert(system->m_phase == GC_PHASE::IDLE_PHASE);
 
 	// mark phase
 	{

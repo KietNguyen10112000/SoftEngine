@@ -90,23 +90,59 @@ void GameObject::DuplicateTreeBuffer()
 
 void GameObject::RemoveFromParent()
 {
-	/*if (!IsInAnyScene())
-	{
-		m_parent[0] = this;
-		obj->m_treeIdx = 1;
-		obj->m_childCopyIdx = 0;
+	assert(ParentUpToDate().Get() != nullptr);
 
-		m_children[0].Push(obj);
-		m_treeIdx = 1;
-		m_childCopyIdx = 0;
+	if (!IsInAnyScene())
+	{
+		ReadParent() = nullptr;
+		
+		auto& list = ParentUpToDate()->ReadChildren();
+		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(list, this, m_childInParentIdx);
+
+		m_childInParentIdx = INVALID_ID;
 
 		return;
-	}*/
+	}
+
+	auto& parent = ParentUpToDate();
+	m_treeLock.lock();
+	parent->m_treeLock.lock();
+	parent->m_modificationLock.lock();
+
+	m_modificationState = MODIFICATION_STATE::REMOVING_FROM_PARENT;
+
+	m_scene->DoRemoveFromParent(parent.Get(), this);
+	//m_scene->OnObjectTransformChanged(obj);
+
+	if (m_lastChangeTreeIterationCount != m_scene->GetIterationCount())
+	{
+		DuplicateTreeBuffer();
+		m_lastChangeTreeIterationCount = m_scene->GetIterationCount();
+	}
+
+	if (parent->m_lastChangeTreeIterationCount != m_scene->GetIterationCount())
+	{
+		parent->DuplicateTreeBuffer();
+		parent->m_lastChangeTreeIterationCount = m_scene->GetIterationCount();
+	}
+
+	WriteParent() = nullptr;
+	auto& list = parent->WriteChildren();
+	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(list, this, m_childInParentIdx);
+
+	uint32_t newCopyIdx = m_childInParentIdx;
+	m_childCopyIdx = std::min(m_childCopyIdx, newCopyIdx);
+
+	m_childInParentIdx = INVALID_ID;
+
+	parent->m_modificationLock.unlock();
+	parent->m_treeLock.unlock();
+	m_treeLock.unlock();
 }
 
 void GameObject::AddChild(const Handle<GameObject>& obj)
 {
-	assert(obj->Parent().Get() == nullptr);
+	assert(obj->ParentUpToDate().Get() == nullptr);
 
 	if (!IsInAnyScene())
 	{

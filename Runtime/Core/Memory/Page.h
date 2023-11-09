@@ -225,6 +225,12 @@ private:
 
 		auto inserted = Tree::Insert(block);
 
+		if (m_maxSizeFreeBlock == nullptr
+			|| (m_maxSizeFreeBlock == inserted->Parent() && m_maxSizeFreeBlock->Right() == inserted))
+		{
+			m_maxSizeFreeBlock = inserted;
+		}
+
 		if (inserted != block)
 		{
 			// one block has same size already inserted
@@ -239,17 +245,16 @@ private:
 
 			return;
 		}
-
-		if (m_maxSizeFreeBlock == nullptr 
-			|| (m_maxSizeFreeBlock == inserted->Parent() && m_maxSizeFreeBlock->Right() == inserted))
-		{
-			m_maxSizeFreeBlock = inserted;
-		}
 	}
 
 	inline void Erase(FreeBlock* block)
 	{
 		m_totalFreeBlocks--;
+
+		if (m_maxSizeFreeBlock == block)
+		{
+			m_maxSizeFreeBlock = block->Parent();
+		}
 
 		if (block->BF() == 2)
 		{
@@ -304,11 +309,6 @@ private:
 			}
 
 			return;
-		}
-
-		if (m_maxSizeFreeBlock == block)
-		{
-			m_maxSizeFreeBlock = block->Parent();
 		}
 
 		Tree::Erase(block);
