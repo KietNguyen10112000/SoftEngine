@@ -56,7 +56,10 @@ private:
 	bool m_padd1;
 	Spinlock m_modificationLock;
 	Spinlock m_treeLock;
-	uint32_t m_modificationState = MODIFICATION_STATE::NONE;
+	uint32_t m_modificationStateScene = MODIFICATION_STATE::NONE;
+
+	uint32_t m_modificationStateTree = MODIFICATION_STATE::NONE;
+	uint32_t m_padd2;
 
 	std::atomic<size_t> m_isRecoredChangeTransformIteration = { 0 };
 	size_t m_updatedTransformIteration = 0;
@@ -536,6 +539,8 @@ public:
 		//auto in1 = m_scene && m_modificationState == MODIFICATION_STATE::ADDING;
 		//auto in2 = m_scene && m_sceneId != INVALID_ID;
 		auto in3 = m_scene && m_UID != INVALID_ID;
+		//auto notIn = m_scene && m_UID != INVALID_ID 
+		//	&& (m_modificationState == MODIFICATION_STATE::REMOVING || m_modificationState == MODIFICATION_STATE::REMOVING_FROM_PARENT);
 		//auto in4 = m_scene && m_modificationState == MODIFICATION_STATE::REMOVING;
 		//auto notIn = m_scene && m_modificationState == MODIFICATION_STATE::NONE && m_sceneId == INVALID_ID;
 		

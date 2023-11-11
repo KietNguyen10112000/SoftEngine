@@ -410,7 +410,7 @@ public:
 
 
 
-	// use these 3 functions to do dynamic submit-wait tasking
+	// use these functions to do dynamic submit-wait tasking
 	inline static void PrepareHandle(TaskWaitingHandle* handle)
 	{
 		handle->counter = 1;
@@ -425,6 +425,58 @@ public:
 			auto fiber = FiberPool::Take();
 			Thread::SwitchToFiber(fiber, false);
 		}
+	}
+
+	inline static void ReleaseHandle(TaskMultipleWaitingsHandle* handle)
+	{
+		if ((--handle->counter) != 2)
+		{
+			return;
+		}
+
+		handle->waitingFiber = nullptr;
+
+		handle->lock.lock();
+
+		for (auto fiber : handle->waitingFibers)
+		{
+			TaskSystem::Resume(fiber);
+		}
+
+		handle->lock.unlock();
+	}
+
+	inline static void WaitForHandle(TaskMultipleWaitingsHandle* handle)
+	{
+		if (handle->counter.load(std::memory_order_relaxed) == 1)
+		{
+			return;
+		}
+
+		handle->lock.lock();
+		if (handle->counter.load(std::memory_order_relaxed) == 1)
+		{
+			handle->lock.unlock();
+			return;
+		}
+
+		handle->waitingFibers.push_back(Thread::GetCurrentFiber());
+
+		handle->lock.unlock();
+
+		auto fiber = FiberPool::Take();
+		Thread::SwitchToFiber(fiber, false);
+	}
+
+	inline static void Submit(TaskMultipleWaitingsHandle* handle, const Task& task, Task::PRIORITY priority = Task::PRIORITY::NORMAL)
+	{
+		task.m_handle = handle;
+		task.m_handle->counter += 2;
+
+		//assert(task.m_handle->waitingFiber == Thread::GetCurrentFiber());
+
+		s_queues[priority].enqueue(task);
+		TryInvokeOneMoreWorker();
 	}
 
 	inline static void Submit(TaskWaitingHandle* handle, const Task& task, Task::PRIORITY priority = Task::PRIORITY::NORMAL)

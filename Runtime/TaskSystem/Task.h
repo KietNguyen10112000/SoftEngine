@@ -20,6 +20,15 @@ struct TaskWaitingHandle
 	TaskWaitingHandle(size_t v, Fiber* f) : counter(v), waitingFiber(f) {}
 };
 
+struct TaskMultipleWaitingsHandle : public TaskWaitingHandle
+{
+	std::vector<Fiber*> waitingFibers;
+	spinlock lock;
+	bool padd[3];
+
+	TaskMultipleWaitingsHandle(size_t v, Fiber* f) : TaskWaitingHandle(v, f) {}
+};
+
 class Task
 {
 protected:

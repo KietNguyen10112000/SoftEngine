@@ -249,7 +249,7 @@ void Scene::FilterAddList()
 	destList.clear();
 	for (auto& obj : list)
 	{
-		if (obj->m_modificationState != MODIFICATION_STATE::ADDING)
+		if (obj->m_modificationStateScene != MODIFICATION_STATE::ADDING)
 		{
 			obj = nullptr;
 			continue;
@@ -257,7 +257,7 @@ void Scene::FilterAddList()
 
 		destList.push_back(obj);
 
-		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		obj->m_modificationStateScene = MODIFICATION_STATE::NONE;
 		if (!obj->m_indexedName.empty())
 		{
 			// implement indexing
@@ -274,7 +274,9 @@ void Scene::FilterAddList()
 			[scene](GameObject* cur)
 			{
 				cur->m_scene = scene;
-				cur->m_UID = scene->m_UIDCounter++;
+
+				if (cur->m_UID == INVALID_ID)
+					cur->m_UID = scene->m_UIDCounter++;
 			}
 		);
 	}
@@ -296,7 +298,7 @@ void Scene::FilterRemoveList()
 
 	for (auto& obj : list)
 	{
-		if (obj->m_modificationState != MODIFICATION_STATE::REMOVING)
+		if (obj->m_modificationStateScene != MODIFICATION_STATE::REMOVING)
 		{
 			obj = nullptr;
 			continue;
@@ -304,7 +306,7 @@ void Scene::FilterRemoveList()
 
 		destList.push_back(obj);
 
-		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		obj->m_modificationStateScene = MODIFICATION_STATE::NONE;
 		
 		if (obj->m_isLongLife)
 		{
@@ -323,13 +325,18 @@ void Scene::FilterRemoveList()
 			// do remove indexing
 		}
 
-		obj->PostTraversalUpToDate(
-			[](GameObject* cur)
-			{
-				cur->m_sceneId = INVALID_ID;
-				cur->m_UID = INVALID_ID;
-			}
-		);
+		if (obj->Parent().Get() == nullptr)
+		{
+			obj->PostTraversalUpToDate(
+				[](GameObject* cur)
+				{
+					cur->m_scene = nullptr;
+					cur->m_sceneId = INVALID_ID;
+			//cur->m_UID = INVALID_ID;
+				}
+			);
+		}
+		
 	}
 
 	if (m_filteredRemoveList.size() != 0)
@@ -400,17 +407,20 @@ void Scene::BeginIteration()
 
 	//GetCurrentTrash().clear();
 
-	Task task;
+	/*Task task;
 	task.Entry() = [](void* p)
 	{
 		auto scene = (Scene*)p;
 		scene->FilterAddList();
 		scene->FilterRemoveList();
 	};
-	task.Params() = this;
+	task.Params() = this;*/
 
-	TaskSystem::PrepareHandle(&m_objectsModificationTaskWaitingHandle);
-	TaskSystem::Submit(&m_objectsModificationTaskWaitingHandle, task, Task::CRITICAL);
+	FilterAddList();
+	FilterRemoveList();
+
+	//TaskSystem::PrepareHandle(&m_objectsModificationTaskWaitingHandle);
+	//TaskSystem::Submit(&m_objectsModificationTaskWaitingHandle, task, Task::CRITICAL);
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_ITERATION);
 }
@@ -419,7 +429,7 @@ void Scene::EndIteration()
 {
 	SynchMainProcessingSystemForMainOutputSystems();
 
-	TaskSystem::WaitForHandle(&m_objectsModificationTaskWaitingHandle);
+	//TaskSystem::WaitForHandle(&m_objectsModificationTaskWaitingHandle);
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_END_ITERATION);
 }
@@ -522,26 +532,31 @@ void Scene::StageAllChangedTreeStruct()
 	{
 		obj->UpdateTreeBuffer();
 
-		if (obj->m_modificationState == MODIFICATION_STATE::ADDING)
+		if (obj->m_modificationStateTree == MODIFICATION_STATE::ADDING)
 		{
 			obj->PostTraversalUpToDate(
 				[&](GameObject* cur)
 				{
 					//cur->m_scene = this;
-					cur->m_UID = m_UIDCounter++;
+					if (cur->m_UID == INVALID_ID)
+						cur->m_UID = m_UIDCounter++;
 				}
 			);
+
+			obj->m_modificationStateTree = MODIFICATION_STATE::NONE;
 		}
 
-		if (obj->m_modificationState == MODIFICATION_STATE::REMOVING)
+		if (obj->m_modificationStateTree == MODIFICATION_STATE::REMOVING)
 		{
 			obj->PostTraversalUpToDate(
 				[&](GameObject* cur)
 				{
 					cur->m_scene = nullptr;
-					cur->m_UID = INVALID_ID;
+					//cur->m_UID = INVALID_ID;
 				}
 			);
+
+			obj->m_modificationStateTree = MODIFICATION_STATE::NONE;
 		}
 	}
 	m_changedTreeStructList.Clear();
@@ -616,7 +631,15 @@ void Scene::RemoveComponent(ID COMPONENT_ID, const Handle<MainComponent>& compon
 void Scene::DoAddToParent(GameObject* parent, const Handle<GameObject>& child)
 {
 	assert(parent->IsInAnyScene() && parent->GetScene() == this);
-	assert(!child->IsInAnyScene());
+
+#ifdef _DEBUG
+	if (child->IsInAnyScene())
+	{
+		assert(child->m_modificationStateScene == MODIFICATION_STATE::REMOVING || child->m_modificationStateTree == MODIFICATION_STATE::REMOVING);
+	}
+#endif // _DEBUG
+
+	child->m_modificationStateTree = MODIFICATION_STATE::ADDING;
 	
 	child->PreTraversal1UpToDate(
 		[&](GameObject* cur)
@@ -649,6 +672,9 @@ void Scene::DoAddToParent(GameObject* parent, const Handle<GameObject>& child)
 
 void Scene::DoRemoveFromParent(GameObject* parent, const Handle<GameObject>& child)
 {
+	assert(parent->IsInAnyScene() && parent->GetScene() == this);
+
+	child->m_modificationStateTree = MODIFICATION_STATE::REMOVING;
 	child->PreTraversal1UpToDate(
 		[&](GameObject* cur)
 		{
@@ -691,16 +717,15 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 #ifdef _DEBUG
 	if (obj->m_scene != nullptr || obj->m_sceneId == INVALID_ID)
 	{
-		assert(obj->m_modificationState == MODIFICATION_STATE::REMOVING 
-			|| obj->m_modificationState == MODIFICATION_STATE::NONE
-			|| obj->m_modificationState == MODIFICATION_STATE::REMOVING_FROM_PARENT
+		assert(obj->m_modificationStateScene == MODIFICATION_STATE::REMOVING
+			|| obj->m_modificationStateScene == MODIFICATION_STATE::NONE
 		);
 	}
 #endif // _DEBUG
 
-	if (obj->m_scene == this && obj->m_modificationState == MODIFICATION_STATE::REMOVING)
+	if (obj->m_scene == this && obj->m_modificationStateScene == MODIFICATION_STATE::REMOVING)
 	{
-		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		obj->m_modificationStateScene = MODIFICATION_STATE::NONE;
 		goto Return;
 	}
 
@@ -711,7 +736,7 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 	}
 
 	obj->m_scene = this;
-	obj->m_modificationState = MODIFICATION_STATE::ADDING;
+	obj->m_modificationStateScene = MODIFICATION_STATE::ADDING;
 
 	if (indexedName)
 	{
@@ -748,16 +773,16 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 	obj->m_modificationLock.lock();
 
 #ifdef _DEBUG
-	assert(obj->m_modificationState == MODIFICATION_STATE::ADDING || obj->m_modificationState == MODIFICATION_STATE::NONE);
+	assert(obj->m_modificationStateScene == MODIFICATION_STATE::ADDING || obj->m_modificationStateScene == MODIFICATION_STATE::NONE);
 #endif // _DEBUG
 
-	if (obj->m_modificationState == MODIFICATION_STATE::ADDING)
+	if (obj->m_modificationStateScene == MODIFICATION_STATE::ADDING)
 	{
-		obj->m_modificationState = MODIFICATION_STATE::NONE;
+		obj->m_modificationStateScene = MODIFICATION_STATE::NONE;
 		goto Return;
 	}
 
-	obj->m_modificationState = MODIFICATION_STATE::REMOVING;
+	obj->m_modificationStateScene = MODIFICATION_STATE::REMOVING;
 
 	GetCurrrentObjectsHolderList().Add(obj);
 	GetCurrentRemoveList().Add(obj);

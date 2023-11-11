@@ -28,6 +28,7 @@ public:
 	size_t m_selectionIdx = -1;
 
 	bool m_pinInspectPanel = true;
+	GameObject* m_dragingObject = nullptr;
 
 	bool m_openInputNamePopup = false;
 	GameObject* m_renameObject = nullptr;

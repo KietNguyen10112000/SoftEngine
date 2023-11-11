@@ -48,6 +48,26 @@ public:
 		return m_translation.xyz();
 	}
 
+	inline auto& GetScale() const
+	{
+		return m_scale.xyz();
+	}
+
+	inline auto& GetTranslation() const
+	{
+		return m_translation.xyz();
+	}
+
+	inline auto& GetRotation() const
+	{
+		return m_rotation;
+	}
+
+	inline auto& GetPosition() const
+	{
+		return m_translation.xyz();
+	}
+
 };
 
 }

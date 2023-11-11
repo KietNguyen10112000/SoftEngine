@@ -43,6 +43,8 @@ public:
 
 		TRANSFORM3D,
 
+		STRING,
+		ARRAY_VARIANT
 	};
 };
 
@@ -53,7 +55,30 @@ private:
 
 	VARIANT_TYPE::TYPE m_type;
 
-	byte m_buffer[BUF_SIZE] = {};
+	union
+	{
+		byte m_buffer[BUF_SIZE] = {};
+		String m_str;
+		mutable std::vector<Variant> m_array;
+	};
+
+public:
+	Variant() : Variant(VARIANT_TYPE::UNKNOWN) {}
+
+	Variant(VARIANT_TYPE::TYPE type) : m_type(type) 
+	{
+		SetType(type);
+	}
+
+	Variant(const Variant& another)
+	{
+		*this = another;
+	}
+
+	~Variant()
+	{
+		Reset();
+	}
 
 private:
 	template <typename T>
@@ -62,11 +87,43 @@ private:
 		return *(T*)m_buffer;
 	}
 
-public:
-	Variant(VARIANT_TYPE::TYPE type) : m_type(type) 
+	inline void Reset()
 	{
-		SetType(type);
-	};
+		::memset(m_buffer, 0, sizeof(m_buffer));
+
+		if (m_type == VARIANT_TYPE::STRING)
+		{
+			m_str.~String();
+		}
+
+		if (m_type == VARIANT_TYPE::ARRAY_VARIANT)
+		{
+			m_array.~vector();
+		}
+	}
+
+public:
+	Variant& operator=(const Variant& another)
+	{
+		SetType(another.Type());
+
+		if (m_type == VARIANT_TYPE::STRING)
+		{
+			m_str = another.AsString();
+			goto Return;
+		}
+
+		if (m_type == VARIANT_TYPE::ARRAY_VARIANT)
+		{
+			m_array = another.AsArray();
+			goto Return;
+		}
+
+		::memcpy(m_buffer, another.m_buffer, sizeof(m_buffer));
+		
+	Return:
+		return *this;
+	}
 
 	template <typename T>
 	inline static Variant Of()
@@ -277,16 +334,35 @@ public:
 			return Get<Transform>();
 		}
 
+		if constexpr (std::is_same_v<T, String>)
+		{
+			assert(Type() == VARIANT_TYPE::STRING);
+			return AsString();
+		}
+
 		assert(0);
+	}
+
+	inline String AsString() const
+	{
+		assert(Type() == VARIANT_TYPE::STRING);
+		return m_str;
+	}
+
+	inline std::vector<Variant>& AsArray() const
+	{
+		assert(Type() == VARIANT_TYPE::ARRAY_VARIANT);
+		return m_array;
 	}
 
 	inline void SetType(VARIANT_TYPE::TYPE type)
 	{
+		Reset();
 		m_type = type;
 		switch (type)
 		{
 		case soft::VARIANT_TYPE::UNKNOWN:
-			assert(0);
+			//assert(0);
 			break;
 		case soft::VARIANT_TYPE::CHAR:
 		//case soft::VARIANT_TYPE::INT8:
@@ -321,6 +397,12 @@ public:
 			break;
 		case soft::VARIANT_TYPE::TRANSFORM3D:
 			Get<Transform>() = {};
+			break;
+		case soft::VARIANT_TYPE::STRING:
+			m_str = "";
+			break;
+		case soft::VARIANT_TYPE::ARRAY_VARIANT:
+			new (&m_array) std::vector<Variant>();
 			break;
 		default:
 			assert(0);

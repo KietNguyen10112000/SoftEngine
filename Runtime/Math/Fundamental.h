@@ -1054,7 +1054,7 @@ public:
         glm::vec4 perspective;
         if (glm::decompose(GLMMatConst(), scaling, rotation.GLMQuat(), translation, skew, perspective))
         {
-            rotation.GLMQuat() = glm::conjugate(rotation.GLMQuat());
+            //rotation.GLMQuat() = glm::conjugate(rotation.GLMQuat());
             return true;
         }
         return false;

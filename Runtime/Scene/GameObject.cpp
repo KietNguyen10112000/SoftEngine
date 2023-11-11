@@ -97,7 +97,18 @@ void GameObject::RemoveFromParent()
 		ReadParent() = nullptr;
 		
 		auto& list = ParentUpToDate()->ReadChildren();
-		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(list, this, m_childInParentIdx);
+		if constexpr (!Config::ORDERED_CHILD)
+		{
+			MANAGED_ARRAY_ROLL_TO_FILL_BLANK(list, this, m_childInParentIdx);
+		}
+		else
+		{
+			list.Remove(&list[m_childInParentIdx]);
+			for (uint32_t i = m_childInParentIdx; i < list.size(); i++)
+			{
+				list[i]->m_childInParentIdx--;
+			}
+		}
 
 		m_childInParentIdx = INVALID_ID;
 
@@ -108,8 +119,6 @@ void GameObject::RemoveFromParent()
 	m_treeLock.lock();
 	parent->m_treeLock.lock();
 	parent->m_modificationLock.lock();
-
-	m_modificationState = MODIFICATION_STATE::REMOVING_FROM_PARENT;
 
 	m_scene->DoRemoveFromParent(parent.Get(), this);
 	//m_scene->OnObjectTransformChanged(obj);
@@ -128,7 +137,19 @@ void GameObject::RemoveFromParent()
 
 	WriteParent() = nullptr;
 	auto& list = parent->WriteChildren();
-	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(list, this, m_childInParentIdx);
+
+	if constexpr (!Config::ORDERED_CHILD)
+	{
+		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(list, this, m_childInParentIdx);
+	}
+	else
+	{
+		list.Remove(&list[m_childInParentIdx]);
+		for (uint32_t i = m_childInParentIdx; i < list.size(); i++)
+		{
+			list[i]->m_childInParentIdx--;
+		}
+	}
 
 	uint32_t newCopyIdx = m_childInParentIdx;
 	m_childCopyIdx = std::min(m_childCopyIdx, newCopyIdx);
@@ -161,8 +182,6 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 	m_treeLock.lock();
 	obj->m_treeLock.lock();
 	obj->m_modificationLock.lock();
-
-	obj->m_modificationState = MODIFICATION_STATE::ADDING;
 
 	m_scene->DoAddToParent(this, obj);
 	m_scene->OnObjectTransformChanged(obj);

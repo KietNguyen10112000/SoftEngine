@@ -3,6 +3,8 @@
 #include "imgui/imgui.h"
 #include "DataInspector.h"
 
+#include "Scene/Scene.h"
+
 void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects)
 {
 	for (auto& obj : objects)
@@ -26,8 +28,22 @@ void EditorContext::OnObjectsRemoved(std::vector<GameObject*>& objects)
 
 		auto editorComp = obj->GetComponentRaw<GameObjectEditorComponent>();
 		auto blankIdx = editorComp->id;
-		STD_VECTOR_ROLL_TO_FILL_BLANK_2(m_objects, blankIdx);
-		m_objects[blankIdx]->GetComponentRaw<GameObjectEditorComponent>()->id = blankIdx;
+
+		/*if (blankIdx == m_objects.size() - 1)
+		{
+			m_objects.pop_back();
+		}
+		else
+		{
+			STD_VECTOR_ROLL_TO_FILL_BLANK_2(m_objects, blankIdx);
+			m_objects[blankIdx]->GetComponentRaw<GameObjectEditorComponent>()->id = blankIdx;
+		}*/
+
+		m_objects.erase(m_objects.begin() + blankIdx);
+		for (size_t i = blankIdx; i < m_objects.size(); i++)
+		{
+			m_objects[i]->GetComponentRaw<GameObjectEditorComponent>()->id--;
+		}
 	}
 }
 
@@ -62,7 +78,65 @@ void EditorContext::RenderHierarchyPanelOf(GameObject* _obj)
 				ImGui::CloseCurrentPopup();
 			}
 
+			if (ImGui::Button("Delete"))
+			{
+				if (obj->Parent().Get() != nullptr)
+				{
+					obj->RemoveFromParent();
+				}
+				else
+				{
+					m_scene->RemoveObject(obj);
+				}
+			}
+
 			ImGui::EndPopup();
+		}
+
+		ImGuiDragDropFlags src_flags = 0;
+		src_flags |= ImGuiDragDropFlags_SourceNoDisableHover;     // Keep the source displayed as hovered
+		src_flags |= ImGuiDragDropFlags_SourceNoHoldToOpenOthers; // Because our dragging is local, we disable the feature of opening foreign treenodes/tabs while dragging
+		//src_flags |= ImGuiDragDropFlags_SourceNoPreviewTooltip; // Hide the tooltip
+		if (ImGui::BeginDragDropSource(src_flags))
+		{
+			m_dragingObject = obj;
+			if (!(src_flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
+				ImGui::Text("Moving");
+			ImGui::SetDragDropPayload("TREE_DND_PAYLOAD", &obj, sizeof(obj));
+			ImGui::EndDragDropSource();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			ImGuiDragDropFlags target_flags = 0;
+			target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+			//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+			if (payload && ImGui::IsMouseReleased(0))
+			{
+				auto dragObj = *(GameObject**)payload->Data;
+				if (dragObj->Parent().Get() == nullptr)
+				{
+					dragObj->GetScene()->RemoveObject(dragObj);
+				}
+				else
+				{
+					dragObj->RemoveFromParent();
+				}
+
+				auto mat = dragObj->ReadGlobalTransformMat() * obj->ReadGlobalTransformMat().GetInverse();
+				
+				Transform transform;
+				mat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
+
+				dragObj->SetLocalTransform(transform);
+
+				obj->AddChild(dragObj);
+
+				m_dragingObject = nullptr;
+			}
+
+			ImGui::EndDragDropTarget();
 		}
 
 		if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
@@ -128,7 +202,57 @@ void EditorContext::RenderHierarchyPanel()
 
 		ImGui::EndPopup();
 	}
-	
+
+	//if (ImGui::BeginDragDropTarget())
+	//{
+	//	ImGuiDragDropFlags target_flags = 0;
+	//	target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+	//	target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+	//	const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+	//	std::cout << "Drop----\n";
+	//	if (payload && ImGui::IsMouseReleased(0))
+	//	{
+	//		/*auto dragObj = *(GameObject**)payload->Data;
+	//		if (dragObj->Parent().Get() == nullptr)
+	//		{
+	//			dragObj->GetScene()->RemoveObject(dragObj);
+	//		}
+	//		else
+	//		{
+	//			dragObj->RemoveFromParent();
+	//		}
+
+	//		m_scene->AddObject(dragObj);*/
+
+	//		std::cout << "Drop\n";
+	//	}
+
+	//	ImGui::EndDragDropTarget();
+	//}
+
+	if (m_dragingObject && ImGui::IsMouseReleased(0))
+	{
+		auto dragObj = m_dragingObject;
+		if (dragObj->Parent().Get() == nullptr)
+		{
+			dragObj->GetScene()->RemoveObject(dragObj);
+		}
+		else
+		{
+			dragObj->RemoveFromParent();
+		}
+
+		auto mat = dragObj->ReadGlobalTransformMat();
+
+		Transform transform;
+		mat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
+
+		dragObj->SetLocalTransform(transform);
+
+		m_scene->AddObject(dragObj);
+
+		m_dragingObject = nullptr;
+	}
 
 Return:
 	ImGui::End();
