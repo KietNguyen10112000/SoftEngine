@@ -44,6 +44,7 @@ public:
 		TRANSFORM3D,
 
 		STRING,
+		STRING_PATH,
 		ARRAY_VARIANT
 	};
 };
@@ -58,7 +59,7 @@ private:
 	union
 	{
 		byte m_buffer[BUF_SIZE] = {};
-		String m_str;
+		mutable String m_str;
 		mutable std::vector<Variant> m_array;
 	};
 
@@ -89,9 +90,7 @@ private:
 
 	inline void Reset()
 	{
-		::memset(m_buffer, 0, sizeof(m_buffer));
-
-		if (m_type == VARIANT_TYPE::STRING)
+		if (m_type == VARIANT_TYPE::STRING || m_type == VARIANT_TYPE::STRING_PATH)
 		{
 			m_str.~String();
 		}
@@ -100,6 +99,7 @@ private:
 		{
 			m_array.~vector();
 		}
+		::memset(m_buffer, 0, sizeof(m_buffer));
 	}
 
 public:
@@ -107,7 +107,7 @@ public:
 	{
 		SetType(another.Type());
 
-		if (m_type == VARIANT_TYPE::STRING)
+		if (m_type == VARIANT_TYPE::STRING || m_type == VARIANT_TYPE::STRING_PATH)
 		{
 			m_str = another.AsString();
 			goto Return;
@@ -336,16 +336,16 @@ public:
 
 		if constexpr (std::is_same_v<T, String>)
 		{
-			assert(Type() == VARIANT_TYPE::STRING);
+			assert(Type() == VARIANT_TYPE::STRING || Type() == VARIANT_TYPE::STRING_PATH);
 			return AsString();
 		}
 
 		assert(0);
 	}
 
-	inline String AsString() const
+	inline String& AsString() const
 	{
-		assert(Type() == VARIANT_TYPE::STRING);
+		assert(Type() == VARIANT_TYPE::STRING || m_type == VARIANT_TYPE::STRING_PATH);
 		return m_str;
 	}
 
@@ -399,6 +399,7 @@ public:
 			Get<Transform>() = {};
 			break;
 		case soft::VARIANT_TYPE::STRING:
+		case soft::VARIANT_TYPE::STRING_PATH:
 			m_str = "";
 			break;
 		case soft::VARIANT_TYPE::ARRAY_VARIANT:

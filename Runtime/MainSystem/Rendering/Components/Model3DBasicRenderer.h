@@ -46,6 +46,11 @@ public:
 	{
 		return m_texture;
 	}
+
+public:
+	void SetModel3D(String path);
+	void SetTexture(String path);
+
 };
 
 NAMESPACE_END

@@ -13,6 +13,7 @@ NAMESPACE_BEGIN
 
 #define SERIALIZABLE_CLASS(className)										\
 private: friend class SerializableDB;										\
+private: friend class ClassMetadata;										\
 inline static const char* ___GetClassName() {return # className;};			\
 public: inline virtual const char* GetClassName() override					\
 {																			\

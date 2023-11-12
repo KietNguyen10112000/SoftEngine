@@ -211,18 +211,21 @@ public:
 	// fast compare
 	inline bool operator>(const String& r) const
 	{
+		assert(!empty() && !r.empty());
 		if (hash() != r.hash()) return hash() > r.hash();
 		return strcmp(c_str(), r.c_str()) > 0;
 	};
 
 	inline bool operator<(const String& r) const
 	{
+		assert(!empty() && !r.empty());
 		if (hash() != r.hash()) return hash() < r.hash();
 		return strcmp(c_str(), r.c_str()) < 0;
 	};
 
 	inline bool operator==(const String& r) const
 	{
+		assert(!empty() && !r.empty());
 		if (hash() != r.hash()) return false;
 		return strcmp(c_str(), r.c_str()) == 0;
 	};

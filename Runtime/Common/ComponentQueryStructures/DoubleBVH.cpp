@@ -8,17 +8,26 @@ NAMESPACE_BEGIN
 
 void DoubleBVH::RecordAddComponent(MainComponent* comp)
 {
+	assert(comp->m_doubleBVHId[0].bvhId == INVALID_ID && comp->m_doubleBVHId[1].bvhId == INVALID_ID);
+
 	m_addList.push_back(comp);
 }
 
 void DoubleBVH::RecordRemoveComponent(MainComponent* comp)
 {
+	assert(comp->m_doubleBVHId[0].bvhId != INVALID_ID || comp->m_doubleBVHId[1].bvhId != INVALID_ID);
+
 	auto treeId = GetAABBQueryStructureIdOf(comp);
 	m_removeList[treeId].push_back(comp);
 }
 
 void DoubleBVH::RecordRefreshComponent(MainComponent* comp)
 {
+	if (comp->m_doubleBVHId[0].bvhId == INVALID_ID && comp->m_doubleBVHId[1].bvhId == INVALID_ID)
+	{
+		return;
+	}
+
 	auto treeId = GetAABBQueryStructureIdOf(comp);
 	m_refreshList[treeId].push_back(comp);
 }

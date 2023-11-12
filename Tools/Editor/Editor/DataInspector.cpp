@@ -6,6 +6,14 @@
 #include "Runtime/Runtime.h"
 #include "Input/Input.h"
 
+#include "FileSystem/FileSystem.h"
+
+#ifdef _WIN32
+#include <Windows.h>
+#undef near
+#undef far
+#endif
+
 DataInspector::InspectFunc DataInspector::s_inspectFunc[MAX_TYPE] = {};
 
 void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
@@ -268,6 +276,68 @@ void DataInspector::InspectProjectionMat4(ClassMetadata* metadata, Accessor& acc
 	}
 }
 
+void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+{
+	auto path = variant.AsString();
+	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+
+	auto labelName = path + "##" + propertyName;
+
+	bool clicked = ImGui::Button(labelName.c_str(), ImVec2(ImGui::GetWindowWidth() * 0.8f, 0));
+	
+	ImGui::PopStyleVar();
+
+	ImGui::SameLine();
+
+	auto labelName2 = String("...") + "##" + propertyName;
+	clicked = ImGui::Button(labelName2.c_str(), ImVec2(30, 0)) || clicked;
+
+	if (clicked)
+	{
+#ifdef _WIN32
+		OPENFILENAME ofn;
+		TCHAR Filestring[MAX_PATH] = { 0 };
+
+		ZeroMemory(&ofn, sizeof(ofn));
+		ofn.lStructSize = sizeof(ofn);
+		ofn.lpstrFile = Filestring;
+		ofn.nMaxFile = sizeof(Filestring);
+		ofn.lpstrFilter = L"All\0*.*\0Text\0*.TXT\0";
+		ofn.nFilterIndex = 1;
+		ofn.lpstrFileTitle = NULL;
+		ofn.nMaxFileTitle = 0;
+		ofn.lpstrInitialDir = NULL;
+		ofn.Flags = OFN_NOCHANGEDIR;//OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		if (GetOpenFileName(&ofn) == TRUE)
+		{
+			//std::wcout << ofn.lpstrFile << "\n";
+
+			std::wstring_view wstr = ofn.lpstrFile;
+
+			int size_needed = WideCharToMultiByte(CP_UTF8, 0, &ofn.lpstrFile[0], (int)wstr.length(), NULL, 0, NULL, NULL);
+			std::string fullPath(size_needed, 0);
+			WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
+
+			std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
+
+			auto rcpath = FileSystem::Get()->GetResourcesFullPath();
+
+			if (fullPath.find(rcpath.c_str()) != 0)
+			{
+				std::cerr << "Resources must be placed under \"" << rcpath << "\"\n";
+				return;
+			}
+
+			auto rpath = fullPath.substr(rcpath.length());
+			auto input = Variant(VARIANT_TYPE::STRING_PATH);
+			input.As<String>() = rpath.c_str();
+			accessor.Set(input);
+		}
+#endif // WIN32
+	}
+}
+
 void DataInspector::Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName)
 {
 	auto variant = accessor.Get();
@@ -284,4 +354,5 @@ void DataInspector::Initialize()
 	s_inspectFunc[VARIANT_TYPE::VEC3]						= InspectVec3;
 	s_inspectFunc[VARIANT_TYPE::TRANSFORM3D]				= InspectTransform;
 	s_inspectFunc[VARIANT_TYPE::PROJECTION_MAT4]			= InspectProjectionMat4;
+	s_inspectFunc[VARIANT_TYPE::STRING_PATH]				= InspectStringPath;
 }

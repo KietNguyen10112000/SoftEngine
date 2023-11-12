@@ -109,6 +109,8 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 		imageLen = w * h * channels;
 
 		stbir_resize_uint8(prevImageBuf, prevW, prevH, 0, buf, w, h, 0, channels);
+		//stbir_resize_uint8_generic(prevImageBuf, prevW, prevH, 0, buf, w, h, 0, channels, -1, 0, 
+		//	STBIR_EDGE_REFLECT, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
 
 		totalSize += imageLen;
 

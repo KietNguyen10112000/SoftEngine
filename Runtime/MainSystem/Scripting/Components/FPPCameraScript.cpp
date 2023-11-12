@@ -140,7 +140,7 @@ void FPPCameraScript::OnUpdate(float dt)
 
 Handle<ClassMetadata> FPPCameraScript::GetMetadata(size_t sign)
 {
-	auto metadata = mheap::New<ClassMetadata>("FPPCameraScript", this);
+	auto metadata = ClassMetadata::For(this);
 
 	metadata->AddProperty(Accessor::For("Move speed", m_speed, this));
 	metadata->AddProperty(Accessor::For("Rotation sensitivity", m_rotationSensi, this));

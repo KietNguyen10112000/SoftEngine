@@ -26,7 +26,7 @@ void RotateScript::OnUpdate(float dt)
 
 Handle<ClassMetadata> RotateScript::GetMetadata(size_t sign)
 {
-	auto metadata = mheap::New<ClassMetadata>("RotateScript", this);
+	auto metadata = ClassMetadata::For(this);
 
 	metadata->AddProperty(Accessor::For("Rotation speed", m_rotationSpeed, this));
 

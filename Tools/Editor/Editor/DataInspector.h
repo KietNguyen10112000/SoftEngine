@@ -18,6 +18,8 @@ private:
 	static void InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
+	static void InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+
 public:
 	static void Initialize();
 	static void Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName);

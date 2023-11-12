@@ -2,6 +2,7 @@
 #include <vector>
 
 #include "Scene/GameObject.h"
+#include "Common/Base/SerializableDB.h"
 
 using namespace soft;
 
@@ -28,13 +29,28 @@ public:
 	size_t m_selectionIdx = -1;
 
 	bool m_pinInspectPanel = true;
+	bool m_pinHierarchyPanel = true;
 	GameObject* m_dragingObject = nullptr;
 
 	bool m_openInputNamePopup = false;
 	GameObject* m_renameObject = nullptr;
 	char m_nameInputTxt[NAME_INPUT_MAX_LEN] = {};
 
+	char m_searchNameInputTxt[NAME_INPUT_MAX_LEN] = {};
+	size_t m_searchNameIdx = -1;
+
+	MainComponent* m_removeComp = nullptr;
+
 	spinlock m_lock;
+
+	std::vector<SerializableDB::SerializableRecord*> m_components[MainSystemInfo::COUNT];
+
+	bool m_needReloadInspectingObject = false;
+	struct CreateComponentContext
+	{
+		ID selectedComponentId = INVALID_ID;
+		ID selectedIdx = INVALID_ID;
+	} m_createComponentContext;
 
 private:
 	TRACEABLE_FRIEND();
@@ -49,9 +65,16 @@ private:
 	void RenderHierarchyPanelOf(GameObject* obj);
 	void RenderHierarchyPanel();
 	void RenderInspectorPanel();
+	void RenderMenuBar();
 
+	void ShowCreateComponentPopup();
+	void ShowCreateGameObjectPopup();
+
+	void ReloadSerializableList();
 
 public:
+	EditorContext();
+
 	void OnObjectsAdded(std::vector<GameObject*>& objects);
 	void OnObjectsRemoved(std::vector<GameObject*>& objects);
 	void OnRenderGUI();

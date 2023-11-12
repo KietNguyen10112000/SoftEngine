@@ -161,6 +161,32 @@ public:
 		);
 	}
 
+	template<bool DIRECT_MODIFY_VAR = true>
+	inline static Accessor ForString(const char* name, String& var, Serializable* instance)
+	{
+		return Accessor(
+			name,
+			&var,
+
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				if constexpr (DIRECT_MODIFY_VAR)
+				{
+					var.As<String>() = input.As<String>();
+				}
+			},
+
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				Variant ret = Variant(VARIANT_TYPE::STRING);
+				ret.As<String>() = var.As<String>();
+				return ret;
+			},
+
+			instance
+		);
+	}
+
 public:
 	void Set(const Variant& input);
 
@@ -242,10 +268,21 @@ private:
 		tracer->Trace(m_subClasses);
 	}
 
-public:
-	//ClassMetadata() {};
 
+	//ClassMetadata() {};
+public:
 	ClassMetadata(const char* className, Serializable* instance);
+
+	// create placeholder
+	inline ClassMetadata(const char* className) : m_className(className) {};
+
+	template <typename T>
+	static Handle<ClassMetadata> For(T* instance)
+	{
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		return mheap::New<ClassMetadata>(T::___GetClassName(), instance);
+	}
 
 private:
 	template<bool RECURSIVE, bool PREV_CALL, bool POST_CALL, typename Fn1, typename Fn2>
@@ -373,6 +410,16 @@ public:
 	inline auto GetInlinePropertiesCount()
 	{
 		return m_properties.size();
+	}
+
+	inline auto IsPlaceholder()
+	{
+		return m_instance.Get() == nullptr;
+	}
+
+	inline auto GetInstance()
+	{
+		return m_instance.Get();
 	}
 
 };

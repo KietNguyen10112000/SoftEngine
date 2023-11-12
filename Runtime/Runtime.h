@@ -170,6 +170,8 @@ public:
 
 		return m_scenes[m_runningSceneIdx];
 	}
+
+	void* GetNativeHWND();
 };
 
 

@@ -266,21 +266,21 @@ void Runtime::Setup()
 	transform.Position() = { 0,5,5 };
 	auto object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
-	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+	object->NewComponent<Model3DBasicRenderer>();
 	scene->AddObject(object);
 
 	transform = {};
 	transform.Position() = { -5,0,5 };
 	object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
-	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+	object->NewComponent<Model3DBasicRenderer>();
 	scene->AddObject(object);
 
 	transform = {};
 	transform.Position() = { 5,0,5 };
 	object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
-	object->NewComponent<Model3DBasicRenderer>("cube.obj", "2.png");
+	object->NewComponent<Model3DBasicRenderer>();
 	scene->AddObject(object);
 }
 
@@ -557,6 +557,11 @@ void Runtime::DestroyScene(Scene* scene)
 void Runtime::SetRunningScene(Scene* scene)
 {
 	m_nextRunningSceneIdx = scene->m_runtimeID;
+}
+
+void* Runtime::GetNativeHWND()
+{
+	return platform::GetWindowNativeHandle(m_window);
 }
 
 NAMESPACE_END

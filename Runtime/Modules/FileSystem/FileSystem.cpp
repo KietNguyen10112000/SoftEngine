@@ -41,6 +41,8 @@ FileSystem::FileSystem()
 	m_cachePath = String(path.parent_path().u8string().c_str()) + "/.cache/";
 	m_rootPath = StartupConfig::Get().resourcesPath;
 
+	m_rootFullPath = String(path.parent_path().u8string().c_str()) + "/" + StartupConfig::Get().resourcesPath;
+
 	LoadCache();
 }
 
@@ -88,6 +90,16 @@ void FileSystem::SaveCache()
 	}
 
 	WriteStream(".filesystem", &stream);
+}
+
+bool FileSystem::IsFileExist(const char* path)
+{
+	return std::filesystem::exists(path);
+}
+
+bool FileSystem::IsDirectoryExist(const char* path)
+{
+	return std::filesystem::exists(path);
 }
 
 bool FileSystem::IsFileChanged(const char* path, bool updateLastModifiedTime)
@@ -174,6 +186,11 @@ bool FileSystem::ReadStream(const char* path, ByteStream* output)
 	fclose(fp);
 
 	return true;
+}
+
+String FileSystem::GetResourcesFullPath()
+{
+	return m_rootFullPath;
 }
 
 NAMESPACE_END

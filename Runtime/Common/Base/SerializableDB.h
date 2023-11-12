@@ -88,6 +88,15 @@ public:
 		return {};
 	}
 
+	template <typename Fn>
+	inline void ForEachSerializableRecord(Fn fn)
+	{
+		for (auto& r : m_records)
+		{
+			fn(r);
+		}
+	}
+
 };
 
 NAMESPACE_END

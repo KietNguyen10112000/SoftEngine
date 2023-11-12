@@ -382,6 +382,11 @@ public:
 		return GetComponentRaw<Comp>() != nullptr;
 	}
 
+	inline bool HasComponent(ID COMPONENT_ID)
+	{
+		return m_mainComponents[COMPONENT_ID].Get() != nullptr;
+	}
+
 public:
 	void AddChild(const Handle<GameObject>& obj);
 	void RemoveFromParent();

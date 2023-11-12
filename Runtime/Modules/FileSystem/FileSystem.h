@@ -31,6 +31,7 @@ private:
 
 	String m_cachePath;
 	String m_rootPath;
+	String m_rootFullPath;
 
 	std::map<String, FileOrDirectory> m_indexedFiles;
 
@@ -58,21 +59,18 @@ private:
 	}
 
 public:
-	inline bool IsFileExist(const char* path)
-	{
-		return std::filesystem::exists(path);
-	}
+	bool IsFileExist(const char* path);
 
-	inline bool IsDirectoryExist(const char* path)
-	{
-		return std::filesystem::exists(path);
-	}
+	bool IsDirectoryExist(const char* path);
 
 	bool IsFileChanged(const char* path, bool updateLastModifiedTime = true);
 	bool IsDirectoryChanged(const char* path, bool updateLastModifiedTime = true);
 
 	void WriteStream(const char* path, ByteStreamRead* stream);
 	bool ReadStream(const char* path, ByteStream* output);
+
+	// full path to Resources/
+	String GetResourcesFullPath();
 };
 
 NAMESPACE_END
