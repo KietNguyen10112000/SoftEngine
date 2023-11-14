@@ -321,7 +321,7 @@ void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accesso
 
 			std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
 
-			auto rcpath = FileSystem::Get()->GetResourcesFullPath();
+			auto rcpath = FileSystem::Get()->GetResourcesRootPath();
 
 			if (fullPath.find(rcpath.c_str()) != 0)
 			{

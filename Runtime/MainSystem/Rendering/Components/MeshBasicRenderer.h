@@ -1,24 +1,26 @@
 #pragma once
 
 #include "RenderingComponent.h"
+#include "Resources/MeshBasic.h"
 #include "Resources/Model3DBasic.h"
 #include "Resources/Texture2D.h"
 
 NAMESPACE_BEGIN
 
-class API Model3DBasicRenderer : public RenderingComponent
+class API MeshBasicRenderer : public RenderingComponent
 {
 public:
 	friend class RenderingSystem;
 
-	Resource<Model3DBasic>	m_model;
+	Resource<Model3DBasic>	m_model3D;
+	Resource<MeshBasic>		m_mesh;
 	Resource<Texture2D>		m_texture;
 
 public:
-	COMPONENT_CLASS(Model3DBasicRenderer);
+	COMPONENT_CLASS(MeshBasicRenderer);
 
-	Model3DBasicRenderer();
-	Model3DBasicRenderer(String modelPath, String texture2DPath);
+	MeshBasicRenderer(bool loadDefault = true);
+	MeshBasicRenderer(String modelPath, String texture2DPath);
 
 	// Inherited via RenderingComponent
 	virtual void Serialize(Serializer* serializer) override;
@@ -37,9 +39,9 @@ public:
 
 	virtual AABox GetGlobalAABB() override;
 
-	inline auto& GetModel()
+	inline auto& GetMesh()
 	{
-		return m_model;
+		return m_mesh;
 	}
 
 	inline auto& GetTexture2D()

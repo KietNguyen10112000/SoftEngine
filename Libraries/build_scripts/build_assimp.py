@@ -19,5 +19,7 @@ def assimp():
     copy_all_files('../build/vcprojects/assimp/lib/Release', '../../build/bin/Release', ['**/*.dll', '**/*.lib', '**/*.pdb'])
     copy_all_files('../build/vcprojects/assimp/bin/Release', '../../build/bin/Release', ['**/*.dll', '**/*.lib', '**/*.pdb'])
     
+    copy_all_files('../build/vcprojects/assimp/include/assimp', '../build/include/assimp', ['**/*.h'])
+    
 #=============================RUNNING=================================================
 assimp();

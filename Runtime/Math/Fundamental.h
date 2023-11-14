@@ -587,6 +587,8 @@ public:
     using Base::z;
     using Base::w;
 
+    using Base::Base;
+
     Quaternion() 
     {
         x = 0, y = 0, z = 0, w = 1;

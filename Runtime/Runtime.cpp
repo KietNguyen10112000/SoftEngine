@@ -28,6 +28,8 @@
 #include "Common/Base/Metadata.h"
 #include "Common/Base/SerializableDB.h"
 
+#include "Resources/Utils.h"
+
 //#include "Network/TCPAcceptor.h"
 //#include "Network/TCPConnector.h"
 
@@ -39,7 +41,7 @@
 #include "FileSystem/FileSystem.h"
 
 #include "MainSystem/Rendering/Components/Camera.h"
-#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+#include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/BuiltinConstantBuffers.h"
 #include "MainSystem/Rendering/DisplayService.h"
 
@@ -262,25 +264,28 @@ void Runtime::Setup()
 	);
 	scene->AddObject(cameraObj);*/
 
-	transform = {};
+	/*transform = {};
 	transform.Position() = { 0,5,5 };
 	auto object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
-	object->NewComponent<Model3DBasicRenderer>();
+	object->NewComponent<MeshBasicRenderer>();
 	scene->AddObject(object);
 
 	transform = {};
 	transform.Position() = { -5,0,5 };
 	object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
-	object->NewComponent<Model3DBasicRenderer>();
+	object->NewComponent<MeshBasicRenderer>();
 	scene->AddObject(object);
 
 	transform = {};
 	transform.Position() = { 5,0,5 };
 	object = mheap::New<GameObject>();
 	object->SetLocalTransform(transform);
-	object->NewComponent<Model3DBasicRenderer>();
+	object->NewComponent<MeshBasicRenderer>();
+	scene->AddObject(object);*/
+
+	auto object = ResourceUtils::LoadModel3DBasic("Default/capsule.obj");
 	scene->AddObject(object);
 }
 

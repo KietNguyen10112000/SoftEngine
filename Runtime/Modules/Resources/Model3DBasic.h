@@ -5,35 +5,19 @@
 #include "Graphics/Graphics.h"
 #include "FileSystem/FileSystem.h"
 
+#include "MeshBasic.h"
+
 NAMESPACE_BEGIN
 
-// basic model3d with vertex and uv (textcoord)
+class MeshBasic;
+
+// basic model3d with vertex and uv (textcoord), all static meshes
 class Model3DBasic : public ResourceBase
 {
 public:
-	struct Vertex
-	{
-		Vec3 position;
-		Vec2 textcoord;
-	};
-
-	SharedPtr<GraphicsVertexBuffer> m_vertexBuffer;
-	uint32_t m_vertexCount;
+	std::vector<Resource<MeshBasic>> m_meshes;
 
 	Model3DBasic(String path);
-
-public:
-	inline const auto& GetVertexBuffer() const
-	{
-		return m_vertexBuffer;
-	}
-
-	inline auto GetVertexCount() const
-	{
-		return m_vertexCount;
-	}
-
-	AABox GetLocalAABB() const;
 
 };
 

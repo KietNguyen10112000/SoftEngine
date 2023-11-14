@@ -3,7 +3,7 @@
 #include "Common/Base/SerializableDB.h"
 
 #include "MainSystem/Rendering/Components/Camera.h"
-#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+#include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
 
@@ -21,7 +21,7 @@ public:
 
 		// built-in rendering components
 		SerializableDB::Get()->Register<Camera>();
-		SerializableDB::Get()->Register<Model3DBasicRenderer>();
+		SerializableDB::Get()->Register<MeshBasicRenderer>();
 
 		// built-in script components
 		SerializableDB::Get()->Register<FPPCameraScript>();

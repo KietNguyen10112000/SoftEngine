@@ -188,7 +188,7 @@ bool FileSystem::ReadStream(const char* path, ByteStream* output)
 	return true;
 }
 
-String FileSystem::GetResourcesFullPath()
+String FileSystem::GetResourcesRootPath()
 {
 	return m_rootFullPath;
 }

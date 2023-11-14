@@ -11,6 +11,8 @@ class Texture2D : public ResourceBase
 public:
 	static const char* CACHE_EXTENSION;
 
+	static const char* DEFAULT_FILE;
+
 	SharedPtr<GraphicsShaderResource> m_shaderResource;
 
 public:

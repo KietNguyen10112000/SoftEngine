@@ -2,7 +2,7 @@
 
 #include "Input/Input.h"
 
-#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+//#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
 
 #include "RotateScript.h"
 

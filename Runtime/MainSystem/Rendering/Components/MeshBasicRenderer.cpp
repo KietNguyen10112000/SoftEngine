@@ -1,4 +1,4 @@
-#include "Model3DBasicRenderer.h"
+#include "MeshBasicRenderer.h"
 
 #include "Scene/GameObject.h"
 #include "Scene/Scene.h"
@@ -7,31 +7,34 @@
 
 NAMESPACE_BEGIN
 
-Model3DBasicRenderer::Model3DBasicRenderer() : RenderingComponent(RENDER_TYPE_MODEL3D_BASIC_RENDERER)
+MeshBasicRenderer::MeshBasicRenderer(bool loadDefault) : RenderingComponent(RENDER_TYPE_MESH_BASIC_RENDERER)
 {
-	m_model = resource::Load<Model3DBasic>("Default/cube.obj");
-	m_texture = resource::Load<Texture2D>("Default/default.png");
+	if (loadDefault)
+	{
+		m_mesh		= resource::Load<MeshBasic>("Default/cube.obj");
+		m_texture	= resource::Load<Texture2D>("Default/default.png");
+	}
 }
 
-Model3DBasicRenderer::Model3DBasicRenderer(String modelPath, String texture2DPath) : RenderingComponent(RENDER_TYPE_MODEL3D_BASIC_RENDERER)
+MeshBasicRenderer::MeshBasicRenderer(String modelPath, String texture2DPath) : RenderingComponent(RENDER_TYPE_MESH_BASIC_RENDERER)
 {
-	m_model		= resource::Load<Model3DBasic>(modelPath);
+	m_mesh		= resource::Load<MeshBasic>(modelPath);
 	m_texture	= resource::Load<Texture2D>(texture2DPath);
 }
 
-void Model3DBasicRenderer::Serialize(Serializer* serializer)
+void MeshBasicRenderer::Serialize(Serializer* serializer)
 {
 }
 
-void Model3DBasicRenderer::Deserialize(Serializer* serializer)
+void MeshBasicRenderer::Deserialize(Serializer* serializer)
 {
 }
 
-void Model3DBasicRenderer::CleanUp()
+void MeshBasicRenderer::CleanUp()
 {
 }
 
-Handle<ClassMetadata> Model3DBasicRenderer::GetMetadata(size_t sign)
+Handle<ClassMetadata> MeshBasicRenderer::GetMetadata(size_t sign)
 {
 	auto metadata = ClassMetadata::For(this);
 
@@ -45,9 +48,9 @@ Handle<ClassMetadata> Model3DBasicRenderer::GetMetadata(size_t sign)
 			},
 			[](UnknownAddress& var, Serializable* instance) -> Variant
 			{
-				auto modelRenderer = (Model3DBasicRenderer*)instance;
+				auto modelRenderer = (MeshBasicRenderer*)instance;
 				Variant ret = Variant(VARIANT_TYPE::STRING_PATH);
-				ret.As<String>() = modelRenderer->m_model->GetPath();
+				ret.As<String>() = modelRenderer->m_mesh->GetPath();
 				return ret;
 			},
 			this
@@ -64,7 +67,7 @@ Handle<ClassMetadata> Model3DBasicRenderer::GetMetadata(size_t sign)
 			},
 			[](UnknownAddress& var, Serializable* instance) -> Variant
 			{
-				auto modelRenderer = (Model3DBasicRenderer*)instance;
+				auto modelRenderer = (MeshBasicRenderer*)instance;
 				Variant ret = Variant(VARIANT_TYPE::STRING_PATH);
 				ret.As<String>() = modelRenderer->m_texture->GetPath();
 				return ret;
@@ -76,7 +79,7 @@ Handle<ClassMetadata> Model3DBasicRenderer::GetMetadata(size_t sign)
 	return metadata;
 }
 
-void Model3DBasicRenderer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+void MeshBasicRenderer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 	if (var.Is(1))
 	{
@@ -89,26 +92,26 @@ void Model3DBasicRenderer::OnPropertyChanged(const UnknownAddress& var, const Va
 	}
 }
 
-void Model3DBasicRenderer::OnComponentAdded()
+void MeshBasicRenderer::OnComponentAdded()
 {
 }
 
-void Model3DBasicRenderer::OnComponentRemoved()
+void MeshBasicRenderer::OnComponentRemoved()
 {
 }
 
-AABox Model3DBasicRenderer::GetGlobalAABB()
+AABox MeshBasicRenderer::GetGlobalAABB()
 {
-	auto localAABB = m_model->GetLocalAABB();
+	auto localAABB = m_mesh->GetLocalAABB();
 	localAABB.Transform(m_globalTransform);
 	return localAABB;
 }
 
-void Model3DBasicRenderer::SetModel3D(String path)
+void MeshBasicRenderer::SetModel3D(String path)
 {
 	struct SetModel3DParam
 	{
-		Model3DBasicRenderer* model;
+		MeshBasicRenderer* model;
 		String path;
 	};
 
@@ -120,13 +123,13 @@ void Model3DBasicRenderer::SetModel3D(String path)
 		||	ext == "dae"
 		||	ext == "xml"
 	)) {
-		std::cerr << "Model3DBasicRenderer::SetModel3D(): Unsupported format\n";
+		std::cerr << "MeshBasicRenderer::SetModel3D(): Unsupported format\n";
 		return;
 	}
 
 	if (!GetGameObject()->IsInAnyScene())
 	{
-		m_model = resource::Load<Model3DBasic>(path);
+		m_mesh = resource::Load<MeshBasic>(path);
 		return;
 	}
 
@@ -137,7 +140,7 @@ void Model3DBasicRenderer::SetModel3D(String path)
 		[](RenderingSystem* system, void* p)
 		{
 			TASK_SYSTEM_UNPACK_PARAM_2(SetModel3DParam, p, model, path);
-			model->m_model = resource::Load<Model3DBasic>(path);
+			model->m_mesh = resource::Load<MeshBasic>(path);
 		}
 	);
 
@@ -148,11 +151,11 @@ void Model3DBasicRenderer::SetModel3D(String path)
 	taskRunner->RunAsync(&task);
 }
 
-void Model3DBasicRenderer::SetTexture(String path)
+void MeshBasicRenderer::SetTexture(String path)
 {
 	struct SetTextureParam
 	{
-		Model3DBasicRenderer* model;
+		MeshBasicRenderer* model;
 		String path;
 	};
 
@@ -163,7 +166,7 @@ void Model3DBasicRenderer::SetTexture(String path)
 		||	ext == "bmp"
 		||	ext == "jpeg"
 	)) {
-		std::cerr << "Model3DBasicRenderer::SetTexture(): Unsupported format\n";
+		std::cerr << "MeshBasicRenderer::SetTexture(): Unsupported format\n";
 		return;
 	}
 

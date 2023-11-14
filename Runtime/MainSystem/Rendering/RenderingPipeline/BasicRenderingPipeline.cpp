@@ -1,6 +1,6 @@
 #include "BasicRenderingPipeline.h"
 
-#include "MainSystem/Rendering/Components/Model3DBasicRenderer.h"
+#include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/Components/RENDER_TYPE.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
 
@@ -96,7 +96,7 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 
 	for (auto& comp : input)
 	{
-		auto model = (Model3DBasicRenderer*)comp;
+		auto model = (MeshBasicRenderer*)comp;
 
 		m_objectBuffer->UpdateBuffer(&model->GlobalTransform(), sizeof(Mat4));
 
@@ -105,8 +105,8 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_objectBuffer);
 		params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &model->GetTexture2D()->GetGraphicsShaderResource());
 
-		auto vb = model->GetModel()->GetVertexBuffer().get();
-		graphics->DrawInstanced(1, &vb, model->GetModel()->GetVertexCount(), 1, 0, 0);
+		auto vb = model->GetMesh()->GetVertexBuffer().get();
+		graphics->DrawInstanced(1, &vb, model->GetMesh()->GetVertexCount(), 1, 0, 0);
 	}
 
 	graphics->UnsetRenderTargets(1, &output, m_depthBuffer.get());
@@ -126,7 +126,7 @@ void BasicRenderingPipeline::SetInput(RenderingComponent** components, size_t co
 	for (size_t i = 0; i < count; i++)
 	{
 		auto comp = components[i];
-		if (comp->GetRenderType() == RENDER_TYPE_MODEL3D_BASIC_RENDERER)
+		if (comp->GetRenderType() == RENDER_TYPE_MESH_BASIC_RENDERER)
 		{
 			m_basicModel3Ds.push_back(comp);
 		}

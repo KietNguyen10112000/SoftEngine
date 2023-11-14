@@ -166,8 +166,8 @@ public:
 	inline auto GetCenter() const { return m_center; };
 
 public:
-	template <Vec3& (*GET_POSITION_FUNC)(size_t, void**)>
-	inline static AABox From(size_t count, void** arg)
+	template <typename Fn>
+	inline static AABox From(size_t count, Fn GET_POSITION_FUNC)
 	{
 		using std::max;
 		using std::min;
@@ -181,7 +181,7 @@ public:
 
 		for (size_t i = 0; i < count; i++)
 		{
-			auto& point = GET_POSITION_FUNC(i, arg);
+			auto& point = GET_POSITION_FUNC(i);
 
 			maxX = max(maxX, point.x);
 			minX = min(minX, point.x);

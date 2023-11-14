@@ -102,7 +102,6 @@ file(
 )
 
 
-
 IF (WIN32)
     # for imgui
     file(
@@ -113,17 +112,42 @@ IF (WIN32)
         "../Libraries/imgui/backends/imgui_impl_win32.cpp"
         "../Libraries/imgui/backends/imgui_impl_dx12.cpp"
     )
+
 ELSE()
     message( FATAL_ERROR "unsupported, yet!" )
 ENDIF()
 
- add_executable (
+
+add_executable (
     ${BINARY} 
     "main.cpp"
     ${SRC}
 
     ${IMGUI_SRC}
 )
+
+
+IF (WIN32)
+    target_link_directories(${BINARY} PUBLIC
+        ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}
+    )
+
+    target_link_directories(${BINARY} PUBLIC
+        ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}
+    )
+
+    target_link_directories(${BINARY} PUBLIC
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    )
+
+    target_link_libraries(${BINARY} PUBLIC
+        assimp-vc${MSVC_TOOLSET_VERSION}-mtd.lib
+    )
+
+ELSE()
+    message( FATAL_ERROR "unsupported, yet!" )
+ENDIF()
+
 
 include_directories(PUBLIC
      "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -135,6 +159,8 @@ include_directories(PUBLIC
      "${CMAKE_SOURCE_DIR}/Libraries/imgui"
      "${CMAKE_SOURCE_DIR}/Libraries/D3D12MemoryAllocator/include"
      "${CMAKE_SOURCE_DIR}/Libraries/stb"
+     "${CMAKE_SOURCE_DIR}/Libraries/assimp/include"
+     "${CMAKE_SOURCE_DIR}/Libraries/build/include"
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

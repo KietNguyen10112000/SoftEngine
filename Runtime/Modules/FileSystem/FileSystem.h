@@ -48,6 +48,7 @@ private:
 		return m_cachePath + path;
 	}
 
+	// get full resource path
 	inline auto GetFullPath(const char* path)
 	{
 		std::string_view str = path;
@@ -70,7 +71,12 @@ public:
 	bool ReadStream(const char* path, ByteStream* output);
 
 	// full path to Resources/
-	String GetResourcesFullPath();
+	String GetResourcesRootPath();
+
+	String GetResourcesPath(String path)
+	{
+		return m_rootFullPath + path;
+	}
 };
 
 NAMESPACE_END
