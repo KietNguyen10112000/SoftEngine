@@ -4,6 +4,19 @@
 
 NAMESPACE_BEGIN
 
+class BasicSkyRenderingPass : public RenderingPass
+{
+public:
+	SharedPtr<GraphicsPipeline>				m_pipeline;
+	SharedPtr<GraphicsConstantBuffer>		m_cameraBuffer;
+
+	BasicSkyRenderingPass();
+
+	virtual void Initialize(RenderingPipeline* pipeline, RenderingPass* prevPass, RenderingPass* nextPass) override;
+
+	virtual void Run(RenderingPipeline* pipeline) override;
+};
+
 class BasicRenderingPass : public RenderingPass
 {
 public:

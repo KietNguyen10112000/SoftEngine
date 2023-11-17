@@ -11,3 +11,5 @@
 #define SPACE_GS space2
 #define SPACE_HS space3
 #define SPACE_DS space4
+
+#define PI 3.14159265359f

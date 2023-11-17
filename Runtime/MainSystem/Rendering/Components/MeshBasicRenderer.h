@@ -1,7 +1,6 @@
 #pragma once
 
 #include "RenderingComponent.h"
-#include "Resources/MeshBasic.h"
 #include "Resources/Model3DBasic.h"
 #include "Resources/Texture2D.h"
 
@@ -13,7 +12,7 @@ public:
 	friend class RenderingSystem;
 
 	Resource<Model3DBasic>	m_model3D;
-	Resource<MeshBasic>		m_mesh;
+	Model3DBasic::Mesh*		m_mesh;
 	Resource<Texture2D>		m_texture;
 
 public:

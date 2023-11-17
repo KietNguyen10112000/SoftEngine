@@ -10,7 +10,7 @@ NAMESPACE_BEGIN
 namespace ResourceUtils
 {
 
-API Handle<GameObject> LoadModel3DBasic(String path);
+API Handle<GameObject> LoadModel3DBasic(String path, String defaultDiffusePath = "");
 
 }
 

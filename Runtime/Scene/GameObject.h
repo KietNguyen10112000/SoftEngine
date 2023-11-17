@@ -16,7 +16,7 @@ class API GameObject final : public Serializable
 {
 public:
 	// one for read, one for write, then swap between them
-	constexpr static size_t NUM_TRANSFORM_BUFFERS = 2;
+	constexpr static size_t NUM_TRANSFORM_BUFFERS = 3;
 
 	using ComponentDtor = void(*)(void*);
 	struct ComponentSlot

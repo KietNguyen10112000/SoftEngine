@@ -94,12 +94,18 @@ void FileSystem::SaveCache()
 
 bool FileSystem::IsFileExist(const char* path)
 {
-	return std::filesystem::exists(path);
+	return std::filesystem::is_regular_file(path) && std::filesystem::exists(path);
+}
+
+bool FileSystem::IsResourceExist(const char* path)
+{
+	auto str = m_rootPath + path;
+	return std::filesystem::is_regular_file(str.c_str()) && std::filesystem::exists(str.c_str());
 }
 
 bool FileSystem::IsDirectoryExist(const char* path)
 {
-	return std::filesystem::exists(path);
+	return std::filesystem::is_directory(path) && std::filesystem::exists(path);
 }
 
 bool FileSystem::IsFileChanged(const char* path, bool updateLastModifiedTime)

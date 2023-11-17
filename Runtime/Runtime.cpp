@@ -285,7 +285,10 @@ void Runtime::Setup()
 	object->NewComponent<MeshBasicRenderer>();
 	scene->AddObject(object);*/
 
-	auto object = ResourceUtils::LoadModel3DBasic("Default/capsule.obj");
+	//transform = {};
+	//transform.Scale() = { 0.03f,0.03f,0.03f };
+	auto object = ResourceUtils::LoadModel3DBasic("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	//object->SetLocalTransform(transform);
 	scene->AddObject(object);
 }
 

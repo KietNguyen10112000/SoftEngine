@@ -499,8 +499,8 @@ SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHIC
     dx12desc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
     dx12desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-    dx12desc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-    dx12desc.DepthStencilState.DepthEnable = TRUE; // enable depth testing
+    dx12desc.DSVFormat = dx12utils::ConvertToDX12DepthBufferFormat(desc.outputDesc.DSVFormat);
+    dx12desc.DepthStencilState.DepthEnable = desc.outputDesc.DSVFormat == GRAPHICS_DATA_FORMAT::UNKNOWN ? FALSE : TRUE; // enable depth testing
     dx12desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; // can write depth data to all of the depth/stencil buffer
     dx12desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // pixel fragment passes depth test if destination pixel's depth is less than pixel fragment's
     dx12desc.DepthStencilState.StencilEnable = FALSE; // disable stencil test

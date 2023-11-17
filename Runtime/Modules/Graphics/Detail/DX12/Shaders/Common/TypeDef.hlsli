@@ -5,4 +5,5 @@
 	#define uint32_t uint
 #endif
 
+#include "Common.hlsli"
 #include "../../../../../../MainSystem/Rendering/BuiltinConstantBuffers.inl"

@@ -5,6 +5,9 @@
 struct VS_INPUT
 {
 	float3 position		: POSITION;
+	float3 tangent		: TANGENT;
+	float3 bitangent	: BITANGENT;
+	float3 normal		: NORMAL;
 	float2 textCoord	: TEXTCOORD;
 };
 

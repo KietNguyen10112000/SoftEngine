@@ -51,6 +51,11 @@ public:
 		*this = s;
 	};
 
+	String(const char* s, size_t count)
+	{
+		Construct(s, count);
+	};
+
 	String(const String& s)
 	{
 		*this = s;
@@ -88,6 +93,22 @@ protected:
 		buf[len] = 0;
 
 		m_header->m_hash = Hash(c_str());
+	};
+
+	inline void Construct(const char_type* r, size_t len = -1)
+	{
+		Reset();
+
+		auto length = len == -1 ? strlen(r) : len;
+		auto nBytes = (length + 1) * sizeof(char_type);
+		m_header = (Header*)Allocate(sizeof(Header) + nBytes);
+
+		m_header->m_length = length;
+		m_header->m_refCount = 1;
+		m_header->m_hash = Hash(r);
+
+		memcpy(m_header + 1, r, nBytes - sizeof(char_type));
+		((char_type*)(m_header + 1))[length] = (char_type)'\0';
 	};
 
 public:
@@ -130,6 +151,12 @@ public:
 		return m_header->m_hash;
 	};
 
+	inline String SubString(size_t idx, size_t count = -1)
+	{
+		assert(idx < length());
+		return String(c_str() + idx, count);
+	}
+
 	friend std::ostream& operator<<(std::ostream& out, const String& str)
 	{
 		auto cstr = str.c_str();
@@ -163,18 +190,7 @@ public:
 
 	inline String& operator=(const char_type* r)
 	{
-		Reset();
-
-		auto length = strlen(r);
-		auto nBytes = (length + 1) * sizeof(char_type);
-		m_header = (Header*)Allocate(sizeof(Header) + nBytes);
-
-		m_header->m_length = length;
-		m_header->m_refCount = 1;
-		m_header->m_hash = Hash(r);
-
-		memcpy(m_header + 1, r, nBytes);
-
+		Construct(r, -1);
 		return *this;
 	};
 

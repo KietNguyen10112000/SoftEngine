@@ -61,6 +61,7 @@ private:
 
 public:
 	bool IsFileExist(const char* path);
+	bool IsResourceExist(const char* path);
 
 	bool IsDirectoryExist(const char* path);
 
@@ -76,6 +77,11 @@ public:
 	String GetResourcesPath(String path)
 	{
 		return m_rootFullPath + path;
+	}
+
+	String GetResourcesRelativePath(String path)
+	{
+		return path;
 	}
 };
 
