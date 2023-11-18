@@ -20,6 +20,17 @@ Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
 	desc.mipLevels = 1;
 	Graphics::Get()->CreateRenderTargets(1, &desc, &m_renderTarget);
 
+	GRAPHICS_SHADER_RESOURCE_DESC outputDesc = {};
+	m_renderTarget->GetShaderResource()->GetDesc(&outputDesc);
+
+	// create depth buffer
+	GRAPHICS_DEPTH_STENCIL_BUFFER_DESC depthBufferDesc = {};
+	depthBufferDesc.format = GRAPHICS_DATA_FORMAT::FORMAT_R32_FLOAT;
+	depthBufferDesc.mipLevels = 1;
+	depthBufferDesc.width = outputDesc.texture2D.width;
+	depthBufferDesc.height = outputDesc.texture2D.height;
+	m_depthBuffer = Graphics::Get()->CreateDepthStencilBuffer(depthBufferDesc);
+
 	// create rendering pipeline
 	m_pipeline = new BasicRenderingPipeline();
 }

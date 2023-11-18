@@ -438,6 +438,9 @@ void Scene::EndIteration()
 
 void Scene::SynchMainProcessingSystems()
 {
+#ifdef _DEBUG
+	GetRenderingSystem()->RenderWithDebugGraphics();
+#endif // _DEBUG
 	StageAllChangedTransformObjects();
 }
 

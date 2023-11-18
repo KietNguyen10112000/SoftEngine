@@ -11,6 +11,8 @@ public:
 
 	constexpr static bool ORDERED_CHILD = true;
 
+	constexpr static bool ENABLE_DEBUG_GRAPHICS = true;
+
 };
 
 NAMESPACE_END

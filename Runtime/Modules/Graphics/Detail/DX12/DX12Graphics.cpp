@@ -478,15 +478,15 @@ SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHIC
         dx12desc.RTVFormats[i] = dx12utils::ConvertToDX12Format(desc.outputDesc.RTVFormat[i]); // format of the render target
     }
 
-    dx12desc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-    dx12desc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-    dx12desc.RasterizerState.FrontCounterClockwise = FALSE;
-    dx12desc.RasterizerState.DepthBias = 0;
-    dx12desc.RasterizerState.SlopeScaledDepthBias = 0.0f;
-    dx12desc.RasterizerState.DepthBiasClamp = 0.0f;
-    dx12desc.RasterizerState.DepthClipEnable = TRUE;
-    dx12desc.RasterizerState.MultisampleEnable = FALSE;
-    dx12desc.RasterizerState.AntialiasedLineEnable = FALSE;
+    dx12desc.RasterizerState.FillMode = dx12utils::ConvertToDX12FillMode(desc.rasterizerDesc.fillMode);
+    dx12desc.RasterizerState.CullMode = dx12utils::ConvertToDX12CullMode(desc.rasterizerDesc.cullMode);
+    dx12desc.RasterizerState.FrontCounterClockwise = desc.rasterizerDesc.frontCounterClockwise;
+    dx12desc.RasterizerState.DepthBias = desc.rasterizerDesc.depthBias;
+    dx12desc.RasterizerState.SlopeScaledDepthBias = desc.rasterizerDesc.slopeScaledDepthBias;
+    dx12desc.RasterizerState.DepthBiasClamp = desc.rasterizerDesc.depthBiasClamp;
+    dx12desc.RasterizerState.DepthClipEnable = desc.rasterizerDesc.depthClipEnable;
+    dx12desc.RasterizerState.MultisampleEnable = desc.rasterizerDesc.multisampleEnable;
+    dx12desc.RasterizerState.AntialiasedLineEnable = desc.rasterizerDesc.antialiasedLineEnable;
 
     dx12desc.BlendState.AlphaToCoverageEnable = FALSE;
     dx12desc.BlendState.IndependentBlendEnable = TRUE;

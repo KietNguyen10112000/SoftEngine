@@ -154,6 +154,44 @@ struct GRAPHICS_PIPELINE_OUTPUT_DESC
 	GRAPHICS_DATA_FORMAT::FORMAT DSVFormat = GRAPHICS_DATA_FORMAT::UNKNOWN;
 };
 
+struct GRAPHICS_FILL_MODE
+{
+	enum MODE
+	{
+		WIREFRAME,
+		SOLID,
+
+		COUNT
+	};
+};
+
+struct GRAPHICS_CULL_MODE
+{
+	enum MODE
+	{
+		NONE,
+		FRONT,
+		BACK,
+
+		COUNT
+	};
+};
+
+struct GRAPHICS_PIPELINE_RASTERIZER_DESC
+{
+	GRAPHICS_FILL_MODE::MODE fillMode = GRAPHICS_FILL_MODE::SOLID;
+	GRAPHICS_CULL_MODE::MODE cullMode = GRAPHICS_CULL_MODE::BACK;
+	bool frontCounterClockwise = false;
+	int depthBias = 0;
+	float depthBiasClamp = 0.0f;
+	float slopeScaledDepthBias = 0.0f;
+	bool depthClipEnable = true;
+	bool multisampleEnable = false;
+	bool antialiasedLineEnable = false;
+	//uint32_t forcedSampleCount;
+	//D3D12_CONSERVATIVE_RASTERIZATION_MODE ConservativeRaster;
+};
+
 struct GRAPHICS_PRIMITIVE_TOPOLOGY
 {
 	enum TYPE 
@@ -190,7 +228,9 @@ struct GRAPHICS_PIPELINE_DESC
 	GRAPHICS_PARAMS_DESC dsParamsDesc;
 	GRAPHICS_PARAMS_DESC gsParamsDesc;
 
-	GRAPHICS_PRIMITIVE_TOPOLOGY::TYPE primitiveTopology;
+	GRAPHICS_PIPELINE_RASTERIZER_DESC rasterizerDesc = {};
+
+	GRAPHICS_PRIMITIVE_TOPOLOGY::TYPE primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
 	size_t preferRenderCallPerFrame = -1;
 };

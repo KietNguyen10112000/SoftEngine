@@ -20,6 +20,7 @@ private:
 
 protected:
 	SharedPtr<GraphicsRenderTarget> m_renderTarget = nullptr;
+	SharedPtr<GraphicsDepthStencilBuffer> m_depthBuffer = nullptr;
 	RenderingPipeline* m_pipeline = nullptr;
 
 public:

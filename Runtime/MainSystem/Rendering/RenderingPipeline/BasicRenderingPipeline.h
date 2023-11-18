@@ -25,7 +25,7 @@ public:
 		Mat4 transform;
 	};
 
-	SharedPtr<GraphicsDepthStencilBuffer>	m_depthBuffer;
+	GraphicsDepthStencilBuffer*				m_depthBuffer;
 
 	SharedPtr<GraphicsPipeline>				m_pipeline;
 	SharedPtr<GraphicsConstantBuffer>		m_objectBuffer;

@@ -142,6 +142,8 @@ public:
 
 	virtual void PostIteration() override;
 
+	void RenderWithDebugGraphics();
+
 public:
 	inline GRAPHICS_VIEWPORT GetDefaultViewport()
 	{

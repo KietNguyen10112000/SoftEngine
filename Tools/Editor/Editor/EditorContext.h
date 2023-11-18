@@ -79,6 +79,8 @@ public:
 	void OnObjectsRemoved(std::vector<GameObject*>& objects);
 	void OnRenderGUI();
 
+	void OnRenderInGameDebugGraphics();
+
 public:
 	inline auto& Lock()
 	{

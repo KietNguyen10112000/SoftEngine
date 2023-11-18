@@ -627,6 +627,15 @@ public:
     }
 
     inline void SetFromMat4(const Mat4& mat);
+
+    //return Quaternion that is shortest rotation {from->to}
+    //source from https://github.com/toji/gl-matrix/blob/f0583ef53e94bc7e78b78c8a24f09ed5e2f7a20c/src/gl-matrix/quat.js#L54 line 54
+    inline static Quaternion RotationFromTo(const Vec3& from, const Vec3& to);
+
+    /*inline static Quaternion RotationFromTo(const Quaternion& from, const Quaternion& to)
+    {
+
+    }*/
 };
 
 class Mat3 : glm::mat3
@@ -1150,6 +1159,35 @@ inline void Quaternion::SetFromMat4(const Mat4& mat4)
 {
     GLMQuat() = glm::quat(mat4.GLMMatConst());
     Normalize();
+}
+
+inline Quaternion Quaternion::RotationFromTo(const Vec3& from, const Vec3& to)
+{
+    Vec3 xUnitVec3 = { 1, 0, 0 };
+    Vec3 yUnitVec3 = { 0, 1, 0 };
+    float dot = from.Dot(to);
+
+    if (dot < -0.999999) {
+        Vec3 temp = xUnitVec3.Cross(from);
+        if (temp.Length() < 0.000001)
+            temp = yUnitVec3.Cross(from);
+
+        temp.Length();
+        //quat.setAxisAngle(out, tmpvec3, Math.PI);
+        return Mat4::Rotation(temp, PI);
+    }
+    else if (dot > 0.999999) {
+        return { 1,0,0,0 };
+    }
+    else {
+        Quaternion re;
+        Vec3 temp = from.Cross(to);
+        re.x = temp.x;
+        re.y = temp.y;
+        re.z = temp.z;
+        re.w = 1 + dot;
+        return re.Normalize();
+    }
 }
 
 using Vector3 = Vec3;

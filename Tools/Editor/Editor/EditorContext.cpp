@@ -8,6 +8,9 @@
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 #include "MainSystem/Scripting/Components/Script.h"
 
+#include "Graphics/Graphics.h"
+#include "Graphics/DebugGraphics.h"
+
 EditorContext::EditorContext()
 {
 	ReloadSerializableList();
@@ -647,4 +650,24 @@ void EditorContext::OnRenderGUI()
 	RenderMenuBar();
 
 	ImGui::ShowDemoWindow(0);
+}
+
+void EditorContext::OnRenderInGameDebugGraphics()
+{
+#ifdef _DEBUG
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (m_inspectingObject)
+	{
+		auto mat = m_inspectingObject->GetLocalTransform().ToTransformMatrix();
+
+		debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
+		debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
+		debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
+	}
+
+	debugGraphics->DrawDirection(Vec3(-10, 0, 0), Vec3(20, 0, 0), { 1,0,0,1 }, { 1,0,0,1 });
+	debugGraphics->DrawDirection(Vec3(0, -10, 0), Vec3(0, 20, 0), { 0,1,0,1 }, { 0,1,0,1 });
+	debugGraphics->DrawDirection(Vec3(0, 0, -10), Vec3(0, 0, 20), { 0,0,1,1 }, { 0,0,1,1 });
+
+#endif // _DEBUG
 }

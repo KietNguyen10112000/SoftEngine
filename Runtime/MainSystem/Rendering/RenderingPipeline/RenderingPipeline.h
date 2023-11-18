@@ -26,6 +26,7 @@ class RenderingPipeline
 {
 private:
 	GraphicsRenderTarget* m_output = nullptr;
+	GraphicsDepthStencilBuffer* m_outputDepthBuffer = nullptr;
 	RenderingSystem* m_renderingSystem = nullptr;
 	std::vector<RenderingPass*> m_passes;
 
@@ -52,10 +53,11 @@ public:
 		m_passes.insert(m_passes.begin(), pass);
 	}
 
-	inline void Bake(GraphicsRenderTarget* target, RenderingSystem* system)
+	inline void Bake(GraphicsRenderTarget* target, GraphicsDepthStencilBuffer* depthBuffer, RenderingSystem* system)
 	{
 		if (m_output == target && m_renderingSystem == system) return;
 		m_output = target;
+		m_outputDepthBuffer = depthBuffer;
 		m_renderingSystem = system;
 
 		for (auto& pass : m_passes)
@@ -87,6 +89,11 @@ public:
 	inline auto GetOutput()
 	{
 		return m_output;
+	}
+
+	inline auto GetOutputDepthBuffer()
+	{
+		return m_outputDepthBuffer;
 	}
 
 	inline auto GetRenderingSystem()

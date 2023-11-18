@@ -53,6 +53,17 @@ void Initialize(Runtime* runtime)
 				editorContextId
 			);
 
+			scene->GetRenderingSystem()->EventDispatcher()->AddListener(RenderingSystem::EVENT_END_RENDER_CAMERA,
+				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
+				{
+					auto editorContext = renderingSystem->GetScene()->GenericStorage()->Access<EditorContext>(editorContextId);
+					editorContext->Lock().lock();
+					editorContext->OnRenderInGameDebugGraphics();
+					editorContext->Lock().unlock();
+				},
+				editorContextId
+			);
+
 			scene->EventDispatcher()->AddListener(Scene::EVENT_OBJECTS_ADDED,
 				[](Scene* scene, int argc, void** argv, ID editorContextId)
 				{

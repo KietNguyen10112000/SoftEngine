@@ -9,6 +9,8 @@
 #include "Network/TCPConnector.h"
 #include "Runtime/StartupConfig.h"
 
+#include "DebugGraphics.h"
+
 NAMESPACE_BEGIN
 
 int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
@@ -99,13 +101,17 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 #ifdef _WIN32
 	case soft::GRAPHICS_BACKEND_API::DX12:
 		ret = rheap::New<dx12::DX12Graphics>(windowNativeHandle);
-		//ret->m_debugGraphics = rheap::New<dx12::DX12DebugGraphics>((dx12::DX12Graphics*)ret);
 		s_instance.reset(ret);
 		((dx12::DX12Graphics*)ret)->FirstInit();
 
 		// show maximized before init d3d12 cause screen flickering when drag and drop application window ????
 		if (StartupConfig::Get().windowWidth == -1 || StartupConfig::Get().windowHeight == -1)
 			ShowWindow((HWND)windowNativeHandle, SW_SHOWMAXIMIZED);
+
+#ifdef _DEBUG
+		ret->m_debugGraphics = rheap::New<DebugGraphics>();
+#endif // _DEBUG
+
 		break;
 #endif
 
@@ -119,11 +125,12 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 
 void Graphics::Finalize()
 {
-	auto graphics = s_instance.release();
-
+	auto graphics = Graphics::Get();
 	if (!graphics) return;
 
-	//rheap::Delete(graphics->m_debugGraphics);
+	if (graphics->m_debugGraphics) rheap::Delete(graphics->m_debugGraphics);
+
+	graphics = s_instance.release();
 	rheap::Delete(graphics);
 }
 

@@ -4,6 +4,10 @@
 #include "MainSystem/Rendering/Components/RENDER_TYPE.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
 
+#ifdef _DEBUG
+#include "Graphics/DebugGraphics.h"
+#endif // _DEBUG
+
 NAMESPACE_BEGIN
 
 BasicSkyRenderingPass::BasicSkyRenderingPass()
@@ -124,16 +128,7 @@ void BasicRenderingPass::Initialize(RenderingPipeline* pipeline, RenderingPass* 
 	auto graphics = Graphics::Get();
 	auto output = pipeline->GetOutput();
 
-	GRAPHICS_SHADER_RESOURCE_DESC outputDesc = {};
-	output->GetShaderResource()->GetDesc(&outputDesc);
-
-	// create depth buffer
-	GRAPHICS_DEPTH_STENCIL_BUFFER_DESC depthBufferDesc = {};
-	depthBufferDesc.format = GRAPHICS_DATA_FORMAT::FORMAT_R32_FLOAT;
-	depthBufferDesc.mipLevels = 1;
-	depthBufferDesc.width = outputDesc.texture2D.width;
-	depthBufferDesc.height = outputDesc.texture2D.height;
-	m_depthBuffer = graphics->CreateDepthStencilBuffer(depthBufferDesc);
+	m_depthBuffer = pipeline->GetOutputDepthBuffer();
 
 	auto builtinCBs = pipeline->GetRenderingSystem()->GetBuiltinConstantBuffers();
 	m_cameraBuffer = builtinCBs->GetCameraBuffer();
@@ -148,10 +143,10 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 	auto output = basicPipeline->GetOutput();
 
 	auto graphics = Graphics::Get();
-	graphics->SetRenderTargets(1, &output, m_depthBuffer.get());
+	graphics->SetRenderTargets(1, &output, m_depthBuffer);
 
 	//graphics->ClearRenderTarget(output, { 0.0f, 0.0f, 0.0f, 0.0f }, 0, 0);
-	graphics->ClearDepthStencil(m_depthBuffer.get(), 0, 0);
+	graphics->ClearDepthStencil(m_depthBuffer, 0, 0);
 	graphics->SetGraphicsPipeline(m_pipeline.get());
 
 	//assert(input.size() == 2);
@@ -164,9 +159,20 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 	//	int x = 3;
 	//}
 
+//#ifdef _DEBUG
+//	auto debugGraphics = graphics->GetDebugGraphics();
+//#endif // _DEBUG
+
 	for (auto& comp : input)
 	{
 		auto model = (MeshBasicRenderer*)comp;
+
+//#ifdef _DEBUG
+//		debugGraphics->DrawAABox(model->GetGlobalAABB());
+//
+//		auto& mat = comp->GlobalTransform();
+//		debugGraphics->DrawDirection(mat.Position(), mat.Forward());
+//#endif // _DEBUG
 
 		m_objectBuffer->UpdateBuffer(&model->GlobalTransform(), sizeof(Mat4));
 
@@ -180,7 +186,7 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 		graphics->DrawInstanced(1, &vb, model->GetMesh()->GetVertexCount(), 1, 0, 0);
 	}
 
-	graphics->UnsetRenderTargets(1, &output, m_depthBuffer.get());
+	graphics->UnsetRenderTargets(1, &output, m_depthBuffer);
 }
 
 BasicRenderingPipeline::BasicRenderingPipeline()
