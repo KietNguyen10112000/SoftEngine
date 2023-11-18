@@ -6,7 +6,7 @@
 
 #include "Modules/Graphics/Graphics.h"
 
-#include "Modules/Graphics/Detail/DX12/Shaders/Common/TypeDef.hlsli"
+//#include "Modules/Graphics/Detail/DX12/Shaders/Common/TypeDef.hlsli"
 
 #include "Modules/Resources/Texture2D.h"
 
@@ -14,6 +14,8 @@
 #include "Input/Input.h"
 
 #include "DisplayService.h"
+
+//#include "imgui/imgui.h"
 
 NAMESPACE_BEGIN
 
@@ -138,6 +140,13 @@ void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
 	m_cameraData.view = camera->GetView();
 	m_cameraData.vp = m_cameraData.view * m_cameraData.proj;
 	m_cameraData.inversedVp = m_cameraData.proj.GetInverse() * camera->GlobalTransform();
+
+	/*ImGui::Begin("Debug info");
+	ImGui::DragFloat4("row1", &m_cameraData.transform[0][0]);
+	ImGui::DragFloat4("row2", &m_cameraData.transform[1][0]);
+	ImGui::DragFloat4("row3", &m_cameraData.transform[2][0]);
+	ImGui::DragFloat4("row4", &m_cameraData.transform[3][0]);
+	ImGui::End();*/
 
 	/*m_cameraData.vp = Mat4::Identity().SetLookAtLH({ 10,10,10 }, Vec3(0, 5, 5), Vec3::UP)
 		* Mat4::Identity().SetPerspectiveFovLH(PI / 3.0f, 

@@ -8,6 +8,8 @@
 
 #include "Runtime/Config.h"
 
+#include "Scene.h"
+
 NAMESPACE_BEGIN
 
 class Scene;
@@ -218,6 +220,19 @@ private:
 	inline ID WriteTransformIdx()
 	{
 		return (m_transformReadIdx + 1) % NUM_TRANSFORM_BUFFERS;
+	}
+
+	inline ID IdxTransformUpToDate()
+	{
+		auto readIdx = (m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_scene->GetIterationCount()) ?
+			WriteTransformIdx() :
+			ReadTransformIdx();
+		return readIdx;
+	}
+
+	inline auto& GlobalTransformMatUpToDate()
+	{
+		return m_globalTransformMat[IdxTransformUpToDate()];
 	}
 
 	void IndirectSetLocalTransform(const Transform& transform);

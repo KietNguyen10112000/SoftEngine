@@ -288,8 +288,34 @@ void Runtime::Setup()
 	//transform = {};
 	//transform.Scale() = { 0.03f,0.03f,0.03f };
 	auto object = ResourceUtils::LoadModel3DBasic("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
 	//object->SetLocalTransform(transform);
 	scene->AddObject(object);
+
+	//transform = {};
+	//transform.Position() = { 0,0,0 };
+	////transform.Scale() = { 10,1,10 };
+	//auto object = mheap::New<GameObject>();
+	//object->SetLocalTransform(transform);
+	//object->NewComponent<MeshBasicRenderer>();
+
+	//{
+	//	transform = {};
+	//	transform.Position() = { 0,-5,0 };
+	//	auto child1 = mheap::New<GameObject>();
+	//	child1->SetLocalTransform(transform);
+	//	child1->NewComponent<MeshBasicRenderer>();
+	//	object->AddChild(child1);
+
+	//	transform = {};
+	//	transform.Position() = { 0,-5,0 };
+	//	auto child2 = mheap::New<GameObject>();
+	//	child2->SetLocalTransform(transform);
+	//	child2->NewComponent<MeshBasicRenderer>();
+	//	child1->AddChild(child2);
+	//}
+	//
+	//scene->AddObject(object);
 }
 
 void Runtime::Run()

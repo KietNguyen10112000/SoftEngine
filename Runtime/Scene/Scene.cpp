@@ -279,6 +279,8 @@ void Scene::FilterAddList()
 					cur->m_UID = scene->m_UIDCounter++;
 			}
 		);
+
+		//obj->RecalculateUpToDateTransform();
 	}
 
 	if (m_filteredAddList.size() != 0)
@@ -502,7 +504,7 @@ void Scene::StageAllChangedTransformObjects()
 				contributors[i].func(gameObject, contributors[i].comp);
 			}
 
-			gameObject->RecalculateUpToDateTransform(0);
+			gameObject->RecalculateUpToDateTransform(INVALID_ID);
 		};
 		recalculateTransformTask.Params() = nearestRootChangedTransform;
 

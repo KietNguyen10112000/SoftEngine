@@ -21,7 +21,7 @@ Model3DBasic::Model3DBasic(String path, bool placeholder) : ResourceBase(path)
 	auto fs = FileSystem::Get();
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(), 
+	const aiScene* scene = importer.ReadFile(fs->GetResourcesRelativePath(path).c_str(), 
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
 	ResourceUtils::LoadAllMeshsForModel3DBasic(this, scene);
 }

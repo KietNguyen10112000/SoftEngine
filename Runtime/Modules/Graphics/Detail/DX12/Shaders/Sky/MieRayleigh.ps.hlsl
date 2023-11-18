@@ -1,23 +1,5 @@
 #include "../Common/TypeDef.hlsli"
 
-struct Light
-{
-	float spotAngle;
-	float constantAttenuation;
-	float linearAttenuation;
-	float quadraticAttenuation;
-	float power;
-
-	float3 pos;
-	float3 dir;
-	float3 color;
-
-	uint type;
-	uint index; //index in structured buffer
-	uint activeIndex;
-	uint activeShadowIndex;
-};
-
 struct PS_INPUT
 {
 	float4 svpos		: SV_POSITION;
@@ -115,10 +97,15 @@ float3 ComputeSkyColor(Light light, float3 position, float3 viewPoint)
 	float3 V = normalize(position - viewPoint);
 
 	float cosY = dot(float3(0,1,0), V);
-	if (cosY < 0)
+	float cone = -position.y / 63600.0f;
+	if (cosY < cone)
 	{
-		position = -position;
-		V = -V;
+		float3 N = float3(V.x, cone, V.z);
+		float3 R = -reflect(V, N);
+		V = R;
+		//position = -position;
+		//V = -V;
+		//V.y = -V.y;
 	}
 
 	//const float EarthR = 63600;//100;//6360;
@@ -170,23 +157,6 @@ float3 ComputeSkyColor(Light light, float3 position, float3 viewPoint)
 
 	return skyColor;
 }
-
-const static Light g_light = {
-	0,
-	0,
-	0,
-	0,
-	1,
-
-	float3(0,0,0),
-	float3(0.57735026919f,0.57735026919f,0.57735026919f),
-	float3(1,1,1),
-
-	0,
-	0,
-	0,
-	0
-};
 
 float4 main(PS_INPUT input) : SV_TARGET0
 {

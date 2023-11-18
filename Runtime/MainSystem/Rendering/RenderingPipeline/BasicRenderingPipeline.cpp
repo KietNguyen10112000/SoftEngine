@@ -173,6 +173,7 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 		auto params = m_pipeline->PrepareRenderParams();
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_cameraBuffer);
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_objectBuffer);
+		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_cameraBuffer);
 		params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &model->GetTexture2D()->GetGraphicsShaderResource());
 
 		auto vb = model->GetMesh()->GetVertexBuffer().get();

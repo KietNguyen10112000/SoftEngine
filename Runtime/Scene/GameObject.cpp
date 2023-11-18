@@ -28,7 +28,7 @@ void GameObject::RecalculateTransform(size_t idx)
 	localMat = m_localTransform[idx].ToTransformMatrix();
 	globalMat = localMat * (ParentUpToDate().Get() ? ParentUpToDate()->m_globalTransformMat[idx] : Mat4::Identity());
 
-	auto& children = Children();
+	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
 	for (auto& child : children)
 	{
 		child->RecalculateTransform(idx);
@@ -37,9 +37,7 @@ void GameObject::RecalculateTransform(size_t idx)
 
 void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 {
-	auto readIdx = (m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_scene->GetIterationCount()) ? 
-		WriteTransformIdx() : 
-		ReadTransformIdx();
+	auto readIdx = IdxTransformUpToDate();
 
 	//auto idx = ReadTransformIdx();
 
@@ -49,7 +47,8 @@ void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 	WriteLocalTransform() = readLocalTransform;
 
 	writeLocalMat = readLocalTransform.ToTransformMatrix();
-	writeGlobalMat = writeLocalMat * (ParentUpToDate().Get() ? ParentUpToDate()->m_globalTransformMat[parentIdx] : Mat4::Identity());
+	auto parent = ParentUpToDate().Get();
+	writeGlobalMat = writeLocalMat * (parent ? parent->m_globalTransformMat[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Mat4::Identity());
 
 	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
 	for (auto& child : children)
@@ -175,6 +174,9 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 		ReadChildren().Push(obj);
 		//m_treeIdx = 1;
 		//m_childCopyIdx = 0;
+
+		RecalculateTransform(0);
+		RecalculateTransform(1);
 
 		return;
 	}

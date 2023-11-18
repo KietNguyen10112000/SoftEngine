@@ -11,7 +11,7 @@ MeshBasicRenderer::MeshBasicRenderer(bool loadDefault) : RenderingComponent(REND
 {
 	if (loadDefault)
 	{
-		m_model3D	= resource::Load<Model3DBasic>("Default/cube.obj");
+		m_model3D	= resource::Load<Model3DBasic>("Default/cube1.obj");
 		m_mesh		= &m_model3D->m_meshes[0];
 		m_texture	= resource::Load<Texture2D>("Default/default.png");
 	}
@@ -19,7 +19,7 @@ MeshBasicRenderer::MeshBasicRenderer(bool loadDefault) : RenderingComponent(REND
 
 MeshBasicRenderer::MeshBasicRenderer(String modelPath, String texture2DPath) : RenderingComponent(RENDER_TYPE_MESH_BASIC_RENDERER)
 {
-	m_model3D	= resource::Load<Model3DBasic>("Default/cube.obj");
+	m_model3D	= resource::Load<Model3DBasic>("Default/cube1.obj");
 	m_mesh		= &m_model3D->m_meshes[0];
 	m_texture	= resource::Load<Texture2D>(texture2DPath);
 }
@@ -131,7 +131,7 @@ void MeshBasicRenderer::SetModel3D(String path)
 
 	if (!GetGameObject()->IsInAnyScene())
 	{
-		m_model3D = resource::Load<Model3DBasic>("Default/cube.obj");
+		m_model3D = resource::Load<Model3DBasic>(path);
 		m_mesh = &m_model3D->m_meshes[0];
 		return;
 	}
@@ -143,7 +143,7 @@ void MeshBasicRenderer::SetModel3D(String path)
 		[](RenderingSystem* system, void* p)
 		{
 			TASK_SYSTEM_UNPACK_PARAM_2(SetModel3DParam, p, model, path);
-			model->m_model3D = resource::Load<Model3DBasic>("Default/cube.obj");
+			model->m_model3D = resource::Load<Model3DBasic>(path);
 			model->m_mesh = &model->m_model3D->m_meshes[0];
 		}
 	);
