@@ -2,7 +2,6 @@
 
 #include "ManagedHeap.h"
 #include "NewMalloc.h"
-#include "DeferredBuffer.h"
 
 NAMESPACE_MEMORY_BEGIN
 
@@ -25,14 +24,10 @@ void MemoryInitialize()
     g_rawHeap = NewMalloc<ManagedHeap>(false);
     g_stableHeap = NewMalloc<ManagedHeap>(false);
     g_gcHeap = NewMalloc<ManagedHeap>();
-
-    DeferredBufferTracker::Initialize();
 }
 
 void MemoryFinalize()
 {
-    DeferredBufferTracker::Finalize();
-
     if (g_rawHeap)
     {
         std::cout << "MemoryFinalize Raw Heap\n";

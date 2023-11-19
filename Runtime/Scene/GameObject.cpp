@@ -9,6 +9,10 @@ GameObject* GameObject::AddMainComponentDefer(ID COMPONENT_ID, const Handle<Main
 	// [TODO]: will implement
 	//assert(0);
 	component->m_object = this;
+
+	m_hasMainComponent.Write()->hasComponents[COMPONENT_ID] = true;
+	m_scene->Update(m_hasMainComponent);
+
 	m_scene->AddComponent(COMPONENT_ID, component);
 	return this;
 }
@@ -17,6 +21,10 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 {
 	// [TODO]: will implement
 	//assert(0);
+
+	m_hasMainComponent.Write()->hasComponents[COMPONENT_ID] = false;
+	m_scene->Update(m_hasMainComponent);
+
 	m_scene->RemoveComponent(COMPONENT_ID, component);
 	return this;
 }
@@ -45,6 +53,15 @@ void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 	auto& writeGlobalMat = m_globalTransformMat[WriteTransformIdx()];
 	auto& writeLocalMat = m_localTransformMat[WriteTransformIdx()];
 	WriteLocalTransform() = readLocalTransform;
+
+	auto numTransformContributors = m_numTransformContributors.load(std::memory_order_relaxed);
+	m_numTransformContributors.store(0, std::memory_order_relaxed);
+
+	auto& contributors = m_transformContributors;
+	for (uint32_t i = 0; i < numTransformContributors; i++)
+	{
+		contributors[i].func(this, contributors[i].comp);
+	}
 
 	writeLocalMat = readLocalTransform.ToTransformMatrix();
 	auto parent = ParentUpToDate().Get();

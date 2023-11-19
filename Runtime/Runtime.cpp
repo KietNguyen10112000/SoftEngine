@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/DeferredBuffer.h"
 #include "Core/Structures/Managed/Function.h"
 #include "Core/Random/Random.h"
 
@@ -225,8 +224,6 @@ void Runtime::Setup()
 {
 	g_timer.Update();
 	g_timer.Update();
-
-	DeferredBufferTracker::Get()->Reset();
 
 	auto scene = CreateScene();
 	if (scene->BeginSetupLongLifeObject())

@@ -51,6 +51,11 @@ file(
     "MainSystem/*.h"
     "MainSystem/*.cpp"
 
+    "MainSystem/Animation/*.h"
+    "MainSystem/Animation/*.cpp"
+    "MainSystem/Animation/Components/*.h"
+    "MainSystem/Animation/Components/*.cpp"
+
     "MainSystem/Rendering/*.h"
     "MainSystem/Rendering/*.cpp"
     "MainSystem/Rendering/Components/*.h"

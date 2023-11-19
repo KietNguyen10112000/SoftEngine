@@ -18,6 +18,8 @@
 
 #include "Runtime/Config.h"
 
+#include "DeferredBuffer.h"
+
 NAMESPACE_BEGIN
 
 class MainComponent;
@@ -133,6 +135,8 @@ private:
 	ID m_runtimeID = INVALID_ID;
 	ID m_UIDCounter = 0;
 
+	raw::ConcurrentArrayList<DeferredBufferControlBlock*> m_deferredBuffers;
+
 public:
 	Scene();
 	//Scene(Runtime* runtime);
@@ -185,6 +189,7 @@ private:
 
 	void SynchMainProcessingSystems();
 	void SynchMainProcessingSystemForMainOutputSystems();
+	void UpdateDeferredBuffers();
 
 	void EndReconstructForMainSystem(ID mainSystemId);
 	void EndReconstructForAllMainSystems();
@@ -377,6 +382,24 @@ public:
 	void CleanUp();
 	//virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	//virtual void OnPropertyChanged(const UnknownAddress& var) override;
+
+public:
+	template <typename T, uint32_t N>
+	inline void Update(DeferredBuffer<T, N>& buffer)
+	{
+		auto ctrlBlock = (DeferredBufferControlBlock*)&buffer;
+		if (ctrlBlock->m_lastUpdateIteration.load(std::memory_order_relaxed) == GetIterationCount())
+		{
+			return;
+		}
+
+		if (ctrlBlock->m_lastUpdateIteration.exchange(GetIterationCount()) == GetIterationCount())
+		{
+			return;
+		}
+
+		m_deferredBuffers.Add(ctrlBlock);
+	}
 	
 };
 

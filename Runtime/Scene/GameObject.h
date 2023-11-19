@@ -88,6 +88,14 @@ private:
 
 	size_t m_lastChangeTreeIterationCount = 0;
 
+	struct HasMainComponentState
+	{
+		bool hasComponents[MainSystemInfo::COUNT] = {};
+	};
+
+	// consistency way to check if game object has a main component
+	DeferredBuffer<HasMainComponentState, Config::NUM_DEFER_BUFFER> m_hasMainComponent;
+
 private:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
@@ -292,6 +300,7 @@ public:
 				return AddMainComponentDefer(Comp::COMPONENT_ID, component);
 			}
 
+			((HasMainComponentState*)m_hasMainComponent.UpToDateRead())->hasComponents[Comp::COMPONENT_ID] = true;
 			return AddMainComponentDirect(component);
 		}
 		else
@@ -329,6 +338,7 @@ public:
 				return RemoveMainComponentDefer(Comp::COMPONENT_ID, _comp);
 			}
 
+			((HasMainComponentState*)m_hasMainComponent.UpToDateRead())->hasComponents[Comp::COMPONENT_ID] = false;
 			return RemoveMainComponentDirect(component);
 		}
 		else
@@ -391,14 +401,31 @@ public:
 		}
 	}
 
+	// consistency check
 	template <typename Comp>
 	inline bool HasComponent()
 	{
+		if constexpr (std::is_base_of_v<MainComponent, Comp>)
+		{
+			if (!IsInAnyScene())
+			{
+				return GetComponentRaw<Comp>() != nullptr;
+			}
+
+			return m_hasMainComponent.Read()->hasComponents[Comp::COMPONENT_ID];
+		}
+		
 		return GetComponentRaw<Comp>() != nullptr;
 	}
 
+	// consistency check
 	inline bool HasComponent(ID COMPONENT_ID)
 	{
+		if (!IsInAnyScene())
+		{
+			return m_hasMainComponent.Read()->hasComponents[COMPONENT_ID];
+		}
+
 		return m_mainComponents[COMPONENT_ID].Get() != nullptr;
 	}
 

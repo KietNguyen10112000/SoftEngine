@@ -7,6 +7,8 @@
 #include "MainSystem/Rendering/RenderingSystem.h"
 #include "MainSystem/Scripting/ScriptingSystem.h"
 
+#include "DeferredBuffer.h"
+
 
 NAMESPACE_BEGIN
 
@@ -446,6 +448,19 @@ void Scene::SynchMainProcessingSystems()
 
 void Scene::SynchMainProcessingSystemForMainOutputSystems()
 {
+	static TaskWaitingHandle handle = { 0,0 };
+
+	Task task;
+	task.Entry() = [](void* p)
+	{
+		auto scene = (Scene*)p;
+		scene->UpdateDeferredBuffers();
+	};
+	task.Params() = this;
+
+	TaskSystem::PrepareHandle(&handle);
+	TaskSystem::Submit(&handle, task, Task::CRITICAL);
+
 	StageAllChangedTreeStruct();
 
 	auto& list = GetCurrentStagedChangeTransformList();
@@ -453,6 +468,21 @@ void Scene::SynchMainProcessingSystemForMainOutputSystems()
 	{
 		obj->UpdateTransformReadWrite();
 	}
+
+	TaskSystem::WaitForHandle(&handle);
+}
+
+void Scene::UpdateDeferredBuffers()
+{
+	auto iteration = GetIterationCount();
+	TaskUtils::ForEachConcurrentList(m_deferredBuffers,
+		[iteration](DeferredBufferControlBlock* ctrlBlock, size_t)
+		{
+			ctrlBlock->Update(iteration);
+		},
+		TaskSystem::GetWorkerCount()
+	);
+	m_deferredBuffers.Clear();
 }
 
 void Scene::StageAllChangedTransformObjects()
@@ -498,15 +528,6 @@ void Scene::StageAllChangedTransformObjects()
 		recalculateTransformTask.Entry() = [](void* p)
 		{
 			auto gameObject = (GameObject*)p;
-			auto numTransformContributors = gameObject->m_numTransformContributors.load(std::memory_order_relaxed);
-			gameObject->m_numTransformContributors.store(0, std::memory_order_relaxed);
-
-			auto& contributors = gameObject->m_transformContributors;
-			for (uint32_t i = 0; i < numTransformContributors; i++)
-			{
-				contributors[i].func(gameObject, contributors[i].comp);
-			}
-
 			gameObject->RecalculateUpToDateTransform(INVALID_ID);
 		};
 		recalculateTransformTask.Params() = nearestRootChangedTransform;
