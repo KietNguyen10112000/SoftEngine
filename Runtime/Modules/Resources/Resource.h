@@ -67,6 +67,9 @@ namespace resource
 
 	template <typename _T, typename... Args>
 	Resource<_T> Load(String path, Args&&... args);
+
+	template <typename _D, typename T>
+	inline Resource<_D> StaticCast(const Resource<T>& rc);
 }
 
 
@@ -76,8 +79,11 @@ class Resource
 private:
 	static_assert(std::is_base_of_v<ResourceBase, T>);
 
-	 template <typename _T, typename... Args>
-	 friend Resource<_T> resource::Load(String path, Args&&... args);
+	template <typename _T, typename... Args>
+	friend Resource<_T> resource::Load(String path, Args&&... args);
+
+	template <typename _D, typename T>
+	friend Resource<_D> resource::StaticCast(const Resource<T>& rc);
 
 
 	T* m_rc = nullptr;
@@ -167,6 +173,19 @@ inline Resource<_T> Load(String path, Args&&... args)
 	}
 	
 	return Resource<_T>(rc);
+}
+
+template<typename _D, typename T>
+Resource<_D> StaticCast(const Resource<T>& rc)
+{
+	Resource<_D> ret;
+	auto ptr = static_cast<_D>(rc.m_rc);
+	if (ptr)
+	{
+		ret.m_rc = ptr;
+		ret.m_rc->m_refCount++;
+	}
+	return ret;
 }
 
 //

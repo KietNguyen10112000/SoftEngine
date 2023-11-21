@@ -8,7 +8,7 @@ NAMESPACE_BEGIN
 
 namespace ResourceUtils 
 {
-	extern void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene);
+	extern void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bool ignoreBones);
 }
 
 Model3DBasic::Model3DBasic(String path, bool placeholder) : ResourceBase(path)
@@ -23,7 +23,7 @@ Model3DBasic::Model3DBasic(String path, bool placeholder) : ResourceBase(path)
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(fs->GetResourcesRelativePath(path).c_str(), 
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
-	ResourceUtils::LoadAllMeshsForModel3DBasic(this, scene);
+	ResourceUtils::LoadAllMeshsForModel3DBasic(this, scene, true);
 }
 
 NAMESPACE_END

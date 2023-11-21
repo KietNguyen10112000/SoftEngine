@@ -1,6 +1,6 @@
 #include "Utils.h"
 
-#include "Model3DBasic.h"
+#include "../Model3DBasic.h"
 
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 
@@ -13,7 +13,7 @@ NAMESPACE_BEGIN
 namespace ResourceUtils 
 {
 
-void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene)
+void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bool ignoreBones = true)
 {
 	constexpr static auto LoadMesh = [](Model3DBasic::Mesh* output, const aiScene* scene, aiMesh* mesh) -> void
 	{
@@ -85,15 +85,34 @@ void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene)
 		);
 	};
 
-	model3D->m_meshes.resize(scene->mNumMeshes);
+	size_t count = 0;
 	for (uint32_t i = 0; i < scene->mNumMeshes; i++)
 	{
 		auto aiMesh = scene->mMeshes[i];
-		auto mesh = &model3D->m_meshes[i];
+		if (ignoreBones || !aiMesh->HasBones())
+		{
+			count++;
+		}
+	}
+
+	model3D->m_meshes.resize(count);
+
+	count = 0;
+	for (uint32_t i = 0; i < scene->mNumMeshes; i++)
+	{
+		auto aiMesh = scene->mMeshes[i];
+
+		if (!ignoreBones && aiMesh->HasBones())
+		{
+			continue;
+		}
+
+		auto mesh = &model3D->m_meshes[count];
 
 		LoadMesh(mesh, scene, aiMesh);
 
-		mesh->m_model3DIdx = i;
+		mesh->m_model3DIdx = count;
+		count++;
 	}
 }
 

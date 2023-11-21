@@ -99,6 +99,8 @@ file(
 
     "Modules/Resources/*.h"
     "Modules/Resources/*.cpp"
+    "Modules/Resources/Utils/*.h"
+    "Modules/Resources/Utils/*.cpp"
 
     "Runtime.h"
     "Runtime.cpp"

@@ -4,9 +4,10 @@
 
 NAMESPACE_BEGIN
 
-class AnimationGameObject : public AnimationComponent
+class AnimSkeletalGameObject : public AnimationComponent
 {
 public:
+	ID m_animationId;
 
 
 };
