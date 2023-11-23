@@ -20,6 +20,8 @@ private:
 	bool m_debug;
 	bool m_padd[3];
 
+	std::map<ID, void*> m_IDMap;
+
 public:
 	~Serializer();
 
@@ -46,6 +48,12 @@ public:
 	inline auto GetReadStream()
 	{
 		return m_read;
+	}
+
+	// to store shared resource, each serializable has a UUID, from which, we can detect whenever shared resource is serialized/deserialized
+	inline auto& GetIDMap()
+	{
+		return m_IDMap;
 	}
 
 };

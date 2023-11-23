@@ -85,6 +85,9 @@ private:
 	template <typename _D, typename T>
 	friend Resource<_D> resource::StaticCast(const Resource<T>& rc);
 
+	template <typename _T>
+	friend class Resource;
+
 
 	T* m_rc = nullptr;
 

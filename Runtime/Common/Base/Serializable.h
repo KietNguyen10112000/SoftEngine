@@ -23,9 +23,17 @@ public: inline virtual const char* GetClassName() override					\
 
 //class 
 
+struct API UUIDCounter
+{
+	static ID GetUUID();
+};
+
 class Serializable
 {
 public:
+	const ID m_UUID;
+
+	Serializable() : m_UUID(UUIDCounter::GetUUID()) {};
 	virtual ~Serializable() {};
 
 public:
@@ -87,6 +95,12 @@ public:
 
 	virtual const char* GetClassName() = 0;
 
+	inline virtual Handle<Serializable> Clone(Serializer* serializer) { return nullptr; };
+
+	inline const ID GetUUID() const
+	{
+		return m_UUID;
+	}
 };
 
 inline ClassMetadata::ClassMetadata(const char* className, Serializable* instance)

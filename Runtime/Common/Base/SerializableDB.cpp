@@ -10,6 +10,12 @@
 
 NAMESPACE_BEGIN
 
+ID UUIDCounter::GetUUID()
+{
+	static ID id = 0;
+	return ++id;
+}
+
 void SerializableDB::AddRecord(const SerializableRecord& record)
 {
 	assert(m_records.find(record) == m_records.end());
