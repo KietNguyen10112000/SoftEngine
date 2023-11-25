@@ -10,8 +10,9 @@ GameObject* GameObject::AddMainComponentDefer(ID COMPONENT_ID, const Handle<Main
 	//assert(0);
 	component->m_object = this;
 
+	m_scene->BeginWrite(m_hasMainComponent);
 	m_hasMainComponent.Write()->hasComponents[COMPONENT_ID] = true;
-	m_scene->Update(m_hasMainComponent);
+	m_scene->EndWrite(m_hasMainComponent);
 
 	m_scene->AddComponent(COMPONENT_ID, component);
 	return this;
@@ -22,8 +23,9 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 	// [TODO]: will implement
 	//assert(0);
 
+	m_scene->BeginWrite(m_hasMainComponent);
 	m_hasMainComponent.Write()->hasComponents[COMPONENT_ID] = false;
-	m_scene->Update(m_hasMainComponent);
+	m_scene->EndWrite(m_hasMainComponent);
 
 	m_scene->RemoveComponent(COMPONENT_ID, component);
 	return this;

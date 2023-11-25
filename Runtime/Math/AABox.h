@@ -114,6 +114,13 @@ public:
 	}
 
 public:
+	inline AABox MakeTransform(const Mat4& mat) const
+	{
+		AABox ret = *this;
+		ret.Transform(mat);
+		return ret;
+	}
+
 	inline void Transform(const Mat4& mat)
 	{
 		auto dimensions = m_halfDimensions * 2.0f;

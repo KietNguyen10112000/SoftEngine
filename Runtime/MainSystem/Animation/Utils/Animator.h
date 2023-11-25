@@ -7,12 +7,9 @@ NAMESPACE_BEGIN
 class Animator
 {
 public:
-	struct AnimationData
-	{
-		float duration;
-	};
-
 	ID m_animationId;
+
+	// duration in sec
 	float m_duration;
 
 };

@@ -15,7 +15,7 @@ public:
 	AnimModel::AnimMesh*	m_mesh;
 	Resource<Texture2D>		m_texture;
 
-	SharedPtr<AnimModel::BoneShaderBuffer> m_shaderBuffer;
+	SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
 
 public:
 	COMPONENT_CLASS(AnimMeshRenderer);

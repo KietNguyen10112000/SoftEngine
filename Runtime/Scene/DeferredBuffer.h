@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Memory/Memory.h"
+#include "Config.h"
 
 NAMESPACE_BEGIN
 
@@ -15,6 +16,10 @@ private:
 	uint32_t m_writeIdx;
 	const uint32_t m_N;
 	const size_t m_sizeOfEach;
+
+#ifdef _DEBUG
+	size_t m_isWriting = 0;
+#endif // _DEBUG
 
 	void* m_read;
 	void* m_write;
@@ -41,12 +46,11 @@ private:
 ///
 /// this buffer will work if it has a scene
 /// usage:
-///		auto read = buffer.Read();
-///		auto write = buffer.Write();
-///		// ... process data from <read> and put the result to <write>
-///		scene->Update(buffer);
+///		scene->BeginWrite(buffer);
+///		// ... process data from buffer.Write()
+///		scene->EndWrite(buffer);
 /// 
-template <typename T, uint32_t N>
+template <typename T, uint32_t N = Config::NUM_DEFER_BUFFER>
 class DeferredBuffer final
 {
 private:
@@ -59,10 +63,21 @@ private:
 	const uint32_t m_N = N;
 	const size_t m_sizeOfEach = sizeof(T);
 
+#ifdef _DEBUG
+	size_t m_isWriting = 0;
+#endif // _DEBUG
+
+
 	T* m_read = &m_buffers[(N - 1) % N];
 	T* m_write = &m_buffers[0];
 
 	T m_buffers[N] = {};
+
+private:
+	inline void CopyOnWrite()
+	{
+		*m_write = *m_read;
+	}
 
 public:
 	inline void Initialize(const T& v)
@@ -84,6 +99,9 @@ public:
 
 	inline T* Write()
 	{
+#ifdef _DEBUG
+		assert(m_isWriting != 0);
+#endif // _DEBUG
 		return m_write;
 	}
 

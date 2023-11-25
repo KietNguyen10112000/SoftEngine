@@ -9,15 +9,30 @@ NAMESPACE_BEGIN
 
 class AnimationComponent;
 class AnimationGameObject;
+class AnimSkeletalGameObject;
+class Animator;
 
 class API AnimationSystem : public MainSystem
 {
 private:
-	std::vector<AnimationGameObject*> m_animationGameObjectRoots;
+	struct AnimMeshRenderingBufferCounter
+	{
+		size_t count;
+		void* p;
+		Animator* animator;
+	};
+
+	std::vector<AnimSkeletalGameObject*> m_animSkeletalGameObjects;
+
+	std::vector<AnimMeshRenderingBufferCounter> m_animMeshRenderingBufferCount;
 
 public:
 	AnimationSystem(Scene* scene);
 	~AnimationSystem();
+
+private:
+	void AddAnimMeshRenderingBuffer(void*, Animator* animator);
+	void RemoveMeshRenderingBuffer(void*, Animator* animator);
 
 public:
 	// Inherited via MainSystem

@@ -4,6 +4,7 @@
 
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/Components/AnimMeshRenderer.h"
+#include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -20,7 +21,8 @@ struct AnimModelLoadingCtx
 	// refer to m_animMeshes/m_meshes
 	std::vector<void*> meshes;
 
-	SharedPtr<AnimModel::BoneShaderBuffer> shaderBuffer;
+	SharedPtr<AnimModel::AnimMeshRenderingBuffer> animMeshRenderingBuffer;
+	SharedPtr<Animator> animator;
 };
 
 void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
@@ -109,6 +111,7 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 
 		auto vertexTypeSize = vertexTypeSizes[vertexTypeIdx];
 
+		size_t _idx = 0;
 		for (uint32_t i = 0; i < mesh->mNumFaces; i++)
 		{
 			aiFace& face = mesh->mFaces[i];
@@ -117,7 +120,7 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 				auto idx = face.mIndices[j];
 				auto& aiVertex = aiVertices[idx];
 
-				auto& vertex = *(AnimModel::AnimVertex::WeightVertex_16*)(verticesBuffer.data() + idx * vertexTypeSize);
+				auto& vertex = *(AnimModel::AnimVertex::WeightVertex_16*)(verticesBuffer.data() + _idx * vertexTypeSize);
 
 				vertex.position = Vec3(aiVertex.x, aiVertex.y, aiVertex.z);
 
@@ -151,6 +154,8 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 				auto* srcBoneDataIt = (AnimModel::AnimVertex::BoneData16*)(verticesBoneData.data() + idx * curVertexBoneTypeSize);
 				auto boneDataIt = (byte*)&vertex.boneID1[0];
 				::memcpy(boneDataIt, srcBoneDataIt, curVertexBoneTypeSize);
+
+				_idx++;
 			}
 		}
 
@@ -216,6 +221,103 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 	}
 }
 
+void LoadAnimModelAnimation(AnimModelLoadingCtx* ctx, AnimModel* model, const aiScene* scene)
+{
+	constexpr static auto ExtractScaling = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
+	{
+		auto num = aiNode->mNumScalingKeys;
+		auto aiScalings = aiNode->mScalingKeys;
+
+		keyFrames.scaling.resize(num);
+
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& aiScaling = aiScalings[i];
+			auto& scaling = keyFrames.scaling[i];
+
+			scaling.time = aiScaling.mTime;
+			scaling.value.x = aiScaling.mValue.x;
+			scaling.value.y = aiScaling.mValue.y;
+			scaling.value.z = aiScaling.mValue.z;
+		}
+	};
+
+	constexpr static auto ExtractRotation = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
+	{
+		auto num = aiNode->mNumRotationKeys;
+		auto aiKeys = aiNode->mRotationKeys;
+
+		keyFrames.rotation.resize(num);
+
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& aiKey = aiKeys[i];
+			auto& key = keyFrames.rotation[i];
+
+			key.time = aiKey.mTime;
+			key.value.x = aiKey.mValue.x;
+			key.value.y = aiKey.mValue.y;
+			key.value.z = aiKey.mValue.z;
+			key.value.w = aiKey.mValue.w;
+		}
+	};
+
+	constexpr static auto ExtractTranslation = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
+	{
+		auto num = aiNode->mNumPositionKeys;
+		auto aiKeys = aiNode->mPositionKeys;
+
+		keyFrames.translation.resize(num);
+
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& aiKey = aiKeys[i];
+			auto& key = keyFrames.translation[i];
+
+			key.time = aiKey.mTime;
+			key.value.x = aiKey.mValue.x;
+			key.value.y = aiKey.mValue.y;
+			key.value.z = aiKey.mValue.z;
+		}
+	};
+
+	auto numAnimations = scene->mNumAnimations;
+
+	auto& animations = model->m_animations;
+	animations.resize(numAnimations);
+
+	auto numBones = model->m_boneIds.size();
+
+	auto& boneIds = model->m_boneIds;
+
+	for (uint32_t i = 0; i < numAnimations; i++)
+	{
+		auto aiAnim = scene->mAnimations[i];
+		auto& animation = animations[i];
+		animation.channels.resize(numBones);
+
+		animation.name = aiAnim->mName.C_Str();
+		animation.tickDuration = aiAnim->mDuration;
+		animation.ticksPerSecond = aiAnim->mTicksPerSecond;
+
+		auto numChannels = aiAnim->mNumChannels;
+		for (uint32_t j = 0; j < numChannels; j++)
+		{
+			auto aiAnimNode = aiAnim->mChannels[j];
+			String affectedNodeName = aiAnimNode->mNodeName.C_Str();
+
+			assert(boneIds.find(affectedNodeName) != boneIds.end());
+
+			auto affectedBoneId = boneIds[affectedNodeName];
+			auto& channel = animation.channels[affectedBoneId];
+			
+			ExtractScaling(aiAnimNode, channel);
+			ExtractRotation(aiAnimNode, channel);
+			ExtractTranslation(aiAnimNode, channel);
+		}
+	}
+}
+
 void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
 {
 	constexpr static auto ProcessNonAnimMesh =
@@ -244,7 +346,7 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 		comp->m_model3D = model;
 		comp->m_mesh = (AnimModel::AnimMesh*)ctx->meshes[node->mMeshes[i]];
 
-		comp->m_shaderBuffer = ctx->shaderBuffer;
+		comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
 
 		if (aiMesh->mMaterialIndex >= 0)
 		{
@@ -259,7 +361,22 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 	constexpr static void (*ProcessNode)(AnimModelLoadingCtx*, GameObject*, Resource<AnimModel>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode* ) =
 		[](AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node) -> void
 	{
-		size_t animMeshCount = 0;
+		String maybeBoneName = node->mName.C_Str();
+		if (!maybeBoneName.empty())
+		{
+			auto it = model->m_boneIds.find(maybeBoneName);
+			if (it != model->m_boneIds.end())
+			{
+				// this node is a bone
+
+				auto comp = obj->NewComponent<AnimSkeletalGameObject>();
+				comp->m_model3D = model;
+				comp->m_boneId = it->second;
+				comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+			}
+		}
+
+		//size_t animMeshCount = 0;
 		if (node->mNumMeshes > 1)
 		{
 			auto compoundObj = mheap::New<GameObject>();
@@ -275,9 +392,10 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 					compoundObj->AddChild(child);
 					continue;
 				}
-
 				
-				animMeshCount++;
+				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node);
+
+				//animMeshCount++;
 			}
 
 			obj->AddChild(compoundObj);
@@ -401,11 +519,20 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 			animMeshCount++;
 		}
 
-		ctx->shaderBuffer = std::make_shared<AnimModel::BoneShaderBuffer>();
-		ctx->shaderBuffer->bones.resize(model->m_boneIds.size());
+
+		AnimModel::AnimMeshRenderingBufferData buffer;
+		buffer.bones.resize(model->m_boneIds.size());
+		buffer.meshesAABB.resize(model->m_animMeshes.size());
+		ctx->animMeshRenderingBuffer = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
+		ctx->animMeshRenderingBuffer->buffer.Initialize(buffer);
+
+
+		ctx->animator = std::make_shared<Animator>();
 	};
 
 	PrepareCtx(&ctx, model3D, scene);
+
+	LoadAnimModelAnimation(&ctx, model3D, scene);
 
 	LoadAnimModelHierarchy(&ctx, ret, model3D, diffuseTextures, scene);
 

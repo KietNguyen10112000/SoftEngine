@@ -6,6 +6,7 @@
 #include "FileSystem/FileSystem.h"
 
 #include "MainSystem/Animation/Utils/KeyFrame.h"
+#include "Scene/DeferredBuffer.h"
 
 #include "Model3DBasic.h"
 
@@ -24,10 +25,21 @@ public:
 		WEIGHT_16
 	};
 
-	struct BoneShaderBuffer
+	// animation system will push data to this buffer, then rendering system will read data from this buffer to render
+	struct AnimMeshRenderingBufferData
 	{
-		size_t lastUpdateIteration = 0;
 		std::vector<Mat4> bones;
+
+		// data will be refered back by AnimMesh::m_model3DIdx
+		std::vector<AABox> meshesAABB;
+	};
+
+	//using AnimMeshRenderingBuffer = DeferredBuffer<AnimMeshRenderingBufferData>;
+
+	struct AnimMeshRenderingBuffer
+	{
+		ID id = INVALID_ID;
+		DeferredBuffer<AnimMeshRenderingBufferData> buffer;
 	};
 
 	struct AnimVertex
@@ -35,10 +47,10 @@ public:
 		struct WeightVertex_4
 		{
 			Vec3 position;
-			Vec2 textcoord;
-			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
+			Vec3 normal;
+			Vec2 textcoord;
 
 			unsigned short boneID1[4] = {};
 			float weight1[4] = {};
@@ -47,10 +59,10 @@ public:
 		struct WeightVertex_8
 		{
 			Vec3 position;
-			Vec2 textcoord;
-			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
+			Vec3 normal;
+			Vec2 textcoord;
 
 			unsigned short boneID1[4] = {};
 			unsigned short boneID2[4] = {};
@@ -61,10 +73,10 @@ public:
 		struct WeightVertex_16
 		{
 			Vec3 position;
-			Vec2 textcoord;
-			Vec3 normal;
 			Vec3 tangent;
 			Vec3 bitangent;
+			Vec3 normal;
+			Vec2 textcoord;
 
 			unsigned short boneID1[4] = {};
 			unsigned short boneID2[4] = {};

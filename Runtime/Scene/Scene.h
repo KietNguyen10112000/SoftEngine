@@ -383,7 +383,7 @@ public:
 	//virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	//virtual void OnPropertyChanged(const UnknownAddress& var) override;
 
-public:
+private:
 	template <typename T, uint32_t N>
 	inline void Update(DeferredBuffer<T, N>& buffer)
 	{
@@ -399,6 +399,35 @@ public:
 		}
 
 		m_deferredBuffers.Add(ctrlBlock);
+	}
+
+public:
+	template <bool COPY_ON_WRITE = true, typename T, uint32_t N>
+	inline void BeginWrite(DeferredBuffer<T, N>& buffer)
+	{
+		auto ctrlBlock = (DeferredBufferControlBlock*)&buffer;
+		if (ctrlBlock->m_lastUpdateIteration.load(std::memory_order_relaxed) == GetIterationCount())
+		{
+			return;
+		}
+
+		if constexpr (COPY_ON_WRITE)
+		{
+			buffer.CopyOnWrite();
+		}
+
+#ifdef _DEBUG
+		ctrlBlock->m_isWriting++;
+#endif // _DEBUG
+	}
+
+	template <typename T, uint32_t N>
+	inline void EndWrite(DeferredBuffer<T, N>& buffer)
+	{
+#ifdef _DEBUG
+		buffer.m_isWriting--;
+#endif // _DEBUG
+		Update(buffer);
 	}
 	
 };
