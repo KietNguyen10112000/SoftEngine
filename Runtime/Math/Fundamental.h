@@ -580,6 +580,11 @@ private:
         return reinterpret_cast<const glm::quat&>(*this);
     }
 
+    Quaternion(const glm::quat& glmQuat)
+    {
+        GLMQuat() = glmQuat;
+    };
+
 public:
     using Base::operator[];
     using Base::x;
@@ -636,6 +641,11 @@ public:
     {
 
     }*/
+
+    friend inline Quaternion SLerp(const Quaternion& q1, const Quaternion& q2, float t)
+    {
+        return glm::slerp(q1.GLMQuatConst(), q2.GLMQuatConst(), t);
+    }
 };
 
 class Mat3 : glm::mat3
@@ -857,6 +867,11 @@ private:
         reinterpret_cast<glm::mat4&>(*this) = mat;
     }
 
+    Mat4(const glm::mat4& mat)
+    {
+        *this = mat;
+    };
+
 public:
     using Base::Base;
 
@@ -904,6 +919,30 @@ public:
         };
 
         return ret;
+    }
+
+    inline Mat4& operator+=(const Mat4& mat)
+    {
+        GLMMat() += mat.GLMMatConst();
+        return *this;
+    }
+
+    inline Mat4 operator+(const Mat4& mat)
+    {
+        auto ret = GLMMat() + mat.GLMMatConst();
+        return ret;
+    }
+
+    inline Mat4 operator*(const float& scala)
+    {
+        auto ret = GLMMat() * scala;
+        return ret;
+    }
+
+    inline Mat4 operator*=(const float& scala)
+    {
+        GLMMat() *= scala;
+        return *this;
     }
 
 public:

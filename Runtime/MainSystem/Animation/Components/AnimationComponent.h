@@ -14,7 +14,7 @@ class API AnimationComponent : public MainComponent
 private:
 	friend class GameObject;
 	MAIN_SYSTEM_FRIEND_CLASSES();
-	constexpr static ID COMPONENT_ID = MainSystemInfo::RENDERING_ID;
+	constexpr static ID COMPONENT_ID = MainSystemInfo::ANIMATION_ID;
 
 protected:
 	const ANIMATION_TYPE m_ANIMATION_TYPE;

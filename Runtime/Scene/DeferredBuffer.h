@@ -114,6 +114,11 @@ public:
 
 		return Write();
 	}
+
+	inline auto& Buffers()
+	{
+		return m_buffers;
+	}
 };
 
 NAMESPACE_END

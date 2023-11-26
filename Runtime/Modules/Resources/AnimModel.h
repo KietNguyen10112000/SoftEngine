@@ -116,6 +116,15 @@ public:
 			float weight4[4] = {};
 		};
 
+		struct PositionVertex16
+		{
+			Vec3 position;
+
+			unsigned short boneID[16] = {};
+
+			float weight[16] = {};
+		};
+
 		inline static bool TryFill(void* vertex, unsigned short boneID, float weight, size_t maxWeightPerVertex)
 		{
 			//WeightVertex_4* p4 = (WeightVertex_4*)vertex;
@@ -177,6 +186,9 @@ public:
 
 	// list of model animation
 	std::vector<Animation> m_animations;
+
+	// inversed of node's global transform
+	std::vector<Mat4> m_boneOffsetMatrixs;
 
 	AnimModel(String path, bool placeholder = false);
 

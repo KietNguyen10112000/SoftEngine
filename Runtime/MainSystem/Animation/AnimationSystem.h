@@ -15,6 +15,8 @@ class Animator;
 class API AnimationSystem : public MainSystem
 {
 private:
+	friend class AnimSkeletalGameObject;
+
 	struct AnimMeshRenderingBufferCounter
 	{
 		size_t count;
@@ -33,6 +35,7 @@ public:
 private:
 	void AddAnimMeshRenderingBuffer(void*, Animator* animator);
 	void RemoveMeshRenderingBuffer(void*, Animator* animator);
+	void CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBufferCounter* counter);
 
 public:
 	// Inherited via MainSystem

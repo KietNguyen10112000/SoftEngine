@@ -291,8 +291,8 @@ void Runtime::Setup()
 	//scene->AddObject(object);
 
 	transform = {};
-	transform.Scale() = { 0.1f,0.1f,0.1f };
-	auto object = ResourceUtils::LoadAnimModel("model/globin/globin.fbx", "model/globin/textures/lowRes/character diffuse.png");
+	transform.Scale() = { 0.03f,0.03f,0.03f };
+	auto object = ResourceUtils::LoadAnimModel("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
 	//auto object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
 	object->SetLocalTransform(transform);

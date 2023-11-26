@@ -28,12 +28,12 @@ cbuffer CameraCBuffer : register(b0, SPACE_VS)
 	CameraData Camera;
 };
 
-cbuffer ObjectCBuffer : register(b1, SPACE_VS)
-{
-	ObjectData Object;
-};
+//cbuffer ObjectCBuffer : register(b1, SPACE_VS)
+//{
+//	ObjectData Object;
+//};
 
-cbuffer Bones : register(b2, SPACE_VS)
+cbuffer Bones : register(b1, SPACE_VS)
 {
 	row_major float4x4 bones[MAX_BONE];
 };
@@ -49,7 +49,8 @@ VS_OUTPUT main(VS_INPUT input)
 	boneTransform += bones[input.boneId1.z] * input.weight1.z;
 	boneTransform += bones[input.boneId1.w] * input.weight1.w;
 
-	float4x4 temp = mul(boneTransform, Object.transform);
+	//float4x4 temp = mul(boneTransform, Object.transform);
+	float4x4 temp = boneTransform;
 	position = mul(position, temp);
 
 	//output.position = output.pos;

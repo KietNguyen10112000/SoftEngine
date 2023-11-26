@@ -351,6 +351,11 @@ public:
 		return (AudioSystem*)m_mainSystems[MainSystemInfo::AUDIO_ID];
 	}
 
+	inline AnimationSystem* GetAnimationSystem()
+	{
+		return (AnimationSystem*)m_mainSystems[MainSystemInfo::ANIMATION_ID];
+	}
+
 	inline auto* GetInput()
 	{
 		return m_input;
@@ -406,6 +411,11 @@ public:
 	inline void BeginWrite(DeferredBuffer<T, N>& buffer)
 	{
 		auto ctrlBlock = (DeferredBufferControlBlock*)&buffer;
+
+#ifdef _DEBUG
+		ctrlBlock->m_isWriting++;
+#endif // _DEBUG
+
 		if (ctrlBlock->m_lastUpdateIteration.load(std::memory_order_relaxed) == GetIterationCount())
 		{
 			return;
@@ -415,19 +425,16 @@ public:
 		{
 			buffer.CopyOnWrite();
 		}
-
-#ifdef _DEBUG
-		ctrlBlock->m_isWriting++;
-#endif // _DEBUG
 	}
 
-	template <typename T, uint32_t N>
+	template <bool UPDATE = true, typename T, uint32_t N>
 	inline void EndWrite(DeferredBuffer<T, N>& buffer)
 	{
 #ifdef _DEBUG
 		buffer.m_isWriting--;
 #endif // _DEBUG
-		Update(buffer);
+		if constexpr (UPDATE)
+			Update(buffer);
 	}
 	
 };

@@ -6,6 +6,7 @@
 #include "MainSystem/MainSystem.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
 #include "MainSystem/Scripting/ScriptingSystem.h"
+#include "MainSystem/Animation/AnimationSystem.h"
 
 #include "DeferredBuffer.h"
 
@@ -24,6 +25,7 @@ Scene::Scene() : m_eventDispatcher(this)
 
 	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
 	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = new ScriptingSystem(this);
+	m_mainSystems[MainSystemInfo::ANIMATION_ID] = new AnimationSystem(this);
 }
 
 Scene::~Scene()
@@ -101,6 +103,7 @@ void Scene::SetupMainSystemIterationTasks()
 	// processing systems
 	//m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::PHYSICS_ID];
 	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::SCRIPTING_ID];
+	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::ANIMATION_ID];
 }
 
 void Scene::SetupMainSystemModificationTasks()

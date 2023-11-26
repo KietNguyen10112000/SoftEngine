@@ -152,7 +152,7 @@ BasicAnimModelRenderingPass::BasicAnimModelRenderingPass()
 		pipelineDesc.vs = "AnimModel/AnimModel8.vs";
 		pipelineDesc.ps = "Test.ps";
 
-		pipelineDesc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::BACK;
+		pipelineDesc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::NONE;
 
 		pipelineDesc.inputDesc.numElements = 9;
 		pipelineDesc.inputDesc.elements[0] = {
@@ -424,7 +424,7 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 	void* prevBuffer = nullptr;
 	for (auto& comp : input)
 	{
-		m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
+		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
 
 		auto* shaderBuffer = comp->m_animMeshRenderingBuffer.get();
 		if (prevBuffer != (void*)shaderBuffer)
@@ -436,8 +436,8 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 
 		auto params = pipeline->PrepareRenderParams();
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_cameraBuffer);
-		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_objectBuffer);
-		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 2, 1, &m_bonesBuffer);
+		//params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_objectBuffer);
+		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_bonesBuffer);
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_cameraBuffer);
 		params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &comp->GetTexture2D()->GetGraphicsShaderResource());
 
@@ -455,6 +455,8 @@ BasicRenderingPass::BasicRenderingPass()
 	pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	pipelineDesc.vs = "Test.vs";
 	pipelineDesc.ps = "Test.ps";
+
+	pipelineDesc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::NONE;
 
 	pipelineDesc.inputDesc.numElements = 5;
 	pipelineDesc.inputDesc.elements[0] = {
