@@ -443,9 +443,9 @@ void Scene::EndIteration()
 
 void Scene::SynchMainProcessingSystems()
 {
-#ifdef _DEBUG
-	GetRenderingSystem()->RenderWithDebugGraphics();
-#endif // _DEBUG
+	if constexpr (Config::ENABLE_DEBUG_GRAPHICS)
+		GetRenderingSystem()->RenderWithDebugGraphics();
+
 	StageAllChangedTransformObjects();
 }
 

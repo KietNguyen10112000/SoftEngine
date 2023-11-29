@@ -56,6 +56,12 @@ private:
     }
 
 public:
+    inline Vec2(const Vec2& v)
+    {
+        x = v.x;
+        y = v.y;
+    }
+
     using Base::Base;
     using Base::operator[];
     using Base::x;
@@ -104,12 +110,12 @@ public:
     Vec2ScalarOperator(+);
     Vec2ScalarOperator(-);
     Vec2ScalarOperator(*);
-    Vec2ScalarOperator(/ );
+    Vec2ScalarOperator(/);
 
     Vec2Vec2Operator(+);
     Vec2Vec2Operator(-);
     Vec2Vec2Operator(*);
-    Vec2Vec2Operator(/ );
+    Vec2Vec2Operator(/);
 
 #undef Vec2ScalarOperator
 #undef Vec2Vec2Operator

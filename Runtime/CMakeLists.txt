@@ -3,7 +3,12 @@ cmake_minimum_required (VERSION 3.8)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED true)
 
-add_compile_definitions(EXPORTS UNICODE DEV)
+add_compile_definitions(
+    EXPORTS 
+    UNICODE 
+    DEV
+)
+
 add_compile_definitions(IMGUI_USER_CONFIG="Libraries/config/ImGUIConfig.h")
 
 set(BINARY Engine)
@@ -148,7 +153,8 @@ IF (WIN32)
     )
 
     target_link_libraries(${BINARY} PUBLIC
-        assimp-vc${MSVC_TOOLSET_VERSION}-mtd.lib
+        $<$<CONFIG:Debug>:assimp-vc${MSVC_TOOLSET_VERSION}-mtd.lib>
+        $<$<CONFIG:Release>:assimp-vc${MSVC_TOOLSET_VERSION}-mt.lib>
     )
 
 ELSE()

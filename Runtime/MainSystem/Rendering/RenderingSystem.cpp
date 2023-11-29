@@ -281,18 +281,20 @@ void RenderingSystem::Iteration(float dt)
 
 	RenderForEachCamera();
 
-#ifdef _DEBUG
-	if (!graphics->GetDebugGraphics())
+	if constexpr (Config::ENABLE_DEBUG_GRAPHICS) {
+		if (!graphics->GetDebugGraphics())
+		{
+			DisplayAllCamera();
+			EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+			graphics->EndFrame();
+		}
+	}
+	else
 	{
 		DisplayAllCamera();
 		EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
 		graphics->EndFrame();
 	}
-#else
-	DisplayAllCamera();
-	EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
-	graphics->EndFrame();
-#endif // _DEBUG
 }
 
 void RenderingSystem::PrevIteration()
@@ -305,26 +307,28 @@ void RenderingSystem::PostIteration()
 
 void RenderingSystem::RenderWithDebugGraphics()
 {
-#ifdef _DEBUG
-	auto& camCBuffer = GetBuiltinConstantBuffers()->GetCameraBuffer();
-	auto graphics = Graphics::Get();
-	auto debugGraphics = graphics->GetDebugGraphics();
+	if constexpr (Config::ENABLE_DEBUG_GRAPHICS) {
 
-	if (!debugGraphics)
-	{
-		return;
+		auto& camCBuffer = GetBuiltinConstantBuffers()->GetCameraBuffer();
+		auto graphics = Graphics::Get();
+		auto debugGraphics = graphics->GetDebugGraphics();
+
+		if (!debugGraphics)
+		{
+			return;
+		}
+
+		for (auto& cam : m_displayingCamera)
+		{
+			SetBuiltinConstantBufferForCamera(cam.camera);
+			debugGraphics->RenderToTarget(cam.camera->m_renderTarget.get(), cam.camera->m_depthBuffer.get(), camCBuffer);
+		}
+
+		DisplayAllCamera();
+		EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+		graphics->EndFrame();
+
 	}
-
-	for (auto& cam : m_displayingCamera)
-	{
-		SetBuiltinConstantBufferForCamera(cam.camera);
-		debugGraphics->RenderToTarget(cam.camera->m_renderTarget.get(), cam.camera->m_depthBuffer.get(), camCBuffer);
-	}
-
-	DisplayAllCamera();
-	EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
-	graphics->EndFrame();
-#endif // _DEBUG
 
 }
 

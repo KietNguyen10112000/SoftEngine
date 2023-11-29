@@ -7,9 +7,7 @@
 
 #include "MainSystem/Rendering/BuiltinConstantBuffers.h"
 
-#ifdef _DEBUG
 #include "Graphics/DebugGraphics.h"
-#endif // _DEBUG
 
 NAMESPACE_BEGIN
 
@@ -426,6 +424,8 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 	{
 		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
 
+		graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
+
 		auto* shaderBuffer = comp->m_animMeshRenderingBuffer.get();
 		if (prevBuffer != (void*)shaderBuffer)
 		{
@@ -457,7 +457,7 @@ BasicRenderingPass::BasicRenderingPass()
 	pipelineDesc.ps = "Test.ps";
 
 	pipelineDesc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::NONE;
-
+	
 	pipelineDesc.inputDesc.numElements = 5;
 	pipelineDesc.inputDesc.elements[0] = {
 		"POSITION",

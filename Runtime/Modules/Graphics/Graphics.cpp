@@ -10,6 +10,7 @@
 #include "Runtime/StartupConfig.h"
 
 #include "DebugGraphics.h"
+#include <Config.h>
 
 NAMESPACE_BEGIN
 
@@ -108,9 +109,8 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 		if (StartupConfig::Get().windowWidth == -1 || StartupConfig::Get().windowHeight == -1)
 			ShowWindow((HWND)windowNativeHandle, SW_SHOWMAXIMIZED);
 
-#ifdef _DEBUG
+	if constexpr (Config::ENABLE_DEBUG_GRAPHICS)
 		ret->m_debugGraphics = rheap::New<DebugGraphics>();
-#endif // _DEBUG
 
 		break;
 #endif

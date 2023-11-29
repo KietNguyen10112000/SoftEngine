@@ -20,7 +20,7 @@ void DebugGraphics::CubeRenderer::Init(bool wireframe)
 	desc.outputDesc.numRenderTarget = 1;
 	desc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
 	desc.outputDesc.DSVFormat = GRAPHICS_DATA_FORMAT::FORMAT_R32_FLOAT;
-	desc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::BACK;
+	desc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::NONE;
 	desc.rasterizerDesc.fillMode = wireframe ? GRAPHICS_FILL_MODE::WIREFRAME : GRAPHICS_FILL_MODE::SOLID;
 
 	renderer.pipeline = graphics->CreateRasterizerPipeline(desc);

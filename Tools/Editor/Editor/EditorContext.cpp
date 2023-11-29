@@ -654,8 +654,10 @@ void EditorContext::OnRenderGUI()
 
 void EditorContext::OnRenderInGameDebugGraphics()
 {
-#ifdef _DEBUG
+//#ifdef _DEBUG
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics) return;
+
 	if (m_inspectingObject)
 	{
 		auto mat = m_inspectingObject->GetLocalTransform().ToTransformMatrix();
@@ -669,5 +671,5 @@ void EditorContext::OnRenderInGameDebugGraphics()
 	debugGraphics->DrawDirection(Vec3(0, -10, 0), Vec3(0, 20, 0), { 0,1,0,1 }, { 0,1,0,1 });
 	debugGraphics->DrawDirection(Vec3(0, 0, -10), Vec3(0, 0, 20), { 0,0,1,1 }, { 0,0,1,1 });
 
-#endif // _DEBUG
+//#endif // _DEBUG
 }

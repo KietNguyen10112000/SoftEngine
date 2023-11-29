@@ -89,7 +89,8 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 
 		for (auto& obj : animator->m_animMeshRendererObjs)
 		{
-			m_scene->OnObjectTransformChanged(obj);
+			if (obj->m_scene)
+				m_scene->OnObjectTransformChanged(obj);
 		}
 	}
 	else

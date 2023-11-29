@@ -38,12 +38,6 @@ void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bo
 
 				vertex.position = Vec3(aiVertex.x, aiVertex.y, aiVertex.z);
 
-				if (textCoord) // does the mesh contain texture coordinates?
-				{
-					vertex.textcoord.x = textCoord[idx].x;
-					vertex.textcoord.y = textCoord[idx].y;
-				}
-
 				if (mesh->mTangents)
 				{
 					vertex.tangent.x = mesh->mTangents[idx].x;
@@ -65,13 +59,41 @@ void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bo
 					vertex.normal.z = mesh->mNormals[idx].z;
 				}
 
+				if (textCoord) // does the mesh contain texture coordinates?
+				{
+					vertex.textcoord.x = textCoord[idx].x;
+					vertex.textcoord.y = textCoord[idx].y;
+					//std::cout << vertex.textcoord.x << ", " << vertex.textcoord.y << "\n";
+				}
+
 				vertices.push_back(vertex);
+
+				//vertices.back() = vertex;
 			}
 		}
 
 		GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC vbDesc = {};
 		vbDesc.count = vertices.size();
 		vbDesc.stride = sizeof(Model3DBasic::Vertex);
+
+		////(void)((size_t)&vertex.textcoord - (size_t)&vertex);
+
+		////std::cout << ((size_t)&vertex.textcoord - (size_t)&vertex) << "\n";
+		//for (size_t i = 0; i < sizeof(vertex); i++)
+		//{
+		//	std::cout << (int)*(((byte*)&vertex) + i) << ", ";
+		//}
+
+		//byte test[4] = { 0, 0, 64, 63 };
+		//std::cout << *(float*)&test << "\n";
+		////std::cout << sizeof(Model3DBasic::Vertex) << "\n";
+
+		/*std::cout << "====================================\n";
+		for (size_t i = 0; i < vertices.size(); i++)
+		{
+			std::cout << vertices[i].textcoord.x << ", " << vertices[i].textcoord.y << "\n";
+		}*/
+
 		output->m_vertexBuffer = graphics->CreateVertexBuffer(vbDesc);
 		output->m_vertexBuffer->UpdateBuffer(vertices.data(), vbDesc.count * vbDesc.stride);
 

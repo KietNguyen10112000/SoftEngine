@@ -291,10 +291,12 @@ void Runtime::Setup()
 	//scene->AddObject(object);
 
 	transform = {};
-	transform.Scale() = { 0.03f,0.03f,0.03f };
+	transform.Scale() = { 0.01f,0.01f,0.01f };
 	auto object = ResourceUtils::LoadAnimModel("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
+	//auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
 	//auto object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
+	//auto object = ResourceUtils::LoadAnimModel("model/vampires/dancing_vampire.dae");
 	object->SetLocalTransform(transform);
 	scene->AddObject(object);
 

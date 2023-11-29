@@ -41,13 +41,34 @@ struct AnimModelLoadingCtx
 		ID parentId = INVALID_ID;
 		ID boneId = INVALID_ID;
 		Mat4 localTransform;
-		Mat4 globalTransform;
+		//Mat4 globalTransform;
 	};
 
 	struct AnimMeshVertices
 	{
 		std::vector<AnimModel::AnimVertex::PositionVertex16> vertices;
 		std::vector<uint32_t> indices;
+	};
+
+	struct CalAABBTaskCtx
+	{
+		std::vector<Mat4> globalTransform;
+		std::vector<Mat4> bonesMat;
+	};
+
+	struct CalAABBTaskParam1
+	{
+		AnimModelLoadingCtx* ctx;
+		Animation* animation;
+		AnimModel::AnimMesh* mesh;
+		Resource<AnimModel> model;
+		const aiScene* scene;
+	};
+
+	struct CalAABBTaskParam2
+	{
+		CalAABBTaskParam1* param1;
+		AABoxKeyFrame* output;
 	};
 
 	// refer to m_animMeshes/m_meshes
@@ -61,10 +82,12 @@ struct AnimModelLoadingCtx
 	// refered by AnimModel::AnimMesh::m_model3DIdx
 	std::vector<AnimMeshVertices> animMeshesVertices;
 
-	std::vector<KeyFramesIndex> keyFramesIndex;
-	std::vector<Mat4> tempBones;
+	//std::vector<KeyFramesIndex> keyFramesIndex;
+	//std::vector<Mat4> tempBones;
 
 	std::map<String, GameObject*> objectMap;
+
+	std::vector<CalAABBTaskCtx> calAABBTaskCtxs;
 };
 
 void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
@@ -496,7 +519,101 @@ void FlattenAnimModelHierarchy(AnimModelLoadingCtx* ctx, Resource<AnimModel>& mo
 	ProcessNode(ctx, model, scene, scene->mRootNode, INVALID_ID);
 }
 
-void LoadAABoxAnimMesh(AnimModelLoadingCtx* ctx, Resource<AnimModel>& model, AnimModel::AnimMesh* animMesh, Animation* animation, const aiScene* scene)
+
+void LoadAABoxForKeyFrame(AABoxKeyFrame* keyFrame, AnimModelLoadingCtx::CalAABBTaskParam2* param)
+{
+	auto ctx = param->param1->ctx;
+	auto& model = param->param1->model;
+	auto threadId = Thread::GetID();
+	auto& taskCtx = ctx->calAABBTaskCtxs[threadId];
+	auto animation = param->param1->animation;
+	auto meshId = param->param1->mesh->m_model3DIdx;
+
+	auto& channels = animation->channels;
+	/*auto& tempIndex = ctx->keyFramesIndex;
+	tempIndex.clear();
+	tempIndex.resize(channels.size());*/
+
+	auto& bones = taskCtx.bonesMat;
+	bones.clear();
+	bones.resize(model->m_boneIds.size());
+
+	auto& vertices = ctx->animMeshesVertices[meshId].vertices;
+	auto& indices = ctx->animMeshesVertices[meshId].indices;
+
+	std::vector<Mat4>& globalTransform = taskCtx.globalTransform;
+	globalTransform.clear();
+	globalTransform.resize(ctx->nodes.size());
+
+	auto& nodes = ctx->nodes;
+	for (auto& node : nodes)
+	{
+		globalTransform[node.id] = node.localTransform;
+
+		if (node.boneId != INVALID_ID)
+		{
+			auto& channel = channels[node.boneId];
+			//auto& tempId = tempIndex[node.boneId];
+
+			Mat4 scaling;
+			channel.FindScaleMatrix(&scaling, 0, 0, keyFrame->time);
+			Mat4 rotation;
+			channel.FindRotationMatrix(&rotation, 0, 0, keyFrame->time);
+			Mat4 translation;
+			channel.FindTranslationMatrix(&translation, 0, 0, keyFrame->time);
+
+			globalTransform[node.id] = scaling * rotation * translation;
+		}
+
+		globalTransform[node.id] = globalTransform[node.id] *
+			(node.parentId == INVALID_ID ? Mat4::Identity() : globalTransform[nodes[node.parentId].id]);
+
+		/*if (node.parentId != INVALID_ID)
+		{
+			assert(node.id > node.parentId);
+		}*/
+
+		if (node.boneId != INVALID_ID)
+		{
+			bones[node.boneId] = model->m_boneOffsetMatrixs[node.boneId] * globalTransform[node.id];
+		}
+	}
+
+	float
+		maxX = -FLT_MAX, minX = FLT_MAX,
+		maxY = -FLT_MAX, minY = FLT_MAX,
+		maxZ = -FLT_MAX, minZ = FLT_MAX;
+
+	for (auto& index : indices)
+	{
+		auto& vertex = vertices[index];
+
+		Mat4 boneTransform;
+		::memset(&boneTransform, 0, sizeof(Mat4));
+		for (uint32_t i = 0; i < 16; i++)
+		{
+			boneTransform += bones[vertex.boneID[i]] * vertex.weight[i];
+		}
+
+		auto position = Vec4(vertex.position, 1.0f) * boneTransform;
+		position /= position.w;
+
+		maxX = std::max(maxX, position.x);
+		minX = std::min(minX, position.x);
+
+		maxY = std::max(maxY, position.y);
+		minY = std::min(minY, position.y);
+
+		maxZ = std::max(maxZ, position.z);
+		minZ = std::min(minZ, position.z);
+	}
+
+	auto dimensions = Vec3(maxX - minX, maxY - minY, maxZ - minZ);
+	auto center = Vec3(minX, minY, minZ) + dimensions / 2.0f;
+	keyFrame->value = AABox(center, dimensions);
+}
+
+void LoadAABoxAnimMesh(AnimModelLoadingCtx::CalAABBTaskParam1* param, AnimModelLoadingCtx* ctx, Resource<AnimModel>& model, AnimModel::AnimMesh* animMesh, Animation* animation, const aiScene* scene)
 {
 	auto meshId = animMesh->m_model3DIdx;
 	auto& aaBoxKeyFrames = animation->animMeshLocalAABoxKeyFrames[meshId].aaBox;
@@ -580,79 +697,31 @@ void LoadAABoxAnimMesh(AnimModelLoadingCtx* ctx, Resource<AnimModel>& model, Ani
 		}
 	}
 
-	auto& channels = animation->channels;
-	auto& tempIndex = ctx->keyFramesIndex; 
-	tempIndex.clear();
-	tempIndex.resize(channels.size());
+	// cal AABB of each key frame
+	std::vector<Task> tasks;
+	tasks.resize(aaBoxKeyFrames.size());
+	
+	std::vector<AnimModelLoadingCtx::CalAABBTaskParam2> taskParams;
+	taskParams.resize(aaBoxKeyFrames.size());
 
-	auto& bones = ctx->tempBones;
-	bones.resize(model->m_boneIds.size());
-
-	auto& vertices = ctx->animMeshesVertices[meshId].vertices;
-	auto& indices = ctx->animMeshesVertices[meshId].indices;
-
-	for (auto& keyFrame : aaBoxKeyFrames)
+	for (size_t i = 0; i < aaBoxKeyFrames.size(); i++)
 	{
-		auto& nodes = ctx->nodes;
-		for (auto& node : nodes)
+		auto& task = tasks[i];
+		auto& _param = taskParams[i];
+
+		task.Params() = &_param;
+		task.Entry() = [](void* p)
 		{
-			if (node.boneId != INVALID_ID)
-			{
-				auto& channel = channels[node.boneId];
-				auto& tempId = tempIndex[node.boneId];
+			TASK_SYSTEM_UNPACK_PARAM_2(AnimModelLoadingCtx::CalAABBTaskParam2, p, output, param1);
 
-				Mat4 scaling;
-				channel.FindScaleMatrix(&scaling, &tempId.s, tempId.s, keyFrame.time);
-				Mat4 rotation;
-				channel.FindRotationMatrix(&rotation, &tempId.r, tempId.r, keyFrame.time);
-				Mat4 translation;
-				channel.FindTranslationMatrix(&translation, &tempId.t, tempId.t, keyFrame.time);
-
-				node.localTransform = scaling * rotation * translation;
-			}
-
-			node.globalTransform = node.localTransform *
-				(node.parentId == INVALID_ID ? Mat4::Identity() : nodes[node.parentId].globalTransform);
-
-			if (node.boneId != INVALID_ID)
-			{
-				bones[node.boneId] = model->m_boneOffsetMatrixs[node.boneId] * node.globalTransform;
-			}
-		}
-
-		float
-			maxX = -FLT_MAX, minX = FLT_MAX,
-			maxY = -FLT_MAX, minY = FLT_MAX,
-			maxZ = -FLT_MAX, minZ = FLT_MAX;
+			LoadAABoxForKeyFrame(output, param);
+		};
 		
-		for (auto& index : indices)
-		{
-			auto& vertex = vertices[index];
-
-			Mat4 boneTransform;
-			::memset(&boneTransform, 0, sizeof(Mat4));
-			for (uint32_t i = 0; i < 16; i++)
-			{
-				boneTransform += bones[vertex.boneID[i]] * vertex.weight[i];
-			}
-
-			auto position = Vec4(vertex.position, 1.0f) * boneTransform;
-			position /= position.w;
-
-			maxX = std::max(maxX, position.x);
-			minX = std::min(minX, position.x);
-
-			maxY = std::max(maxY, position.y);
-			minY = std::min(minY, position.y);
-
-			maxZ = std::max(maxZ, position.z);
-			minZ = std::min(minZ, position.z);
-		}
-
-		auto dimensions = Vec3(maxX - minX, maxY - minY, maxZ - minZ);
-		auto center = Vec3(minX, minY, minZ) + dimensions / 2.0f;
-		keyFrame.value = AABox(center, dimensions);
+		_param.output = &aaBoxKeyFrames[i];
+		_param.param1 = param;
 	}
+
+	TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 
 	auto boundAABox = aaBoxKeyFrames[0].value;
 	for (auto& keyFrame : aaBoxKeyFrames)
@@ -662,6 +731,7 @@ void LoadAABoxAnimMesh(AnimModelLoadingCtx* ctx, Resource<AnimModel>& model, Ani
 
 	animation->animMeshLocalAABoxKeyFrames[meshId].boundAABox = boundAABox;
 }
+
 
 void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
 {
@@ -727,7 +797,7 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 			}
 		}
 
-		//size_t animMeshCount = 0;
+		size_t animMeshCount = 0;
 		if (node->mNumMeshes > 1)
 		{
 			auto compoundObj = mheap::New<GameObject>();
@@ -746,7 +816,7 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 				
 				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node);
 
-				//animMeshCount++;
+				animMeshCount++;
 			}
 
 			obj->AddChild(compoundObj);
@@ -762,6 +832,7 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 			else
 			{
 				ProcessAnimMesh(ctx, 0, obj, model, diffuseTextures, aiMesh, node);
+				animMeshCount++;
 			}
 
 			//obj->Name() = aiMesh->mName.C_Str();
@@ -770,7 +841,17 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 		aiVector3D scale;
 		aiQuaternion rot;
 		aiVector3D pos;
-		node->mTransformation.Decompose(scale, rot, pos);
+
+		if (!animMeshCount)
+		{
+			node->mTransformation.Decompose(scale, rot, pos);
+		}
+		else
+		{
+			//auto mat = node->mParent->mTransformation;
+			auto mat = scene->mRootNode->mTransformation;
+			mat.Inverse().Decompose(scale, rot, pos);
+		}
 
 		Transform transform = {};
 		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
@@ -778,7 +859,7 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 		transform.Position() = reinterpret_cast<const Vec3&>(pos);
 
 		obj->SetLocalTransform(transform);
-
+		
 		for (size_t i = 0; i < node->mNumChildren; i++)
 		{
 			auto child = mheap::New<GameObject>();
@@ -894,17 +975,56 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 
 	FlattenAnimModelHierarchy(&ctx, model3D, scene);
 
+	//size_t count = 0;
+
+	auto numTasks = model3D->m_animMeshes.size() * model3D->m_animations.size();
+	std::vector<Task> tasks;
+	tasks.resize(numTasks);
+	
+	std::vector<AnimModelLoadingCtx::CalAABBTaskParam1> taskParams;
+	taskParams.resize(numTasks);
+
+	ctx.calAABBTaskCtxs.resize(TaskSystem::GetWorkerCount());
+
+	size_t count = 0;
 	for (auto& animMesh : model3D->m_animMeshes)
 	{
 		for (auto& animation : model3D->m_animations)
 		{
-			LoadAABoxAnimMesh(&ctx, model3D, &animMesh, &animation, scene);
-			break;
+			//LoadAABoxAnimMesh(&ctx, model3D, &animMesh, &animation, scene);
+			//std::cout << count << "\n";
+			//if (count++ == 4) break;
+			//break;
+
+			auto& task = tasks[count];
+			auto& param = taskParams[count];
+
+			task.Params() = &param;
+			task.Entry() = [](void* p)
+			{
+				TASK_SYSTEM_UNPACK_PARAM_REF_5(AnimModelLoadingCtx::CalAABBTaskParam1, p, ctx, animation, mesh, model, scene);
+
+				LoadAABoxAnimMesh(param, ctx, model, mesh, animation, scene);
+			};
+
+			param.animation = &animation;
+			param.ctx = &ctx;
+			param.mesh = &animMesh;
+			param.model = model3D;
+			param.scene = scene;
+
+			count++;
 		}
+
+		//std::cout << count << "\n";
+		//if (count++ == 10) break;
 	}
 
-	ctx.animator->m_durationRatio = model3D->m_animations[0].ticksPerSecond;
-	ctx.animator->m_duration = model3D->m_animations[0].tickDuration;
+	TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
+
+	ctx.animator->m_animationId = 3;
+	ctx.animator->m_durationRatio = model3D->m_animations[3].ticksPerSecond;
+	ctx.animator->m_duration = model3D->m_animations[3].tickDuration;
 
 	//ctx.animator->m_durationRatio /= 20.0f;
 
