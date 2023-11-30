@@ -168,6 +168,152 @@ struct KeyFrames
 	}
 
 
+	inline Vec3 BinaryFindScale(float t) const
+	{
+		auto& keyFrames = scaling;
+		uint32_t num = (uint32_t)keyFrames.size();
+		uint32_t count = num;
+		uint32_t idx = 0;
+
+		while (count)
+		{
+			auto step = count / 2;
+			auto it = idx + step;
+
+			auto& v = keyFrames[it];
+
+			if (v.time < t)
+			{
+				idx = it + 1;
+				count -= step + 1;
+			}
+			else
+			{
+				count = step;
+			}
+		}
+
+		auto& v = keyFrames[idx];
+
+		if (v.time < t)
+		{
+			assert(idx == num - 1);
+
+			/*if (idx != num - 1)
+			{
+				BinaryFindScale(t);
+			}*/
+
+			return keyFrames.back().value;
+		}
+
+		if (idx == 0)
+		{
+			return keyFrames.front().value;
+		}
+
+		auto l0 = t - keyFrames[idx - 1].time;
+		auto l1 = keyFrames[idx].time - keyFrames[idx - 1].time;
+		return Lerp(
+			keyFrames[idx - 1].value,
+			keyFrames[idx].value,
+			l0 / l1
+		);
+	}
+
+	inline Quaternion BinaryFindRotation(float t) const
+	{
+		auto& keyFrames = rotation;
+		uint32_t num = (uint32_t)keyFrames.size();
+		uint32_t count = num;
+		uint32_t idx = 0;
+
+		while (count)
+		{
+			auto step = count / 2;
+			auto it = idx + step;
+
+			auto& v = keyFrames[it];
+
+			if (v.time < t)
+			{
+				idx = it + 1;
+				count -= step + 1;
+			}
+			else
+			{
+				count = step;
+			}
+		}
+
+		auto& v = keyFrames[idx];
+
+		if (v.time < t)
+		{
+			assert(idx == num - 1);
+			return keyFrames.back().value;
+		}
+
+		if (idx == 0)
+		{
+			return keyFrames.front().value;
+		}
+
+		auto l0 = t - keyFrames[idx - 1].time;
+		auto l1 = keyFrames[idx].time - keyFrames[idx - 1].time;
+		return SLerp(
+			keyFrames[idx - 1].value,
+			keyFrames[idx].value,
+			l0 / l1
+		);
+	}
+
+	inline Vec3 BinaryFindTranslation(float t) const
+	{
+		auto& keyFrames = translation;
+		uint32_t num = (uint32_t)keyFrames.size();
+		uint32_t count = num;
+		uint32_t idx = 0;
+
+		while (count)
+		{
+			auto step = count / 2;
+			auto it = idx + step;
+
+			auto& v = keyFrames[it];
+
+			if (v.time < t)
+			{
+				idx = it + 1;
+				count -= step + 1;
+			}
+			else
+			{
+				count = step;
+			}
+		}
+
+		auto& v = keyFrames[idx];
+
+		if (v.time < t)
+		{
+			assert(idx == num - 1);
+			return keyFrames.back().value;
+		}
+
+		if (idx == 0)
+		{
+			return keyFrames.front().value;
+		}
+
+		auto l0 = t - keyFrames[idx - 1].time;
+		auto l1 = keyFrames[idx].time - keyFrames[idx - 1].time;
+		return Lerp(
+			keyFrames[idx - 1].value,
+			keyFrames[idx].value,
+			l0 / l1
+		);
+	}
 };
 
 struct AABoxKeyFrames
