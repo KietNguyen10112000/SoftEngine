@@ -321,6 +321,48 @@ struct AABoxKeyFrames
 	std::vector<AABoxKeyFrame> aaBox;
 
 	AABox boundAABox;
+
+	inline AABox Find(uint32_t* outputIndex, uint32_t startIndex, float t) const
+	{
+		auto& keyFrames = aaBox;
+		auto num = (uint32_t)keyFrames.size();
+
+		assert(startIndex < num);
+
+		for (uint32_t i = startIndex; i < num; i++)
+		{
+			auto& keyFrame = keyFrames[i];
+			if (keyFrame.time > t)
+			{
+				if (outputIndex)
+				{
+					*outputIndex = i;
+				}
+
+				if (i == 0)
+				{
+					return keyFrame.value;
+				}
+
+				auto& start = keyFrames[i - 1];
+				auto& end = keyFrames[i];
+				auto l0 = t - start.time;
+				auto l1 = end.time - start.time;
+				auto d = l0 / l1;
+
+				AABox ret;
+				ret.m_center = Lerp(start.value.m_center, end.value.m_center, d);
+				ret.m_halfDimensions = Lerp(start.value.m_halfDimensions, end.value.m_halfDimensions, d);
+				return ret;
+			}
+		}
+
+		if (outputIndex)
+		{
+			*outputIndex = num - 1;
+		}
+		return keyFrames.back().value;
+	}
 };
 
 struct Animation

@@ -50,11 +50,6 @@ void AnimSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, const 
 {
 }
 
-const char* AnimSkeletalGameObject::GetClassName()
-{
-	return nullptr;
-}
-
 void AnimSkeletalGameObject::Update(float dt)
 {
 	auto& globalTransform = GetGameObject()->ReadGlobalTransformMat();

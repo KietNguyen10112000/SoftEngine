@@ -14,10 +14,12 @@ private:
 
 	// variant is the value from calling accessor.Get() so don't need to re-call accessor.Get() inside InspectFunc
 	static void InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static void InspectUint64(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
+	static void InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
 public:

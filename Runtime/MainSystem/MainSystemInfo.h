@@ -20,7 +20,7 @@ public:
 		"RenderingComponent",
 		"PhysicsComponent",
 		"ScriptComponent",
-		"AnimationComponent"
+		"AnimationComponent",
 		"AudioComponent",
 	};
 };

@@ -143,7 +143,7 @@ void Camera::SetProjection(const Mat4& projMat)
 	auto task = taskRunner->CreateTask(
 		[](RenderingSystem* system, void* p)
 		{
-			TASK_SYSTEM_UNPACK_PARAM_2(SetPerspectiveParam, p, camera, projMat);
+			TASK_SYSTEM_UNPACK_PARAM_REF_2(SetPerspectiveParam, p, camera, projMat);
 			camera->Projection() = projMat;
 		}
 	);

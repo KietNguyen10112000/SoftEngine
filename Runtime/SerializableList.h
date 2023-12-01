@@ -7,6 +7,9 @@
 
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
 
+#include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
+#include "MainSystem/Animation/Components/AnimatorSkeletalGameObject.h"
+
 #include "Scene/GameObject.h"
 
 NAMESPACE_BEGIN
@@ -25,6 +28,11 @@ public:
 
 		// built-in script components
 		SerializableDB::Get()->Register<FPPCameraScript>();
+
+		// built-in animation components
+		SerializableDB::Get()->Register<AnimSkeletalGameObject>();
+		SerializableDB::Get()->Register<AnimatorSkeletalGameObject>();
+
 	}
 };
 

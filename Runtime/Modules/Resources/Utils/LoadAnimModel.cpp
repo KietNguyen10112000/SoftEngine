@@ -5,6 +5,7 @@
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/Components/AnimMeshRenderer.h"
 #include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
+#include "MainSystem/Animation/Components/AnimatorSkeletalGameObject.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -76,7 +77,7 @@ struct AnimModelLoadingCtx
 	std::vector<void*> meshes;
 
 	SharedPtr<AnimModel::AnimMeshRenderingBuffer> animMeshRenderingBuffer;
-	Animator* animator;
+	AnimatorSkeletalGameObject* animator;
 
 	std::vector<Node> nodes;
 
@@ -981,10 +982,10 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 		defaultDiffusePath = Texture2D::DEFAULT_FILE;
 	}
 
-	auto animator = mheap::New<Animator>();
-
 	auto ret = mheap::New<GameObject>();
 	auto model3D = resource::Load<AnimModel>(path, true);
+
+	auto animator = ret->NewComponent<AnimatorSkeletalGameObject>();
 
 	std::vector<Resource<Texture2D>> diffuseTextures;
 
@@ -1126,8 +1127,8 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 	TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 
 	ctx.animator->m_animationId = 0;
-	ctx.animator->m_durationRatio = model3D->m_animations[0].ticksPerSecond;
-	ctx.animator->m_duration = model3D->m_animations[0].tickDuration;
+	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
+	ctx.animator->m_tickDuration = model3D->m_animations[0].tickDuration;
 
 	//ctx.animator->m_durationRatio /= 20.0f;
 

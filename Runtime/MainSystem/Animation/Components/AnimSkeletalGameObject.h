@@ -6,17 +6,17 @@
 
 #include "Resources/AnimModel.h"
 
-#include "../Utils/Animator.h"
+#include "AnimatorSkeletalGameObject.h"
 
 NAMESPACE_BEGIN
 
-class Animator;
+class AnimatorSkeletalGameObject;
 
 class AnimSkeletalGameObject : public AnimationComponent
 {
 public:
 	Resource<AnimModel>	m_model3D;
-	Handle<Animator> m_animator;
+	Handle<AnimatorSkeletalGameObject> m_animator;
 	SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
 
 	// refer to m_animMeshRenderingBuffer.bones[m_boneId], m_model3D.m_animations.channels[m_boneId]
@@ -36,6 +36,8 @@ protected:
 	}
 
 public:
+	COMPONENT_CLASS(AnimSkeletalGameObject);
+
 	AnimSkeletalGameObject();
 
 	// Inherited via AnimationComponent
@@ -48,7 +50,6 @@ public:
 	virtual void CleanUp();
 	virtual soft::Handle<soft::ClassMetadata> GetMetadata(size_t sign);
 	virtual void OnPropertyChanged(const soft::UnknownAddress& var, const soft::Variant& newValue);
-	virtual const char* GetClassName();
 
 public:
 	void Update(float dt);

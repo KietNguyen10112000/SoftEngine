@@ -16,7 +16,7 @@ AnimationSystem::~AnimationSystem()
 {
 }
 
-void AnimationSystem::AddAnimMeshRenderingBuffer(void* p, Animator* animator)
+void AnimationSystem::AddAnimMeshRenderingBuffer(void* p, AnimatorSkeletalGameObject* animator)
 {
 	auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)p;
 	auto& id = animMeshRenderingBuffer->id;
@@ -34,7 +34,7 @@ void AnimationSystem::AddAnimMeshRenderingBuffer(void* p, Animator* animator)
 	m_animMeshRenderingBufferCount.push_back({ 1,p,animator });
 }
 
-void AnimationSystem::RemoveMeshRenderingBuffer(void* p, Animator* animator)
+void AnimationSystem::RemoveMeshRenderingBuffer(void* p, AnimatorSkeletalGameObject* animator)
 {
 	auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)p;
 	auto& id = animMeshRenderingBuffer->id;
@@ -65,6 +65,13 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	auto& buffer = animMeshRenderingBuffer->buffer;
 	auto animator = counter->animator;
 
+	auto& index = animator->m_aabbKeyFrameIndex;
+	if (animator->m_numUpdateAABB != animator->m_numAnimIterationCount)
+	{
+		index = 0;
+		animator->m_numUpdateAABB = animator->m_numAnimIterationCount;
+	}
+
 	bool update = false;
 
 	m_scene->BeginWrite<false>(buffer);
@@ -76,7 +83,7 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	auto num = write->meshesAABB.size();
 	for (uint32_t i = 0; i < num; i++)
 	{
-		write->meshesAABB[i] = animation.animMeshLocalAABoxKeyFrames[i].boundAABox;
+		write->meshesAABB[i] = animation.animMeshLocalAABoxKeyFrames[i].Find(&index, index, animator->m_t);
 		if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
 		{
 			update = true;
@@ -162,6 +169,9 @@ void AnimationSystem::PrevIteration()
 
 void AnimationSystem::Iteration(float dt)
 {
+	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
+	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+
 	for (auto& data : m_animMeshRenderingBufferCount)
 	{
 		auto animator = data.animator;
