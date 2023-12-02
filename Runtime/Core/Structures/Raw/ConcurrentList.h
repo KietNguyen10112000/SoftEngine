@@ -368,6 +368,8 @@ public:
 	};
 
 public:
+	using Iterator = T*;
+
 	std::vector<T, Alloc>		m_buffer;
 	std::atomic<size_t> m_size		= { 0 };
 	std::atomic<size_t> m_numWriter	= { 0 };

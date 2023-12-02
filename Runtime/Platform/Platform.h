@@ -39,4 +39,6 @@ void BindInput(::soft::Input* input, void* nativeHandle);
 
 String GetExecutablePath();
 
+const char* GetExecutablePathCStr();
+
 NAMESPACE_PLATFORM_END

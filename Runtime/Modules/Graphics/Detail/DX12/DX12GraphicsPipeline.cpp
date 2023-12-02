@@ -14,10 +14,11 @@ void DX12GraphicsParams::SetConstantBuffers(soft::GRAPHICS_SHADER_SPACE::SPACE s
 
 	auto dx12 = DX12Graphics::GetDX12();
 
-	uint32_t startIdx = 0;
+	uint32_t startIdx = 1;
 	
 Begin:
-	auto dx12buffer = (DX12ConstantBuffer*)constantBuffers[startIdx++].get();
+	auto dx12buffer = (DX12ConstantBuffer*)constantBuffers[0].get();
+	dx12buffer->m_fenceValues[dx12buffer->m_viewIdx] = fenceValue;
 	dx12buffer->m_lastFenceValue = fenceValue;
 	auto baseCPUHandle = dx12buffer->GetCurrentCBV();
 
@@ -33,7 +34,7 @@ Begin:
 	{
 		auto offset = i - startIdx;
 		dx12buffer = (DX12ConstantBuffer*)constantBuffers[i].get();
-		dx12buffer->m_fenceValues[(dx12buffer->m_viewIdx + dx12buffer->m_numViews - 1) % dx12buffer->m_numViews] = fenceValue;
+		dx12buffer->m_fenceValues[dx12buffer->m_viewIdx] = fenceValue;
 
 		dx12buffer->m_lastFenceValue = fenceValue;
 

@@ -94,6 +94,17 @@ void MeshBasicRenderer::OnPropertyChanged(const UnknownAddress& var, const Varia
 	}
 }
 
+Handle<Serializable> MeshBasicRenderer::Clone(Serializer* serializer)
+{
+	auto ret = mheap::New<MeshBasicRenderer>();
+
+	ret->m_model3D = m_model3D;
+	ret->m_mesh = m_mesh;
+	ret->m_texture = m_texture;
+
+	return ret;
+}
+
 void MeshBasicRenderer::OnComponentAdded()
 {
 }

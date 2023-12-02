@@ -172,21 +172,35 @@ void AnimationSystem::Iteration(float dt)
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 
-	for (auto& data : m_animMeshRenderingBufferCount)
+	TaskUtils::ForEachStdVector(m_animMeshRenderingBufferCount, 
+		[this, dt](AnimMeshRenderingBufferCounter& data, ID) 
+		{
+			auto animator = data.animator;
+			animator->Update(dt);
+			CalculateAABBForMeshRenderingBuffer(&data);
+		},
+		TaskSystem::GetWorkerCount()
+	);
+
+	TaskUtils::ForEachStdVector(m_animSkeletalGameObjects,
+		[dt](AnimSkeletalGameObject* comp, ID)
+		{
+			comp->Update(dt);
+		},
+		TaskSystem::GetWorkerCount()
+	);
+
+	/*for (auto& data : m_animMeshRenderingBufferCount)
 	{
 		auto animator = data.animator;
 		animator->Update(dt);
+		CalculateAABBForMeshRenderingBuffer(&data);
 	}
 
 	for (auto& comp : m_animSkeletalGameObjects)
 	{
 		comp->Update(dt);
-	}
-
-	for (auto& data : m_animMeshRenderingBufferCount)
-	{
-		CalculateAABBForMeshRenderingBuffer(&data);
-	}
+	}*/
 }
 
 void AnimationSystem::PostIteration()

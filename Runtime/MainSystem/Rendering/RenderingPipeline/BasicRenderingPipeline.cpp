@@ -59,7 +59,7 @@ BasicAnimModelRenderingPass::BasicAnimModelRenderingPass()
 
 	GRAPHICS_CONSTANT_BUFFER_DESC cbDesc = {};
 	cbDesc.bufferSize = sizeof(Mat4) * MAX_BONES;
-	cbDesc.perferNumRoom = 512;
+	cbDesc.perferNumRoom = 1024;
 	graphics->CreateConstantBuffers(1, &cbDesc, &m_bonesBuffer);
 
 	{
@@ -424,7 +424,7 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 	{
 		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
 
-		graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
+		//graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
 
 		auto* shaderBuffer = comp->m_animMeshRenderingBuffer.get();
 		if (prevBuffer != (void*)shaderBuffer)

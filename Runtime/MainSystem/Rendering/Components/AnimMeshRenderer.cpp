@@ -27,6 +27,43 @@ void AnimMeshRenderer::OnPropertyChanged(const UnknownAddress& var, const Varian
 {
 }
 
+Handle<Serializable> AnimMeshRenderer::Clone(Serializer* serializer)
+{
+	struct CloneParam
+	{
+		AnimMeshRenderer* src;
+		AnimMeshRenderer* dest;
+	};
+
+	auto ret = mheap::New<AnimMeshRenderer>();
+
+	ret->m_model3D = m_model3D;
+	ret->m_mesh = m_mesh;
+	ret->m_texture = m_texture;
+
+	auto callbackRunner = serializer->GetCallbackRunner();
+	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
+
+			auto& addresses = serializer->GetAddressMap();
+
+			auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
+			assert(it != addresses.end());
+
+			dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
+		}
+	);
+
+	auto param = callbackRunner->CreateParam<CloneParam>(&task);
+	param->src = this;
+	param->dest = ret.Get();
+
+	callbackRunner->RunAsync(&task);
+
+	return ret;
+}
+
 void AnimMeshRenderer::OnComponentAdded()
 {
 }

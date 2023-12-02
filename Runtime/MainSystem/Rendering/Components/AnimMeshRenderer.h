@@ -33,6 +33,8 @@ public:
 
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
+	virtual Handle<Serializable> Clone(Serializer* serializer) override;
+
 	virtual void OnComponentAdded() override;
 
 	virtual void OnComponentRemoved() override;

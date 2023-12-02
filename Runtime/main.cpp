@@ -15,6 +15,8 @@
 
 #include "StartupConfig.h"
 
+#include "Platform/Platform.h"
+
 //#include "windows.h"
 //#define _CRTDBG_MAP_ALLOC //to get more details
 //#include <stdlib.h>  
@@ -38,12 +40,18 @@ inline void ProcessArgs(int argc, const char** argv)
 {
 	using namespace soft;
 
-	StartupConfig::Get().executablePath = argv[0];
+	StartupConfig::Get().executablePath = platform::GetExecutablePathCStr();
 
 	size_t id = -1;
 	for (int i = 1; i < argc; i++)
 	{
 		std::string_view str = argv[i];
+
+		if ((id = str.find("--NReservedThread=")) != std::string_view::npos)
+		{
+			StartupConfig::Get().reservedThread = std::stoi(str.substr(id + 18).data());
+			continue;
+		}
 
 		if ((id = str.find("--NThread=")) != std::string_view::npos)
 		{
@@ -82,12 +90,12 @@ int main(int argc, const char** argv)
 
 	ManagedLocalScope::ClearStack();
 
-	ProcessArgs(argc, argv);
-
 	MemoryInitialize();
 	Random::Initialize();
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
+
+	ProcessArgs(argc, argv);
 
 	//struct AllocInfo
 	//{

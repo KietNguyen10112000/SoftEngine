@@ -52,40 +52,45 @@ void AnimSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, const 
 
 Handle<Serializable> AnimSkeletalGameObject::Clone(Serializer* serializer)
 {
+	struct CloneParam
+	{
+		AnimSkeletalGameObject* src;
+		AnimSkeletalGameObject* dest;
+	};
+
 	auto ret = mheap::New<AnimSkeletalGameObject>();
 
 	ret->m_model3D = m_model3D;
 	
 	auto& addresses = serializer->GetAddressMap();
 
-	{
-		// clone animator
-		auto it = addresses.find(m_animator.Get());
-		if (it != addresses.end())
+	auto callbackRunner = serializer->GetCallbackRunner();
+	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
 		{
-			ret->m_animator = (AnimatorSkeletalGameObject*)(*it);
-		}
-		else
-		{
-			auto animator = m_animator->Clone(serializer);
+			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
 
-			// the "Clone()" function of m_animator can insert shared resource to "addresses"
-			it = addresses.find(m_animator.Get());
-			if (it == addresses.end())
-			{
-				addresses.insert({ m_animator.Get(), animator.Get() });
-			}
+			auto& addresses = serializer->GetAddressMap();
 
-			ret->m_animator = animator;
+			// clone animator
+			auto it = addresses.find(src->m_animator.Get());
+			assert(it != addresses.end());
+
+			dest->m_animator = (AnimatorSkeletalGameObject*)(it->second);
 		}
-	}
+	);
+
+	auto param = callbackRunner->CreateParam<CloneParam>(&task);
+	param->src = this;
+	param->dest = ret.Get();
+
+	callbackRunner->RunAsync(&task);
 	
 	{
 		// clone render buffer
 		auto it = addresses.find(m_animMeshRenderingBuffer.get());
 		if (it != addresses.end())
 		{
-			ret->m_animMeshRenderingBuffer = *(decltype(m_animMeshRenderingBuffer)*)(*it);
+			ret->m_animMeshRenderingBuffer = *(decltype(m_animMeshRenderingBuffer)*)(it->second);
 		}
 		else
 		{

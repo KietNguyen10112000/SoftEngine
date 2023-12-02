@@ -49,6 +49,8 @@
 #include "MainSystem/Scripting/ScriptMeta.h"
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
 
+#include "Common/Base/Serializer.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -292,13 +294,32 @@ void Runtime::Setup()
 
 	transform = {};
 	transform.Scale() = { 0.01f,0.01f,0.01f };
-	//auto object = ResourceUtils::LoadAnimModel("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
+	auto object = ResourceUtils::LoadAnimModel("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
 	//auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
-	auto object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	//auto object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
 	//auto object = ResourceUtils::LoadAnimModel("model/vampires/dancing_vampire.dae");
-	//object->SetLocalTransform(transform);
+	object->SetLocalTransform(transform);
 	scene->AddObject(object);
+
+	constexpr int64_t NUM = 25;
+
+	for (int64_t y = -NUM / 2; y < NUM / 2; y++)
+	{
+		for (int64_t x = -NUM / 2; x < NUM / 2; x++)
+		{
+			Serializer serializer;
+			auto cloned = StaticCast<GameObject>(serializer.Clone(object.Get()));
+
+			transform = {};
+			transform.Scale() = { 0.01f,0.01f,0.01f };
+			transform.Position() = { x * 3,0,y * 3 };
+
+			cloned->SetLocalTransform(transform);
+
+			scene->AddObject(cloned);
+		}
+	}
 
 	//transform = {};
 	//transform.Position() = { 0,0,0 };

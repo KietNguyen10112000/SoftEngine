@@ -286,16 +286,26 @@ void GameObject::OnPropertyChanged(const UnknownAddress& var, const Variant& new
 
 Handle<Serializable> GameObject::Clone(Serializer* serializer)
 {
-	assert(!IsInAnyScene());
+	//assert(!IsInAnyScene());
+
+	auto& addresses = serializer->GetAddressMap();
 
 	Handle<GameObject> ret = mheap::New<GameObject>();
+
+	addresses.insert({ this, ret.Get() });
 
 	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 	{
 		auto& comp = m_mainComponents[i];
 		if (comp)
 		{
-			ret->m_mainComponents[i] = StaticCast<MainComponent>(comp->Clone(serializer));
+			auto newComp = comp->Clone(serializer);
+			if (newComp)
+			{
+				ret->m_mainComponents[i] = StaticCast<MainComponent>(newComp);
+				ret->m_mainComponents[i]->m_object = ret;
+				((HasMainComponentState*)ret->m_hasMainComponent.UpToDateRead())->hasComponents[i] = true;
+			}
 		}
 	}
 
@@ -309,7 +319,11 @@ Handle<Serializable> GameObject::Clone(Serializer* serializer)
 	for (size_t i = 0; i < NUM_TRANSFORM_BUFFERS; i++)
 	{
 		ret->m_localTransform[i] = m_localTransform[i];
+		ret->m_globalTransformMat[i] = m_globalTransformMat[i];
+		ret->m_localTransformMat[i] = m_localTransformMat[i];
 	}
+
+	ret->Name() = Name();
 
 	return ret;
 }

@@ -476,4 +476,29 @@ String GetExecutablePath()
 #endif
 }
 
+const char* GetExecutablePathCStr()
+{
+#ifdef _WIN32
+    static char buffer[MAX_PATH] = {};
+
+    if (buffer[0] == 0)
+    {
+        wchar_t path[MAX_PATH] = { 0 };
+        auto len = GetModuleFileNameW(NULL, path, MAX_PATH);
+
+        int size_needed = WideCharToMultiByte(CP_UTF8, 0, &path[0], (int)len, NULL, 0, NULL, NULL);
+        std::string strTo(size_needed, 0);
+        WideCharToMultiByte(CP_UTF8, 0, &path[0], (int)len, &strTo[0], size_needed, NULL, NULL);
+
+        ::memcpy(buffer, strTo.c_str(), sizeof(char) * strTo.size());
+    }
+
+    return buffer;
+#else
+    static char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    return std::string(result, (count > 0) ? count : 0);
+#endif
+}
+
 NAMESPACE_PLATFORM_END

@@ -17,7 +17,7 @@ public:
 
 	Resource<AnimModel>	m_model3D;
 
-	SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
+	//SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
 
 	Array<Handle<GameObject>> m_animMeshRendererObjs;
 
@@ -108,6 +108,8 @@ public:
 	virtual soft::Handle<soft::ClassMetadata> GetMetadata(size_t sign);
 
 	virtual void OnPropertyChanged(const soft::UnknownAddress& var, const soft::Variant& newValue);
+
+	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 
 };
 

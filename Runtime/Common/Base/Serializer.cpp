@@ -52,4 +52,12 @@ void Serializer::Serialize(Serializable* object)
 	m_byteStream->Set(idx, serializedSize);
 }
 
+Handle<Serializable> Serializer::Clone(Serializable* obj)
+{
+	BeginClone();
+	auto ret = obj->Clone(this);
+	EndClone();
+	return ret;
+}
+
 NAMESPACE_END

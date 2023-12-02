@@ -4,6 +4,7 @@
 
 #include "../Stream/ByteStream.h"
 
+#include "Common/Base/AsyncTaskRunnerRaw.h"
 
 NAMESPACE_BEGIN
 
@@ -22,7 +23,9 @@ private:
 
 	std::map<ID, void*> m_IDMap;
 
-	std::set<void*, void*> m_addressMap;
+	std::map<void*, void*> m_addressMap;
+
+	raw::AsyncTaskRunner<Serializer> m_asyncTaskRunner;
 
 public:
 	~Serializer();
@@ -40,6 +43,16 @@ public:
 	{
 		auto ret = Deserialize(SerializableType::___GetClassName());
 		return DynamicCast<SerializableType>(ret);
+	}
+
+	inline void BeginClone()
+	{
+
+	}
+
+	inline void EndClone()
+	{
+		m_asyncTaskRunner.ProcessAllTasks(this);
 	}
 
 	inline auto& GetWriteStream()
@@ -63,6 +76,12 @@ public:
 		return m_addressMap;
 	}
 
+	inline auto* GetCallbackRunner()
+	{
+		return &m_asyncTaskRunner;
+	}
+
+	Handle<Serializable> Clone(Serializable* obj);
 };
 
 NAMESPACE_END

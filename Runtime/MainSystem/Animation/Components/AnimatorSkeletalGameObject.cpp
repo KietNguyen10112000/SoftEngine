@@ -217,4 +217,57 @@ void AnimatorSkeletalGameObject::OnPropertyChanged(const soft::UnknownAddress& v
 	}
 }
 
+Handle<Serializable> AnimatorSkeletalGameObject::Clone(Serializer* serializer)
+{
+	struct CloneParam
+	{
+		AnimatorSkeletalGameObject* src;
+		AnimatorSkeletalGameObject* dest;
+	};
+
+	auto ret = mheap::New<AnimatorSkeletalGameObject>();
+
+	auto& addresses = serializer->GetAddressMap();
+
+	{
+		addresses.insert({ this, ret.Get() });
+	}
+
+	auto callbackRunner = serializer->GetCallbackRunner();
+	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
+
+			auto& addresses = serializer->GetAddressMap();
+
+			auto& objs = src->m_animMeshRendererObjs;
+			for (auto& obj : objs)
+			{
+				auto it = addresses.find(obj.Get());
+				assert(it != addresses.end());
+				dest->m_animMeshRendererObjs.Push((GameObject*)(it->second));
+			}
+
+			/*{
+				auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
+				assert(it != addresses.end());
+				dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
+			}*/
+		}
+	);
+
+	auto param = callbackRunner->CreateParam<CloneParam>(&task);
+	param->src = this;
+	param->dest = ret.Get();
+
+	callbackRunner->RunAsync(&task);
+
+	ret->m_animationId = m_animationId;
+	ret->m_model3D = m_model3D;
+	ret->m_tickDuration = m_tickDuration;
+	ret->m_ticksPerSecond = m_ticksPerSecond;
+
+	return ret;
+}
+
 NAMESPACE_END
