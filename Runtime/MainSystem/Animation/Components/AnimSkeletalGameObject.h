@@ -26,7 +26,7 @@ public:
 
 	ID m_numAnimIterationCount = 0;
 
-	KeyFramesIndex m_keyFramesIndex;
+	KeyFramesIndex m_keyFramesIndex = {};
 
 protected:
 	TRACEABLE_FRIEND();
@@ -50,6 +50,8 @@ public:
 	virtual void CleanUp();
 	virtual soft::Handle<soft::ClassMetadata> GetMetadata(size_t sign);
 	virtual void OnPropertyChanged(const soft::UnknownAddress& var, const soft::Variant& newValue);
+
+	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 
 public:
 	void Update(float dt);

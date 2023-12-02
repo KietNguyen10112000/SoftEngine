@@ -50,6 +50,61 @@ void AnimSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, const 
 {
 }
 
+Handle<Serializable> AnimSkeletalGameObject::Clone(Serializer* serializer)
+{
+	auto ret = mheap::New<AnimSkeletalGameObject>();
+
+	ret->m_model3D = m_model3D;
+	
+	auto& addresses = serializer->GetAddressMap();
+
+	{
+		// clone animator
+		auto it = addresses.find(m_animator.Get());
+		if (it != addresses.end())
+		{
+			ret->m_animator = (AnimatorSkeletalGameObject*)(*it);
+		}
+		else
+		{
+			auto animator = m_animator->Clone(serializer);
+
+			// the "Clone()" function of m_animator can insert shared resource to "addresses"
+			it = addresses.find(m_animator.Get());
+			if (it == addresses.end())
+			{
+				addresses.insert({ m_animator.Get(), animator.Get() });
+			}
+
+			ret->m_animator = animator;
+		}
+	}
+	
+	{
+		// clone render buffer
+		auto it = addresses.find(m_animMeshRenderingBuffer.get());
+		if (it != addresses.end())
+		{
+			ret->m_animMeshRenderingBuffer = *(decltype(m_animMeshRenderingBuffer)*)(*it);
+		}
+		else
+		{
+			AnimModel::AnimMeshRenderingBufferData buffer;
+			buffer.bones.resize(m_model3D->m_boneIds.size());
+			buffer.meshesAABB.resize(m_model3D->m_animMeshes.size());
+			auto buf = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
+			buf->buffer.Initialize(buffer);
+
+			ret->m_animMeshRenderingBuffer = buf;
+			addresses.insert({ m_animMeshRenderingBuffer.get(), &ret->m_animMeshRenderingBuffer });
+		}
+	}
+	
+	ret->m_boneId = m_boneId;
+
+	return ret;
+}
+
 void AnimSkeletalGameObject::Update(float dt)
 {
 	auto& globalTransform = GetGameObject()->ReadGlobalTransformMat();

@@ -15,6 +15,8 @@ NAMESPACE_BEGIN
 class AnimModel : public Model3DBasic
 {
 public:
+	static const char* CACHE_EXTENSION;
+
 	using NonWeightVertex = Model3DBasic::Vertex;
 	using NonAnimMesh = Model3DBasic::Mesh;
 

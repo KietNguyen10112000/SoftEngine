@@ -284,4 +284,34 @@ void GameObject::OnPropertyChanged(const UnknownAddress& var, const Variant& new
 	}
 }
 
+Handle<Serializable> GameObject::Clone(Serializer* serializer)
+{
+	assert(!IsInAnyScene());
+
+	Handle<GameObject> ret = mheap::New<GameObject>();
+
+	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	{
+		auto& comp = m_mainComponents[i];
+		if (comp)
+		{
+			ret->m_mainComponents[i] = StaticCast<MainComponent>(comp->Clone(serializer));
+		}
+	}
+
+	auto& children = ReadChildren();
+	for (size_t i = 0; i < children.size(); i++)
+	{
+		auto child = StaticCast<GameObject>(children[i]->Clone(serializer));
+		ret->AddChild(child);
+	}
+
+	for (size_t i = 0; i < NUM_TRANSFORM_BUFFERS; i++)
+	{
+		ret->m_localTransform[i] = m_localTransform[i];
+	}
+
+	return ret;
+}
+
 NAMESPACE_END

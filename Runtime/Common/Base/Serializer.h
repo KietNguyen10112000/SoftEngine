@@ -22,6 +22,8 @@ private:
 
 	std::map<ID, void*> m_IDMap;
 
+	std::set<void*, void*> m_addressMap;
+
 public:
 	~Serializer();
 
@@ -54,6 +56,11 @@ public:
 	inline auto& GetIDMap()
 	{
 		return m_IDMap;
+	}
+
+	inline auto& GetAddressMap()
+	{
+		return m_addressMap;
 	}
 
 };

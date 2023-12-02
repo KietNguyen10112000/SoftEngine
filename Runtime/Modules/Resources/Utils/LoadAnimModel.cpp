@@ -973,6 +973,67 @@ void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<
 	ProcessNode(ctx, obj, model, diffuseTextures, scene, scene->mRootNode);
 }
 
+void AnimModelCreateCache(AnimModelLoadingCtx* ctx, AnimModel* model, ByteStream& stream, const String& streamPath)
+{
+	{
+		// write aabb cache
+
+		auto& animations = model->m_animations;
+		stream.Put(animations.size());
+
+		for (auto& animation : animations)
+		{
+			stream.Put(animation.animMeshLocalAABoxKeyFrames.size());
+
+			for (auto& aabbKeyFrames : animation.animMeshLocalAABoxKeyFrames)
+			{
+				stream.Put(aabbKeyFrames.aaBox.size());
+
+				for (auto& aabbKeyFrame : aabbKeyFrames.aaBox)
+				{
+					stream.Put(aabbKeyFrame);
+				}
+
+				stream.Put(aabbKeyFrames.boundAABox);
+			}
+		}
+	}
+
+	FileSystem::Get()->WriteStream(streamPath.c_str(), &stream);
+}
+
+void AnimModelReadCache(AnimModelLoadingCtx* ctx, AnimModel* model, ByteStream& stream)
+{
+	{
+		// read aabb cache
+
+		auto& animations = model->m_animations;
+
+		size_t temp;
+		stream.Pick(temp);
+		animations.resize(temp);
+
+		for (auto& animation : animations)
+		{
+			stream.Pick(temp);
+			animation.animMeshLocalAABoxKeyFrames.resize(temp);
+
+			for (auto& aabbKeyFrames : animation.animMeshLocalAABoxKeyFrames)
+			{
+				stream.Pick(temp);
+				aabbKeyFrames.aaBox.resize(temp);
+
+				for (auto& aabbKeyFrame : aabbKeyFrames.aaBox)
+				{
+					stream.Pick(aabbKeyFrame);
+				}
+
+				stream.Pick(aabbKeyFrames.boundAABox);
+			}
+		}
+	}
+}
+
 Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 {
 	auto fs = FileSystem::Get();
@@ -1075,56 +1136,68 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 
 	LoadAnimModelAnimation(&ctx, model3D, scene);
 
-	FlattenAnimModelHierarchy(&ctx, model3D, scene);
-
-	//size_t count = 0;
-
-	auto numTasks = model3D->m_animMeshes.size() * model3D->m_animations.size();
-	std::vector<Task> tasks;
-	tasks.resize(numTasks);
-	
-	std::vector<AnimModelLoadingCtx::CalAABBTaskParam1> taskParams;
-	taskParams.resize(numTasks);
-
-	ctx.calAABBTaskCtxs.resize(TaskSystem::GetWorkerCount());
-
-	size_t count = 0;
-	for (auto& animMesh : model3D->m_animMeshes)
+	ByteStream stream;
+	path = "Resources/" + path;
+	auto streamPath = (path + AnimModel::CACHE_EXTENSION);
+	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
 	{
-		for (auto& animation : model3D->m_animations)
+		FlattenAnimModelHierarchy(&ctx, model3D, scene);
+
+		//size_t count = 0;
+
+		auto numTasks = model3D->m_animMeshes.size() * model3D->m_animations.size();
+		std::vector<Task> tasks;
+		tasks.resize(numTasks);
+
+		std::vector<AnimModelLoadingCtx::CalAABBTaskParam1> taskParams;
+		taskParams.resize(numTasks);
+
+		ctx.calAABBTaskCtxs.resize(TaskSystem::GetWorkerCount());
+
+		size_t count = 0;
+		for (auto& animMesh : model3D->m_animMeshes)
 		{
-			//LoadAABoxAnimMesh(&ctx, model3D, &animMesh, &animation, scene);
-			//std::cout << count << "\n";
-			//if (count++ == 4) break;
-			//break;
-
-			auto& task = tasks[count];
-			auto& param = taskParams[count];
-
-			task.Params() = &param;
-			task.Entry() = [](void* p)
+			for (auto& animation : model3D->m_animations)
 			{
-				TASK_SYSTEM_UNPACK_PARAM_REF_5(AnimModelLoadingCtx::CalAABBTaskParam1, p, ctx, animation, mesh, model, scene);
+				//LoadAABoxAnimMesh(&ctx, model3D, &animMesh, &animation, scene);
+				//std::cout << count << "\n";
+				//if (count++ == 4) break;
+				//break;
 
-				LoadAABoxAnimMesh(param, ctx, model, mesh, animation, scene);
-			};
+				auto& task = tasks[count];
+				auto& param = taskParams[count];
 
-			param.animation = &animation;
-			param.ctx = &ctx;
-			param.mesh = &animMesh;
-			param.model = model3D;
-			param.scene = scene;
+				task.Params() = &param;
+				task.Entry() = [](void* p)
+				{
+					TASK_SYSTEM_UNPACK_PARAM_REF_5(AnimModelLoadingCtx::CalAABBTaskParam1, p, ctx, animation, mesh, model, scene);
 
-			//task.Entry()(task.Params());
+					LoadAABoxAnimMesh(param, ctx, model, mesh, animation, scene);
+				};
 
-			count++;
+				param.animation = &animation;
+				param.ctx = &ctx;
+				param.mesh = &animMesh;
+				param.model = model3D;
+				param.scene = scene;
+
+				//task.Entry()(task.Params());
+
+				count++;
+			}
+
+			//std::cout << count << "\n";
+			//if (count++ == 10) break;
 		}
 
-		//std::cout << count << "\n";
-		//if (count++ == 10) break;
-	}
+		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 
-	TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
+		AnimModelCreateCache(&ctx, model3D, stream, streamPath);
+	}
+	else
+	{
+		AnimModelReadCache(&ctx, model3D, stream);
+	}
 
 	ctx.animator->m_animationId = 0;
 	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
