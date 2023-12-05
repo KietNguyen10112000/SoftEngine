@@ -15,6 +15,8 @@
 #include "imgui/backends/imgui_impl_win32.h"
 #include "imgui/backends/imgui_impl_dx12.h"
 
+#include "Core/Time/Clock.h"
+
 
 NAMESPACE_DX12_BEGIN
 
@@ -1344,6 +1346,8 @@ void DX12Graphics::WaitForFenceValue(uint64_t value)
 {
 }
 
+//size_t g_testTime = 0;
+
 void DX12Graphics::BeginFrame()
 {
     m_frameCount++;
@@ -1373,10 +1377,19 @@ void DX12Graphics::BeginFrame()
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
+
+    //g_testTime = Clock::ms::now();
 }
 
 void DX12Graphics::EndFrame()
 {
+   /* auto dt = Clock::ms::now() - g_testTime;
+    ImGui::Begin("Debug");
+
+    ImGui::Text("Render time %d ms", dt);
+
+    ImGui::End();*/
+
     auto cmdList = GetCmdList();
     ExecuteCurrentCmdList();
 

@@ -140,11 +140,11 @@ void AnimatorSkeletalGameObject::Play(ID animationId, float blendTime)
 	taskRunner->RunAsync(&task);
 }
 
-void AnimatorSkeletalGameObject::Serialize(soft::Serializer* serializer)
+void AnimatorSkeletalGameObject::Serialize(Serializer* serializer)
 {
 }
 
-void AnimatorSkeletalGameObject::Deserialize(soft::Serializer* serializer)
+void AnimatorSkeletalGameObject::Deserialize(Serializer* serializer)
 {
 }
 
@@ -152,7 +152,7 @@ void AnimatorSkeletalGameObject::CleanUp()
 {
 }
 
-soft::Handle<soft::ClassMetadata> AnimatorSkeletalGameObject::GetMetadata(size_t sign)
+Handle<ClassMetadata> AnimatorSkeletalGameObject::GetMetadata(size_t sign)
 {
 	auto metadata = mheap::New<ClassMetadata>(GetClassName(), this);
 
@@ -204,7 +204,7 @@ soft::Handle<soft::ClassMetadata> AnimatorSkeletalGameObject::GetMetadata(size_t
 	return metadata;
 }
 
-void AnimatorSkeletalGameObject::OnPropertyChanged(const soft::UnknownAddress& var, const soft::Variant& newValue)
+void AnimatorSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 	if (var.Is(&m_animationId))
 	{

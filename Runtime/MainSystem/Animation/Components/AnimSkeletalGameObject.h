@@ -45,11 +45,11 @@ public:
 	virtual void OnComponentRemoved() override;
 	virtual void OnTransformChanged() override;
 	virtual AABox GetGlobalAABB() override;
-	virtual void Serialize(soft::Serializer* serializer);
-	virtual void Deserialize(soft::Serializer* serializer);
+	virtual void Serialize(Serializer* serializer);
+	virtual void Deserialize(Serializer* serializer);
 	virtual void CleanUp();
-	virtual soft::Handle<soft::ClassMetadata> GetMetadata(size_t sign);
-	virtual void OnPropertyChanged(const soft::UnknownAddress& var, const soft::Variant& newValue);
+	virtual Handle<ClassMetadata> GetMetadata(size_t sign);
+	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue);
 
 	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 

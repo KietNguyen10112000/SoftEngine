@@ -126,7 +126,11 @@ void RenderingSystem::CollectInputForEachCamera()
 			querySession->ClearPrevQueryResult();
 			queryStructure->QueryFrustum(frustum, querySession);
 
-			int x = 3;
+			auto& pipeline = camera->m_pipeline;
+			auto& input = querySession->Result();
+			pipeline->SetInput((RenderingComponent**)input.data(), input.size());
+
+			//int x = 3;
 		};
 
 		task.Params() = &params;
@@ -165,13 +169,13 @@ void RenderingSystem::RenderForEachCamera()
 	{
 		auto& cam = m_cameras[i];
 		auto& pipeline = cam->m_pipeline;
-		auto& input = m_collectInputForCameraRets[i]->Result();
+		//auto& input = m_collectInputForCameraRets[i]->Result();
 
 		EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_RENDER_CAMERA, cam);
 
 		SetBuiltinConstantBufferForCamera(cam);
 
-		pipeline->SetInput((RenderingComponent**)input.data(), input.size());
+		//pipeline->SetInput((RenderingComponent**)input.data(), input.size());
 		pipeline->Run();
 
 		EventDispatcher()->Dispatch(EVENT::EVENT_END_RENDER_CAMERA, cam);

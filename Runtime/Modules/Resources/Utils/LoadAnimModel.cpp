@@ -78,6 +78,7 @@ struct AnimModelLoadingCtx
 
 	SharedPtr<AnimModel::AnimMeshRenderingBuffer> animMeshRenderingBuffer;
 	AnimatorSkeletalGameObject* animator;
+	//AnimatorSkeletalArray* animatorArray;
 
 	std::vector<Node> nodes;
 
@@ -90,6 +91,38 @@ struct AnimModelLoadingCtx
 	std::map<String, GameObject*> objectMap;
 
 	std::vector<CalAABBTaskCtx> calAABBTaskCtxs;
+
+	inline AnimModelLoadingCtx(AnimModel* model, const aiScene* scene)
+	{
+		auto& nonAnimMeshes = model->m_meshes;
+		auto& animMeshes = model->m_animMeshes;
+		uint32_t nonAnimMeshCount = 0;
+		uint32_t animMeshCount = 0;
+		meshes.resize(scene->mNumMeshes);
+
+		for (uint32_t i = 0; i < scene->mNumMeshes; i++)
+		{
+			auto aiMesh = scene->mMeshes[i];
+
+			if (!aiMesh->HasBones())
+			{
+				meshes[i] = &nonAnimMeshes[nonAnimMeshCount];
+				nonAnimMeshCount++;
+				continue;
+			}
+
+			meshes[i] = &animMeshes[animMeshCount];
+			animMeshCount++;
+		}
+
+		AnimModel::AnimMeshRenderingBufferData buffer;
+		buffer.bones.resize(model->m_boneIds.size());
+		buffer.meshesAABB.resize(model->m_animMeshes.size());
+		animMeshRenderingBuffer = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
+		animMeshRenderingBuffer->buffer.Initialize(buffer);
+
+		animMeshesVertices.resize(model->m_animMeshes.size());
+	}
 };
 
 void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
@@ -1034,28 +1067,9 @@ void AnimModelReadCache(AnimModelLoadingCtx* ctx, AnimModel* model, ByteStream& 
 	}
 }
 
-Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
+void LoadMaterialsForAnimModel(const String& basePath, const String& defaultDiffusePath, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
 {
 	auto fs = FileSystem::Get();
-
-	if (defaultDiffusePath.empty())
-	{
-		defaultDiffusePath = Texture2D::DEFAULT_FILE;
-	}
-
-	auto ret = mheap::New<GameObject>();
-	auto model3D = resource::Load<AnimModel>(path, true);
-
-	auto animator = ret->NewComponent<AnimatorSkeletalGameObject>();
-
-	std::vector<Resource<Texture2D>> diffuseTextures;
-
-	std::string_view pathview(path.c_str());
-	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
-
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
-		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
 
 	if (scene->HasMaterials())
 	{
@@ -1087,61 +1101,19 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 
 	diffuseTextures.push_back(resource::Load<Texture2D>(defaultDiffusePath));
 
-	LoadAllMeshsForModel3DBasic(model3D, scene, false);
+}
 
-	LoadAllAnimMeshsForAnimModel(model3D, scene);
-
-	AnimModelLoadingCtx ctx;
-
-	constexpr static auto PrepareCtx = [](AnimModelLoadingCtx* ctx, AnimModel* model, const aiScene* scene)
-	{
-		auto& nonAnimMeshes = model->m_meshes;
-		auto& animMeshes = model->m_animMeshes;
-		uint32_t nonAnimMeshCount = 0;
-		uint32_t animMeshCount = 0;
-		ctx->meshes.resize(scene->mNumMeshes);
-
-		for (uint32_t i = 0; i < scene->mNumMeshes; i++)
-		{
-			auto aiMesh = scene->mMeshes[i];
-
-			if (!aiMesh->HasBones())
-			{
-				ctx->meshes[i] = &nonAnimMeshes[nonAnimMeshCount];
-				nonAnimMeshCount++;
-				continue;
-			}
-
-			ctx->meshes[i] = &animMeshes[animMeshCount];
-			animMeshCount++;
-		}
-
-
-		AnimModel::AnimMeshRenderingBufferData buffer;
-		buffer.bones.resize(model->m_boneIds.size());
-		buffer.meshesAABB.resize(model->m_animMeshes.size());
-		ctx->animMeshRenderingBuffer = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
-		ctx->animMeshRenderingBuffer->buffer.Initialize(buffer);
-
-		ctx->animMeshesVertices.resize(model->m_animMeshes.size());
-	};
-
-	PrepareCtx(&ctx, model3D, scene);
-
-	ctx.animator = animator.Get();
-	ctx.animator->m_animMeshRendererObjs.Resize(model3D->m_animMeshes.size());
-	ctx.animator->m_model3D = model3D;
-
-	LoadAnimModelHierarchy(&ctx, ret, model3D, diffuseTextures, scene);
-
-	LoadAnimModelAnimation(&ctx, model3D, scene);
-
+void CreateAABoxKeyFramesForAnimModel(String path, AnimModelLoadingCtx& ctx, Resource<AnimModel>& model3D, const aiScene* scene)
+{
 	ByteStream stream;
 	path = "Resources/" + path;
 	auto streamPath = (path + AnimModel::CACHE_EXTENSION);
 	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
 	{
-		FlattenAnimModelHierarchy(&ctx, model3D, scene);
+		if (ctx.nodes.empty())
+		{
+			FlattenAnimModelHierarchy(&ctx, model3D, scene);
+		}
 
 		//size_t count = 0;
 
@@ -1198,6 +1170,100 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 	{
 		AnimModelReadCache(&ctx, model3D, stream);
 	}
+}
+
+Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
+{
+	auto fs = FileSystem::Get();
+
+	if (defaultDiffusePath.empty())
+	{
+		defaultDiffusePath = Texture2D::DEFAULT_FILE;
+	}
+
+	auto ret = mheap::New<GameObject>();
+	auto model3D = resource::Load<AnimModel>(path, true);
+
+	auto animator = ret->NewComponent<AnimatorSkeletalGameObject>();
+
+	std::vector<Resource<Texture2D>> diffuseTextures;
+
+	std::string_view pathview(path.c_str());
+	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	LoadMaterialsForAnimModel(basePath, defaultDiffusePath, diffuseTextures, scene);
+	
+	LoadAllMeshsForModel3DBasic(model3D, scene, false);
+
+	LoadAllAnimMeshsForAnimModel(model3D, scene);
+
+	AnimModelLoadingCtx ctx(model3D, scene);
+
+	ctx.animator = animator.Get();
+	ctx.animator->m_animMeshRendererObjs.Resize(model3D->m_animMeshes.size());
+	ctx.animator->m_model3D = model3D;
+
+	LoadAnimModelHierarchy(&ctx, ret, model3D, diffuseTextures, scene);
+
+	LoadAnimModelAnimation(&ctx, model3D, scene);
+
+	CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+
+	ctx.animator->m_animationId = 0;
+	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
+	ctx.animator->m_tickDuration = model3D->m_animations[0].tickDuration;
+
+	//ctx.animator->m_durationRatio /= 20.0f;
+
+	return ret;
+}
+
+Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
+{
+	auto fs = FileSystem::Get();
+
+	if (defaultDiffusePath.empty())
+	{
+		defaultDiffusePath = Texture2D::DEFAULT_FILE;
+	}
+
+	auto ret = mheap::New<GameObject>();
+	auto model3D = resource::Load<AnimModel>(path, true);
+
+	auto animator = ret->NewComponent<AnimatorSkeletalGameObject>();
+
+	std::vector<Resource<Texture2D>> diffuseTextures;
+
+	std::string_view pathview(path.c_str());
+	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	LoadMaterialsForAnimModel(basePath, defaultDiffusePath, diffuseTextures, scene);
+
+	LoadAllMeshsForModel3DBasic(model3D, scene, false);
+
+	LoadAllAnimMeshsForAnimModel(model3D, scene);
+
+	AnimModelLoadingCtx ctx(model3D, scene);
+
+	ctx.animator = animator.Get();
+	ctx.animator->m_animMeshRendererObjs.Resize(model3D->m_animMeshes.size());
+	ctx.animator->m_model3D = model3D;
+
+	FlattenAnimModelHierarchy(&ctx, model3D, scene);
+
+	LoadAnimModelHierarchy(&ctx, ret, model3D, diffuseTextures, scene);
+
+	LoadAnimModelAnimation(&ctx, model3D, scene);
+
+	CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
 
 	ctx.animator->m_animationId = 0;
 	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;

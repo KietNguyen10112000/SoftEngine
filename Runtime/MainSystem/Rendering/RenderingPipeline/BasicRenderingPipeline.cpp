@@ -9,6 +9,9 @@
 
 #include "Graphics/DebugGraphics.h"
 
+//#include "Core/Time/Clock.h"
+//#include "imgui/imgui.h"
+
 NAMESPACE_BEGIN
 
 BasicSkyRenderingPass::BasicSkyRenderingPass()
@@ -55,16 +58,18 @@ void BasicSkyRenderingPass::Run(RenderingPipeline* pipeline)
 
 BasicAnimModelRenderingPass::BasicAnimModelRenderingPass()
 {
+	constexpr size_t PREFER_RENDER_CALL_PER_FRAME = 1024;
+
 	auto graphics = Graphics::Get();
 
 	GRAPHICS_CONSTANT_BUFFER_DESC cbDesc = {};
 	cbDesc.bufferSize = sizeof(Mat4) * MAX_BONES;
-	cbDesc.perferNumRoom = 1024;
+	cbDesc.perferNumRoom = PREFER_RENDER_CALL_PER_FRAME;
 	graphics->CreateConstantBuffers(1, &cbDesc, &m_bonesBuffer);
 
 	{
 		GRAPHICS_PIPELINE_DESC pipelineDesc = {};
-		pipelineDesc.preferRenderCallPerFrame = 1024;
+		pipelineDesc.preferRenderCallPerFrame = PREFER_RENDER_CALL_PER_FRAME;
 		pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineDesc.vs = "AnimModel/AnimModel4.vs";
 		pipelineDesc.ps = "Test.ps";
@@ -145,7 +150,7 @@ BasicAnimModelRenderingPass::BasicAnimModelRenderingPass()
 
 	{
 		GRAPHICS_PIPELINE_DESC pipelineDesc = {};
-		pipelineDesc.preferRenderCallPerFrame = 1024;
+		pipelineDesc.preferRenderCallPerFrame = PREFER_RENDER_CALL_PER_FRAME;
 		pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineDesc.vs = "AnimModel/AnimModel8.vs";
 		pipelineDesc.ps = "Test.ps";
@@ -248,7 +253,7 @@ BasicAnimModelRenderingPass::BasicAnimModelRenderingPass()
 
 	{
 		GRAPHICS_PIPELINE_DESC pipelineDesc = {};
-		pipelineDesc.preferRenderCallPerFrame = 1024;
+		pipelineDesc.preferRenderCallPerFrame = PREFER_RENDER_CALL_PER_FRAME;
 		pipelineDesc.primitiveTopology = GRAPHICS_PRIMITIVE_TOPOLOGY::PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pipelineDesc.vs = "AnimModel/AnimModel16.vs";
 		pipelineDesc.ps = "Test.ps";
@@ -423,8 +428,7 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 	for (auto& comp : input)
 	{
 		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
-
-		//graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
+		graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
 
 		auto* shaderBuffer = comp->m_animMeshRenderingBuffer.get();
 		if (prevBuffer != (void*)shaderBuffer)
