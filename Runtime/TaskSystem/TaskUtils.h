@@ -105,7 +105,7 @@ inline void ForEachConcurrentList(CList& list, Fn callback,
 
 	auto begin = list.begin();
 	auto it = begin;
-	auto numPerThread = size / N_THREADS;
+	auto numPerThread = size / N_THREADS + 1;
 
 	for (size_t i = 0; i < N_THREADS; i++)
 	{
@@ -169,7 +169,7 @@ inline void ForEachStdVector(CList& list, Fn callback,
 
 	auto begin = list.begin();
 	auto it = begin;
-	auto numPerThread = size / N_THREADS;
+	auto numPerThread = size / N_THREADS + 1;
 
 	for (size_t i = 0; i < N_THREADS; i++)
 	{

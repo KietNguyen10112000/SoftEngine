@@ -64,7 +64,7 @@ private:
 	uint32_t m_padd2;
 
 	std::atomic<size_t> m_isRecoredChangeTransformIteration = { 0 };
-	size_t m_updatedTransformIteration = 0;
+	std::atomic<size_t> m_updatedTransformIteration = { 0 };
 
 	ID m_sceneId = INVALID_ID;
 	ID m_UID = INVALID_ID;
@@ -95,6 +95,8 @@ private:
 
 	// consistency way to check if game object has a main component
 	DeferredBuffer<HasMainComponentState, Config::NUM_DEFER_BUFFER> m_hasMainComponent;
+
+	GameObject* m_root = this;
 
 private:
 	TRACEABLE_FRIEND();
@@ -218,6 +220,7 @@ private:
 
 	//void RecalculateReadTransform();
 
+	void RecalculateUpToDateTransformBegin(ID parentIdx);
 	void RecalculateUpToDateTransform(ID parentIdx);
 
 	inline ID ReadTransformIdx()

@@ -45,6 +45,38 @@ void GameObject::RecalculateTransform(size_t idx)
 	}
 }
 
+void GameObject::RecalculateUpToDateTransformBegin(ID parentIdx)
+{
+	auto readIdx = IdxTransformUpToDate();
+
+	//auto idx = ReadTransformIdx();
+
+	auto& readLocalTransform = m_localTransform[readIdx];
+	auto& writeGlobalMat = m_globalTransformMat[WriteTransformIdx()];
+	auto& writeLocalMat = m_localTransformMat[WriteTransformIdx()];
+	WriteLocalTransform() = readLocalTransform;
+
+	auto numTransformContributors = m_numTransformContributors.load(std::memory_order_relaxed);
+	m_numTransformContributors.store(0, std::memory_order_relaxed);
+
+	auto& contributors = m_transformContributors;
+	for (uint32_t i = 0; i < numTransformContributors; i++)
+	{
+		contributors[i].func(this, contributors[i].comp);
+	}
+
+	writeLocalMat = readLocalTransform.ToTransformMatrix();
+	auto parent = ParentUpToDate().Get();
+
+	writeGlobalMat = writeLocalMat * (parent ? parent->m_globalTransformMat[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Mat4::Identity());
+
+	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
+	for (auto& child : children)
+	{
+		child->RecalculateUpToDateTransform(WriteTransformIdx());
+	}
+}
+
 void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 {
 	auto readIdx = IdxTransformUpToDate();
@@ -67,7 +99,9 @@ void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 
 	writeLocalMat = readLocalTransform.ToTransformMatrix();
 	auto parent = ParentUpToDate().Get();
-	writeGlobalMat = writeLocalMat * (parent ? parent->m_globalTransformMat[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Mat4::Identity());
+	//writeGlobalMat = writeLocalMat * (parent ? parent->m_globalTransformMat[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Mat4::Identity());
+
+	writeGlobalMat = writeLocalMat * parent->m_globalTransformMat[parentIdx];
 
 	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
 	for (auto& child : children)
@@ -109,6 +143,13 @@ void GameObject::DuplicateTreeBuffer()
 void GameObject::RemoveFromParent()
 {
 	assert(ParentUpToDate().Get() != nullptr);
+
+	PostTraversalUpToDate(
+		[](GameObject* cur)
+		{
+			cur->m_root = nullptr;
+		}
+	);
 
 	if (!IsInAnyScene())
 	{
@@ -182,6 +223,14 @@ void GameObject::RemoveFromParent()
 void GameObject::AddChild(const Handle<GameObject>& obj)
 {
 	assert(obj->ParentUpToDate().Get() == nullptr);
+
+	auto root = m_root;
+	PostTraversalUpToDate(
+		[root](GameObject* cur)
+		{
+			cur->m_root = root;
+		}
+	);
 
 	if (!IsInAnyScene())
 	{

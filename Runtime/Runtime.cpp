@@ -302,7 +302,7 @@ void Runtime::Setup()
 	object->SetLocalTransform(transform);
 	//scene->AddObject(object);
 
-	constexpr int64_t NUM = 10;
+	constexpr int64_t NUM = 50;
 
 	for (int64_t y = -NUM / 2; y < NUM / 2; y++)
 	{

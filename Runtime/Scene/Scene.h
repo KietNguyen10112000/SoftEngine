@@ -94,7 +94,7 @@ private:
 	raw::ConcurrentArrayList<GameObject*> m_changedTreeStructList					= {};
 
 	// no child, no parent, just an order to call MainComponent::OnTransformChanged
-	std::vector<GameObject*> m_stagedChangeTransformList			[NUM_DEFER_LIST] = {};
+	raw::ConcurrentArrayList<GameObject*> m_stagedChangeTransformList			[NUM_DEFER_LIST] = {};
 	//std::vector<GameObject*> m_changedTransformRoots;
 
 	raw::ConcurrentArrayList<MainComponent*> m_addComponents	[MainSystemInfo::COUNT][NUM_DEFER_LIST] = {};

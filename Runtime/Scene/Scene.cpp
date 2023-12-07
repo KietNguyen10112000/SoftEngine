@@ -133,7 +133,7 @@ void Scene::SetupDeferLists()
 {
 	constexpr size_t RESERVE_SIZE = 16 * KB;
 
-	decltype(m_addList)* listss[] = { &m_addList, &m_removeList, &m_changedTransformList };
+	decltype(m_addList)* listss[] = { &m_addList, &m_removeList, &m_changedTransformList, &m_stagedChangeTransformList };
 
 	for (auto& _lists : listss)
 	{
@@ -206,12 +206,16 @@ void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 
 void Scene::OnObjectTransformChanged(GameObject* obj)
 {
-	if (obj->m_isRecoredChangeTransformIteration.exchange(m_iterationCount, std::memory_order_acquire) == m_iterationCount)
-	{
-		return;
-	}
+	auto root = obj->m_root;
+	auto& atomicVar = root->m_updatedTransformIteration;
 
-	GetCurrentChangedTransformList().Add(obj);
+	auto& atomicVar1 = obj->m_isRecoredChangeTransformIteration;
+
+	ATOMIC_EXCHANGE_ONCE(atomicVar1, m_iterationCount);
+
+	ATOMIC_EXCHANGE_ONCE(atomicVar, m_iterationCount);
+
+	GetCurrentChangedTransformList().Add(root);
 }
 
 void Scene::ProcessChangedTransformListForMainSystem(ID mainSystemId)
@@ -493,64 +497,80 @@ void Scene::StageAllChangedTransformObjects()
 	static TaskWaitingHandle handle = { 0,0 };
 
 	auto& destList = GetCurrentStagedChangeTransformList();
-	destList.clear();
+	destList.Clear();
 	auto& list = GetCurrentChangedTransformList();
 
 	TaskSystem::PrepareHandle(&handle);
-	for (auto& obj : list)
-	{
-		if (obj->m_updatedTransformIteration == m_iterationCount)
-		{
-			continue;
-		}
 
-		auto root = obj;
-		GameObject* nearestRootChangedTransform = nullptr;
-		while (true)
+	TaskUtils::ForEachConcurrentList(
+		list, 
+		[&](GameObject* obj, ID) 
 		{
-			if (root->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
+			/*if (obj->m_updatedTransformIteration == m_iterationCount)
 			{
-				nearestRootChangedTransform = root;
+				continue;
 			}
 
-			auto parent = root->ParentUpToDate().Get();
-			if (!parent)
+			auto root = obj;
+			GameObject* nearestRootChangedTransform = nullptr;
+			while (true)
 			{
-				break;
-			}
-
-			root = parent;
-		}
-
-		if (!nearestRootChangedTransform)
-		{
-			continue;
-		}
-
-		Task recalculateTransformTask;
-		recalculateTransformTask.Entry() = [](void* p)
-		{
-			auto gameObject = (GameObject*)p;
-			gameObject->RecalculateUpToDateTransform(INVALID_ID);
-		};
-		recalculateTransformTask.Params() = nearestRootChangedTransform;
-
-		TaskSystem::Submit(&handle, recalculateTransformTask, Task::CRITICAL);
-
-		nearestRootChangedTransform->PreTraversalUpToDate(
-			[&](GameObject* cur)
-			{
-				if (cur->m_updatedTransformIteration == m_iterationCount)
+				if (root->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
 				{
-					return true;
+					nearestRootChangedTransform = root;
 				}
 
-				cur->m_updatedTransformIteration = m_iterationCount;
-				destList.push_back(cur);
-				return false;
+				auto parent = root->ParentUpToDate().Get();
+				if (!parent)
+				{
+					break;
+				}
+
+				root = parent;
 			}
-		);
-	}
+
+			if (!nearestRootChangedTransform)
+			{
+				continue;
+			}*/
+
+			auto nearestRootChangedTransform = obj;
+
+			assert(obj == obj->m_root);
+
+			Task recalculateTransformTask;
+			recalculateTransformTask.Entry() = [](void* p)
+			{
+				auto gameObject = (GameObject*)p;
+				//auto parent = gameObject->ParentUpToDate().Get();
+				gameObject->RecalculateUpToDateTransformBegin(INVALID_ID);
+			};
+			recalculateTransformTask.Params() = nearestRootChangedTransform;
+
+			TaskSystem::Submit(&handle, recalculateTransformTask, Task::CRITICAL);
+
+			nearestRootChangedTransform->PreTraversal1UpToDate(
+				[&](GameObject* cur)
+				{
+					/*if (cur->m_updatedTransformIteration == m_iterationCount)
+					{
+						return true;
+					}
+
+					cur->m_updatedTransformIteration = m_iterationCount;*/
+
+					if (cur->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
+					{
+						destList.Add(cur);
+					}
+
+					//destList.push_back(cur);
+					//return false;
+				}
+			);
+		},
+		std::max(TaskSystem::GetWorkerCount() / 2, (size_t)4)
+	);
 
 	TaskSystem::WaitForHandle(&handle);
 }
@@ -1000,7 +1020,7 @@ void Scene::CleanUp()
 
 	for (auto& list : m_stagedChangeTransformList)
 	{
-		list.clear();
+		list.Clear();
 	}
 
 	mheap::internal::FreeStableObjects(m_stableValue, 0, 0);

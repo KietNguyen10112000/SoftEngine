@@ -45,3 +45,9 @@ constexpr static size_t MB = 1024 * 1024;
 using byte = uint8_t;
 using ID = size_t;
 constexpr static ID INVALID_ID = -1;
+
+#define ATOMIC_EXCHANGE_ONCE(atomicVar, onceValue)							\
+{																			\
+	if (atomicVar.load(std::memory_order_relaxed) == onceValue) return;		\
+	if (atomicVar.exchange(onceValue) == onceValue) return;					\
+}
