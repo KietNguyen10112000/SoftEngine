@@ -16,6 +16,7 @@ class AnimationComponent;
 class AnimationGameObject;
 class AnimSkeletalGameObject;
 class AnimatorSkeletalGameObject;
+class AnimatorSkeletalArray;
 
 class API AnimationSystem : public MainSystem
 {
@@ -32,6 +33,7 @@ private:
 	};
 
 	std::vector<AnimSkeletalGameObject*> m_animSkeletalGameObjects;
+	std::vector<AnimatorSkeletalArray*> m_animSkeletalArrays;
 
 	std::vector<AnimMeshRenderingBufferCounter> m_animMeshRenderingBufferCount;
 

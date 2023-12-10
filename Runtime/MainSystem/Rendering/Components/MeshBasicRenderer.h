@@ -12,7 +12,7 @@ public:
 	friend class RenderingSystem;
 
 	Resource<Model3DBasic>	m_model3D;
-	Model3DBasic::Mesh*		m_mesh;
+	Model3DBasic::Mesh* m_mesh;
 	Resource<Texture2D>		m_texture;
 
 public:
@@ -20,6 +20,8 @@ public:
 
 	MeshBasicRenderer(bool loadDefault = true);
 	MeshBasicRenderer(String modelPath, String texture2DPath);
+
+	inline virtual ~MeshBasicRenderer() {};
 
 	// Inherited via RenderingComponent
 	virtual void Serialize(Serializer* serializer) override;

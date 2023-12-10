@@ -51,6 +51,8 @@
 
 #include "Common/Base/Serializer.h"
 
+#include "Scene/GameObjectCache.h"
+
 NAMESPACE_BEGIN
 
 struct Timer
@@ -126,6 +128,8 @@ void Runtime::InitializeModules()
 	DisplayService::SingletonInitialize();
 
 	SerializableList::Initialize();
+
+	m_gameObjectCache = mheap::New<class GameObjectCache>();
 }
 
 void Runtime::FinalizeModules()
@@ -294,15 +298,21 @@ void Runtime::Setup()
 
 	transform = {};
 	transform.Scale() = { 0.01f,0.01f,0.01f };
-	//auto object = ResourceUtils::LoadAnimModel("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
-	auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
-	//auto object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	//auto object = ResourceUtils::LoadAnimModelArray("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
+	//auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
+	auto object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
-	//auto object = ResourceUtils::LoadAnimModel("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
-	object->SetLocalTransform(transform);
-	//scene->AddObject(object);
+	//auto object = ResourceUtils::LoadAnimModelArray("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
+	//object->SetLocalTransform(transform);
+	scene->AddObject(object);
 
-	constexpr int64_t NUM = 50;
+	object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	scene->AddObject(object);
+
+	object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	scene->AddObject(object);
+
+	/*constexpr int64_t NUM = 10;
 
 	for (int64_t y = -NUM / 2; y < NUM / 2; y++)
 	{
@@ -312,14 +322,14 @@ void Runtime::Setup()
 			auto cloned = StaticCast<GameObject>(serializer.Clone(object.Get()));
 
 			transform = {};
-			transform.Scale() = Vec3(0.005f);
+			transform.Scale() = Vec3(0.01f);
 			transform.Position() = { x * 3,0,y * 3 };
 
 			cloned->SetLocalTransform(transform);
 
 			scene->AddObject(cloned);
 		}
-	}
+	}*/
 
 	//transform = {};
 	//transform.Position() = { 0,0,0 };

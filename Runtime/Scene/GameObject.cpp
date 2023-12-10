@@ -225,7 +225,8 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 	assert(obj->ParentUpToDate().Get() == nullptr);
 
 	auto root = m_root;
-	PostTraversalUpToDate(
+	assert(root->ParentUpToDate().Get() == nullptr);
+	obj->PostTraversalUpToDate(
 		[root](GameObject* cur)
 		{
 			cur->m_root = root;

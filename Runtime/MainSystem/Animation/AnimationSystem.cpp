@@ -3,6 +3,7 @@
 #include "Resources/AnimModel.h"
 
 #include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
+#include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 
 #include "Scene/GameObject.h"
 
@@ -125,7 +126,12 @@ void AnimationSystem::AddComponent(MainComponent* comp)
 		break;
 	}
 	case soft::ANIMATION_TYPE_SKELETAL_ARRAY:
+	{
+		auto animComp = (AnimatorSkeletalArray*)animationComp;
+		animComp->m_animationSystemId = m_animSkeletalArrays.size();
+		m_animSkeletalArrays.push_back(animComp);
 		break;
+	}
 	case soft::ANIMATION_TYPE_SKELETAL_SELF_HIERARCHY:
 		break;
 	default:
@@ -147,7 +153,11 @@ void AnimationSystem::RemoveComponent(MainComponent* comp)
 		break;
 	}
 	case soft::ANIMATION_TYPE_SKELETAL_ARRAY:
+	{
+		auto animComp = (AnimatorSkeletalArray*)animationComp;
+		STD_VECTOR_ROLL_TO_FILL_BLANK(m_animSkeletalArrays, animComp, m_animationSystemId);
 		break;
+	}
 	case soft::ANIMATION_TYPE_SKELETAL_SELF_HIERARCHY:
 		break;
 	default:
@@ -186,6 +196,15 @@ void AnimationSystem::Iteration(float dt)
 		[dt](AnimSkeletalGameObject* comp, ID)
 		{
 			comp->Update(dt);
+		},
+		TaskSystem::GetWorkerCount()
+	);
+
+	auto scene = m_scene;
+	TaskUtils::ForEachStdVector(m_animSkeletalArrays,
+		[dt, scene](AnimatorSkeletalArray* comp, ID)
+		{
+			comp->Update(scene, dt);
 		},
 		TaskSystem::GetWorkerCount()
 	);

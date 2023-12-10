@@ -3,9 +3,14 @@
 #include "../AnimModel.h"
 
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
+#include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
 #include "MainSystem/Rendering/Components/AnimMeshRenderer.h"
 #include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
 #include "MainSystem/Animation/Components/AnimatorSkeletalGameObject.h"
+#include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
+
+#include "Runtime/Runtime.h"
+#include "Scene/GameObjectCache.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -78,7 +83,7 @@ struct AnimModelLoadingCtx
 
 	SharedPtr<AnimModel::AnimMeshRenderingBuffer> animMeshRenderingBuffer;
 	AnimatorSkeletalGameObject* animator;
-	//AnimatorSkeletalArray* animatorArray;
+	AnimatorSkeletalArray* animatorArray;
 
 	std::vector<Node> nodes;
 
@@ -436,18 +441,20 @@ void LoadAnimModelAnimation(AnimModelLoadingCtx* ctx, Resource<AnimModel>& model
 
 				model->m_boneOffsetMatrixs.emplace_back();
 
-				assert(ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end());
+				//assert(ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end());
 
-				auto obj = ctx->objectMap[affectedNodeName];
-				if (obj->GetComponentRaw<AnimSkeletalGameObject>() == nullptr)
+				if (ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end())
 				{
-					auto comp = obj->NewComponent<AnimSkeletalGameObject>();
-					comp->m_model3D = model;
-					comp->m_boneId = boneId;
-					comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
-					comp->m_animator = ctx->animator;
+					auto obj = ctx->objectMap[affectedNodeName];
+					if (obj->GetComponentRaw<AnimSkeletalGameObject>() == nullptr)
+					{
+						auto comp = obj->NewComponent<AnimSkeletalGameObject>();
+						comp->m_model3D = model;
+						comp->m_boneId = boneId;
+						comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+						comp->m_animator = ctx->animator;
+					}
 				}
-
 				
 			}
 
@@ -1181,8 +1188,16 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 		defaultDiffusePath = Texture2D::DEFAULT_FILE;
 	}
 
-	auto ret = mheap::New<GameObject>();
 	auto model3D = resource::Load<AnimModel>(path, true);
+
+	auto ret = Runtime::Get()->GameObjectCache()->Get("AnimatorSkeletalGameObject|" + model3D->GetPath());
+	if (ret.Get())
+	{
+		Serializer serializer;
+		return StaticCast<GameObject>(serializer.Clone(ret.Get()));
+	}
+
+	ret = mheap::New<GameObject>();
 
 	auto animator = ret->NewComponent<AnimatorSkeletalGameObject>();
 
@@ -1197,9 +1212,12 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 
 	LoadMaterialsForAnimModel(basePath, defaultDiffusePath, diffuseTextures, scene);
 	
-	LoadAllMeshsForModel3DBasic(model3D, scene, false);
+	if (model3D->m_meshes.size() == 0 && model3D->m_animMeshes.size() == 0)
+	{
+		LoadAllMeshsForModel3DBasic(model3D, scene, false);
 
-	LoadAllAnimMeshsForAnimModel(model3D, scene);
+		LoadAllAnimMeshsForAnimModel(model3D, scene);
+	}
 
 	AnimModelLoadingCtx ctx(model3D, scene);
 
@@ -1209,17 +1227,172 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 
 	LoadAnimModelHierarchy(&ctx, ret, model3D, diffuseTextures, scene);
 
-	LoadAnimModelAnimation(&ctx, model3D, scene);
+	if (model3D->m_animations.size() == 0)
+	{
+		LoadAnimModelAnimation(&ctx, model3D, scene);
 
-	CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+		CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+	}
 
 	ctx.animator->m_animationId = 0;
 	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
 	ctx.animator->m_tickDuration = model3D->m_animations[0].tickDuration;
 
-	//ctx.animator->m_durationRatio /= 20.0f;
+	Runtime::Get()->GameObjectCache()->Store("AnimatorSkeletalGameObject|" + model3D->GetPath(), ret);
 
-	return ret;
+	Serializer serializer;
+	return StaticCast<GameObject>(serializer.Clone(ret.Get()));
+}
+
+void LoadAnimModelHierarchyArray(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
+{
+	constexpr static auto ProcessNonAnimMesh =
+		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node, ID nodeId, Transform& transform) -> void
+	{
+		auto comp = obj->NewComponent<AnimModelStaticMeshRenderer>(false);
+
+		comp->m_model3D = model;
+		comp->m_mesh = (Model3DBasic::Mesh*)ctx->meshes[node->mMeshes[i]];
+
+		if (aiMesh->mMaterialIndex >= 0)
+		{
+			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+		}
+		else
+		{
+			comp->m_texture = diffuseTextures.back();
+		}
+	};
+
+	constexpr static auto ProcessAnimMesh =
+		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node, ID nodeId, Transform& transform) -> void
+	{
+		auto comp = obj->NewComponent<AnimMeshRenderer>();
+
+		comp->m_model3D = model;
+		comp->m_mesh = (AnimModel::AnimMesh*)ctx->meshes[node->mMeshes[i]];
+
+		comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+
+		//ctx->animatorArray->m_meshRendererObjs[comp->m_mesh->m_model3DIdx] = obj;
+
+		if (aiMesh->mMaterialIndex >= 0)
+		{
+			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+		}
+		else
+		{
+			comp->m_texture = diffuseTextures.back();
+		}
+
+		auto animator = ctx->animatorArray;
+		animator->m_meshRendererObjs.Push(obj);
+		model->m_boundNodeIds.push_back({ INVALID_ID });
+
+		obj->SetLocalTransform(transform);
+	};
+
+	constexpr static void (*ProcessNode)(AnimModelLoadingCtx*, GameObject*, Resource<AnimModel>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode*, ID&) =
+		[](AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node, ID& nodeId)-> void
+	{
+		size_t animMeshCount = 0;
+		aiVector3D scale;
+		aiQuaternion rot;
+		aiVector3D pos;
+
+		//if (!animMeshCount)
+		//{
+			node->mTransformation.Decompose(scale, rot, pos);
+		//}
+		//else
+		//{
+		//	//auto mat = node->mParent->mTransformation;
+		//	auto mat = scene->mRootNode->mTransformation;
+		//	mat.Inverse().Decompose(scale, rot, pos);
+		//}
+
+		Transform transform = {};
+		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+		transform.Position() = reinterpret_cast<const Vec3&>(pos);
+
+		if (node->mNumMeshes > 1)
+		{
+			auto compoundObj = mheap::New<GameObject>();
+
+			bool hasStaticMesh = false;
+
+			for (size_t i = 0; i < node->mNumMeshes; i++)
+			{
+				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
+				auto child = mheap::New<GameObject>();
+				child->Name() = aiMesh->mName.C_Str();
+
+				compoundObj->AddChild(child);
+
+				if (!aiMesh->HasBones())
+				{
+					hasStaticMesh = true;
+					ProcessNonAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node, nodeId, transform);
+					continue;
+				}
+
+				auto mat = scene->mRootNode->mTransformation;
+				mat.Inverse().Decompose(scale, rot, pos);
+				transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+				transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+				transform.Position() = reinterpret_cast<const Vec3&>(pos);
+
+				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node, nodeId, transform);
+
+				animMeshCount++;
+			}
+
+			if (hasStaticMesh)
+			{
+				auto animator = ctx->animatorArray;
+				animator->m_meshRendererObjs.Push(compoundObj);
+				model->m_boundNodeIds.push_back({ nodeId });
+			}
+
+			obj->AddChild(compoundObj);
+		}
+		else if (node->mNumMeshes == 1)
+		{
+			auto compoundObj = mheap::New<GameObject>();
+			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
+
+			if (!aiMesh->HasBones())
+			{
+				ProcessNonAnimMesh(ctx, 0, compoundObj, model, diffuseTextures, aiMesh, node, nodeId, transform);
+				auto animator = ctx->animatorArray;
+				animator->m_meshRendererObjs.Push(compoundObj);
+				model->m_boundNodeIds.push_back({ nodeId });
+			}
+			else
+			{
+				auto mat = scene->mRootNode->mTransformation;
+				mat.Inverse().Decompose(scale, rot, pos);
+				transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+				transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+				transform.Position() = reinterpret_cast<const Vec3&>(pos);
+
+				ProcessAnimMesh(ctx, 0, compoundObj, model, diffuseTextures, aiMesh, node, nodeId, transform);
+				animMeshCount++;
+			}
+
+			obj->AddChild(compoundObj);
+		}
+
+		nodeId++;
+		for (size_t i = 0; i < node->mNumChildren; i++)
+		{
+			ProcessNode(ctx, obj, model, diffuseTextures, scene, node->mChildren[i], nodeId);
+		}
+	};
+
+	size_t nodeId = 0;
+	ProcessNode(ctx, obj, model, diffuseTextures, scene, scene->mRootNode, nodeId);
 }
 
 Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
@@ -1231,10 +1404,18 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 		defaultDiffusePath = Texture2D::DEFAULT_FILE;
 	}
 
-	auto ret = mheap::New<GameObject>();
 	auto model3D = resource::Load<AnimModel>(path, true);
 
-	auto animator = ret->NewComponent<AnimatorSkeletalGameObject>();
+	auto ret = Runtime::Get()->GameObjectCache()->Get("AnimatorSkeletalArray|" + model3D->GetPath());
+	if (ret.Get())
+	{
+		Serializer serializer;
+		return StaticCast<GameObject>(serializer.Clone(ret.Get()));
+	}
+
+	ret = mheap::New<GameObject>();
+
+	auto animator = ret->NewComponent<AnimatorSkeletalArray>();
 
 	std::vector<Resource<Texture2D>> diffuseTextures;
 
@@ -1247,31 +1428,69 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 
 	LoadMaterialsForAnimModel(basePath, defaultDiffusePath, diffuseTextures, scene);
 
-	LoadAllMeshsForModel3DBasic(model3D, scene, false);
+	if (model3D->m_meshes.size() == 0 && model3D->m_animMeshes.size() == 0)
+	{
+		LoadAllMeshsForModel3DBasic(model3D, scene, false);
 
-	LoadAllAnimMeshsForAnimModel(model3D, scene);
+		LoadAllAnimMeshsForAnimModel(model3D, scene);
+	}
 
 	AnimModelLoadingCtx ctx(model3D, scene);
 
-	ctx.animator = animator.Get();
-	ctx.animator->m_animMeshRendererObjs.Resize(model3D->m_animMeshes.size());
-	ctx.animator->m_model3D = model3D;
+	ctx.animatorArray = animator.Get();
+	//ctx.animatorArray->m_meshRendererObjs.Resize(model3D->m_animMeshes.size());
+	ctx.animatorArray->m_model3D = model3D;
+	ctx.animatorArray->m_animMeshRenderingBuffer = ctx.animMeshRenderingBuffer;
 
 	FlattenAnimModelHierarchy(&ctx, model3D, scene);
 
-	LoadAnimModelHierarchy(&ctx, ret, model3D, diffuseTextures, scene);
+	LoadAnimModelHierarchyArray(&ctx, ret, model3D, diffuseTextures, scene);
 
-	LoadAnimModelAnimation(&ctx, model3D, scene);
+	if (model3D->m_animations.size() == 0)
+	{
+		LoadAnimModelAnimation(&ctx, model3D, scene);
 
-	CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+		CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+	}
 
-	ctx.animator->m_animationId = 0;
-	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
-	ctx.animator->m_tickDuration = model3D->m_animations[0].tickDuration;
+	ctx.animatorArray->m_keyFramesIndex.resize(model3D->m_boneIds.size());
 
-	//ctx.animator->m_durationRatio /= 20.0f;
+	auto& srcNodes = ctx.nodes;
+	auto& destNodes = model3D->m_nodes;
+	if (destNodes.empty())
+	{
+		destNodes.resize(srcNodes.size());
+		for (size_t i = 0; i < srcNodes.size(); i++)
+		{
+			auto& srcNode = srcNodes[i];
+			auto& destNode = destNodes[i];
 
-	return ret;
+			destNode.boneId = srcNode.boneId;
+			destNode.parentId = srcNode.parentId;
+			destNode.localTransform = srcNode.localTransform;
+		}
+	}
+
+	ctx.animatorArray->m_globalTransforms.resize(destNodes.size());
+	ctx.animatorArray->m_animationId = 0;
+	ctx.animatorArray->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
+	ctx.animatorArray->m_tickDuration = model3D->m_animations[0].tickDuration;
+
+	aiVector3D scale;
+	aiQuaternion rot;
+	aiVector3D pos;
+	scene->mRootNode->mTransformation.Decompose(scale, rot, pos);
+	Transform transform = {};
+	transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+	transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+	transform.Position() = reinterpret_cast<const Vec3&>(pos);
+
+	ret->SetLocalTransform(transform);
+
+	Runtime::Get()->GameObjectCache()->Store("AnimatorSkeletalArray|" + model3D->GetPath(), ret);
+
+	Serializer serializer;
+	return StaticCast<GameObject>(serializer.Clone(ret.Get()));
 }
 
 }

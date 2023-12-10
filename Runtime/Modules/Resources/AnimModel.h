@@ -20,6 +20,13 @@ public:
 	using NonWeightVertex = Model3DBasic::Vertex;
 	using NonAnimMesh = Model3DBasic::Mesh;
 
+	struct Node
+	{
+		ID parentId = INVALID_ID;
+		ID boneId = INVALID_ID;
+		Mat4 localTransform;
+	};
+
 	enum ANIM_MESH_TYPE
 	{
 		WEIGHT_4,
@@ -191,6 +198,11 @@ public:
 
 	// inversed of node's global transform
 	std::vector<Mat4> m_boneOffsetMatrixs;
+
+	std::vector<Node> m_nodes;
+
+	// refer node for static mesh, INVALID_ID if animMesh
+	std::vector<ID> m_boundNodeIds;
 
 	AnimModel(String path, bool placeholder = false);
 

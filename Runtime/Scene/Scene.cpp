@@ -215,6 +215,8 @@ void Scene::OnObjectTransformChanged(GameObject* obj)
 
 	ATOMIC_EXCHANGE_ONCE(atomicVar, m_iterationCount);
 
+	assert(root->ParentUpToDate().Get() == nullptr);
+
 	GetCurrentChangedTransformList().Add(root);
 }
 
@@ -559,7 +561,7 @@ void Scene::StageAllChangedTransformObjects()
 
 					cur->m_updatedTransformIteration = m_iterationCount;*/
 
-					if (cur->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
+					//if (cur->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
 					{
 						destList.Add(cur);
 					}

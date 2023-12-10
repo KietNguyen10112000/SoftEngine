@@ -17,6 +17,8 @@ class Input;
 class Plugin;
 class Scene;
 
+class GameObjectCache;
+
 class IterationHandler
 {
 public:
@@ -53,6 +55,8 @@ private:
 
 	GenericStorage m_genericStorage;
 	EventDispatcher<Runtime, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
+
+	Handle<GameObjectCache> m_gameObjectCache;
 
 	std::bitset<2 * MAX_RUNNING_SCENES> m_runningSceneStableValue;
 
@@ -95,6 +99,7 @@ private:
 	{
 		tracer->Trace(m_scenes);
 		tracer->Trace(m_genericStorage);
+		tracer->Trace(m_gameObjectCache);
 	}
 
 	void InitGraphics();
@@ -172,6 +177,11 @@ public:
 	}
 
 	void* GetNativeHWND();
+
+	inline GameObjectCache* GameObjectCache()
+	{
+		return m_gameObjectCache.Get();
+	}
 };
 
 

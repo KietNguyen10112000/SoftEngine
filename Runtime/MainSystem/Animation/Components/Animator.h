@@ -37,6 +37,8 @@ protected:
 public:
 	inline Animator() : AnimationComponent(ANIMATION_TYPE::NONE) {};
 
+	inline Animator(ANIMATION_TYPE type) : AnimationComponent(type) {};
+
 	// return id of animation, return INVALID_ID if not found
 	virtual ID FindAnimation(const String& name) = 0;
 
