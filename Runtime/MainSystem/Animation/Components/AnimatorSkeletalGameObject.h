@@ -15,19 +15,18 @@ public:
 
 	ID m_animationId = 0;
 
-	Resource<AnimModel>	m_model3D;
-
 	//SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
 
 	Array<Handle<GameObject>> m_animMeshRendererObjs;
+
+	std::vector<uint32_t> m_aabbKeyFrameIndex;
 
 	// duration in sec
 	float m_tickDuration;
 	float m_ticksPerSecond;
 
 	float m_t = 0;
-
-	uint32_t m_aabbKeyFrameIndex = 0;
+	float padd;
 
 	size_t m_numUpdateAABB = 0;
 

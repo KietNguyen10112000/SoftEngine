@@ -18,8 +18,6 @@ public:
 
 	ID m_animationSystemId = 0;
 
-	Resource<AnimModel>	m_model3D;
-
 	SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
 
 	// include both animMesh and static mesh
@@ -29,11 +27,12 @@ public:
 
 	std::vector<KeyFramesIndex> m_keyFramesIndex;
 
+	std::vector<uint32_t> m_aabbKeyFrameIndex;
+
 	ID m_animationId = 0;
 	float m_tickDuration;
 	float m_ticksPerSecond;
 	float m_t = 0;
-	uint32_t m_aabbKeyFrameIndex = 0;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -60,7 +59,10 @@ private:
 			index.t = 0;
 		}
 
-		m_aabbKeyFrameIndex = 0;
+		for (auto& index : m_aabbKeyFrameIndex)
+		{
+			index = 0;
+		}
 
 		auto& animation = m_model3D->m_animations[m_animationId];
 		m_tickDuration = animation.tickDuration;

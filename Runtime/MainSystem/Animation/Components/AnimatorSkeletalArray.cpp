@@ -265,7 +265,7 @@ Handle<Serializable> AnimatorSkeletalArray::Clone(Serializer* serializer)
 	ret->m_tickDuration = m_tickDuration;
 	ret->m_ticksPerSecond = m_ticksPerSecond;
 
-	ret->m_aabbKeyFrameIndex = 0;
+	ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
 	ret->m_globalTransforms.resize(m_globalTransforms.size());
 	ret->m_keyFramesIndex.resize(m_keyFramesIndex.size());
 
@@ -287,7 +287,10 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 			index.t = 0;
 		}
 
-		m_aabbKeyFrameIndex = 0;
+		for (auto& index : m_aabbKeyFrameIndex)
+		{
+			index = 0;
+		}
 	}
 
 	{
@@ -370,7 +373,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 		auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();
 		auto& buffer = animMeshRenderingBuffer->buffer;
 
-		auto& index = m_aabbKeyFrameIndex;
+		//auto& index = m_aabbKeyFrameIndex;
 
 		bool update = false;
 
@@ -383,6 +386,8 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 		auto num = write->meshesAABB.size();
 		for (uint32_t i = 0; i < num; i++)
 		{
+			auto& index = m_aabbKeyFrameIndex[i];
+
 			write->meshesAABB[i] = animation.animMeshLocalAABoxKeyFrames[i].Find(&index, index, m_t);
 			if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
 			{

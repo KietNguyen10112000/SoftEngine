@@ -6,6 +6,8 @@
 
 #include "ANIMATION_TYPE.h"
 
+#include "Resources/AnimModel.h"
+
 NAMESPACE_BEGIN
 
 class Animator : public AnimationComponent
@@ -22,6 +24,8 @@ public:
 			tracer->Trace(callback);
 		}
 	};
+
+	Resource<AnimModel>	m_model3D;
 
 protected:
 	spinlock m_tiggersLock;

@@ -267,6 +267,8 @@ Handle<Serializable> AnimatorSkeletalGameObject::Clone(Serializer* serializer)
 	ret->m_tickDuration = m_tickDuration;
 	ret->m_ticksPerSecond = m_ticksPerSecond;
 
+	ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
+
 	return ret;
 }
 

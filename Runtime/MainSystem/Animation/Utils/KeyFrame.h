@@ -168,7 +168,7 @@ struct KeyFrames
 	}
 
 
-	inline Vec3 BinaryFindScale(float t) const
+	inline Vec3 BinaryFindScale(float t, uint32_t* outputIndex) const
 	{
 		auto& keyFrames = scaling;
 		uint32_t num = (uint32_t)keyFrames.size();
@@ -194,6 +194,11 @@ struct KeyFrames
 		}
 
 		auto& v = keyFrames[idx];
+
+		if (outputIndex)
+		{
+			*outputIndex = idx;
+		}
 
 		if (v.time < t)
 		{
@@ -221,7 +226,7 @@ struct KeyFrames
 		);
 	}
 
-	inline Quaternion BinaryFindRotation(float t) const
+	inline Quaternion BinaryFindRotation(float t, uint32_t* outputIndex) const
 	{
 		auto& keyFrames = rotation;
 		uint32_t num = (uint32_t)keyFrames.size();
@@ -248,6 +253,11 @@ struct KeyFrames
 
 		auto& v = keyFrames[idx];
 
+		if (outputIndex)
+		{
+			*outputIndex = idx;
+		}
+
 		if (v.time < t)
 		{
 			assert(idx == num - 1);
@@ -268,7 +278,7 @@ struct KeyFrames
 		);
 	}
 
-	inline Vec3 BinaryFindTranslation(float t) const
+	inline Vec3 BinaryFindTranslation(float t, uint32_t* outputIndex) const
 	{
 		auto& keyFrames = translation;
 		uint32_t num = (uint32_t)keyFrames.size();
@@ -294,6 +304,11 @@ struct KeyFrames
 		}
 
 		auto& v = keyFrames[idx];
+
+		if (outputIndex)
+		{
+			*outputIndex = idx;
+		}
 
 		if (v.time < t)
 		{
@@ -363,6 +378,74 @@ struct AABoxKeyFrames
 		}
 		return keyFrames.back().value;
 	}
+
+	inline AABox BinaryFind(float t, uint32_t* outputIndex) const
+	{
+		auto& keyFrames = aaBox;
+		uint32_t num = (uint32_t)keyFrames.size();
+		uint32_t count = num;
+		uint32_t idx = 0;
+
+		while (count)
+		{
+			auto step = count / 2;
+			auto it = idx + step;
+
+			auto& v = keyFrames[it];
+
+			if (v.time < t)
+			{
+				idx = it + 1;
+				count -= step + 1;
+			}
+			else
+			{
+				count = step;
+			}
+		}
+
+		auto& v = keyFrames[idx];
+
+		if (outputIndex)
+		{
+			*outputIndex = idx;
+		}
+
+		if (v.time < t)
+		{
+			assert(idx == num - 1);
+			return keyFrames.back().value;
+		}
+
+		if (idx == 0)
+		{
+			return keyFrames.front().value;
+		}
+
+		auto& start = keyFrames[idx - 1];
+		auto& end = keyFrames[idx];
+		auto l0 = t - start.time;
+		auto l1 = end.time - start.time;
+		auto d = l0 / l1;
+
+		AABox ret;
+		ret.m_center = Lerp(start.value.m_center, end.value.m_center, d);
+		ret.m_halfDimensions = Lerp(start.value.m_halfDimensions, end.value.m_halfDimensions, d);
+		return ret;
+	}
+};
+
+struct AnimationTrack
+{
+	ID animationId = INVALID_ID;
+
+	std::vector<KeyFramesIndex> startKeyFramesIndex;
+
+	std::vector<uint32_t> startAABBKeyFrameIndex;
+
+	float tickDuration;
+	float ticksPerSecond;
+	float t = 0;
 };
 
 struct Animation
@@ -376,6 +459,43 @@ struct Animation
 	// keyframes of each anim mesh's AABox when animation is applied to,
 	// it will be refered by AnimMesh::m_model3DIdx
 	std::vector<AABoxKeyFrames> animMeshLocalAABoxKeyFrames;
+
+	// time in sec
+	inline void InitializeTrack(AnimationTrack* track, float startTime, float endTime)
+	{
+		auto startTick = startTime * ticksPerSecond;
+		auto endTick = endTime * ticksPerSecond;
+
+		auto& startIndex = track->startKeyFramesIndex;
+		auto& startAABBIndex = track->startAABBKeyFrameIndex;
+
+		auto num = (uint32_t)channels.size();
+		startIndex.resize(num);
+
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& channel = channels[i];
+			auto& index = startIndex[i];
+
+			channel.BinaryFindScale(startTick, &index.s);
+			channel.BinaryFindRotation(startTick, &index.r);
+			channel.BinaryFindTranslation(startTick, &index.t);
+		}
+
+		num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
+		startAABBIndex.resize(num);
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& channel = animMeshLocalAABoxKeyFrames[i];
+			auto& index = startAABBIndex[i];
+
+			channel.BinaryFind(startTick, &index);
+		}
+
+		track->t = 0;
+		track->tickDuration = endTick - startTick;
+		track->ticksPerSecond = ticksPerSecond;
+	}
 };
 
 NAMESPACE_END

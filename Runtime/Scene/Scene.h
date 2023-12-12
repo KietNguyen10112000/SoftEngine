@@ -87,6 +87,9 @@ private:
 	GenericStorage m_genericStorage;
 	EventDispatcher<Scene, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
+	// to keep memory across the frames
+	ConcurrentArrayList<Handle<void>>		m_handleKeepers[MainSystemInfo::COUNT * NUM_DEFER_LIST] = {};
+
 	raw::ConcurrentArrayList<GameObject*> m_addList					[NUM_DEFER_LIST] = {};
 	raw::ConcurrentArrayList<GameObject*> m_removeList				[NUM_DEFER_LIST] = {};
 	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
@@ -152,6 +155,7 @@ private:
 		tracer->Trace(m_objectsHolder);
 		tracer->Trace(m_componentsHolder);
 		tracer->Trace(m_genericStorage);
+		tracer->Trace(m_handleKeepers);
 		//tracer->Trace(m_mainSystems);
 		//tracer->Trace(m_removeList);
 	}

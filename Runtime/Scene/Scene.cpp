@@ -26,6 +26,20 @@ Scene::Scene() : m_eventDispatcher(this)
 	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
 	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = new ScriptingSystem(this);
 	m_mainSystems[MainSystemInfo::ANIMATION_ID] = new AnimationSystem(this);
+
+	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	{
+		auto system = m_mainSystems[i];
+		if (system)
+		{
+			system->m_handleKeeper = &m_handleKeepers[i * 2];
+
+			for (size_t j = 0; j < NUM_DEFER_LIST; j++)
+			{
+				system->m_handleKeeper[j].ReserveNoSafe(8 * KB);
+			}
+		}
+	}
 }
 
 Scene::~Scene()
@@ -77,6 +91,8 @@ void Scene::SetupMainSystemIterationTasks()
 			//scene->EndReconstructForMainSystem(mainSystemId);
 
 			system->Iteration(scene->m_dt);
+
+			system->m_handleKeeper[scene->GetPrevDeferBufferIdx()].Clear();
 		};
 	}
 

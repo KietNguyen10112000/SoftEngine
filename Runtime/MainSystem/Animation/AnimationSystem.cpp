@@ -66,10 +66,14 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	auto& buffer = animMeshRenderingBuffer->buffer;
 	auto animator = counter->animator;
 
-	auto& index = animator->m_aabbKeyFrameIndex;
+	auto& aabbIndex = animator->m_aabbKeyFrameIndex;
 	if (animator->m_numUpdateAABB != animator->m_numAnimIterationCount)
 	{
-		index = 0;
+		for (auto& index : aabbIndex)
+		{
+			index = 0;
+		}
+
 		animator->m_numUpdateAABB = animator->m_numAnimIterationCount;
 	}
 
@@ -84,6 +88,7 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	auto num = write->meshesAABB.size();
 	for (uint32_t i = 0; i < num; i++)
 	{
+		auto& index = aabbIndex[i];
 		write->meshesAABB[i] = animation.animMeshLocalAABoxKeyFrames[i].Find(&index, index, animator->m_t);
 		if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
 		{

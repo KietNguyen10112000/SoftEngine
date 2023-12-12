@@ -598,13 +598,13 @@ void LoadAABoxForKeyFrame(AABoxKeyFrame* keyFrame, AnimModelLoadingCtx::CalAABBT
 			//auto& tempId = tempIndex[node.boneId];
 
 			Mat4 scaling;
-			scaling.SetScale(channel.BinaryFindScale(keyFrame->time));
+			scaling.SetScale(channel.BinaryFindScale(keyFrame->time, 0));
 			//channel.FindScaleMatrix(&scaling, 0, 0, keyFrame->time);
 			Mat4 rotation;
-			rotation.SetRotation(channel.BinaryFindRotation(keyFrame->time));
+			rotation.SetRotation(channel.BinaryFindRotation(keyFrame->time, 0));
 			//channel.FindRotationMatrix(&rotation, 0, 0, keyFrame->time);
 			Mat4 translation;
-			translation.SetTranslation(channel.BinaryFindTranslation(keyFrame->time));
+			translation.SetTranslation(channel.BinaryFindTranslation(keyFrame->time, 0));
 			//channel.FindTranslationMatrix(&translation, 0, 0, keyFrame->time);
 
 			globalTransform[node.id] = scaling * rotation * translation;
@@ -1237,6 +1237,7 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 	ctx.animator->m_animationId = 0;
 	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
 	ctx.animator->m_tickDuration = model3D->m_animations[0].tickDuration;
+	ctx.animator->m_aabbKeyFrameIndex.resize(model3D->m_animMeshes.size());
 
 	Runtime::Get()->GameObjectCache()->Store("AnimatorSkeletalGameObject|" + model3D->GetPath(), ret);
 
@@ -1475,6 +1476,7 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 	ctx.animatorArray->m_animationId = 0;
 	ctx.animatorArray->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
 	ctx.animatorArray->m_tickDuration = model3D->m_animations[0].tickDuration;
+	ctx.animatorArray->m_aabbKeyFrameIndex.resize(model3D->m_animMeshes.size());
 
 	aiVector3D scale;
 	aiQuaternion rot;
