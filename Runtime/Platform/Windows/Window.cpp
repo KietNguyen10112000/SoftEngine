@@ -397,7 +397,7 @@ WindowNative* CreateWindow(::soft::Input* input, int x, int y, int width, int he
     );
 
     int xPos = (maxW - rc.right) / 2;
-    int yPos = (maxH - rc.bottom) / 2;
+    int yPos = (maxH - rc.bottom) / 2 - 25;
 
     // Create the window for our viewport.
     auto hwnd = CreateWindowW(

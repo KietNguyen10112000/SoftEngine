@@ -141,6 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ComponentInspector.cpp" />
     <ClCompile Include="EditorContext.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="DataInspector.cpp" />
@@ -148,6 +149,7 @@
     <ClCompile Include="TestScript.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ComponentInspector.h" />
     <ClInclude Include="EditorContext.h" />
     <ClInclude Include="DataInspector.h" />
     <ClInclude Include="ImGuiExtern.h" />

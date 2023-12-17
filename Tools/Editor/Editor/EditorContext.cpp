@@ -11,6 +11,8 @@
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
 
+#include "ComponentInspector.h"
+
 EditorContext::EditorContext()
 {
 	ReloadSerializableList();
@@ -334,7 +336,6 @@ void EditorContext::RenderInspectorPanel()
 		m_needReloadInspectingObject = false;
 	}
 
-	size_t currentDepth = -1; 
 	bool _open = false;
 
 	auto& metaData = m_inspectingObjectData;
@@ -361,68 +362,7 @@ void EditorContext::RenderInspectorPanel()
 
 	ImGui::Separator();
 
-	metaData->ForEachProperties(
-		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
-		{
-			if (depth == 0)
-			{
-				ImGui::SetNextItemOpen(true);
-			}
-
-			if (currentDepth + 1 == depth)
-			{
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 5.f));
-				auto open = ImGui::TreeNodeEx(metadata->GetName(), ImGuiTreeNodeFlags_FramePadding);
-				ImGui::PopStyleVar();
-
-				m_inspectPropertiesIsOpenStack.push_back(open);
-				m_inspectInlinePropertiesCountStack.push_back(metadata->GetInlinePropertiesCount());
-				currentDepth++;
-
-				if (depth != 0 && dynamic_cast<MainComponent*>(metadata->GetInstance()))
-				{
-					//ImGui::SameLine();
-					auto pos = ImGui::GetCursorPos();
-					ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 50, pos.y - 35));
-					String btnName = String("x") + "##" + metadata->GetName();
-					if (ImGui::Button(btnName.c_str(), ImVec2(30, 30)))
-					{
-						m_removeComp = dynamic_cast<MainComponent*>(metadata->GetInstance());
-					}
-
-					ImGui::SetCursorPos(pos);
-				}
-			}
-
-			bool open = m_inspectPropertiesIsOpenStack.back();
-			if (open)
-			{
-				ImGui::Text(propertyName);
-				DataInspector::Inspect(metadata, accessor, propertyName);
-				ImGui::Separator();
-				return true;
-			}
-
-			return false;
-		},
-
-		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
-		{
-			if (currentDepth == depth)
-			{
-				bool open = m_inspectPropertiesIsOpenStack.back();
-				m_inspectPropertiesIsOpenStack.pop_back();
-				m_inspectInlinePropertiesCountStack.pop_back();
-
-				if (open)
-				{
-					ImGui::TreePop();
-				}
-
-				currentDepth--;
-			}
-		}
-	);
+	Inspect(metaData.Get());
 
 	assert(m_inspectPropertiesIsOpenStack.empty());
 
@@ -672,4 +612,88 @@ void EditorContext::OnRenderInGameDebugGraphics()
 	debugGraphics->DrawDirection(Vec3(0, 0, -10), Vec3(0, 0, 20), { 0,0,1,1 }, { 0,0,1,1 });
 
 //#endif // _DEBUG
+}
+
+void EditorContext::Inspect(ClassMetadata* metaData)
+{
+	size_t currentDepth = -1;
+	metaData->ForEachProperties(
+		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+		{
+			if (depth == 0)
+			{
+				ImGui::SetNextItemOpen(true);
+			}
+
+			bool rawInspect = true;
+			if (currentDepth + 1 == depth)
+			{
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 5.f));
+				auto open = ImGui::TreeNodeEx(metadata->GetName(), ImGuiTreeNodeFlags_FramePadding);
+				ImGui::PopStyleVar();
+
+				m_inspectPropertiesIsOpenStack.push_back(open);
+				m_inspectInlinePropertiesCountStack.push_back(metadata->GetInlinePropertiesCount());
+				currentDepth++;
+
+				if (depth != 0 && dynamic_cast<MainComponent*>(metadata->GetInstance()))
+				{
+					//ImGui::SameLine();
+					auto pos = ImGui::GetCursorPos();
+					ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 50, pos.y - 35));
+					String btnName = String("x") + "##" + metadata->GetName();
+					if (ImGui::Button(btnName.c_str(), ImVec2(30, 30)))
+					{
+						m_removeComp = dynamic_cast<MainComponent*>(metadata->GetInstance());
+					}
+
+					ImGui::SetCursorPos(pos);
+				}
+
+				if (open)
+				{
+					if (ComponentInspector::Get()->Inspect(this, metadata->GetInstance(), metadata))
+					{
+						rawInspect = false;
+					}
+				}
+
+				m_inspectPropertiesIsRawInspectStack.push_back(rawInspect);
+			}
+
+			bool open = m_inspectPropertiesIsOpenStack.back();
+			if (open && m_inspectPropertiesIsRawInspectStack.back())
+			{
+				ImGui::Text(propertyName);
+
+				if (!ComponentInspector::Get()->Inspect(this, metadata->GetInstance(), metadata))
+				{
+					DataInspector::Inspect(metadata, accessor, propertyName);
+				}
+
+				ImGui::Separator();
+				return true;
+			}
+
+			return false;
+		},
+
+		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+		{
+			if (currentDepth == depth)
+			{
+				bool open = m_inspectPropertiesIsOpenStack.back();
+				m_inspectPropertiesIsOpenStack.pop_back();
+				m_inspectInlinePropertiesCountStack.pop_back();
+				m_inspectPropertiesIsRawInspectStack.pop_back();
+
+				if (open)
+				{
+					ImGui::TreePop();
+				}
+
+				currentDepth--;
+			}
+		}
+	);
 }

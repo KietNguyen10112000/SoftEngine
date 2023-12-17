@@ -24,6 +24,7 @@ public:
 	Handle<ClassMetadata> m_inspectingObjectData;
 
 	std::vector<bool> m_inspectPropertiesIsOpenStack;
+	std::vector<bool> m_inspectPropertiesIsRawInspectStack;
 	std::vector<size_t> m_inspectInlinePropertiesCountStack;
 
 	size_t m_selectionIdx = -1;
@@ -86,6 +87,9 @@ public:
 	{
 		return m_lock;
 	}
+
+public:
+	void Inspect(ClassMetadata* metaData);
 
 };
 

@@ -138,7 +138,8 @@ private:
 	ID m_runtimeID = INVALID_ID;
 	ID m_UIDCounter = 0;
 
-	raw::ConcurrentArrayList<DeferredBufferControlBlock*> m_deferredBuffers;
+	raw::ConcurrentArrayList<DeferredBufferControlBlock*> m_deferredBuffers1;
+	raw::ConcurrentArrayList<DeferredBufferControlBlock*> m_deferredBuffers2;
 
 public:
 	Scene();
@@ -193,7 +194,7 @@ private:
 
 	void SynchMainProcessingSystems();
 	void SynchMainProcessingSystemForMainOutputSystems();
-	void UpdateDeferredBuffers();
+	void UpdateDeferredBuffers(decltype(m_deferredBuffers1)& buffers);
 
 	void EndReconstructForMainSystem(ID mainSystemId);
 	void EndReconstructForAllMainSystems();
@@ -393,7 +394,7 @@ public:
 	//virtual void OnPropertyChanged(const UnknownAddress& var) override;
 
 private:
-	template <typename T, uint32_t N>
+	template <bool PROCESSING_SYS_TO_OUTPUT_SYS, typename T, uint32_t N>
 	inline void Update(DeferredBuffer<T, N>& buffer)
 	{
 		auto ctrlBlock = (DeferredBufferControlBlock*)&buffer;
@@ -407,11 +408,18 @@ private:
 			return;
 		}
 
-		m_deferredBuffers.Add(ctrlBlock);
+		if constexpr (PROCESSING_SYS_TO_OUTPUT_SYS)
+		{
+			m_deferredBuffers1.Add(ctrlBlock);
+		}
+		else
+		{
+			m_deferredBuffers2.Add(ctrlBlock);
+		}
 	}
 
 public:
-	template <bool COPY_ON_WRITE = true, typename T, uint32_t N>
+	template <bool COPY_ON_WRITE = true, bool PROCESSING_SYS_TO_OUTPUT_SYS = true, typename T, uint32_t N>
 	inline void BeginWrite(DeferredBuffer<T, N>& buffer)
 	{
 		auto ctrlBlock = (DeferredBufferControlBlock*)&buffer;
@@ -431,14 +439,14 @@ public:
 		}
 	}
 
-	template <bool UPDATE = true, typename T, uint32_t N>
+	template <bool UPDATE = true, bool PROCESSING_SYS_TO_OUTPUT_SYS = true, typename T, uint32_t N>
 	inline void EndWrite(DeferredBuffer<T, N>& buffer)
 	{
 #ifdef _DEBUG
 		buffer.m_isWriting--;
 #endif // _DEBUG
 		if constexpr (UPDATE)
-			Update(buffer);
+			Update<PROCESSING_SYS_TO_OUTPUT_SYS>(buffer);
 	}
 	
 };

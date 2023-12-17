@@ -10,6 +10,7 @@
 
 #include "EditorContext.h"
 #include "DataInspector.h"
+#include "ComponentInspector.h"
 
 #include "ScriptList.h"
 
@@ -22,6 +23,7 @@ void RegisterSerializables()
 void Initialize(Runtime* runtime)
 {
 	DataInspector::Initialize();
+	ComponentInspector::SingletonInitialize();
 
 	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
@@ -94,5 +96,5 @@ void Initialize(Runtime* runtime)
 
 void Finalize(Runtime* runtime)
 {
-
+	ComponentInspector::SingletonFinalize();
 }

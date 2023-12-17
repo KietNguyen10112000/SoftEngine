@@ -389,7 +389,7 @@ public:
 	template<typename Fn1, typename Fn2, bool RECURSIVE = true>
 	void ForEachProperties(Fn1 fnPrevCall, Fn2 fnPostCall, const char* currentIntanceName = "")
 	{
-		ForEachPropertiesImpl<RECURSIVE, true, true>(fnPrevCall, fnPostCall, currentIntanceName, 0);
+		ForEachPropertiesImpl<RECURSIVE, !std::is_same_v<std::nullptr_t, Fn1>, !std::is_same_v<std::nullptr_t, Fn2>>(fnPrevCall, fnPostCall, currentIntanceName, 0);
 
 		if constexpr (RECURSIVE)
 		{

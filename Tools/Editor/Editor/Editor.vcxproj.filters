@@ -25,6 +25,9 @@
     <ClCompile Include="RotateScript.cpp">
       <Filter>Source Files\TestScript</Filter>
     </ClCompile>
+    <ClCompile Include="ComponentInspector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -44,6 +47,9 @@
     </ClInclude>
     <ClInclude Include="ScriptList.h">
       <Filter>Source Files\TestScript</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentInspector.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

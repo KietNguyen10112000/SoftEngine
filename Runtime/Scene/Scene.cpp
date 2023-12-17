@@ -465,10 +465,25 @@ void Scene::EndIteration()
 
 void Scene::SynchMainProcessingSystems()
 {
+	static TaskWaitingHandle handle = { 0,0 };
+
 	if constexpr (Config::ENABLE_DEBUG_GRAPHICS)
 		GetRenderingSystem()->RenderWithDebugGraphics();
 
+	Task task;
+	task.Entry() = [](void* p)
+	{
+		auto scene = (Scene*)p;
+		scene->UpdateDeferredBuffers(scene->m_deferredBuffers2);
+	};
+	task.Params() = this;
+
+	TaskSystem::PrepareHandle(&handle);
+	TaskSystem::Submit(&handle, task, Task::CRITICAL);
+
 	StageAllChangedTransformObjects();
+
+	TaskSystem::WaitForHandle(&handle);
 }
 
 void Scene::SynchMainProcessingSystemForMainOutputSystems()
@@ -479,7 +494,7 @@ void Scene::SynchMainProcessingSystemForMainOutputSystems()
 	task.Entry() = [](void* p)
 	{
 		auto scene = (Scene*)p;
-		scene->UpdateDeferredBuffers();
+		scene->UpdateDeferredBuffers(scene->m_deferredBuffers1);
 	};
 	task.Params() = this;
 
@@ -497,17 +512,17 @@ void Scene::SynchMainProcessingSystemForMainOutputSystems()
 	TaskSystem::WaitForHandle(&handle);
 }
 
-void Scene::UpdateDeferredBuffers()
+void Scene::UpdateDeferredBuffers(decltype(m_deferredBuffers1)& buffers)
 {
 	auto iteration = GetIterationCount();
-	TaskUtils::ForEachConcurrentList(m_deferredBuffers,
+	TaskUtils::ForEachConcurrentList(buffers,
 		[iteration](DeferredBufferControlBlock* ctrlBlock, size_t)
 		{
 			ctrlBlock->Update(iteration);
 		},
 		TaskSystem::GetWorkerCount()
 	);
-	m_deferredBuffers.Clear();
+	buffers.Clear();
 }
 
 void Scene::StageAllChangedTransformObjects()

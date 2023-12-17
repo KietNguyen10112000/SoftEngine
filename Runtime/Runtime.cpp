@@ -312,7 +312,7 @@ void Runtime::Setup()
 	object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	scene->AddObject(object);*/
 
-	constexpr int64_t NUM = 10;
+	constexpr int64_t NUM = 2;
 
 	for (int64_t y = -NUM / 2; y < NUM / 2; y++)
 	{
