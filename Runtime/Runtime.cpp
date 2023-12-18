@@ -298,13 +298,13 @@ void Runtime::Setup()
 
 	transform = {};
 	transform.Scale() = { 0.01f,0.01f,0.01f };
-	//auto object = ResourceUtils::LoadAnimModelArray("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
+	auto object = ResourceUtils::LoadAnimModelArray("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
 	//auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
 	//auto object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
-	auto object = ResourceUtils::LoadAnimModelArray("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
-	//object->SetLocalTransform(transform);
-	//scene->AddObject(object);
+	//auto object = ResourceUtils::LoadAnimModelArray("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
+	object->SetLocalTransform(transform);
+	scene->AddObject(object);
 
 	/*object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	scene->AddObject(object);
@@ -312,7 +312,7 @@ void Runtime::Setup()
 	object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	scene->AddObject(object);*/
 
-	constexpr int64_t NUM = 2;
+	/*constexpr int64_t NUM = 2;
 
 	for (int64_t y = -NUM / 2; y < NUM / 2; y++)
 	{
@@ -329,7 +329,7 @@ void Runtime::Setup()
 
 			scene->AddObject(cloned);
 		}
-	}
+	}*/
 
 	//transform = {};
 	//transform.Position() = { 0,0,0 };

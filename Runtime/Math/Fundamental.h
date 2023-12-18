@@ -853,6 +853,9 @@ private:
 
     using Base = glm::mat4;
 
+    template <typename T, typename _Scala>
+    friend T Lerp(const T& v1, const T& v2, _Scala t);
+
     /*constexpr operator glm::mat4&()
     {
         return reinterpret_cast<glm::mat4&>(*this);

@@ -96,7 +96,7 @@ public:
 
 	virtual float GetDuration() const override;
 
-	virtual void Play(ID animationId, float blendTime) override;
+	virtual void Play(ID animationId, float startTime, float endTime, float blendTime) override;
 
 	virtual void Serialize(Serializer* serializer);
 

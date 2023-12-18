@@ -445,7 +445,7 @@ struct AnimationTrack
 
 	float tickDuration;
 	float ticksPerSecond;
-	float t = 0;
+	float startTick;
 };
 
 struct Animation
@@ -463,8 +463,8 @@ struct Animation
 	// time in sec
 	inline void InitializeTrack(AnimationTrack* track, float startTime, float endTime)
 	{
-		auto startTick = startTime * ticksPerSecond;
-		auto endTick = endTime * ticksPerSecond;
+		auto startTick = startTime < 0 ? 0 : startTime * ticksPerSecond;
+		auto endTick = endTime < 0 ? tickDuration : endTime * ticksPerSecond;
 
 		auto& startIndex = track->startKeyFramesIndex;
 		auto& startAABBIndex = track->startAABBKeyFrameIndex;
@@ -492,7 +492,7 @@ struct Animation
 			channel.BinaryFind(startTick, &index);
 		}
 
-		track->t = 0;
+		track->startTick = startTick;
 		track->tickDuration = endTick - startTick;
 		track->ticksPerSecond = ticksPerSecond;
 	}

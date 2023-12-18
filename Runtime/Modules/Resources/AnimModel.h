@@ -206,6 +206,12 @@ public:
 
 	AnimModel(String path, bool placeholder = false);
 
+	inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
+	{
+		m_animations[animationId].InitializeTrack(track, startTime, endTime);
+		track->animationId = animationId;
+	}
+
 };
 
 NAMESPACE_END

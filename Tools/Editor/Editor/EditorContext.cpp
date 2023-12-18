@@ -652,7 +652,7 @@ void EditorContext::Inspect(ClassMetadata* metaData)
 
 				if (open)
 				{
-					if (ComponentInspector::Get()->Inspect(this, metadata->GetInstance(), metadata))
+					if (ComponentInspector::Get()->Inspect(this, metadata->GetInstance(), metadata, propertyName))
 					{
 						rawInspect = false;
 					}
@@ -666,7 +666,7 @@ void EditorContext::Inspect(ClassMetadata* metaData)
 			{
 				ImGui::Text(propertyName);
 
-				if (!ComponentInspector::Get()->Inspect(this, metadata->GetInstance(), metadata))
+				//if (!ComponentInspector::Get()->Inspect(this, metadata->GetInstance(), metadata))
 				{
 					DataInspector::Inspect(metadata, accessor, propertyName);
 				}

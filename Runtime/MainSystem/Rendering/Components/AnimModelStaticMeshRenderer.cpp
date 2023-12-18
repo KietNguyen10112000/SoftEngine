@@ -22,7 +22,7 @@ void AnimModelStaticMeshRenderer::OnTransformChanged()
 
 Handle<Serializable> AnimModelStaticMeshRenderer::Clone(Serializer* serializer)
 {
-	auto ret = mheap::New<AnimModelStaticMeshRenderer>();
+	auto ret = mheap::New<AnimModelStaticMeshRenderer>(false);
 
 	ret->m_model3D = m_model3D;
 	ret->m_mesh = m_mesh;

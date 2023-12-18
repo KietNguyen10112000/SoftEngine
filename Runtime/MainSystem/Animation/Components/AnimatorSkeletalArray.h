@@ -29,10 +29,25 @@ public:
 
 	std::vector<uint32_t> m_aabbKeyFrameIndex;
 
-	ID m_animationId = 0;
+	std::vector<KeyFramesIndex> m_blendKeyFramesIndex;
+
+	std::vector<uint32_t> m_blendAabbKeyFrameIndex;
+
+	/*ID m_animationId = 0;
 	float m_tickDuration;
 	float m_ticksPerSecond;
+	float m_t = 0;*/
+
+	AnimationTrack* m_currentAnimTrack = nullptr;
+	AnimationTrack* m_blendingAnimTrack = nullptr;
+
+	DeferredBuffer<AnimationTrack> m_currentAnimTrackBuffer;
+	DeferredBuffer<AnimationTrack> m_blendingAnimTrackBuffer;
+
 	float m_t = 0;
+	float m_blendTime = 0;
+	float m_blendCurTime = 0;
+	float m_tBlend = 0;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -47,27 +62,40 @@ public:
 	AnimatorSkeletalArray();
 
 private:
-	inline void SetAnimationImpl(ID animationId, float blendTime)
+	inline void SetAnimationImpl(float blendTime)
 	{
-		m_animationId = animationId;
-		m_t = 0;
-
-		for (auto& index : m_keyFramesIndex)
+		if (blendTime != 0)
 		{
-			index.s = 0;
-			index.r = 0;
-			index.t = 0;
-		}
+			m_blendingAnimTrack = (decltype(m_blendingAnimTrack))m_blendingAnimTrackBuffer.Read();
+			m_blendTime = blendTime;
+			m_blendCurTime = 0;
+			m_tBlend = 0;
 
-		for (auto& index : m_aabbKeyFrameIndex)
+			std::memcpy(m_blendKeyFramesIndex.data(), m_blendingAnimTrack->startKeyFramesIndex.data(),
+				m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+			std::memcpy(m_blendAabbKeyFrameIndex.data(), m_blendingAnimTrack->startAABBKeyFrameIndex.data(),
+				m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+		}
+		else
 		{
-			index = 0;
-		}
+			m_t = 0;
+			m_blendTime = 0;
+			m_blendingAnimTrack = nullptr;
 
-		auto& animation = m_model3D->m_animations[m_animationId];
-		m_tickDuration = animation.tickDuration;
-		m_ticksPerSecond = animation.ticksPerSecond;
+			m_currentAnimTrack = (decltype(m_currentAnimTrack))m_currentAnimTrackBuffer.Read();
+
+			std::memcpy(m_keyFramesIndex.data(), m_currentAnimTrack->startKeyFramesIndex.data(), 
+				m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+			std::memcpy(m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(), 
+				m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+		}
 	}
+
+	void UpdateNoBlend(Scene* scene);
+
+	void UpdateBlend(Scene* scene, float dt);
 
 public:
 
@@ -92,7 +120,7 @@ public:
 
 	virtual ID GetCurrentAnimationId() const override;
 
-	virtual void Play(ID animationId, float blendTime) override;
+	virtual void Play(ID animationId, float startTime, float endTime, float blendTime) override;
 
 	virtual void Serialize(Serializer* serializer);
 

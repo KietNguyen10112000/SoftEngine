@@ -223,6 +223,12 @@ void Scene::ProcessRemoveObjectListForMainSystem(ID mainSystemId)
 void Scene::OnObjectTransformChanged(GameObject* obj)
 {
 	auto root = obj->m_root;
+
+	if (!root)
+	{
+		return;
+	}
+
 	auto& atomicVar = root->m_updatedTransformIteration;
 
 	auto& atomicVar1 = obj->m_isRecoredChangeTransformIteration;
@@ -506,7 +512,8 @@ void Scene::SynchMainProcessingSystemForMainOutputSystems()
 	auto& list = GetCurrentStagedChangeTransformList();
 	for (auto& obj : list)
 	{
-		obj->UpdateTransformReadWrite();
+		if (obj->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
+			obj->UpdateTransformReadWrite();
 	}
 
 	TaskSystem::WaitForHandle(&handle);
@@ -569,7 +576,12 @@ void Scene::StageAllChangedTransformObjects()
 
 			auto nearestRootChangedTransform = obj;
 
-			assert(obj == obj->m_root);
+			//assert(obj == obj->m_root);
+			if (obj != obj->m_root)
+			{
+				//assert(obj->m_root == nullptr);
+				return;
+			}
 
 			Task recalculateTransformTask;
 			recalculateTransformTask.Entry() = [](void* p)

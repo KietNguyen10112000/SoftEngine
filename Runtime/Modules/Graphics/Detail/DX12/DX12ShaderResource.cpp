@@ -20,6 +20,7 @@ void DX12ShaderResource::UpdateBuffer(const void* buffer, size_t bufferSize)
 void DX12ShaderResource::UpdateTexture2D(const void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endChain)
 {
 	auto uploader = DX12Graphics::GetDX12()->GetResourceUploader();
+	m_lastFenceValue = DX12Graphics::GetDX12()->GetCurrentDX12FenceValue();
 	uploader->UploadTexture2D(m_resource.resource.Get(), region.x, region.y, buffer, region.width, region.height, region.pixelStride, region.mipLevel, endChain);
 }
 

@@ -144,10 +144,11 @@ void GameObject::RemoveFromParent()
 {
 	assert(ParentUpToDate().Get() != nullptr);
 
+	auto root = this;
 	PostTraversalUpToDate(
-		[](GameObject* cur)
+		[root](GameObject* cur)
 		{
-			cur->m_root = nullptr;
+			cur->m_root = root;
 		}
 	);
 

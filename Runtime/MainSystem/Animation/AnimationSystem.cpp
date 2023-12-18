@@ -211,7 +211,7 @@ void AnimationSystem::Iteration(float dt)
 		{
 			comp->Update(scene, dt);
 		},
-		TaskSystem::GetWorkerCount()
+		m_animSkeletalArrays.size() < 9000 ? 4 : TaskSystem::GetWorkerCount()
 	);
 
 	/*for (auto& data : m_animMeshRenderingBufferCount)
