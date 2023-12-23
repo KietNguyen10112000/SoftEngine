@@ -63,7 +63,7 @@ void AnimatorSkeletalArray::SetDuration(float sec)
 	}
 
 	auto system = GetGameObject()->GetScene()->GetAnimationSystem();
-	auto taskRunner = system->AsyncTaskRunnerMT();
+	auto taskRunner = system->AsyncTaskRunner();
 
 	auto task = taskRunner->CreateTask(
 		[](AnimationSystem* system, void* p)
@@ -77,7 +77,7 @@ void AnimatorSkeletalArray::SetDuration(float sec)
 	param->animator = this;
 	param->sec = tickDuration / sec;
 
-	taskRunner->RunAsync(&task);
+	taskRunner->RunAsync(this, &task);
 }
 
 void AnimatorSkeletalArray::SetDuration(float sec, ID animationId)
@@ -94,13 +94,19 @@ ID AnimatorSkeletalArray::GetCurrentAnimationId() const
 	return ID();
 }
 
-void AnimatorSkeletalArray::Play(ID animationId, float startTime, float endTime, float blendTime)
+void AnimatorSkeletalArray::Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime)
 {
 	struct Param
 	{
 		AnimatorSkeletalArray* animator;
 		float blendTime;
+		float startTime;
+
+		float startTransitTime = 0;
+		float padd;
 	};
+
+	startTime = std::max(0.0f, std::clamp(startTime, beginTime, endTime));
 
 	blendTime = std::max(0.0f, blendTime);
 
@@ -111,8 +117,8 @@ void AnimatorSkeletalArray::Play(ID animationId, float startTime, float endTime,
 
 	if (!GetGameObject()->IsInAnyScene())
 	{
-		m_model3D->InitializeAnimationTrack(animationId, m_currentAnimTrack, startTime, endTime);
-		SetAnimationImpl(blendTime);
+		m_model3D->InitializeAnimationTrack(animationId, m_currentAnimTrack, beginTime, endTime);
+		SetAnimationImpl(startTransitTime, blendTime, startTime);
 		return;
 	}
 
@@ -122,26 +128,72 @@ void AnimatorSkeletalArray::Play(ID animationId, float startTime, float endTime,
 	scene->BeginWrite<false>(buffer);
 
 	auto track = buffer.Write();
-	m_model3D->InitializeAnimationTrack(animationId, track, startTime, endTime);
+	m_model3D->InitializeAnimationTrack(animationId, track, beginTime, endTime);
 
 	scene->EndWrite(buffer);
 
 	auto system = scene->GetAnimationSystem();
-	auto taskRunner = system->AsyncTaskRunnerMT();
+	auto taskRunner = system->AsyncTaskRunner();
 
 	auto task = taskRunner->CreateTask(
 		[](AnimationSystem* system, void* p)
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, animator, blendTime);
-			animator->SetAnimationImpl(blendTime);
+			TASK_SYSTEM_UNPACK_PARAM_REF_4(Param, p, animator, blendTime, startTime, startTransitTime);
+			animator->SetAnimationImpl(startTransitTime, blendTime, startTime);
 		}
 	);
 
 	auto param = taskRunner->CreateParam<Param>(&task);
 	param->animator = this;
 	param->blendTime = blendTime;
+	param->startTime = startTime;
+	param->startTransitTime = startTransitTime;
 
-	taskRunner->RunAsync(&task);
+	taskRunner->RunAsync(this, &task);
+}
+
+void AnimatorSkeletalArray::SetPause(bool pause)
+{
+	m_paused = pause;
+}
+
+void AnimatorSkeletalArray::SetTime(float t)
+{
+	struct Param
+	{
+		AnimatorSkeletalArray* animator;
+		float sec;
+	};
+
+	if (!GetGameObject()->IsInAnyScene())
+	{
+		SetTimeImpl(t);
+		return;
+	}
+
+	auto system = GetGameObject()->GetScene()->GetAnimationSystem();
+	auto taskRunner = system->AsyncTaskRunner();
+
+	auto task = taskRunner->CreateTask(
+		[](AnimationSystem* system, void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, animator, sec);
+			animator->SetTimeImpl(sec);
+
+			if (animator->m_paused) 
+			{
+				animator->m_paused = false;
+				animator->Update(system->GetScene(), 0.0f);
+				animator->m_paused = true;
+			}
+		}
+	);
+
+	auto param = taskRunner->CreateParam<Param>(&task);
+	param->animator = this;
+	param->sec = t;
+
+	taskRunner->RunAsync(this, &task);
 }
 
 void AnimatorSkeletalArray::Serialize(Serializer* serializer)
@@ -213,7 +265,7 @@ void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const V
 {
 	if (var.Is(1))
 	{
-		Play(newValue.As<ID>(), -1, -1, 0);
+		Play(-1, newValue.As<ID>(), 0, -1, -1, 0);
 	}
 
 	if (var.Is(3))
@@ -486,7 +538,7 @@ void AnimatorSkeletalArray::UpdateBlend(Scene* scene, float dt)
 	auto& blendTickDuration = m_blendingAnimTrack->tickDuration;
 	auto& blendTicksPerSecond = m_blendingAnimTrack->ticksPerSecond;
 
-	m_tBlend += dt * blendTicksPerSecond;
+	//m_tBlend += dt * blendTicksPerSecond;
 	if (m_tBlend > blendTickDuration)
 	{
 		uint32_t num = (uint32_t)std::floor(m_tBlend / blendTickDuration);
@@ -501,7 +553,7 @@ void AnimatorSkeletalArray::UpdateBlend(Scene* scene, float dt)
 
 	m_blendCurTime += dt;
 
-	auto sBlend = std::min(1.0f, m_blendCurTime / m_blendTime);
+	auto sBlend = 1.0f - std::min(1.0f, m_blendCurTime / m_blendTime);
 
 	auto& animationId = m_currentAnimTrack->animationId;
 	auto& tickDuration = m_currentAnimTrack->tickDuration;
@@ -632,7 +684,7 @@ void AnimatorSkeletalArray::UpdateBlend(Scene* scene, float dt)
 			auto& blendIndex = m_blendAabbKeyFrameIndex[i];
 
 			auto aaBox1 = animation.animMeshLocalAABoxKeyFrames[i].Find(&index, index, t);
-			auto aaBox2 = blendAnimation.animMeshLocalAABoxKeyFrames[i].Find(&blendIndex, blendIndex, t);
+			auto aaBox2 = blendAnimation.animMeshLocalAABoxKeyFrames[i].Find(&blendIndex, blendIndex, tBlend);
 
 			auto& output = write->meshesAABB[i];
 			output.m_center = Lerp(aaBox1.m_center, aaBox2.m_center, sBlend);
@@ -691,7 +743,7 @@ void AnimatorSkeletalArray::UpdateBlend(Scene* scene, float dt)
 
 	if (sBlend == 1.0f)
 	{
-		m_t = m_blendTime;
+		/*m_t = m_blendTime;
 
 		m_currentAnimTrack = m_blendingAnimTrack;
 
@@ -699,7 +751,7 @@ void AnimatorSkeletalArray::UpdateBlend(Scene* scene, float dt)
 			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
 
 		std::memcpy(m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(),
-			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));*/
 
 		m_blendingAnimTrack = nullptr;
 	}
@@ -707,11 +759,21 @@ void AnimatorSkeletalArray::UpdateBlend(Scene* scene, float dt)
 
 void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 {
+	if (m_paused)
+	{
+		return;
+	}
+
 	auto& animationId = m_currentAnimTrack->animationId;
 	auto& tickDuration = m_currentAnimTrack->tickDuration;
 	auto& ticksPerSecond = m_currentAnimTrack->ticksPerSecond;
 
+	bool doBlend = m_t <= m_startTransitTick;
+
 	m_t += dt * ticksPerSecond;
+
+	doBlend = doBlend && (m_t > m_startTransitTick);
+
 	if (m_t > tickDuration)
 	{
 		uint32_t num = (uint32_t)std::floor(m_t / tickDuration);
@@ -724,13 +786,30 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 	}
 
-	if (m_blendingAnimTrack == nullptr)
+	doBlend = doBlend || m_startTransitTick == INFINITY || m_startTransitTick < 0;
+
+	if (m_blendingAnimTrack && doBlend)
 	{
-		UpdateNoBlend(scene);
+		if (m_startTransitTick != INFINITY)
+		{
+			m_currentAnimTrack = (decltype(m_currentAnimTrack))m_blendingAnimTrackBuffer.Read();
+
+			m_t = m_transitStartTime * m_currentAnimTrack->ticksPerSecond - m_currentAnimTrack->startTick;
+
+			std::memcpy(m_keyFramesIndex.data(), m_currentAnimTrack->startKeyFramesIndex.data(),
+				m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+			std::memcpy(m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(),
+				m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+
+			m_startTransitTick = INFINITY;
+		}
+
+		UpdateBlend(scene, dt);
 	}
 	else
 	{
-		UpdateBlend(scene, dt);
+		UpdateNoBlend(scene);
 	}
 }
 

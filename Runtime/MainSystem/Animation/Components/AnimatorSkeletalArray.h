@@ -49,6 +49,12 @@ public:
 	float m_blendCurTime = 0;
 	float m_tBlend = 0;
 
+	float m_startTransitTick = 0;
+	float m_transitStartTime = 0;
+
+	bool m_paused = false;
+	bool m_padd[7];
+
 protected:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -62,11 +68,20 @@ public:
 	AnimatorSkeletalArray();
 
 private:
-	inline void SetAnimationImpl(float blendTime)
+	inline void SetAnimationImpl(float startTransitTime, float blendTime, float startTime)
 	{
+		startTransitTime = startTransitTime * m_currentAnimTrack->ticksPerSecond;
+
+		if (startTransitTime > 0)
+		{
+			startTransitTime = std::clamp(startTransitTime, m_currentAnimTrack->startTick, m_currentAnimTrack->startTick + m_currentAnimTrack->tickDuration);
+		}
+
+		m_startTransitTick = startTransitTime - m_currentAnimTrack->startTick;
+
 		if (blendTime != 0)
 		{
-			m_blendingAnimTrack = (decltype(m_blendingAnimTrack))m_blendingAnimTrackBuffer.Read();
+			/*m_blendingAnimTrack = (decltype(m_blendingAnimTrack))m_blendingAnimTrackBuffer.Read();
 			m_blendTime = blendTime;
 			m_blendCurTime = 0;
 			m_tBlend = 0;
@@ -75,15 +90,42 @@ private:
 				m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
 
 			std::memcpy(m_blendAabbKeyFrameIndex.data(), m_blendingAnimTrack->startAABBKeyFrameIndex.data(),
+				m_aabbKeyFrameIndex.size() * sizeof(uint32_t));*/
+
+			m_blendingAnimTrack = (decltype(m_blendingAnimTrack))m_currentAnimTrack;
+			m_blendTime = blendTime;
+			m_blendCurTime = 0;
+			m_tBlend = m_t;
+
+			std::memcpy(m_blendKeyFramesIndex.data(), m_keyFramesIndex.data(),
+				m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+			std::memcpy(m_blendAabbKeyFrameIndex.data(), m_aabbKeyFrameIndex.data(),
 				m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+
+			m_transitStartTime = startTime;
+
+			if (m_startTransitTick < 0)
+			{
+				m_currentAnimTrack = (decltype(m_currentAnimTrack))m_blendingAnimTrackBuffer.Read();
+
+				m_t = startTime * m_currentAnimTrack->ticksPerSecond - m_currentAnimTrack->startTick;
+
+				std::memcpy(m_keyFramesIndex.data(), m_currentAnimTrack->startKeyFramesIndex.data(),
+					m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+				std::memcpy(m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(),
+					m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+			}
 		}
 		else
 		{
-			m_t = 0;
 			m_blendTime = 0;
 			m_blendingAnimTrack = nullptr;
 
 			m_currentAnimTrack = (decltype(m_currentAnimTrack))m_currentAnimTrackBuffer.Read();
+
+			m_t = startTime * m_currentAnimTrack->ticksPerSecond - m_currentAnimTrack->startTick;
 
 			std::memcpy(m_keyFramesIndex.data(), m_currentAnimTrack->startKeyFramesIndex.data(), 
 				m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
@@ -91,6 +133,20 @@ private:
 			std::memcpy(m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(), 
 				m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 		}
+	}
+
+	inline void SetTimeImpl(float t)
+	{
+		t *= m_currentAnimTrack->ticksPerSecond;
+		t = std::clamp(t, m_currentAnimTrack->startTick, m_currentAnimTrack->startTick + m_currentAnimTrack->tickDuration);
+		
+		m_t = t; //- m_currentAnimTrack->startTick;
+
+		std::memcpy(m_keyFramesIndex.data(), m_currentAnimTrack->startKeyFramesIndex.data(),
+			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+		std::memcpy(m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(),
+			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 	}
 
 	void UpdateNoBlend(Scene* scene);
@@ -120,7 +176,11 @@ public:
 
 	virtual ID GetCurrentAnimationId() const override;
 
-	virtual void Play(ID animationId, float startTime, float endTime, float blendTime) override;
+	virtual void Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime) override;
+
+	virtual void SetPause(bool pause) override;
+
+	virtual void SetTime(float t) override;
 
 	virtual void Serialize(Serializer* serializer);
 

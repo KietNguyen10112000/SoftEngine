@@ -430,6 +430,18 @@ public:
 		return id;
 	}
 
+	inline ID EmplaceBack()
+	{
+		auto id = m_size++;
+
+		if (id >= m_buffer.size())
+		{
+			TryGrowthCapacity(id);
+		}
+
+		return id;
+	}
+
 	inline void Set(ID index, const T& v)
 	{
 		++m_numWriter;
@@ -463,6 +475,41 @@ public:
 	{
 		return m_buffer[--m_size];
 	}
+
+	inline void BeginTryTake()
+	{
+		if (m_size.load(std::memory_order_relaxed) > m_buffer.size())
+		{
+			m_size.store(0, std::memory_order_relaxed);
+		}
+	}
+
+	template <bool AVOID_THREAD_COLLIDE = false>
+	inline T* TryTake()
+	{
+		auto idx = --m_size;
+		if (idx < m_buffer.size())
+		{
+			return &m_buffer[idx];
+		}
+		return nullptr;
+	}
+
+	inline void Swap(ConcurrentArrayList<T, Alloc>& list)
+	{
+		m_buffer.swap(list.m_buffer);
+
+		auto size = m_size.load(std::memory_order_relaxed);
+		m_size.store(list.m_size.load(std::memory_order_relaxed), std::memory_order_relaxed);
+		list.m_size.store(size, std::memory_order_relaxed);
+	}
+
+	/*inline void Concat(ConcurrentArrayList<T, Alloc>& list)
+	{
+		auto size = m_size.load(std::memory_order_relaxed);
+		m_size.store(list.m_size.load(std::memory_order_relaxed) + (size < m_buffer.size() ? size : 0), std::memory_order_relaxed);
+		m_buffer.insert(m_buffer.end(), list.m_buffer.begin(), list.m_buffer.end());
+	}*/
 
 	// no thread-safe
 	// output size must >= N_SPACES

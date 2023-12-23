@@ -101,7 +101,7 @@ float AnimatorSkeletalGameObject::GetDuration() const
 	return m_tickDuration / m_ticksPerSecond;
 }
 
-void AnimatorSkeletalGameObject::Play(ID animationId, float startTime, float endTime, float blendTime)
+void AnimatorSkeletalGameObject::Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime)
 {
 	struct Param
 	{
@@ -208,7 +208,7 @@ void AnimatorSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, co
 {
 	if (var.Is(&m_animationId))
 	{
-		Play(newValue.As<ID>(), -1, -1, 0);
+		Play(-1, newValue.As<ID>(), 0, -1, -1, 0);
 	}
 
 	if (var.Is(&m_tickDuration))

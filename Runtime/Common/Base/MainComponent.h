@@ -9,6 +9,12 @@
 
 NAMESPACE_BEGIN
 
+namespace raw 
+{
+	template <typename _C>
+	class AsyncTaskRunnerForMainComponent;
+}
+
 #define COMPONENT_CLASS(className) SERIALIZABLE_CLASS(className)
 
 class MainComponent : public Serializable
@@ -17,6 +23,9 @@ private:
 	friend class GameObject;
 	friend class DoubleBVH;
 	friend class Scene;
+
+	template <typename _C>
+	friend class raw::AsyncTaskRunnerForMainComponent;
 
 protected:
 	struct DoubleBVHId
@@ -29,6 +38,8 @@ protected:
 
 	DoubleBVHId m_doubleBVHId[2] = {};
 	GameObject* m_object = nullptr;
+
+	std::atomic<void*> m_forAsyncTaskRunner = { 0 };
 
 public:
 	// called when object contains this component added to scene

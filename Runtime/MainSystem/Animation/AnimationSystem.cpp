@@ -186,6 +186,7 @@ void AnimationSystem::Iteration(float dt)
 {
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
 
 	TaskUtils::ForEachStdVector(m_animMeshRenderingBufferCount, 
 		[this, dt](AnimMeshRenderingBufferCounter& data, ID) 

@@ -59,7 +59,11 @@ public:
 
 	virtual ID GetCurrentAnimationId() const = 0;
 
-	virtual void Play(ID animationId, float startTime, float endTime, float blendTime) = 0;
+	virtual void Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime) = 0;
+
+	inline virtual void SetPause(bool pause) {};
+
+	inline virtual void SetTime(float t) {};
 
 	template <typename Fn, typename... Args>
 	inline ID AddTrigger(float percentTime, Fn fn, Args&&... args)

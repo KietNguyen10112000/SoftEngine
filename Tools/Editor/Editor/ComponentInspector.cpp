@@ -28,14 +28,20 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 	const static char* cacheNameFmt = "editor_InspectAnimatorSkeletalArray_{}";
 	struct Cache
 	{
-		//ID animId = 0;
-		//float animStartTime = 0;
-		//float animEndTime = 0;
+		/*ID curAnimId = 0;
+		float curAnimStartTime = 0;
+		float curAnimEndTime = 0;*/
 
 		ID blendAnimId = 0;
 		float blendAnimStartTime = 0;
 		float blendAnimEndTime = 0;
 		float blendTime = 0;
+		float startTransitTime = -1;
+
+		float curT = 0;
+
+		bool isPaused = false;
+		bool needRepause = false;
 	};
 
 	auto cacheName = String::Format(cacheNameFmt, propertyName);
@@ -58,19 +64,35 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 
 	auto animator = (AnimatorSkeletalArray*)comp;
 
-	if (ImGui::Button("Replay"))
-	{
-
-	}
+	auto& curAnimationTrack = animator->m_currentAnimTrack;
 
 	if (ImGui::Button("Stop"))
 	{
-
+		animator->SetPause(true);
+		cache->isPaused = true;
 	}
 
 	if (ImGui::Button("Continue"))
 	{
+		animator->SetPause(false);
+		cache->isPaused = false;
+	}
 
+	/*if (cache->needRepause)
+	{
+		animator->SetPause(true);
+		cache->isPaused = true;
+		cache->needRepause = false;
+	}*/
+
+	auto curAnimBeginSec = curAnimationTrack->startTick / curAnimationTrack->ticksPerSecond;
+	auto curAnimEndSec = curAnimBeginSec + curAnimationTrack->tickDuration / curAnimationTrack->ticksPerSecond;
+	auto tempT = animator->m_t / curAnimationTrack->ticksPerSecond;
+	if (ImGui::SliderFloat("Animation Time", &tempT, curAnimBeginSec, curAnimEndSec) && cache->isPaused)
+	{
+		//animator->SetPause(false);
+		//cache->needRepause = true;
+		animator->SetTime(tempT);
 	}
 
 	ImGui::SeparatorText("Blend Animation");
@@ -86,9 +108,11 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 
 	int temp = (int)cache->blendAnimId;
 	modified |= ImGui::DragInt("Blend Animation Id", (int*)&temp, 0.1f, 0, animator->m_model3D->m_animations.size() - 1);
-	modified |= ImGui::DragFloat("Start Time", &cache->blendAnimStartTime, 0.01f, -INFINITY, duration);
+	modified |= ImGui::DragFloat("Begin Time", &cache->blendAnimStartTime, 0.01f, -INFINITY, duration);
 	modified |= ImGui::DragFloat("End Time", &cache->blendAnimEndTime, 0.01f, -INFINITY, INFINITY);
 	modified |= ImGui::DragFloat("Blend Duration", &cache->blendTime, 0.01f, 0, INFINITY);
+
+	modified |= ImGui::DragFloat("Start transit time", &cache->startTransitTime, 0.01f, 0, INFINITY);
 
 	ImGui::Text("Animation name: %s", animation.name.c_str());
 	ImGui::Text("Animation duration: %f sec", duration);
@@ -104,6 +128,6 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 	
 	if (ImGui::Button("Play"))
 	{
-		animator->Play(cache->blendAnimId, cache->blendAnimStartTime, cache->blendAnimEndTime, cache->blendTime);
+		animator->Play(cache->startTransitTime, cache->blendAnimId, 0, cache->blendAnimStartTime, cache->blendAnimEndTime, cache->blendTime);
 	}
 }

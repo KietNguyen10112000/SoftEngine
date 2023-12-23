@@ -5,10 +5,14 @@
 #include "Core/Structures/Raw/ConcurrentList.h"
 #include "TaskSystem/TaskUtils.h"
 
+//#include "MainComponent.h"
+
 NAMESPACE_BEGIN
 
 //template <typename _C, size_t>
 //class AsyncServer2;
+
+class MainComponent;
 
 namespace raw 
 {
@@ -132,6 +136,203 @@ public:
 		m_tasks.Add(*task);
 	}
 
+};
+
+template <typename _C>
+class AsyncTaskRunnerForMainComponent
+{
+public:
+	friend typename _C;
+
+	using Param = void*;
+	using PramDtor = void (*)(void*);
+	using Entry = void (*)(_C*, Param);
+
+	struct AsyncTask
+	{
+		Entry entry;
+		Param param;
+		PramDtor paramDtor;
+	};
+
+	using ListType = raw::ConcurrentArrayList<AsyncTask>;
+
+	struct AsyncTaskList
+	{
+		size_t processed;
+		ListType* list;
+		MainComponent* component;
+	};
+
+	StackAllocator m_stackAllocator = { 8 * MB };
+
+	raw::ConcurrentArrayList<AsyncTaskList> m_objectTasks;
+
+	raw::ConcurrentArrayList<ListType*> m_cacheList;
+
+public:
+	AsyncTaskRunnerForMainComponent()
+	{
+		m_objectTasks.ReserveNoSafe(8 * KB);
+	}
+
+	~AsyncTaskRunnerForMainComponent()
+	{
+		for (auto& list : m_objectTasks)
+		{
+			delete list.list;
+		}
+
+		for (auto& list : m_cacheList)
+		{
+			delete list;
+		}
+	}
+
+public:
+	template <typename MainComponent_ = MainComponent>
+	inline void ProcessAllTasks(_C* self)
+	{
+		m_cacheList.BeginTryTake();
+
+		TaskUtils::ForEachConcurrentListAsRingBuffer(
+			m_objectTasks,
+			[&](AsyncTaskList& taskList, ID)
+			{
+				auto& processed_ = reinterpret_cast<std::atomic<size_t>&>(taskList.processed);
+				auto id = processed_.exchange(INVALID_ID);
+				if (id == INVALID_ID)
+				{
+					return false;
+				}
+
+				for (auto& task : *taskList.list)
+				{
+					task.entry(self, task.param);
+
+					if (task.paramDtor)
+					{
+						task.paramDtor(task.param);
+					}
+				}
+
+				taskList.list->Clear();
+
+				m_cacheList.Add(taskList.list);
+
+				using AtomicType = std::atomic<ListType*>;
+				AtomicType& atom = reinterpret_cast<AtomicType&>(taskList.component->m_forAsyncTaskRunner);
+				atom.store(nullptr, std::memory_order_relaxed);
+
+				return true;
+			},
+			TaskSystem::GetWorkerCount()
+		);
+
+		m_objectTasks.Clear();
+		m_stackAllocator.Clear();
+	}
+
+public:
+	inline AsyncTask CreateTask(Entry func)
+	{
+		AsyncTask task;
+		task.entry = func;
+		return task;
+	}
+
+	template <typename T, typename ...Args>
+	inline T* CreateParam(AsyncTask* ofTask, Args&&... args)
+	{
+		T* ret = (T*)m_stackAllocator.Allocate(sizeof(T));
+		new (ret) T(std::forward<Args>(args)...);
+
+		ofTask->param = ret;
+
+		if constexpr (!(std::is_pod_v<T>))
+		{
+			ofTask->paramDtor = [](void* ptr)
+				{
+					auto p = (T*)ptr;
+					p->~T();
+				};
+		}
+		else
+		{
+			ofTask->paramDtor = nullptr;
+		}
+
+		return ret;
+	}
+
+	inline void CreateParamVoidPtr(AsyncTask* ofTask, void* p)
+	{
+		ofTask->param = p;
+		ofTask->paramDtor = nullptr;
+	}
+
+	// type of <component> must be derived from MainComponent
+	template <typename MainComponent_>
+	inline void RunAsync(MainComponent_* component, AsyncTask* task)
+	{
+		using AtomicType = std::atomic<ListType*>;
+		AtomicType& atom = reinterpret_cast<AtomicType&>(component->m_forAsyncTaskRunner);
+
+		ListType* list = atom.load(std::memory_order_relaxed);
+		if (list != 0 && list != (ListType*)INVALID_ID)
+		{
+			list->Add(*task);
+			return;
+		}
+
+		if (list == (ListType*)INVALID_ID)
+		{
+			while ((list = atom.load(std::memory_order_relaxed)) == (ListType*)INVALID_ID)
+			{
+				std::this_thread::yield();
+			}
+
+			list->Add(*task);
+			return;
+		}
+
+		if (list == 0)
+		{
+			if (atom.exchange((ListType*)INVALID_ID) == 0)
+			{
+				auto pList = m_cacheList.TryTake();
+				if (pList)
+				{
+					list = *pList;
+				}
+				else
+				{
+					list = new ListType();
+				}
+
+				AsyncTaskList taskList;
+				taskList.processed = 0;
+				taskList.component = component;
+				taskList.list = list;
+				m_objectTasks.Add(taskList);
+
+				atom.store(list, std::memory_order_relaxed);
+
+				list->Add(*task);
+				return;
+			}
+			else
+			{
+				while ((list = atom.load(std::memory_order_relaxed)) == (ListType*)INVALID_ID)
+				{
+					std::this_thread::yield();
+				}
+
+				list->Add(*task);
+				return;
+			}
+		}
+	}
 };
 
 //template <typename _C, size_t NUM_CMD>

@@ -295,6 +295,18 @@ public:
 		return id;
 	}
 
+	inline ID EmplaceBack()
+	{
+		auto id = m_size++;
+
+		if (id >= m_buffer.size())
+		{
+			TryGrowthCapacity(id);
+		}
+
+		return id;
+	}
+
 	inline void Set(ID index, const T& v)
 	{
 		++m_numWriter;

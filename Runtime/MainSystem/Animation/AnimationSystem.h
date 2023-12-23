@@ -40,6 +40,8 @@ private:
 	raw::AsyncTaskRunner<AnimationSystem> m_asyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
 	raw::AsyncTaskRunner<AnimationSystem> m_asyncTaskRunnerMT[NUM_DEFER_BUFFER] = {};
 
+	raw::AsyncTaskRunnerForMainComponent<AnimationSystem> m_asyncTaskRunner[NUM_DEFER_BUFFER] = {};
+
 public:
 	AnimationSystem(Scene* scene);
 	~AnimationSystem();
@@ -59,6 +61,11 @@ private:
 		return &m_asyncTaskRunnerMT[m_scene->GetCurrentDeferBufferIdx()];
 	}
 
+	inline auto* GetCurrentAsyncTaskRunner()
+	{
+		return &m_asyncTaskRunner[m_scene->GetCurrentDeferBufferIdx()];
+	}
+
 	inline auto* GetPrevAsyncTaskRunnerST()
 	{
 		return &m_asyncTaskRunnerST[m_scene->GetPrevDeferBufferIdx()];
@@ -67,6 +74,11 @@ private:
 	inline auto* GetPrevAsyncTaskRunnerMT()
 	{
 		return &m_asyncTaskRunnerMT[m_scene->GetPrevDeferBufferIdx()];
+	}
+
+	inline auto* GetPrevAsyncTaskRunner()
+	{
+		return &m_asyncTaskRunner[m_scene->GetPrevDeferBufferIdx()];
 	}
 
 public:
@@ -95,6 +107,11 @@ public:
 	inline auto* AsyncTaskRunnerMT()
 	{
 		return GetCurrentAsyncTaskRunnerMT();
+	}
+
+	inline auto* AsyncTaskRunner()
+	{
+		return GetCurrentAsyncTaskRunner();
 	}
 
 };

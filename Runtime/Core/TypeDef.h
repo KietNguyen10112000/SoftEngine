@@ -51,3 +51,9 @@ constexpr static ID INVALID_ID = -1;
 	if (atomicVar.load(std::memory_order_relaxed) == onceValue) return;		\
 	if (atomicVar.exchange(onceValue) == onceValue) return;					\
 }
+
+#define ATOMIC_EXCHANGE_ONCE_CALLBACK(atomicVar, onceValue, onceCallback)						\
+{																								\
+	if (atomicVar.load(std::memory_order_relaxed) == onceValue) { onceCallback; return; }		\
+	if (atomicVar.exchange(onceValue) == onceValue) return;										\
+}

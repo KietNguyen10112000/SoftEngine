@@ -248,6 +248,7 @@ void RenderingSystem::Iteration(float dt)
 {
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
 
 	auto graphics = Graphics::Get();
 	graphics->BeginFrame();

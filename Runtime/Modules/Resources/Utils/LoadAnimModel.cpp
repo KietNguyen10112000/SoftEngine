@@ -1480,7 +1480,7 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 	ctx.animatorArray->m_aabbKeyFrameIndex.resize(model3D->m_animMeshes.size());
 	ctx.animatorArray->m_blendAabbKeyFrameIndex.resize(model3D->m_animMeshes.size());
 
-	ctx.animatorArray->Play(0, -1, -1, 0);
+	ctx.animatorArray->Play(-1, 0, 0, -1, -1, 0);
 
 	aiVector3D scale;
 	aiQuaternion rot;
