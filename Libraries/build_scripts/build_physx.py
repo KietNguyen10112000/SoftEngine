@@ -8,7 +8,7 @@ from utils import copy_all_files
 
 def physx():
     os.system(( r'cd ../PhysX/physx' 
-                r' && call generate_projects.bat < ../../build_scripts/build_physx.txt'
+                r' && echo 2 | call generate_projects.bat'
                 r' && cmake --build ./compiler/vc17win64 --config Debug'
                 r' && cmake --build ./compiler/vc17win64 --config Release'
     ))
