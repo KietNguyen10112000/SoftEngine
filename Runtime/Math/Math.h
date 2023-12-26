@@ -4,6 +4,7 @@
 #include "Transform.h"
 #include "AABox.h"
 #include "Sphere.h"
+#include "Capsule.h"
 #include "Box.h"
 #include "Frustum.h"
 #include "Plane.h"
