@@ -23,7 +23,7 @@ public:
 	~DX12ShaderResource();
 
 	// Inherited via GraphicsShaderResource
-	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) override;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize, const GRAPHICS_BUFFER_REGION& region, bool endUpdateChain) override;
 
 	virtual void UpdateTexture2D(const void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endChain) override;
 

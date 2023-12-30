@@ -268,7 +268,7 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 		vbDesc.count = totalVertices;
 		vbDesc.stride = vertexTypeSize;
 		output->m_vertexBuffer = graphics->CreateVertexBuffer(vbDesc);
-		output->m_vertexBuffer->UpdateBuffer(verticesBuffer.data(), vbDesc.count * vbDesc.stride);
+		output->m_vertexBuffer->UpdateBuffer(verticesBuffer.data(), vbDesc.count * vbDesc.stride, {});
 
 		output->m_vertexCount = vbDesc.count;
 

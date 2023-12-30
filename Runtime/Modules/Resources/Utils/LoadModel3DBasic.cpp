@@ -95,7 +95,7 @@ void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bo
 		}*/
 
 		output->m_vertexBuffer = graphics->CreateVertexBuffer(vbDesc);
-		output->m_vertexBuffer->UpdateBuffer(vertices.data(), vbDesc.count * vbDesc.stride);
+		output->m_vertexBuffer->UpdateBuffer(vertices.data(), vbDesc.count * vbDesc.stride, {});
 
 		output->m_vertexCount = vbDesc.count;
 

@@ -190,7 +190,7 @@ void DebugGraphics::PyramidRenderer::Render(SharedPtr<GraphicsConstantBuffer>& c
 	backCount = 0;
 }
 
-void DebugGraphics::Model3DRenderer::Init(bool wireframe, const SharedPtr<GraphicsPipeline>& sharedPipeline, const SharedPtr<GraphicsConstantBuffer>& sharedConstantBuffer)
+void DebugGraphics::Model3DRenderer::Init(bool wireframe, const SharedPtr<GraphicsPipeline>& sharedPipeline, const SharedPtr<GraphicsConstantBuffer>& sharedConstantBuffer, const char* customVS)
 {
 	auto graphics = Graphics::Get();
 
@@ -202,7 +202,7 @@ void DebugGraphics::Model3DRenderer::Init(bool wireframe, const SharedPtr<Graphi
 	{
 		GRAPHICS_PIPELINE_DESC desc = {};
 		desc.preferRenderCallPerFrame = 512;
-		desc.vs = "DebugGraphics/Default.vs";
+		desc.vs = customVS ? customVS : "DebugGraphics/Default.vs";
 		desc.ps = "DebugGraphics/Px.ps";
 
 		desc.outputDesc.numRenderTarget = 1;
@@ -312,6 +312,133 @@ void DebugGraphics::Model3DRenderer::Render(SharedPtr<GraphicsConstantBuffer>& c
 	backCount = 0;
 }
 
+
+void DebugGraphics::DebugMeshRenderer::Init(bool wireframe)
+{
+	auto graphics = Graphics::Get();
+
+	auto& renderer = *this;
+	renderer.dataPerDrawCall.reserve(KB);
+
+	{
+		GRAPHICS_PIPELINE_DESC desc = {};
+		desc.preferRenderCallPerFrame = 512;
+		desc.vs = "DebugGraphics/Mesh.vs";
+		desc.ps = "DebugGraphics/Px.ps";
+
+		desc.outputDesc.numRenderTarget = 1;
+		desc.outputDesc.RTVFormat[0] = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
+		desc.outputDesc.DSVFormat = GRAPHICS_DATA_FORMAT::FORMAT_R32_FLOAT;
+		desc.rasterizerDesc.cullMode = GRAPHICS_CULL_MODE::NONE;
+		desc.rasterizerDesc.fillMode = wireframe ? GRAPHICS_FILL_MODE::WIREFRAME : GRAPHICS_FILL_MODE::SOLID;
+
+		desc.inputDesc.numElements = 1;
+		desc.inputDesc.elements[0] = {
+			"POSITION",
+			0,
+			GRAPHICS_DATA_FORMAT::FORMAT_R32G32B32_FLOAT,
+			0,
+			0,
+			GRAPHICS_PIPELINE_INPUT_CLASSIFICATION::INPUT_CLASSIFICATION_PER_VERTEX_DATA,
+			0
+		};
+
+		renderer.pipeline = graphics->CreateRasterizerPipeline(desc);
+	}
+
+	{
+		GRAPHICS_CONSTANT_BUFFER_DESC cbDesc = {};
+		cbDesc.bufferSize = sizeof(CBuffer);
+		cbDesc.perferNumRoom = 128;
+		graphics->CreateConstantBuffers(1, &cbDesc, &renderer.constantBuffer);
+	}
+
+	{
+		GRAPHICS_SHADER_RESOURCE_TYPE_BUFFER_DESC vbDesc = {};
+		vbDesc.count = VERTEX_BUFFER_ELEMENTS_COUNT;
+		vbDesc.stride = sizeof(Vec3);
+
+		for (auto& vb : vertexBuffers)
+		{
+			vb  = graphics->CreateVertexBuffer(vbDesc);
+		}
+	}
+}
+
+void DebugGraphics::DebugMeshRenderer::Render(SharedPtr<GraphicsConstantBuffer>& cameraBuffer)
+{
+	auto graphics = Graphics::Get();
+
+	graphics->SetGraphicsPipeline(pipeline.get());
+
+	size_t curVBElmCount = 0;
+	size_t curDrawIdx = 0;
+	size_t curVerticesIdx = 0;
+
+	auto drawCallCount = dataPerDrawCall.size();
+
+	size_t curVBIdx = 0;
+	size_t curVBOffset = 0;
+
+	GRAPHICS_BUFFER_REGION region = {};
+
+	for (size_t i = 0; i < drawCallCount; i++)
+	{
+		auto& data = dataPerDrawCall[i];
+
+		// update to vertex buffer
+		auto& vb = vertexBuffers[curVBIdx];
+
+		curVBElmCount += data.verticesCount;
+
+		bool needFlushVB = (curVBElmCount + data.verticesCount) > VERTEX_BUFFER_ELEMENTS_COUNT || i == (drawCallCount - 1);
+
+		if (curVBElmCount <= VERTEX_BUFFER_ELEMENTS_COUNT) 
+		{
+			region.offset = curVBOffset;
+			vb->UpdateBuffer(&vertices[curVerticesIdx], data.verticesCount * sizeof(Vec3), region, needFlushVB);
+		}
+		else
+		{
+			assert(0);
+		}
+
+		curVerticesIdx += data.verticesCount;
+		curVBOffset += data.verticesCount * sizeof(Vec3);
+
+		if (needFlushVB)
+		{
+			size_t vbDrawOffset = 0;
+
+			GraphicsVertexBuffer* vbs[] = { vb.get() };
+
+			for (size_t j = curDrawIdx; j <= i; j++)
+			{
+				auto& drawData = dataPerDrawCall[j];
+
+				// render calls
+				constantBuffer->UpdateBuffer(&drawData.transform, sizeof(CBuffer));
+
+				auto params = pipeline->PrepareRenderParams();
+				params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &cameraBuffer);
+				params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &constantBuffer);
+
+				graphics->DrawInstanced(1, vbs, drawData.verticesCount, 1, vbDrawOffset, 0);
+
+				vbDrawOffset += drawData.verticesCount;
+			}
+
+			curVBElmCount = 0;
+			curDrawIdx = i + 1;
+			curVBOffset = 0;
+			curVBIdx = (curVBIdx + 1) % NUM_VERTEX_BUFFERS;
+		}
+	}
+
+	dataPerDrawCall.clear();
+	vertices.clear();
+}
+
 DebugGraphics::DebugGraphics()
 {
 	InitCubeRenderer();
@@ -330,8 +457,10 @@ void DebugGraphics::InitSphereRenderer()
 	m_sphereRenderer.Init(true, nullptr, nullptr);
 	m_sphereRenderer.model = resource::Load<Model3DBasic>("Default/sphere_lowpoly.obj");
 
-	m_capsuleRenderer.Init(true, m_sphereRenderer.pipeline, m_sphereRenderer.constantBuffer);
+	m_capsuleRenderer.Init(true, nullptr, m_sphereRenderer.constantBuffer, "DebugGraphics/Capsule.vs");
 	m_capsuleRenderer.model = resource::Load<Model3DBasic>("Default/capsule.obj");
+
+	m_meshRenderer.Init(true);
 }
 
 void DebugGraphics::DrawDirection(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor)
@@ -451,7 +580,7 @@ void DebugGraphics::DrawSphere(const Sphere& sphere, const Vec4& color)
 
 void DebugGraphics::DrawCapsule(const Capsule& capsule, const Vec4& color)
 {
-	/*auto& renderer = m_capsuleRenderer;
+	auto& renderer = m_capsuleRenderer;
 
 	renderer.lock.lock();
 
@@ -465,15 +594,44 @@ void DebugGraphics::DrawCapsule(const Capsule& capsule, const Vec4& color)
 
 	auto& back = renderer.buffers.back();
 	auto& transform = back.transforms[idx];
-	transform.SetScale(Vec3(sphere.m_radius));
-	transform.Position() = sphere.m_center;
+
+	auto scaleH = capsule.m_height;
+	auto scaleR = capsule.m_radius;
+
+	transform.SetScale(1.0f, 1.0f, 1.0f);
+	
+	auto rotation = Quaternion::RotationFromTo(Capsule::DEFAULT_UP_AXIS, capsule.m_up);
+	transform *= Mat4::Rotation(rotation);
+	transform.Position() = capsule.m_center;
+
+	transform[0][3] = scaleH;
+	transform[1][3] = scaleR;
 
 	back.colors[idx] = color;
 
-	renderer.lock.unlock();*/
+	renderer.lock.unlock();
 }
 
-void DebugGraphics::RenderToTarget(GraphicsRenderTarget* renderTarget, GraphicsDepthStencilBuffer* depthBuffer, 
+void DebugGraphics::DrawMesh(const Vec3* vertices, uint32_t count, const Mat4& transform, const Vec4& color)
+{
+	auto& renderer = m_meshRenderer;
+
+	renderer.lock.lock();
+
+	auto& data = renderer.dataPerDrawCall.emplace_back();
+	data.transform = transform;
+	data.color = color;
+	data.verticesCount = count;
+
+	auto idx = renderer.vertices.size();
+	renderer.vertices.resize(idx + count);
+
+	std::memcpy(&renderer.vertices[idx], vertices, count * sizeof(Vec3));
+
+	renderer.lock.unlock();
+}
+
+void DebugGraphics::RenderToTarget(GraphicsRenderTarget* renderTarget, GraphicsDepthStencilBuffer* depthBuffer,
 	SharedPtr<GraphicsConstantBuffer>& cameraBuffer)
 {
 	auto graphics = Graphics::Get();
@@ -494,6 +652,14 @@ void DebugGraphics::RenderToTarget(GraphicsRenderTarget* renderTarget, GraphicsD
 
 	{
 		m_sphereRenderer.Render(cameraBuffer);
+	}
+
+	{
+		m_capsuleRenderer.Render(cameraBuffer);
+	}
+
+	{
+		m_meshRenderer.Render(cameraBuffer);
 	}
 
 	graphics->UnsetRenderTargets(1, &renderTarget, depthBuffer);

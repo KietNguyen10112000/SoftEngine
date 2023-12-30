@@ -30,11 +30,12 @@ DX12VertexBuffer::~DX12VertexBuffer()
 	DX12Graphics::GetDX12()->ThreadSafeFreeDX12Resource(m_resource, m_lastFenceValue);
 }
 
-void DX12VertexBuffer::UpdateBuffer(const void* buffer, size_t bufferSize)
+void DX12VertexBuffer::UpdateBuffer(const void* buffer, size_t bufferSize, const GRAPHICS_BUFFER_REGION& region, bool endUpdateChain)
 {
 	auto dx12 = DX12Graphics::GetDX12();
 	auto uploader = dx12->GetResourceUploader();
-	uploader->UploadBuffer(m_resource.resource.Get(), 0, buffer, bufferSize, true);
+	m_lastFenceValue = dx12->GetCurrentDX12FenceValue();
+	uploader->UploadBuffer(m_resource.resource.Get(), region.offset, buffer, bufferSize, endUpdateChain);
 }
 
 NAMESPACE_DX12_END

@@ -13,7 +13,7 @@ DX12ShaderResource::~DX12ShaderResource()
 	}
 }
 
-void DX12ShaderResource::UpdateBuffer(const void* buffer, size_t bufferSize)
+void DX12ShaderResource::UpdateBuffer(const void* buffer, size_t bufferSize, const GRAPHICS_BUFFER_REGION& region, bool endUpdateChain)
 {
 }
 

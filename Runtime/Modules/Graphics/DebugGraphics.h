@@ -80,7 +80,46 @@ private:
 		spinlock lock;
 		bool padd[3];
 
-		void Init(bool wireframe, const SharedPtr<GraphicsPipeline>& sharedPipeline, const SharedPtr<GraphicsConstantBuffer>& sharedConstantBuffer);
+		void Init(bool wireframe, const SharedPtr<GraphicsPipeline>& sharedPipeline, const SharedPtr<GraphicsConstantBuffer>& sharedConstantBuffer, const char* customVS = nullptr);
+		void Render(SharedPtr<GraphicsConstantBuffer>& cameraBuffer);
+	};
+
+	struct DebugMeshRenderer
+	{
+		constexpr static size_t BATCH_SIZE = 512;
+
+		constexpr static size_t NUM_VERTEX_BUFFERS = 16;
+		constexpr static size_t VERTEX_BUFFER_SIZE = 3 * MB;
+		constexpr static size_t VERTEX_BUFFER_ELEMENTS_COUNT = VERTEX_BUFFER_SIZE / sizeof(Vec3);
+
+		SharedPtr<GraphicsPipeline> pipeline;
+		SharedPtr<GraphicsConstantBuffer> constantBuffer;
+
+		SharedPtr<GraphicsVertexBuffer> vertexBuffers[NUM_VERTEX_BUFFERS];
+
+		struct Data
+		{
+			Mat4 transform;
+			Vec4 color;
+
+			// size refer to m_vertices
+			size_t verticesCount;
+		};
+
+		struct CBuffer
+		{
+			Mat4 transform;
+			Vec4 color;
+		};
+
+		std::vector<Data> dataPerDrawCall;
+
+		std::vector<Vec3> vertices;
+
+		spinlock lock;
+		bool padd[3];
+
+		void Init(bool wireframe);
 		void Render(SharedPtr<GraphicsConstantBuffer>& cameraBuffer);
 	};
 
@@ -91,6 +130,8 @@ private:
 
 	Model3DRenderer m_sphereRenderer;
 	Model3DRenderer m_capsuleRenderer;
+
+	DebugMeshRenderer m_meshRenderer;;
 
 public:
 	DebugGraphics();
@@ -109,6 +150,10 @@ public:
 
 	void DrawSphere(const Sphere& sphere, const Vec4& color = { 1,1,1,1 });
 	void DrawCapsule(const Capsule& capsule, const Vec4& color = { 1,1,1,1 });
+
+	// hungry perfromance consumption
+	// count <= 64 KB
+	void DrawMesh(const Vec3* vertices, uint32_t count, const Mat4& transform = {}, const Vec4& color = { 1,1,1,1 });
 
 public:
 	void RenderToTarget(GraphicsRenderTarget* renderTarget, GraphicsDepthStencilBuffer* depthBuffer, 

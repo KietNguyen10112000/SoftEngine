@@ -24,6 +24,13 @@ struct TEXTURE2D_REGION
 	uint32_t pixelStride = 0;
 };
 
+struct GRAPHICS_BUFFER_REGION
+{
+	// offset, size in byte
+	size_t offset = 0;
+	size_t size = (size_t)(-1);
+};
+
 struct GRAPHICS_DATA_FORMAT
 {
 	enum FORMAT
@@ -260,7 +267,7 @@ class GraphicsShaderResource
 {
 public:
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_BUFFER
-	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) = 0;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize, const GRAPHICS_BUFFER_REGION& region, bool endUpdateChain = true) = 0;
 
 	// only work if GRAPHICS_SHADER_RESOURCE_DESC::TYPE is SHADER_RESOURCE_TYPE_TEXTURE2D
 	virtual void UpdateTexture2D(const void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endUpdateChain = true) = 0;
@@ -319,7 +326,7 @@ public:
 class GraphicsVertexBuffer
 {
 public:
-	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) = 0;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize, const GRAPHICS_BUFFER_REGION& region, bool endUpdateChain = true) = 0;
 
 };
 

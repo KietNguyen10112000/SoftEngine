@@ -57,7 +57,7 @@ public:
 
 	~DX12VertexBuffer();
 
-	virtual void UpdateBuffer(const void* buffer, size_t bufferSize) override;
+	virtual void UpdateBuffer(const void* buffer, size_t bufferSize, const GRAPHICS_BUFFER_REGION& region, bool endUpdateChain) override;
 
 };
 

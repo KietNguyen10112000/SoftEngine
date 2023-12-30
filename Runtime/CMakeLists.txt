@@ -107,6 +107,9 @@ file(
     "Modules/Resources/Utils/*.h"
     "Modules/Resources/Utils/*.cpp"
 
+    "Modules/PhysX/*.h"
+    "Modules/PhysX/*.cpp"
+
     "Runtime.h"
     "Runtime.cpp"
     "StartupConfig.h"
@@ -157,8 +160,26 @@ IF (WIN32)
         $<$<CONFIG:Release>:assimp-vc${MSVC_TOOLSET_VERSION}-mt.lib>
     )
 
+    target_link_libraries(${BINARY} PUBLIC
+        "PhysXFoundation_64.lib"
+        "PhysXTask_static_64.lib"
+        "PhysXVehicle_static_64.lib"
+        "PhysXVehicle2_static_64.lib"
+        "PVDRuntime_64.lib"
+        "SceneQuery_static_64.lib"
+        "SimulationController_static_64.lib"
+        "LowLevel_static_64.lib"
+        "LowLevelAABB_static_64.lib"
+        "LowLevelDynamics_static_64.lib"
+        "PhysX_64.lib"
+        "PhysXCharacterKinematic_static_64.lib"
+        "PhysXCommon_64.lib"
+        "PhysXCooking_64.lib"
+        "PhysXExtensions_static_64.lib"
+    )
+
 ELSE()
-    message( FATAL_ERROR "unsupported, yet!" )
+    message( FATAL_ERROR "unsupported, now!" )
 ENDIF()
 
 
@@ -174,6 +195,7 @@ include_directories(PUBLIC
      "${CMAKE_SOURCE_DIR}/Libraries/stb"
      "${CMAKE_SOURCE_DIR}/Libraries/assimp/include"
      "${CMAKE_SOURCE_DIR}/Libraries/build/include"
+     "${CMAKE_SOURCE_DIR}/Libraries/PhysX/physx/include"
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

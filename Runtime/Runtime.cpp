@@ -16,6 +16,8 @@
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
 
+#include "PhysX/PhysX.h"
+
 #include "Network/Network.h"
 #include "Resources/Resource.h"
 
@@ -132,6 +134,7 @@ void Runtime::InitializeModules()
 
 	InitNetwork();
 	InitGraphics();
+	PhysX::SingletonInitialize();
 	InitPlugins();
 
 	BuiltinConstantBuffers::SingletonInitialize();
@@ -148,6 +151,7 @@ void Runtime::FinalizeModules()
 	BuiltinConstantBuffers::SingletonFinalize();
 
 	FinalPlugins();
+	PhysX::SingletonFinalize();
 	FinalGraphics();
 	FinalNetwork();
 

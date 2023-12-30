@@ -616,6 +616,46 @@ void EditorContext::OnRenderInGameDebugGraphics()
 	debugGraphics->DrawSphere({ Vec3(0, 0, 0), 1 }, Vec4(1, 0, 0, 1));
 	debugGraphics->DrawDirection(Vec3(0, 0, 0.5f), Vec3::X_AXIS, { 0,0,1,1 }, { 0,1,0,1 });
 
+	debugGraphics->DrawCapsule(Capsule(Vec3(5, 0, 5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
+	debugGraphics->DrawDirection(Vec3(5, 0, 5), Capsule::DEFAULT_UP_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
+	debugGraphics->DrawDirection(Vec3(5, 2.5f, 5), Vec3::X_AXIS * 2.0f, { 0,0,1,1 }, { 0,1,0,1 });
+
+	debugGraphics->DrawCapsule(Capsule(Vec3(1,1,1), Vec3(5, 0, -5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
+	//debugGraphics->DrawDirection(Vec3(5, 0, -5), Vec3::X_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
+	//debugGraphics->DrawDirection(Vec3(5, 0, -5), Vec3::Y_AXIS * 2.0f, { 0,0,1,1 }, { 0,1,0,1 });
+
+	/*{
+		static size_t temp = 0;
+		for (size_t j = 0; j < 10; j++)
+		{
+			if (temp > 300)
+			{
+				temp = 0;
+			}
+
+			size_t numSamples = (temp++) / 30 + 10;
+			auto center = Vec3(5, 0, -5 * ((float)j + 1));
+			float radius = 4.f;
+			float arc = 0;
+			float dArc = 2 * PI / (float)numSamples;
+			std::vector<Vec3> vertices;
+			for (size_t i = 0; i < numSamples; i++)
+			{
+				auto v1 = Vec3(std::sin(arc), 0, std::cos(arc)) * radius + center;
+
+				arc += dArc;
+
+				auto v2 = Vec3(std::sin(arc), 0, std::cos(arc)) * radius + center;
+
+				vertices.push_back(center);
+				vertices.push_back(v1);
+				vertices.push_back(v2);
+			}
+			debugGraphics->DrawMesh(vertices.data(), vertices.size(), {}, Vec4(1, 0, 0, 1));
+		}
+		
+	}*/
+	
 //#endif // _DEBUG
 }
 
