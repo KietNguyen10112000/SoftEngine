@@ -190,9 +190,9 @@ void Scene::ProcessAddObjectListForMainSystem(ID mainSystemId)
 			comps[mainSystemId] = comp;
 		}
 
+		comp->OnTransformChanged();
 		system->AddComponent(comp);
 		comp->OnComponentAdded();
-		comp->OnTransformChanged();
 	}
 }
 

@@ -31,6 +31,16 @@ public:
 		return m_physics;
 	}
 
+	inline auto GetCpuDispatcher()
+	{
+		return m_dispatcher;
+	}
+
+	inline auto GetAllocator()
+	{
+		return m_allocator;
+	}
+
 };
 
 NAMESPACE_END

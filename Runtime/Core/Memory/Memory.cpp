@@ -145,7 +145,7 @@ void rheap::internal::Reset()
 #ifdef _DEBUG
 void* rheap::malloc(size_t nBytes)
 {
-    auto handle = soft::g_rawHeap->Allocate(nBytes + 2 * sizeof(size_t), 0, 0, 0);
+    auto handle = soft::g_rawHeap->Allocate(nBytes + 3 * sizeof(size_t), 0, 0, 0);
     auto mem = handle->GetUsableMemAddress();
 
     size_t* p = (size_t*)mem;
@@ -154,13 +154,13 @@ void* rheap::malloc(size_t nBytes)
     p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
     *p = MALLOC_SIGN_END;
 
-    auto ret = ((size_t*)mem) + 1;
+    auto ret = ((size_t*)mem) + 2;
     return ret;
 }
 
 void rheap::free(void* ptr)
 {
-    size_t* p = ((size_t*)ptr) - 1;
+    size_t* p = ((size_t*)ptr) - 2;
     auto handle = ((ManagedHandle*)p) - 1;
 
     assert(*p == MALLOC_SIGN_BEGIN);

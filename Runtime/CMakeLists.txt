@@ -70,6 +70,12 @@ file(
 
     "MainSystem/Physics/*.h"
     "MainSystem/Physics/*.cpp"
+    "MainSystem/Physics/Components/*.h"
+    "MainSystem/Physics/Components/*.cpp"
+    "MainSystem/Physics/Materials/*.h"
+    "MainSystem/Physics/Materials/*.cpp"
+    "MainSystem/Physics/Shapes/*.h"
+    "MainSystem/Physics/Shapes/*.cpp"
 
     "MainSystem/Scripting/*.h"
     "MainSystem/Scripting/*.cpp"

@@ -77,6 +77,7 @@ private:
 
 	Mat4		m_globalTransformMat	[NUM_TRANSFORM_BUFFERS] = {};
 	Mat4		m_localTransformMat		[NUM_TRANSFORM_BUFFERS] = {};
+	Transform	m_globalTransform		[NUM_TRANSFORM_BUFFERS] = {};
 	Transform	m_localTransform		[NUM_TRANSFORM_BUFFERS] = {};
 	uint32_t	m_transformReadIdx								= 0;
 
