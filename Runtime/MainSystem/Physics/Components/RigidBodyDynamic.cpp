@@ -4,19 +4,22 @@
 
 #include "PxPhysicsAPI.h"
 
+#include "PhysX/PhysX.h"
+
+#include "../Shapes/PhysicsShape.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
 
-void RigidBodyDynamic::OnTransformChanged()
+RigidBodyDynamic::RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape)
 {
-	auto gameObject = GetGameObject();
+	auto physics = PhysX::Get()->GetPxPhysics();
+	m_pxActor = physics->createRigidDynamic(PxTransform(PxIdentity));
+}
 
-	auto& globalTransform = gameObject->ReadGlobalTransformMat();
-
-	auto pxRigidBody = m_pxActor->is<PxRigidBody>();
-	auto pxTransform = pxRigidBody->getGlobalPose();
-
+RigidBodyDynamic::~RigidBodyDynamic()
+{
 
 }
 

@@ -310,15 +310,15 @@ void Runtime::Setup()
 	//object->SetLocalTransform(transform);
 	//scene->AddObject(object);
 
-	transform = {};
-	transform.Scale() = { 0.01f,0.01f,0.01f };
-	auto object = ResourceUtils::LoadAnimModelArray("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
+	//transform = {};
+	//transform.Scale() = { 0.01f,0.01f,0.01f };
+	//auto object = ResourceUtils::LoadAnimModelArray("model/globin/globin2.fbx", "model/globin/textures/lowRes/character diffuse.png");
 	////auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
 	////auto object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	////auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
 	////auto object = ResourceUtils::LoadAnimModelArray("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
-	object->SetLocalTransform(transform);
-	scene->AddObject(object);
+	//object->SetLocalTransform(transform);
+	//scene->AddObject(object);
 
 	/*object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	scene->AddObject(object);
@@ -369,6 +369,23 @@ void Runtime::Setup()
 	//}
 	//
 	//scene->AddObject(object);
+
+	{
+		auto obj1 = mheap::New<GameObject>();
+		obj1->NewComponent<MeshBasicRenderer>();
+
+		auto obj2 = mheap::New<GameObject>();
+		obj2->NewComponent<MeshBasicRenderer>();
+
+		transform = {};
+		transform.Position() = { 0,5,0 };
+		obj2->SetLocalTransform(transform);
+
+		obj1->AddChild(obj2);
+
+		scene->AddObject(obj1);
+	}
+
 }
 
 void Runtime::Run()

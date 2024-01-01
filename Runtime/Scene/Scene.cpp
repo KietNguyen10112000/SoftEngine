@@ -512,7 +512,7 @@ void Scene::SynchMainProcessingSystemForMainOutputSystems()
 	auto& list = GetCurrentStagedChangeTransformList();
 	for (auto& obj : list)
 	{
-		if (obj->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
+		//if (obj->m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_iterationCount)
 			obj->UpdateTransformReadWrite();
 	}
 

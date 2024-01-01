@@ -533,6 +533,11 @@ public:
 	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 
 public:
+	inline const Transform& ReadGlobalTransform() const
+	{
+		return m_globalTransform[m_transformReadIdx];
+	}
+
 	inline const Transform& ReadLocalTransform() const
 	{
 		return m_localTransform[m_transformReadIdx];
@@ -603,9 +608,14 @@ public:
 		return in3;//in1 || in2 || in3 || in4;
 	}
 
-	inline const auto& GetLocalTransform()
+	inline const auto& GetLocalTransform() const
 	{
 		return ReadLocalTransform();
+	}
+
+	inline const auto& GetGlobalTransform() const
+	{
+		return ReadGlobalTransform();
 	}
 
 	inline void SetLocalTransform(const Transform& transform)
