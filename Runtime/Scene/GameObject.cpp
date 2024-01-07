@@ -54,35 +54,32 @@ void GameObject::RecalculateUpToDateTransformBegin(ID parentIdx)
 	auto& readLocalTransform = m_localTransform[readIdx];
 	auto& writeGlobalMat = m_globalTransformMat[WriteTransformIdx()];
 
-	auto& writeGlobalTransform = m_globalTransform[WriteTransformIdx()];
-
 	auto& writeLocalMat = m_localTransformMat[WriteTransformIdx()];
+	m_updatedTransformIteration = m_scene->GetIterationCount();
 	WriteLocalTransform() = readLocalTransform;
-
-	auto numTransformContributors = m_numTransformContributors.load(std::memory_order_relaxed);
-	m_numTransformContributors.store(0, std::memory_order_relaxed);
-
-	auto& contributors = m_transformContributors;
-	for (uint32_t i = 0; i < numTransformContributors; i++)
-	{
-		contributors[i].func(this, contributors[i].comp);
-	}
 
 	writeLocalMat = readLocalTransform.ToTransformMatrix();
 	auto parent = ParentUpToDate().Get();
 
 	auto parentTransform = (parent ? parent->m_globalTransformMat[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Mat4::Identity());
-	auto parentTransform_ = (parent ? parent->m_globalTransform[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Transform());
 	writeGlobalMat = writeLocalMat * parentTransform;
 
-	auto p = (Vec4(readLocalTransform.Translation(), 1.0f) * parentTransform);
-	writeGlobalTransform.Translation() = p.xyz() / p.w;
+	auto numTransformContributors = m_numTransformContributors.load(std::memory_order_relaxed);
+	m_numTransformContributors.store(0, std::memory_order_relaxed);
+	if (numTransformContributors != 0)
+	{
+		auto& _readLocalTransform = m_localTransform[WriteTransformIdx()];
+		if (readIdx != WriteTransformIdx())
+		{
+			_readLocalTransform = m_localTransform[ReadTransformIdx()];
+		}
 
-	auto scale = readLocalTransform.Scale() * parentTransform_.Scale();
-	writeGlobalTransform.Scale() = scale;
-
-	auto rot = Mat4::Rotation(readLocalTransform.Rotation()) * parentTransform;
-	writeGlobalTransform.Rotation() = rot;
+		auto& contributors = m_transformContributors;
+		for (uint32_t i = 0; i < numTransformContributors; i++)
+		{
+			contributors[i].func(this, _readLocalTransform, writeGlobalMat, contributors[i].comp);
+		}
+	}
 
 	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
 	for (auto& child : children)
@@ -100,36 +97,33 @@ void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 	auto& readLocalTransform = m_localTransform[readIdx];
 	auto& writeGlobalMat = m_globalTransformMat[WriteTransformIdx()];
 
-	auto& writeGlobalTransform = m_globalTransform[WriteTransformIdx()];
-
 	auto& writeLocalMat = m_localTransformMat[WriteTransformIdx()];
+	m_updatedTransformIteration = m_scene->GetIterationCount();
 	WriteLocalTransform() = readLocalTransform;
-
-	auto numTransformContributors = m_numTransformContributors.load(std::memory_order_relaxed);
-	m_numTransformContributors.store(0, std::memory_order_relaxed);
-
-	auto& contributors = m_transformContributors;
-	for (uint32_t i = 0; i < numTransformContributors; i++)
-	{
-		contributors[i].func(this, contributors[i].comp);
-	}
 
 	writeLocalMat = readLocalTransform.ToTransformMatrix();
 	auto parent = ParentUpToDate().Get();
 	auto& parentTransform = parent->m_globalTransformMat[parentIdx];
-	auto& parentTransform_ = parent->m_globalTransform[parentIdx];
 	//writeGlobalMat = writeLocalMat * (parent ? parent->m_globalTransformMat[parentIdx == INVALID_ID ? parent->ReadTransformIdx() : parentIdx] : Mat4::Identity());
 
 	writeGlobalMat = writeLocalMat * parentTransform;
 
-	//auto p = (Vec4(readLocalTransform.Translation(), 1.0f) * parentTransform);
-	writeGlobalTransform.Translation() = parentTransform_.Translation() + readLocalTransform.Translation() * parentTransform_.Scale();
+	auto numTransformContributors = m_numTransformContributors.load(std::memory_order_relaxed);
+	m_numTransformContributors.store(0, std::memory_order_relaxed);
+	if (numTransformContributors != 0)
+	{
+		auto& _readLocalTransform = m_localTransform[WriteTransformIdx()];
+		if (readIdx != WriteTransformIdx())
+		{
+			_readLocalTransform = m_localTransform[ReadTransformIdx()];
+		}
 
-	auto scale = readLocalTransform.Scale() * parentTransform_.Scale();
-	writeGlobalTransform.Scale() = scale;
-
-	auto rot = Mat4::Rotation(readLocalTransform.Rotation()) * Mat4::Rotation(parentTransform_.Rotation());
-	writeGlobalTransform.Rotation() = rot;
+		auto& contributors = m_transformContributors;
+		for (uint32_t i = 0; i < numTransformContributors; i++)
+		{
+			contributors[i].func(this, _readLocalTransform, writeGlobalMat, contributors[i].comp);
+		}
+	}
 
 	auto& children = m_lastChangeTreeIterationCount == 0 ? ReadChildren() : WriteChildren();
 	for (auto& child : children)
@@ -142,6 +136,7 @@ void GameObject::IndirectSetLocalTransform(const Transform& transform)
 {
 	if (transform.Equals(ReadLocalTransform())) return;
 
+	m_updatedTransformIteration = m_scene->GetIterationCount();
 	WriteLocalTransform() = transform;
 	m_scene->OnObjectTransformChanged(this);
 }
@@ -284,6 +279,9 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 	obj->m_modificationLock.lock();
 
 	m_scene->DoAddToParent(this, obj);
+
+	m_updatedTransformIteration = m_scene->GetIterationCount();
+	WriteLocalTransform() = ReadLocalTransform();
 	m_scene->OnObjectTransformChanged(this);
 
 	if (m_lastChangeTreeIterationCount != m_scene->GetIterationCount())

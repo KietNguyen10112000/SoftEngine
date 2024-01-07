@@ -39,7 +39,7 @@ public:
 	struct TransformContributor
 	{
 		void* comp;
-		void (*func)(GameObject* object, void* comp);
+		void (*func)(GameObject* object, Transform& objectLocalTransform, Mat4& objectGlobalTransform, void* comp);
 	};
 
 private:
@@ -64,7 +64,7 @@ private:
 	uint32_t m_padd2;
 
 	std::atomic<size_t> m_isRecoredChangeTransformIteration = { 0 };
-	std::atomic<size_t> m_updatedTransformIteration = { 0 };
+	size_t m_updatedTransformIteration = { 0 };
 
 	ID m_sceneId = INVALID_ID;
 	ID m_UID = INVALID_ID;
@@ -77,7 +77,6 @@ private:
 
 	Mat4		m_globalTransformMat	[NUM_TRANSFORM_BUFFERS] = {};
 	Mat4		m_localTransformMat		[NUM_TRANSFORM_BUFFERS] = {};
-	Transform	m_globalTransform		[NUM_TRANSFORM_BUFFERS] = {};
 	Transform	m_localTransform		[NUM_TRANSFORM_BUFFERS] = {};
 	uint32_t	m_transformReadIdx								= 0;
 
@@ -236,7 +235,7 @@ private:
 
 	inline ID IdxTransformUpToDate()
 	{
-		auto readIdx = (m_isRecoredChangeTransformIteration.load(std::memory_order_relaxed) == m_scene->GetIterationCount()) ?
+		auto readIdx = (m_updatedTransformIteration == m_scene->GetIterationCount()) ?
 			WriteTransformIdx() :
 			ReadTransformIdx();
 		return readIdx;
@@ -249,7 +248,7 @@ private:
 
 	void IndirectSetLocalTransform(const Transform& transform);
 
-	inline void ContributeLocalTransform(void* p, void (*func)(GameObject*, void*))
+	inline void ContributeTransform(void* p, void (*func)(GameObject*, Transform&, Mat4&, void*))
 	{
 		auto idx = m_numTransformContributors++;
 		assert(idx < MainSystemInfo::COUNT);
@@ -533,11 +532,6 @@ public:
 	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 
 public:
-	inline const Transform& ReadGlobalTransform() const
-	{
-		return m_globalTransform[m_transformReadIdx];
-	}
-
 	inline const Transform& ReadLocalTransform() const
 	{
 		return m_localTransform[m_transformReadIdx];
@@ -611,11 +605,6 @@ public:
 	inline const auto& GetLocalTransform() const
 	{
 		return ReadLocalTransform();
-	}
-
-	inline const auto& GetGlobalTransform() const
-	{
-		return ReadGlobalTransform();
 	}
 
 	inline void SetLocalTransform(const Transform& transform)

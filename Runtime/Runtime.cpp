@@ -48,6 +48,12 @@
 #include "MainSystem/Rendering/BuiltinConstantBuffers.h"
 #include "MainSystem/Rendering/DisplayService.h"
 
+#include "MainSystem/Physics/Components/RigidBodyStatic.h"
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
+#include "MainSystem/Physics/Materials/PhysicsMaterial.h"
+
 #include "SerializableList.h"
 
 #include "MainSystem/Scripting/ScriptMeta.h"
@@ -114,6 +120,7 @@ void Runtime::Finalize()
 	resource::internal::Finalize();
 
 	Graphics::Finalize();
+	PhysX::SingletonFinalize();
 	MetadataParser::Finalize();
 	FileSystem::Finalize();
 }
@@ -151,7 +158,6 @@ void Runtime::FinalizeModules()
 	BuiltinConstantBuffers::SingletonFinalize();
 
 	FinalPlugins();
-	PhysX::SingletonFinalize();
 	FinalGraphics();
 	FinalNetwork();
 
@@ -370,7 +376,7 @@ void Runtime::Setup()
 	//
 	//scene->AddObject(object);
 
-	{
+	/*{
 		auto obj1 = mheap::New<GameObject>();
 		obj1->NewComponent<MeshBasicRenderer>();
 
@@ -384,6 +390,39 @@ void Runtime::Setup()
 		obj1->AddChild(obj2);
 
 		scene->AddObject(obj1);
+	}*/
+
+
+	auto material = std::make_shared<PhysicsMaterial>(0.5f, 0.5f, 0.6f);
+
+	{
+		auto obj = mheap::New<GameObject>();
+		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/white.png");
+
+		auto shape = std::make_shared<PhysicsShapePlane>(material);
+		obj->NewComponent<RigidBodyStatic>(shape);
+
+		transform = {};
+		transform.Scale() = { 0.01f, 100.f, 100.f };
+		transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
+		obj->SetLocalTransform(transform);
+
+		scene->AddObject(obj);
+	}
+
+	{
+		auto obj = mheap::New<GameObject>();
+		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
+
+		auto shape = std::make_shared<PhysicsShapeBox>(Vec3(2.0f,2.0f,2.0f), material);
+		obj->NewComponent<RigidBodyDynamic>(shape);
+
+		transform = {};
+		transform.Position() = { 0.0f, 50.0f, 0.0f };
+		//transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
+		obj->SetLocalTransform(transform);
+
+		scene->AddObject(obj);
 	}
 
 }

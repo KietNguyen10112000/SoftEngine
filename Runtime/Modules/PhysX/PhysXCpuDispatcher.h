@@ -15,7 +15,9 @@ public:
 		myTask.Params() = &task;
 		myTask.Entry() = [](void* p)
 		{
-			((physx::PxBaseTask*)p)->run();
+			auto pxTask = ((physx::PxBaseTask*)p);
+			pxTask->run();
+			pxTask->release();
 		};
 
 		TaskSystem::Submit(myTask, Task::CRITICAL);

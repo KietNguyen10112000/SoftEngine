@@ -5,6 +5,7 @@
 
 #include "MainSystem/MainSystem.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
+#include "MainSystem/Physics/PhysicsSystem.h"
 #include "MainSystem/Scripting/ScriptingSystem.h"
 #include "MainSystem/Animation/AnimationSystem.h"
 
@@ -24,6 +25,7 @@ Scene::Scene() : m_eventDispatcher(this)
 	SetupDeferLists();
 
 	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
+	m_mainSystems[MainSystemInfo::PHYSICS_ID]	= new PhysicsSystem(this);
 	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = new ScriptingSystem(this);
 	m_mainSystems[MainSystemInfo::ANIMATION_ID] = new AnimationSystem(this);
 
@@ -117,7 +119,7 @@ void Scene::SetupMainSystemIterationTasks()
 	//m_mainOutputSystemIterationTasks[m_numMainOutputSystem++] = m_mainSystemIterationTasks[MainSystemInfo::AUDIO_ID];
 
 	// processing systems
-	//m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::PHYSICS_ID];
+	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::PHYSICS_ID];
 	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::SCRIPTING_ID];
 	m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++]	= m_mainSystemIterationTasks[MainSystemInfo::ANIMATION_ID];
 }
@@ -229,11 +231,13 @@ void Scene::OnObjectTransformChanged(GameObject* obj)
 		return;
 	}
 
-	auto& atomicVar = root->m_updatedTransformIteration;
+	auto& atomicVar = root->m_isRecoredChangeTransformIteration;
 
-	auto& atomicVar1 = obj->m_isRecoredChangeTransformIteration;
-
-	ATOMIC_EXCHANGE_ONCE(atomicVar1, m_iterationCount);
+	if (obj != root)
+	{
+		auto& atomicVar1 = obj->m_isRecoredChangeTransformIteration;
+		ATOMIC_EXCHANGE_ONCE(atomicVar1, m_iterationCount);
+	}
 
 	ATOMIC_EXCHANGE_ONCE(atomicVar, m_iterationCount);
 

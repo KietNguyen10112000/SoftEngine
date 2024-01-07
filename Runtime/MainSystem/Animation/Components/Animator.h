@@ -39,7 +39,7 @@ protected:
 	}
 
 public:
-	inline Animator() : AnimationComponent(ANIMATION_TYPE::NONE) {};
+	inline Animator() : AnimationComponent(ANIMATION_TYPE::ANIMATION_TYPE_NONE) {};
 
 	inline Animator(ANIMATION_TYPE type) : AnimationComponent(type) {};
 

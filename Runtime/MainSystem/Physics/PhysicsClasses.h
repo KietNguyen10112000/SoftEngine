@@ -6,4 +6,5 @@ friend class PhysicsShapePlane;						\
 friend class PhysicsShapeSphere;					\
 friend class PhysicsShapeConvexMesh;				\
 friend class PhysicsShapeConvexTriangleMesh;		\
-friend class RigidBodyDynamic;
+friend class RigidBodyDynamic;						\
+friend class RigidBodyStatic;

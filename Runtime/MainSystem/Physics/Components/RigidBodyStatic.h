@@ -9,22 +9,19 @@ NAMESPACE_BEGIN
 
 class PhysicsShape;
 
-class RigidBodyDynamic : public RigidBody
+class RigidBodyStatic : public RigidBody
 {
 public:
-	COMPONENT_CLASS(RigidBodyDynamic);
+	COMPONENT_CLASS(RigidBodyStatic);
 
-	RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape);
-	~RigidBodyDynamic();
+	RigidBodyStatic(const SharedPtr<PhysicsShape>& shape);
+	~RigidBodyStatic();
 
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 
 	{
-		return PHYSICS_TYPE_RIGID_BODY_DYNAMIC;
+		return PHYSICS_TYPE_RIGID_BODY_STATIC;
 	};
-
-public:
-	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
 
 	// Inherited via RigidBody
