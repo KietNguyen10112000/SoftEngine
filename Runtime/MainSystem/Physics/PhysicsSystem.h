@@ -10,9 +10,12 @@
 
 #include "Scene/Scene.h"
 
+#include "PhysicsClasses.h"
+
 namespace physx
 {
 class PxScene;
+class PxControllerManager;
 }
 
 NAMESPACE_BEGIN
@@ -20,6 +23,8 @@ NAMESPACE_BEGIN
 class API PhysicsSystem : public MainSystem
 {
 private:
+	PHYSICS_FRIEND_CLASSES();
+
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
 
 	raw::AsyncTaskRunner<PhysicsSystem> m_asyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
@@ -28,6 +33,7 @@ private:
 	raw::AsyncTaskRunnerForMainComponent<PhysicsSystem> m_asyncTaskRunner[NUM_DEFER_BUFFER] = {};
 
 	physx::PxScene* m_pxScene = nullptr;
+	physx::PxControllerManager* m_pxControllerManager = nullptr;
 
 public:
 	PhysicsSystem(Scene* scene);

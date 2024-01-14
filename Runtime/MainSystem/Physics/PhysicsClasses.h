@@ -7,4 +7,7 @@ friend class PhysicsShapeSphere;					\
 friend class PhysicsShapeConvexMesh;				\
 friend class PhysicsShapeConvexTriangleMesh;		\
 friend class RigidBodyDynamic;						\
-friend class RigidBodyStatic;
+friend class RigidBodyStatic;						\
+friend class CharacterController;					\
+friend class CharacterControllerCapsule;			\
+friend class CharacterControllerBox;

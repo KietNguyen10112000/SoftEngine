@@ -15,6 +15,7 @@ public:
 	float m_radius = 0;
 
 public:
+	Capsule() {};
 	Capsule(const Vec3& up, const Vec3& center, float height, float radius) : m_up(up.Normal()), m_center(center), m_height(height), m_radius(radius) {};
 	Capsule(const Vec3& center, float height, float radius) : m_center(center), m_height(height), m_radius(radius) {};
 

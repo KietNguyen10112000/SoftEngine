@@ -50,6 +50,7 @@
 
 #include "MainSystem/Physics/Components/RigidBodyStatic.h"
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
+#include "MainSystem/Physics/Components/CharacterControllerCapsule.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
 #include "MainSystem/Physics/Materials/PhysicsMaterial.h"
@@ -58,6 +59,7 @@
 
 #include "MainSystem/Scripting/ScriptMeta.h"
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
+#include "MainSystem/Scripting/Components/TestScript.h"
 
 #include "Common/Base/Serializer.h"
 
@@ -410,16 +412,42 @@ void Runtime::Setup()
 		scene->AddObject(obj);
 	}
 
+	for (size_t y = 0; y < 3; y++)
+	{
+		for (size_t x = 0; x < 3; x++)
+		{
+			auto obj = mheap::New<GameObject>();
+			obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
+
+			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(2.0f, 2.0f, 2.0f), material);
+			obj->NewComponent<RigidBodyDynamic>(shape);
+
+			transform = {};
+			transform.Position() = { x * 5.0f, 50.0f, y * 5.0f };
+			//transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
+			obj->SetLocalTransform(transform);
+
+			scene->AddObject(obj);
+		}
+	}
+
 	{
 		auto obj = mheap::New<GameObject>();
-		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
+		//obj->NewComponent<MeshBasicRenderer>("Default/capsule.obj", "Default/green.png");
 
-		auto shape = std::make_shared<PhysicsShapeBox>(Vec3(2.0f,2.0f,2.0f), material);
-		obj->NewComponent<RigidBodyDynamic>(shape);
+		{
+			CharacterControllerCapsuleDesc desc = {};
+			desc.capsule = Capsule(Vec3::ZERO + Vec3::UP, 1.0f, 0.5f);
+			desc.material = material;
+			obj->NewComponent<CharacterControllerCapsule>(scene, desc);
+		}
+
+		{
+			obj->NewComponent<TestScript>();
+		}
 
 		transform = {};
-		transform.Position() = { 0.0f, 50.0f, 0.0f };
-		//transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
+		transform.Position() = Vec3::ZERO + Vec3::UP;
 		obj->SetLocalTransform(transform);
 
 		scene->AddObject(obj);

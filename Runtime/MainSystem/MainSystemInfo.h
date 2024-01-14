@@ -38,7 +38,9 @@ friend class AnimationSystem;			\
 friend class AnimatorSkeletalArray;		\
 friend class ScriptScheduler;			\
 friend class GameObject;				\
-friend class ScriptMeta;
+friend class ScriptMeta;				\
+friend class RigidBodyDynamic;			\
+friend class CharacterController;
 
 
 NAMESPACE_END

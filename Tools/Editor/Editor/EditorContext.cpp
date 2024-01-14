@@ -7,6 +7,7 @@
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 #include "MainSystem/Scripting/Components/Script.h"
+#include "MainSystem/Physics/Components/PhysicsComponent.h"
 
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
@@ -605,6 +606,12 @@ void EditorContext::OnRenderInGameDebugGraphics()
 		debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
 		debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
 		debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
+
+		auto physicsComp = m_inspectingObject->GetComponentRaw<PhysicsComponent>();
+		if (physicsComp)
+		{
+			physicsComp->OnDrawDebug();
+		}
 	}
 
 	debugGraphics->DrawDirection(Vec3(-10, 0, 0), Vec3(20, 0, 0), { 1,0,0,1 }, { 1,0,0,1 });

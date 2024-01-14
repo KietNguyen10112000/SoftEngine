@@ -448,6 +448,11 @@ public:
 		if constexpr (UPDATE)
 			Update<PROCESSING_SYS_TO_OUTPUT_SYS>(buffer);
 	}
+
+	inline float Dt() const
+	{
+		return m_dt;
+	}
 	
 };
 

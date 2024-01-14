@@ -55,7 +55,7 @@ private:
 
 	Scene* m_scene = nullptr;
 	bool m_isLongLife = true;
-	bool m_padd1;
+	bool m_isNeedRecalculateLocalTransform = false;
 	Spinlock m_modificationLock;
 	Spinlock m_treeLock;
 	uint32_t m_modificationStateScene = MODIFICATION_STATE::NONE;
@@ -87,6 +87,7 @@ private:
 	uint32_t	m_childInParentIdx = INVALID_ID;
 
 	size_t m_lastChangeTreeIterationCount = 0;
+	size_t m_lastWriteLocalTransformIterationCount = 0;
 
 	struct HasMainComponentState
 	{
@@ -215,6 +216,8 @@ private:
 
 		return this;
 	}
+
+	void RecalculateReadLocalTransform();
 
 	void RecalculateTransform(size_t idx);
 
@@ -602,8 +605,13 @@ public:
 		return in3;//in1 || in2 || in3 || in4;
 	}
 
-	inline const auto& GetLocalTransform() const
+	inline const auto& GetLocalTransform()
 	{
+		if (m_isNeedRecalculateLocalTransform) {
+			RecalculateReadLocalTransform();
+			m_isNeedRecalculateLocalTransform = false;
+		}
+
 		return ReadLocalTransform();
 	}
 

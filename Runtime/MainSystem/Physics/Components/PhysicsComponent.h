@@ -35,6 +35,11 @@ public:
 
 	virtual PHYSICS_TYPE GetPhysicsType() const = 0;
 
+	inline virtual void OnDrawDebug() {};
+
+protected:
+	virtual void OnPhysicsTransformChanged() = 0;
+	
 public:
 	inline void SetPhysicsFlag(PHYSICS_FLAG flag, bool value)
 	{

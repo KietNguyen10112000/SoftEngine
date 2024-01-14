@@ -21,10 +21,14 @@ PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 	sceneDesc.flags |= PxSceneFlag::eENABLE_ACTIVE_ACTORS;
 
 	m_pxScene = physics->createScene(sceneDesc);
+
+	m_pxControllerManager = PxCreateControllerManager(*m_pxScene);
 }
 
 PhysicsSystem::~PhysicsSystem()
 {
+	m_pxControllerManager->release();
+	m_pxScene->release();
 }
 
 void PhysicsSystem::BeginModification()
@@ -34,13 +38,15 @@ void PhysicsSystem::BeginModification()
 void PhysicsSystem::AddComponent(MainComponent* comp)
 {
 	auto physics = (PhysicsComponent*)comp;
-	m_pxScene->addActor(*physics->m_pxActor);
+	if (physics->m_pxActor)
+		m_pxScene->addActor(*physics->m_pxActor);
 }
 
 void PhysicsSystem::RemoveComponent(MainComponent* comp)
 {
 	auto physics = (PhysicsComponent*)comp;
-	m_pxScene->removeActor(*physics->m_pxActor);
+	if (physics->m_pxActor)
+		m_pxScene->removeActor(*physics->m_pxActor);
 }
 
 void PhysicsSystem::OnObjectTransformChanged(MainComponent* comp)
@@ -57,9 +63,12 @@ void PhysicsSystem::PrevIteration()
 
 void PhysicsSystem::Iteration(float dt)
 {
+	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
+	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
+
 	if (dt <= 0)
 	{
-		//std::cout << "Fuckkkkkkkkkkkkkkkkkk\n";
 		dt = 1.0f / 120.0f;
 	}
 
@@ -68,23 +77,20 @@ void PhysicsSystem::Iteration(float dt)
 	// lose 1 thread T___T
 	m_pxScene->fetchResults(true);
 
-	uint32_t activeCount = 0;
-	auto actors = m_pxScene->getActiveActors(activeCount);
-	for (uint32_t i = 0; i < activeCount; i++)
 	{
-		auto actor = actors[i];
-
+		uint32_t activeCount = 0;
+		auto actors = m_pxScene->getActiveActors(activeCount);
+		for (uint32_t i = 0; i < activeCount; i++)
 		{
-			auto dynamicRigid = actor->is<PxRigidDynamic>();
-			if (dynamicRigid)
-			{
-				auto comp = (RigidBodyDynamic*)dynamicRigid->userData;
-				auto obj = comp->GetGameObject();
-				obj->ContributeTransform(comp, RigidBodyDynamic::TransformContributor);
-				m_scene->OnObjectTransformChanged(obj);
-			}
-		}
+			auto actor = actors[i];
+			auto comp = (PhysicsComponent*)actor->userData;
 
+			if (comp)
+			{
+				comp->OnPhysicsTransformChanged();
+			}
+
+		}
 	}
 }
 

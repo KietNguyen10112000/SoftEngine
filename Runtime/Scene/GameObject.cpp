@@ -31,6 +31,25 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 	return this;
 }
 
+void GameObject::RecalculateReadLocalTransform()
+{
+	auto* read = (Transform*)&ReadLocalTransform();
+	auto& globalMat = ReadGlobalTransformMat();
+
+	Mat4 localTransformMat;
+	if (Parent().IsNull()) 
+	{
+		localTransformMat = globalMat;
+	}
+	else
+	{
+		auto& globalParentMat = Parent()->ReadGlobalTransformMat();
+		localTransformMat = globalMat * globalParentMat.GetInverse();
+	}
+
+	localTransformMat.Decompose(read->Scale(), read->Rotation(), read->Translation());
+}
+
 void GameObject::RecalculateTransform(size_t idx)
 {
 	auto& localMat = m_localTransformMat[idx];
@@ -137,6 +156,7 @@ void GameObject::IndirectSetLocalTransform(const Transform& transform)
 	if (transform.Equals(ReadLocalTransform())) return;
 
 	m_updatedTransformIteration = m_scene->GetIterationCount();
+	m_lastWriteLocalTransformIterationCount = m_updatedTransformIteration;
 	WriteLocalTransform() = transform;
 	m_scene->OnObjectTransformChanged(this);
 }

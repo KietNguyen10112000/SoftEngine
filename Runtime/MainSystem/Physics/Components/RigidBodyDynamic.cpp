@@ -28,18 +28,34 @@ RigidBodyDynamic::~RigidBodyDynamic()
 
 }
 
+void RigidBodyDynamic::OnPhysicsTransformChanged()
+{
+	auto obj = GetGameObject();
+	obj->ContributeTransform(this, RigidBodyDynamic::TransformContributor);
+	obj->GetScene()->OnObjectTransformChanged(obj);
+}
+
 void RigidBodyDynamic::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
 {
 	auto rigidBody = (RigidBodyDynamic*)self;
+	auto gameObject = rigidBody->GetGameObject();
+	auto scene = gameObject->GetScene();
 	auto pxRigidBody = (PxRigidActor*)rigidBody->m_pxActor;
+
+	auto& lastGlobalTransform = rigidBody->m_lastGlobalTransform;
+	if (gameObject->m_lastWriteLocalTransformIterationCount == scene->GetIterationCount())
+	{
+		return;
+	}
+
 	auto pxTransform = pxRigidBody->getGlobalPose();
 
 	PxMat44 shapePose(pxTransform);
 	Mat4& myMat = reinterpret_cast<Mat4&>(shapePose);
 
 	global = myMat;
-
-	rigidBody->m_lastGlobalTransform = myMat;
+	lastGlobalTransform = myMat;
+	rigidBody->GetGameObject()->m_isNeedRecalculateLocalTransform = true;
 }
 
 void RigidBodyDynamic::Serialize(Serializer* serializer)

@@ -37,6 +37,8 @@ void RigidBody::OnTransformChanged()
 		pxTransform.q.w = rot.w;
 
 		pxRigidBody->setGlobalPose(pxTransform);
+
+		m_lastGlobalTransform = globalTransform;
 	}
 }
 

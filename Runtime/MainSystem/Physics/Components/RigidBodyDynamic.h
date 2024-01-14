@@ -17,6 +17,12 @@ public:
 	RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape);
 	~RigidBodyDynamic();
 
+private:
+	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
+
+protected:
+	virtual void OnPhysicsTransformChanged() override;
+
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 
 	{
@@ -24,9 +30,6 @@ public:
 	};
 
 public:
-	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
-
-
 	// Inherited via RigidBody
 	void Serialize(Serializer* serializer) override;
 

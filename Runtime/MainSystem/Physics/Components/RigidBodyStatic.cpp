@@ -28,6 +28,12 @@ RigidBodyStatic::~RigidBodyStatic()
 
 }
 
+void RigidBodyStatic::OnPhysicsTransformChanged()
+{
+	// can not be moved
+	assert(0);
+}
+
 void RigidBodyStatic::Serialize(Serializer* serializer)
 {
 }

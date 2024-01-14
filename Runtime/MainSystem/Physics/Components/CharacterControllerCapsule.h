@@ -1,33 +1,31 @@
 #pragma once
 
+#include "CharacterController.h"
+
 #include "Core/Memory/SmartPointers.h"
 
-#include "PhysicsComponent.h"
-#include "RigidBody.h"
+#include "../Materials/PhysicsMaterial.h"
 
 NAMESPACE_BEGIN
 
-class PhysicsShape;
+struct CharacterControllerCapsuleDesc
+{
+	Capsule capsule = {};
+	SharedPtr<PhysicsMaterial> material;
+};
 
-class RigidBodyStatic : public RigidBody
+class CharacterControllerCapsule : public CharacterController
 {
 public:
-	COMPONENT_CLASS(RigidBodyStatic);
+	COMPONENT_CLASS(CharacterControllerCapsule);
 
-	RigidBodyStatic(const SharedPtr<PhysicsShape>& shape);
-	~RigidBodyStatic();
+	CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc);
 
 protected:
-	virtual void OnPhysicsTransformChanged() override;
+	virtual void OnDrawDebug() override;
 
 public:
-	inline virtual PHYSICS_TYPE GetPhysicsType() const 
-	{
-		return PHYSICS_TYPE_RIGID_BODY_STATIC;
-	};
-
-
-	// Inherited via RigidBody
+	// Inherited via CharacterController
 	void Serialize(Serializer* serializer) override;
 
 	void Deserialize(Serializer* serializer) override;
