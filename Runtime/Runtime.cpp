@@ -412,9 +412,9 @@ void Runtime::Setup()
 		scene->AddObject(obj);
 	}
 
-	for (size_t y = 0; y < 3; y++)
+	for (size_t y = 0; y < 1; y++)
 	{
-		for (size_t x = 0; x < 3; x++)
+		for (size_t x = 0; x < 1; x++)
 		{
 			auto obj = mheap::New<GameObject>();
 			obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");

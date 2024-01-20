@@ -15,6 +15,10 @@ protected:
 	Mat4 m_lastGlobalTransform;
 
 	physx::PxController* m_pxCharacterController = nullptr;
+	Vec3 m_gravity = Vec3::ZERO;
+	Vec3 m_velocity = Vec3::ZERO;
+
+	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
 	inline CharacterController() {};
 	~CharacterController();
@@ -24,6 +28,9 @@ private:
 
 protected:
 	virtual void OnPhysicsTransformChanged() override;
+
+	virtual void OnUpdate(float dt);
+	virtual void OnPostUpdate(float dt);
 
 public:
 	void OnTransformChanged() override;
@@ -35,6 +42,9 @@ public:
 
 public:
 	void Move(const Vec3& disp, float minDist);
+
+	// to unset gravity, let g = { 0,0,0 }
+	void SetGravity(const Vec3& g);
 
 };
 

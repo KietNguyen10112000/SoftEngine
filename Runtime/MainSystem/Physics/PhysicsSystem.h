@@ -20,6 +20,8 @@ class PxControllerManager;
 
 NAMESPACE_BEGIN
 
+class PhysicsComponent;
+
 class API PhysicsSystem : public MainSystem
 {
 private:
@@ -34,6 +36,20 @@ private:
 
 	physx::PxScene* m_pxScene = nullptr;
 	physx::PxControllerManager* m_pxControllerManager = nullptr;
+
+	std::vector<PhysicsComponent*> m_updateList;
+	std::vector<PhysicsComponent*> m_postUpdateList;
+
+	std::vector<PhysicsComponent*> m_removeUpdateList;
+	std::vector<PhysicsComponent*> m_removePostUpdateList;
+
+	Spinlock m_updateListLock;
+	Spinlock m_postUpdateListLock;
+	bool m_padd[2];
+
+	float m_dt;
+
+	Vec3 m_gravity = {};
 
 public:
 	PhysicsSystem(Scene* scene);
@@ -70,6 +86,16 @@ private:
 		return &m_asyncTaskRunner[m_scene->GetPrevDeferBufferIdx()];
 	}
 
+	void ScheduleUpdateImpl(PhysicsComponent* comp);
+	void UnscheduleUpdateImpl(PhysicsComponent* comp);
+
+	void SchedulePostUpdateImpl(PhysicsComponent* comp);
+	void UnschedulePostUpdateImpl(PhysicsComponent* comp);
+
+	void RebuildUpdateList();
+	void ProcessUpdateList();
+	void ProcessPostUpdateList();
+
 public:
 	// Inherited via MainSystem
 	virtual void BeginModification() override;
@@ -103,6 +129,29 @@ public:
 		return GetCurrentAsyncTaskRunner();
 	}
 
+public:
+	inline void ScheduleUpdate(PhysicsComponent* comp)
+	{
+		m_updateListLock.lock();
+		ScheduleUpdateImpl(comp);
+		m_updateListLock.unlock();
+	}
+
+	void UnscheduleUpdate(PhysicsComponent* comp);
+
+	inline void SchedulePostUpdate(PhysicsComponent* comp)
+	{
+		m_postUpdateListLock.lock();
+		SchedulePostUpdateImpl(comp);
+		m_postUpdateListLock.unlock();
+	}
+
+	void UnschedulePostUpdate(PhysicsComponent* comp);
+
+	inline auto& GetGraviry() const
+	{
+		return m_gravity;
+	}
 };
 
 NAMESPACE_END

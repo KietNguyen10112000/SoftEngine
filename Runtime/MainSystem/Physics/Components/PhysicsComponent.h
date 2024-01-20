@@ -8,7 +8,9 @@
 
 #include "Math/Math.h"
 
-#include <bitset>
+#include "Scene/DeferredBuffer.h"
+
+//#include <bitset>
 
 namespace physx
 {
@@ -39,6 +41,32 @@ public:
 
 protected:
 	virtual void OnPhysicsTransformChanged() = 0;
+
+	// called before PhysX fetchResults, use PhysicsSystem::ScheduleUpdate() to schedule update
+	inline virtual void OnUpdate(float dt) {};
+
+	// called after PhysX fetchResults, use PhysicsSystem::SchedulePostUpdate() to schedule post update
+	inline virtual void OnPostUpdate(float dt) {};
+
+	inline size_t& UpdateId()
+	{
+		return m_doubleBVHId[0].bvhId;
+	}
+
+	inline bool& IsUpdateIdRemoved()
+	{
+		return *(bool*)&m_doubleBVHId[0].ulistId;
+	}
+
+	inline size_t& PostUpdateId()
+	{
+		return m_doubleBVHId[1].bvhId;
+	}
+
+	inline bool& IsPostUpdateIdRemoved()
+	{
+		return *(bool*)&m_doubleBVHId[1].ulistId;
+	}
 	
 public:
 	inline void SetPhysicsFlag(PHYSICS_FLAG flag, bool value)

@@ -47,6 +47,19 @@ void CharacterController::OnPhysicsTransformChanged()
 	obj->GetScene()->OnObjectTransformChanged(obj);
 }
 
+void CharacterController::OnUpdate(float dt)
+{
+	m_velocity += m_gravity * dt;
+
+	// TODO 
+}
+
+void CharacterController::OnPostUpdate(float dt)
+{
+	Vec3 disp = m_velocity * dt;
+	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.01f, dt, g_defaultPxControllerFilters);
+}
+
 void CharacterController::OnTransformChanged()
 {
 	auto gameObject = GetGameObject();
@@ -86,6 +99,43 @@ void CharacterController::Move(const Vec3& disp, float minDist)
 	param->disp = disp;
 	param->minDist = minDist;
 	param->dt = GetGameObject()->GetScene()->Dt();
+
+	taskRunner->RunAsync(this, &task);
+}
+
+void CharacterController::SetGravity(const Vec3& g)
+{
+	auto system = GetGameObject()->GetScene()->GetPhysicsSystem();
+	auto taskRunner = system->AsyncTaskRunner();
+
+	struct Param
+	{
+		CharacterController* controller;
+		Vec3 g;
+	};
+
+	auto task = taskRunner->CreateTask(
+		[](PhysicsSystem* system, void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, g);
+
+			controller->m_gravity = g;
+
+			if (g == Vec3::ZERO)
+			{
+				system->UnscheduleUpdate(controller);
+				system->UnschedulePostUpdate(controller);
+				return;
+			}
+
+			system->ScheduleUpdate(controller);
+			system->SchedulePostUpdate(controller);
+		}
+	);
+
+	auto param = taskRunner->CreateParam<Param>(&task);
+	param->controller = this;
+	param->g = g;
 
 	taskRunner->RunAsync(this, &task);
 }
