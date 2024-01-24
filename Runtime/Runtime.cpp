@@ -420,7 +420,7 @@ void Runtime::Setup()
 			obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
 
 			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(2.0f, 2.0f, 2.0f), material);
-			obj->NewComponent<RigidBodyDynamic>(shape);
+			obj->NewComponent<RigidBodyDynamic>(shape)->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 
 			transform = {};
 			transform.Position() = { x * 5.0f, 50.0f, y * 5.0f };

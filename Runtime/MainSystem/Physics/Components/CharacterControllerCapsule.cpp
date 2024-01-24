@@ -10,6 +10,8 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
+extern void* g_defaultPxControllerHitCallbackPtr;
+
 CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc)
 {
 	PxCapsuleControllerDesc pxDesc = {};
@@ -18,6 +20,7 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 	pxDesc.upDirection = reinterpret_cast<const PxVec3&>(desc.capsule.m_up);
 	pxDesc.position = PxExtendedVec3(desc.capsule.m_center.x, desc.capsule.m_center.y, desc.capsule.m_center.z);
 	pxDesc.material = desc.material->m_pxMaterial;
+	pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
 
 	m_pxCharacterController = scene->GetPhysicsSystem()->m_pxControllerManager->createController(pxDesc);
 

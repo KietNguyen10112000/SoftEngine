@@ -105,6 +105,11 @@ public:
 		return m_write;
 	}
 
+	inline T* ForceWrite()
+	{
+		return m_write;
+	}
+
 	inline const T* UpToDateRead()
 	{
 		if (m_lastUpdateIteration.load(std::memory_order_relaxed) == m_prevUpdateIteration)
@@ -118,6 +123,11 @@ public:
 	inline auto& Buffers()
 	{
 		return m_buffers;
+	}
+
+	inline auto GetWriteIdx() const
+	{
+		return m_writeIdx;
 	}
 };
 

@@ -10,6 +10,8 @@
 
 #include "Scene/DeferredBuffer.h"
 
+#include "../Collision/Collision.h"
+
 //#include <bitset>
 
 namespace physx
@@ -19,10 +21,61 @@ namespace physx
 
 NAMESPACE_BEGIN
 
+struct PhysicsCollisionResult
+{
+	// collision.Read() is collisions that currenly be on this PhysicsComponent
+	DeferredBuffer<Collision, 3> collision;
+
+	size_t lastActiveIterationCount = 0;
+
+	bool isInPrevFrame[8] = {};
+
+	template <typename Fn>
+	inline void ForEachCollisionBegin(Fn callback)
+	{
+		auto& _collision = *collision.Read();
+		for (auto idx : _collision.collisionBegin)
+		{
+			callback(_collision.contactPairs[idx]);
+		}
+	}
+
+	template <typename Fn>
+	inline void ForEachCollisionEnd(Fn callback)
+	{
+		auto& _collision = *(collision.Buffers()[(collision.GetWriteIdx() + 3 - 2) % 3]);
+		for (auto idx : _collision.collisionEnd)
+		{
+			callback(_collision.contactPairs[idx]);
+		}
+	}
+
+	template <typename Fn>
+	inline void ForEachCollision(Fn callback)
+	{
+		auto& _collision = *collision.Read();
+		for (auto& e : _collision.contactPairs)
+		{
+			callback(e);
+		}
+	}
+
+	inline void Clear()
+	{
+		auto buffers = collision.Buffers();
+		for (size_t i = 0; i < 3; i++)
+		{
+			buffers[i].Clear();
+		}
+	}
+};
+
 class API PhysicsComponent : public MainComponent
 {
 private:
 	friend class GameObject;
+	friend class PhysXSimulationCallback;
+	friend class CharacterControllerHitCallback;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 	constexpr static ID COMPONENT_ID = MainSystemInfo::PHYSICS_ID;
 
@@ -31,6 +84,8 @@ private:
 
 protected:
 	physx::PxActor* m_pxActor = nullptr;
+
+	PhysicsCollisionResult* m_collisionResult = nullptr;
 
 public:
 	virtual ~PhysicsComponent();
@@ -69,17 +124,7 @@ protected:
 	}
 	
 public:
-	inline void SetPhysicsFlag(PHYSICS_FLAG flag, bool value)
-	{
-		if (value)
-		{
-			m_physicsFlag |= flag;
-		}
-		else
-		{
-			m_physicsFlag &= ~flag;
-		}
-	}
+	void SetPhysicsFlag(PHYSICS_FLAG flag, bool value);
 
 	inline bool HasPhysicsFlag(PHYSICS_FLAG flag) const
 	{

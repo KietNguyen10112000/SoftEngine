@@ -11,7 +11,89 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
+class CharacterControllerHitCallback : public PxUserControllerHitReport
+{
+public:
+	void onShapeHit(const PxControllerShapeHit& hit) override
+	{
+		auto dynamicRigidActor = hit.actor->is<PxRigidDynamic>();
+		auto staticRigidActor = hit.actor->is<PxRigidStatic>();
+
+		if (!staticRigidActor && !dynamicRigidActor)
+		{
+			return;
+		}
+
+		if (dynamicRigidActor && !dynamicRigidActor->isSleeping())
+		{
+			return;
+		}
+
+		auto controller = (CharacterController*)hit.controller->getActor()->userData;
+		auto system = controller->GetGameObject()->GetScene()->GetPhysicsSystem();
+
+		auto& activeComponentsHasContact = system->m_activeComponentsHasContact;
+
+		PxActor* actors[2] = { hit.controller->getActor(), hit.actor };
+
+		for (auto a : actors)
+		{
+			auto comp = (PhysicsComponent*)a->userData;
+			if (comp && comp->HasPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION)
+				&& comp->m_collisionResult->lastActiveIterationCount != system->GetScene()->GetIterationCount())
+			{
+				comp->m_collisionResult->lastActiveIterationCount = system->GetScene()->GetIterationCount();
+				activeComponentsHasContact.push_back(comp);
+			}
+		}
+
+		auto A = (PhysicsComponent*)actors[0]->userData;
+		auto B = (PhysicsComponent*)actors[1]->userData;
+
+		auto AContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
+		auto BContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
+
+		if (!AContactPairs && !BContactPairs)
+		{
+			return;
+		}
+
+		SharedPtr<CollisionContactPair> contactPair = std::make_shared<CollisionContactPair>();
+
+		contactPair->A = A->GetGameObject();
+		contactPair->B = B->GetGameObject();
+
+		if (AContactPairs)
+		{
+			AContactPairs->push_back(contactPair);
+		}
+
+		if (BContactPairs)
+		{
+			BContactPairs->push_back(contactPair);
+		}
+
+		CollisionContactPoint contactPoint;
+		contactPoint.position = reinterpret_cast<const Vec3&>(hit.worldPos);
+		contactPoint.normal = reinterpret_cast<const Vec3&>(hit.worldNormal);
+		contactPoint.impluse = reinterpret_cast<const Vec3&>(hit.dir * hit.length);
+
+		contactPair->contacts.push_back(contactPoint);
+	}
+
+	void onControllerHit(const PxControllersHit& hit) override
+	{
+	}
+
+	void onObstacleHit(const PxControllerObstacleHit& hit) override
+	{
+	}
+
+};
+
 PxControllerFilters g_defaultPxControllerFilters;
+CharacterControllerHitCallback g_defaultPxControllerHitCallback;
+void* g_defaultPxControllerHitCallbackPtr = &g_defaultPxControllerHitCallback;
 
 CharacterController::~CharacterController()
 {

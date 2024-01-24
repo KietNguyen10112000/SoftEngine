@@ -607,7 +607,16 @@ void EditorContext::OnRenderInGameDebugGraphics()
 		debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
 		debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
 
-		auto physicsComp = m_inspectingObject->GetComponentRaw<PhysicsComponent>();
+		/*auto physicsComp = m_inspectingObject->GetComponentRaw<PhysicsComponent>();
+		if (physicsComp)
+		{
+			physicsComp->OnDrawDebug();
+		}*/
+	}
+
+	for (auto& obj : m_objects)
+	{
+		auto physicsComp = obj->GetComponentRaw<PhysicsComponent>();
 		if (physicsComp)
 		{
 			physicsComp->OnDrawDebug();

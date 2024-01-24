@@ -27,6 +27,9 @@ class API PhysicsSystem : public MainSystem
 private:
 	PHYSICS_FRIEND_CLASSES();
 
+	friend class PhysXSimulationCallback;
+	friend class CharacterControllerHitCallback;
+
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
 
 	raw::AsyncTaskRunner<PhysicsSystem> m_asyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
@@ -50,6 +53,10 @@ private:
 	float m_dt;
 
 	Vec3 m_gravity = {};
+
+	std::vector<PhysicsComponent*> m_activeComponentsHasContact;
+
+	size_t m_physxSimulationCallback[2] = {};
 
 public:
 	PhysicsSystem(Scene* scene);
@@ -95,6 +102,8 @@ private:
 	void RebuildUpdateList();
 	void ProcessUpdateList();
 	void ProcessPostUpdateList();
+
+	void ProcessCollisionList();
 
 public:
 	// Inherited via MainSystem
