@@ -170,10 +170,19 @@ public:
 
 	raw::ConcurrentArrayList<ListType*> m_cacheList;
 
+	size_t* m_runAsynchDeferBufferIdx = 0;
+	size_t* m_executeAsynchDeferBufferIdx = 0;
+
 public:
 	AsyncTaskRunnerForMainComponent()
 	{
 		m_objectTasks.ReserveNoSafe(8 * KB);
+	}
+
+	inline void Initialize(size_t* runAsynchDeferBufferIdx, size_t* executeAsynchDeferBufferIdx)
+	{
+		m_runAsynchDeferBufferIdx = runAsynchDeferBufferIdx;
+		m_executeAsynchDeferBufferIdx = executeAsynchDeferBufferIdx;
 	}
 
 	~AsyncTaskRunnerForMainComponent()
@@ -193,6 +202,8 @@ public:
 	template <typename MainComponent_ = MainComponent>
 	inline void ProcessAllTasks(_C* self)
 	{
+		assert(m_executeAsynchDeferBufferIdx && m_runAsynchDeferBufferIdx);
+
 		m_cacheList.BeginTryTake();
 
 		TaskUtils::ForEachConcurrentListAsRingBuffer(
@@ -221,7 +232,7 @@ public:
 				m_cacheList.Add(taskList.list);
 
 				using AtomicType = std::atomic<ListType*>;
-				AtomicType& atom = reinterpret_cast<AtomicType&>(taskList.component->m_forAsyncTaskRunner);
+				AtomicType& atom = reinterpret_cast<AtomicType&>(taskList.component->m_forAsyncTaskRunner[*m_executeAsynchDeferBufferIdx]);
 				atom.store(nullptr, std::memory_order_relaxed);
 
 				return true;
@@ -276,7 +287,7 @@ public:
 	inline void RunAsync(MainComponent_* component, AsyncTask* task)
 	{
 		using AtomicType = std::atomic<ListType*>;
-		AtomicType& atom = reinterpret_cast<AtomicType&>(component->m_forAsyncTaskRunner);
+		AtomicType& atom = reinterpret_cast<AtomicType&>(component->m_forAsyncTaskRunner[*m_runAsynchDeferBufferIdx]);
 
 		ListType* list = atom.load(std::memory_order_relaxed);
 		if (list != 0 && list != (ListType*)INVALID_ID)

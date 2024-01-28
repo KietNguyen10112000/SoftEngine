@@ -23,6 +23,8 @@ NAMESPACE_BEGIN
 
 RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene), m_eventDispatcher(this)
 {
+	InitializeAsyncTaskRunnerForMainComponent(m_asyncTaskRunner);
+
 	auto graphics = Graphics::Get();
 
     m_defaultViewport.topLeft = { 0,0 };

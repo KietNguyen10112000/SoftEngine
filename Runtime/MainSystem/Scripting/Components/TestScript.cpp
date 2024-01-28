@@ -81,13 +81,33 @@ void TestScript::OnUpdate(float dt)
 
 	if (motion.Length2() != 0)
 	{
-		controller->Move(motion, 0.05f);
+		controller->Move(motion);
 	}
 }
 
 Handle<ClassMetadata> TestScript::GetMetadata(size_t sign)
 {
 	auto metadata = ClassMetadata::For(this);
+
+	return metadata;
+}
+
+void TestScript2::OnUpdate(float dt)
+{
+	auto transform = GetLocalTransform();
+	transform.Position() = Vec3::ZERO + m_A * std::sin(m_a) * Vec3::X_AXIS;
+	transform.Position().y = 2.5f;
+	SetLocalTransform(transform);
+
+	m_a += dt * m_speed;
+}
+
+Handle<ClassMetadata> TestScript2::GetMetadata(size_t sign)
+{
+	auto metadata = ClassMetadata::For(this);
+
+	metadata->AddProperty(Accessor::For("A", m_A, this));
+	metadata->AddProperty(Accessor::For("speed", m_speed, this));
 
 	return metadata;
 }

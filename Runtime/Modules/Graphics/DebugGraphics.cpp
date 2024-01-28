@@ -531,7 +531,7 @@ void DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
 
 void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color)
 {
-	auto& renderer = m_solidCubeRenderer;
+	auto& renderer = m_wireFrameCubeRenderer;
 
 	renderer.lock.lock();
 

@@ -14,6 +14,9 @@ protected:
 public:
 	void OnTransformChanged() override;
 
+protected:
+	virtual void OnDrawDebug() override;
+
 };
 
 NAMESPACE_END

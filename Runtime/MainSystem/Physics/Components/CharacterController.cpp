@@ -16,21 +16,25 @@ class CharacterControllerHitCallback : public PxUserControllerHitReport
 public:
 	void onShapeHit(const PxControllerShapeHit& hit) override
 	{
-		auto dynamicRigidActor = hit.actor->is<PxRigidDynamic>();
+		//std::cout << "onShapeHit all " << "\n";
+		return;
+		/*auto dynamicRigidActor = hit.actor->is<PxRigidDynamic>();
 		auto staticRigidActor = hit.actor->is<PxRigidStatic>();
 
 		if (!staticRigidActor && !dynamicRigidActor)
 		{
 			return;
-		}
+		}*/
 
-		if (dynamicRigidActor && !dynamicRigidActor->isSleeping())
+		/*if (dynamicRigidActor && !dynamicRigidActor->isSleeping())
 		{
 			return;
-		}
+		}*/
 
 		auto controller = (CharacterController*)hit.controller->getActor()->userData;
 		auto system = controller->GetGameObject()->GetScene()->GetPhysicsSystem();
+
+		std::cout << "onShapeHit all " << system->GetScene()->GetIterationCount() << "\n";
 
 		auto& activeComponentsHasContact = system->m_activeComponentsHasContact;
 
@@ -46,6 +50,12 @@ public:
 				activeComponentsHasContact.push_back(comp);
 			}
 		}
+
+		//if (hit.actor->is<PxRigidDynamic>())
+		//{
+		//	//int x = 3;
+		//	//std::cout << "onShapeHit dynamic " << system->GetScene()->GetIterationCount() << "\n";
+		//}
 
 		auto A = (PhysicsComponent*)actors[0]->userData;
 		auto B = (PhysicsComponent*)actors[1]->userData;
@@ -122,6 +132,15 @@ void CharacterController::TransformContributor(GameObject* object, Transform& lo
 	gameObject->m_isNeedRecalculateLocalTransform = true;
 }
 
+bool CharacterController::IsHasNextMove()
+{
+	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	return m_lastMoveIterationCount >= GetGameObject()->GetScene()->GetIterationCount() - 1 
+		|| disp != Vec3::ZERO 
+		|| m_gravity != Vec3::ZERO 
+		|| m_velocity != Vec3::ZERO;
+}
+
 void CharacterController::OnPhysicsTransformChanged()
 {
 	auto obj = GetGameObject();
@@ -138,8 +157,12 @@ void CharacterController::OnUpdate(float dt)
 
 void CharacterController::OnPostUpdate(float dt)
 {
-	Vec3 disp = m_velocity * dt;
-	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.01f, dt, g_defaultPxControllerFilters);
+	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+
+	disp += m_velocity * dt;
+	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.05f, dt, g_defaultPxControllerFilters);
+
+	disp = Vec3::ZERO;
 }
 
 void CharacterController::OnTransformChanged()
@@ -152,37 +175,59 @@ void CharacterController::OnTransformChanged()
 		auto& pos = globalTransform.Position();
 		PxExtendedVec3 position = { pos.x, pos.y, pos.z };
 		m_pxCharacterController->setPosition(position);
+
+		m_lastGlobalTransform = globalTransform;
 	}
 }
 
-void CharacterController::Move(const Vec3& disp, float minDist)
+void CharacterController::Move(const Vec3& disp)
 {
-	auto system = GetGameObject()->GetScene()->GetPhysicsSystem();
+	auto scene = GetGameObject()->GetScene();
+	auto iteration = scene->GetIterationCount();
+	if (m_lastMoveIterationCount == iteration)
+	{
+		return;
+	}
+
+	m_lastMoveIterationCount = iteration;
+
+	auto system = scene->GetPhysicsSystem();
 	auto taskRunner = system->AsyncTaskRunner();
 
 	struct Param
 	{
 		CharacterController* controller;
-		Vec3 disp;
-		float minDist;
+		//Vec3 disp;
+		//float minDist;
 		float dt;
 	};
 
 	auto task = taskRunner->CreateTask(
 		[](PhysicsSystem* system, void* p)
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_4(Param, p, controller, disp, minDist, dt);
-			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), minDist, dt, g_defaultPxControllerFilters);
+			//TASK_SYSTEM_UNPACK_PARAM_REF_4(Param, p, controller, disp, minDist, dt);
+			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, dt);
+
+			if (controller->m_gravity != Vec3::ZERO || controller->m_velocity != Vec3::ZERO)
+			{
+				return;
+			}
+
+			auto& disp = controller->m_sumDisp[controller->GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.05f, dt, g_defaultPxControllerFilters);
+			disp = Vec3::ZERO;
 		}
 	);
 
 	auto param = taskRunner->CreateParam<Param>(&task);
 	param->controller = this;
-	param->disp = disp;
-	param->minDist = minDist;
+	//param->disp = disp;
+	//param->minDist = minDist;
 	param->dt = GetGameObject()->GetScene()->Dt();
 
 	taskRunner->RunAsync(this, &task);
+
+	m_sumDisp[scene->GetCurrentDeferBufferIdx()] += disp;
 }
 
 void CharacterController::SetGravity(const Vec3& g)

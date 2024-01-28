@@ -41,6 +41,15 @@ protected:
 
 	inline virtual void Finalize() {};
 
+	template <typename T>
+	inline void InitializeAsyncTaskRunnerForMainComponent(T& runners)
+	{
+		for (auto& r : runners)
+		{
+			r.Initialize(&m_scene->m_currentDeferBufferIdx, &m_scene->m_prevDeferBufferIdx);
+		}
+	}
+
 public:
 	inline auto GetScene()
 	{

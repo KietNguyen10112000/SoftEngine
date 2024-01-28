@@ -39,7 +39,7 @@ protected:
 	DoubleBVHId m_doubleBVHId[2] = {};
 	GameObject* m_object = nullptr;
 
-	std::atomic<void*> m_forAsyncTaskRunner = { 0 };
+	std::atomic<void*> m_forAsyncTaskRunner[2] = {0};
 
 public:
 	// called when object contains this component added to scene

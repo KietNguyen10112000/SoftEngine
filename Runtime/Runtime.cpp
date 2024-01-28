@@ -419,11 +419,14 @@ void Runtime::Setup()
 			auto obj = mheap::New<GameObject>();
 			obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
 
-			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(2.0f, 2.0f, 2.0f), material);
-			obj->NewComponent<RigidBodyDynamic>(shape)->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 5.0f), material);
+			obj->NewComponent<RigidBodyDynamic>(shape);//->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+
+			//obj->NewComponent<TestScript2>();
 
 			transform = {};
-			transform.Position() = { x * 5.0f, 50.0f, y * 5.0f };
+			transform.Scale() = Vec3(2.5f);
+			transform.Position() = { x * 5.0f, 2.5f, y * 5.0f };
 			//transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
 			obj->SetLocalTransform(transform);
 
@@ -439,7 +442,7 @@ void Runtime::Setup()
 			CharacterControllerCapsuleDesc desc = {};
 			desc.capsule = Capsule(Vec3::ZERO + Vec3::UP, 1.0f, 0.5f);
 			desc.material = material;
-			obj->NewComponent<CharacterControllerCapsule>(scene, desc);
+			obj->NewComponent<CharacterControllerCapsule>(scene, desc)->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 		}
 
 		{
@@ -448,6 +451,7 @@ void Runtime::Setup()
 
 		transform = {};
 		transform.Position() = Vec3::ZERO + Vec3::UP;
+		transform.Position().z = 10;
 		obj->SetLocalTransform(transform);
 
 		scene->AddObject(obj);

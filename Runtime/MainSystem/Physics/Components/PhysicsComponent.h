@@ -28,8 +28,6 @@ struct PhysicsCollisionResult
 
 	size_t lastActiveIterationCount = 0;
 
-	bool isInPrevFrame[8] = {};
-
 	template <typename Fn>
 	inline void ForEachCollisionBegin(Fn callback)
 	{
@@ -86,6 +84,8 @@ protected:
 	physx::PxActor* m_pxActor = nullptr;
 
 	PhysicsCollisionResult* m_collisionResult = nullptr;
+
+	bool isInPrevFrame[8] = {};
 
 public:
 	virtual ~PhysicsComponent();

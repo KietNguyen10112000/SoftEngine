@@ -11,6 +11,7 @@ NAMESPACE_BEGIN
 
 AnimationSystem::AnimationSystem(Scene* scene) : MainSystem(scene)
 {
+	InitializeAsyncTaskRunnerForMainComponent(m_asyncTaskRunner);
 }
 
 AnimationSystem::~AnimationSystem()

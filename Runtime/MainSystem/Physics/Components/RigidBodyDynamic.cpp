@@ -21,6 +21,7 @@ RigidBodyDynamic::RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape)
 
 	m_pxActor = body;
 	m_pxActor->userData = this;
+	//body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 }
 
 RigidBodyDynamic::~RigidBodyDynamic()
@@ -53,7 +54,7 @@ void RigidBodyDynamic::TransformContributor(GameObject* object, Transform& local
 	PxMat44 shapePose(pxTransform);
 	Mat4& myMat = reinterpret_cast<Mat4&>(shapePose);
 
-	global = myMat;
+	global = Mat4::Scaling(local.Scale()) * myMat;
 	lastGlobalTransform = myMat;
 	rigidBody->GetGameObject()->m_isNeedRecalculateLocalTransform = true;
 }

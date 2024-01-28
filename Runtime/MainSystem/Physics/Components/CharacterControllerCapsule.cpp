@@ -21,6 +21,8 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 	pxDesc.position = PxExtendedVec3(desc.capsule.m_center.x, desc.capsule.m_center.y, desc.capsule.m_center.z);
 	pxDesc.material = desc.material->m_pxMaterial;
 	pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
+	pxDesc.scaleCoeff = 1.0f;
+	pxDesc.contactOffset = 0.00001f;
 
 	m_pxCharacterController = scene->GetPhysicsSystem()->m_pxControllerManager->createController(pxDesc);
 
@@ -36,13 +38,34 @@ void CharacterControllerCapsule::OnDrawDebug()
 
 		auto& pos = pxController->getPosition();
 
+		Vec4 color = Vec4(0, 0, 0, 1);
+		if (m_collisionResult)
+		{
+			auto size = m_collisionResult->collision.Read()->contactPairs.size();
+			if (size == 1)
+			{
+				color = { 1,0,0,1 };
+			}
+
+			if (size == 2)
+			{
+				color = { 0,1,0,1 };
+			}
+
+			if (size > 2)
+			{
+				color = { 0,0,1,1 };
+			}
+		}
+
 		debugGraphics->DrawCapsule(
 			Capsule(
 				reinterpret_cast<const Vec3&>(pxController->getUpDirection()),
 				Vec3(pos.x, pos.y, pos.z),
 				pxController->getHeight(),
 				pxController->getRadius()
-			)
+			),
+			color
 		);
 	}
 }

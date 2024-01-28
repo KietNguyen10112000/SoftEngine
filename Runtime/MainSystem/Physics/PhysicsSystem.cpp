@@ -4,6 +4,7 @@
 
 #include "Components/PhysicsComponent.h"
 #include "Components/RigidBodyDynamic.h"
+#include "Components/CharacterController.h"
 
 #include "Scene/GameObject.h"
 
@@ -26,7 +27,7 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 	pairFlags = PxPairFlag::eSOLVE_CONTACT 
 		| PxPairFlag::eDETECT_DISCRETE_CONTACT
 		| PxPairFlag::eNOTIFY_TOUCH_FOUND 
-		//| PxPairFlag::eNOTIFY_TOUCH_LOST
+		| PxPairFlag::eNOTIFY_TOUCH_LOST
 		| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
 		| PxPairFlag::eNOTIFY_CONTACT_POINTS;
 
@@ -52,6 +53,8 @@ public:
 
 	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs)
 	{
+		//std::cout << "CONTACT\n";
+
 		auto& activeComponentsHasContact = m_system->m_activeComponentsHasContact;
 		for (auto a : pairHeader.actors)
 		{
@@ -64,8 +67,64 @@ public:
 			}
 		}
 
+		if (nbPairs == 0)
+		{
+			std::cout << "CONTACT LOST\n";
+			return;
+		}
+
+		if (pairHeader.flags)
+		{
+			return;
+		}
+
+		/*{
+			for (PxU32 i = 0; i < nbPairs; i++)
+			{
+				if (pairs[i].flags.isSet(PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH))
+				{
+					std::cout << "CONTACT LOST\n";
+					return;
+				}
+			}
+		}*/
+
+		if (pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH))
+		{
+			std::cout << "CONTACT LOST\n";
+			return;
+		}
+
 		auto A = (PhysicsComponent*)pairHeader.actors[0]->userData;
 		auto B = (PhysicsComponent*)pairHeader.actors[1]->userData;
+
+		auto AType = A->GetPhysicsType();
+		auto BType = B->GetPhysicsType();
+
+		//{
+		//	CharacterController* controller = nullptr;
+		//	if (AType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
+		//	{
+		//		controller = (CharacterController*)A;
+		//	}
+
+		//	if (BType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
+		//	{
+		//		controller = (CharacterController*)B;
+		//		assert((void*)controller != (void*)A);
+		//	}
+
+		//	/*if (controller)
+		//	{
+		//		std::cout << "CONTACT CONTROLLER --- " << controller->IsHasNextMove() << "\n";
+		//	}*/
+
+		//	if (controller && controller->IsHasNextMove())
+		//	{
+		//		//std::cout << "CONTACT CONTROLLER\n";
+		//		return;
+		//	}
+		//}
 
 		auto AContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
 		auto BContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
@@ -120,6 +179,8 @@ public:
 
 PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 {
+	InitializeAsyncTaskRunnerForMainComponent(m_asyncTaskRunner);
+
 	auto callback = new (&m_physxSimulationCallback) PhysXSimulationCallback(this);
 
 	auto physics = PhysX::Get()->GetPxPhysics();
@@ -131,6 +192,8 @@ PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 	sceneDesc.userData = this;
 	sceneDesc.simulationEventCallback = callback;
 	sceneDesc.filterShader = PhysicsContactReportFilterShader;
+	sceneDesc.kineKineFilteringMode = PxPairFilteringMode::eKEEP;
+	sceneDesc.staticKineFilteringMode = PxPairFilteringMode::eKEEP;
 
 	m_pxScene = physics->createScene(sceneDesc);
 
@@ -248,25 +311,63 @@ void PhysicsSystem::ProcessPostUpdateList()
 
 void PhysicsSystem::ProcessCollisionList()
 {
-	// collect sleeping collision pairs from previous frame
-	for (auto comp : m_activeComponentsHasContact)
-	{
-		auto obj = comp->GetGameObject();
-		auto prevCollision = comp->m_collisionResult->collision.Read();
-		auto curCollision = comp->m_collisionResult->collision.ForceWrite();
+	//// collect sleeping collision pairs from previous frame
+	//for (auto comp : m_activeComponentsHasContact)
+	//{
+	//	auto obj = comp->GetGameObject();
+	//	auto prevCollision = comp->m_collisionResult->collision.Read();
+	//	auto curCollision = comp->m_collisionResult->collision.ForceWrite();
 
-		for (auto& pair : prevCollision->contactPairs)
-		{
-			auto B = pair->A == obj ? pair->B : pair->A;
-			auto BpxActor = B->GetComponentRaw<PhysicsComponent>()->m_pxActor;
-			
-			auto BdynamicRigidActor = BpxActor->is<PxRigidDynamic>();
-			if (BdynamicRigidActor && BdynamicRigidActor->isSleeping())
-			{
-				curCollision->contactPairs.push_back(pair);
-			}
-		}
-	}
+	//	auto compType = comp->GetPhysicsType();
+
+	//	for (auto& pair : curCollision->contactPairs)
+	//	{
+	//		auto B = pair->A == obj ? pair->B : pair->A;
+	//		B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = true;
+	//	}
+
+	//	/*if (compType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
+	//	{
+	//		continue;
+	//	}*/
+
+	//	for (auto& pair : prevCollision->contactPairs)
+	//	{
+	//		auto B = pair->A == obj ? pair->B : pair->A;
+
+	//		auto& BisInCurFrame = B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0];
+
+	//		if (BisInCurFrame)
+	//		{
+	//			continue;
+	//		}
+
+	//		auto BpxActor = B->GetComponentRaw<PhysicsComponent>()->m_pxActor;
+
+	//		if (BpxActor->getScene() != m_pxScene)
+	//		{
+	//			continue;
+	//		}
+	//		
+	//		auto BdynamicRigidActor = BpxActor->is<PxRigidDynamic>();
+
+	//		/*if (!BdynamicRigidActor)
+	//		{
+	//			curCollision->contactPairs.push_back(pair);
+	//		}*/
+
+	//		if (BdynamicRigidActor && BdynamicRigidActor->isSleeping())
+	//		{
+	//			curCollision->contactPairs.push_back(pair);
+	//		}
+	//	}
+
+	//	for (auto& pair : curCollision->contactPairs)
+	//	{
+	//		auto B = pair->A == obj ? pair->B : pair->A;
+	//		B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = false;
+	//	}
+	//}
 
 	// collect collision begin, collision end
 	for (auto comp : m_activeComponentsHasContact)
@@ -275,37 +376,29 @@ void PhysicsSystem::ProcessCollisionList()
 		auto prevCollision = comp->m_collisionResult->collision.Read();
 		auto curCollision = comp->m_collisionResult->collision.ForceWrite();
 
+		auto compType = comp->GetPhysicsType();
+
 		auto& collisionBegin = comp->m_collisionResult->collision.ForceWrite()->collisionBegin;
 		auto& collisionEnd = comp->m_collisionResult->collision.ForceWrite()->collisionEnd;
 
 		for (auto& pair : prevCollision->contactPairs)
 		{
 			auto B = pair->A == obj ? pair->B : pair->A;
-			auto BCollisionResult = B->GetComponentRaw<PhysicsComponent>()->m_collisionResult;
-
-			if (BCollisionResult)
-			{
-				BCollisionResult->isInPrevFrame[0] = true;
-			}
+			B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = true;
 		}
 
 		size_t i = 0;
 		for (auto& pair : curCollision->contactPairs)
 		{
 			auto B = pair->A == obj ? pair->B : pair->A;
-			auto BCollisionResult = B->GetComponentRaw<PhysicsComponent>()->m_collisionResult;
+			auto& BisInPrevFrame = B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0];
 
-			if (BCollisionResult)
+			if (BisInPrevFrame == false)
 			{
-				auto& temp = BCollisionResult->isInPrevFrame[0];
-
-				if (temp == false)
-				{
-					collisionBegin.push_back(i);
-				}
-
-				temp = false;
+				collisionBegin.push_back(i);
 			}
+
+			BisInPrevFrame = false;
 
 			i++;
 		}
@@ -314,19 +407,14 @@ void PhysicsSystem::ProcessCollisionList()
 		for (auto& pair : prevCollision->contactPairs)
 		{
 			auto B = pair->A == obj ? pair->B : pair->A;
-			auto BCollisionResult = B->GetComponentRaw<PhysicsComponent>()->m_collisionResult;
+			auto& BisInPrevFrame = B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0];
 
-			if (BCollisionResult)
+			if (BisInPrevFrame == true)
 			{
-				auto& temp = BCollisionResult->isInPrevFrame[0];
-
-				if (temp == true)
-				{
-					collisionEnd.push_back(i);
-				}
-
-				temp = false;
+				collisionEnd.push_back(i);
 			}
+
+			BisInPrevFrame = false;
 
 			i++;
 		}
@@ -336,7 +424,7 @@ void PhysicsSystem::ProcessCollisionList()
 	for (auto comp : m_activeComponentsHasContact)
 	{
 		m_scene->BeginWrite<false>(comp->m_collisionResult->collision);
-		m_scene->EndWrite<false>(comp->m_collisionResult->collision);
+		m_scene->EndWrite(comp->m_collisionResult->collision);
 	}
 }
 
@@ -383,6 +471,12 @@ void PhysicsSystem::PrevIteration()
 
 void PhysicsSystem::Iteration(float dt)
 {
+	for (auto comp : m_activeComponentsHasContact)
+	{
+		comp->m_collisionResult->collision.ForceWrite()->Clear();
+	}
+	m_activeComponentsHasContact.clear();
+
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
@@ -398,12 +492,6 @@ void PhysicsSystem::Iteration(float dt)
 
 	RebuildUpdateList();
 	ProcessUpdateList();
-
-	for (auto comp : m_activeComponentsHasContact)
-	{
-		comp->m_collisionResult->collision.ForceWrite()->Clear();
-	}
-	m_activeComponentsHasContact.clear();
 
 	// lose 1 thread T___T
 	m_pxScene->fetchResults(true);
