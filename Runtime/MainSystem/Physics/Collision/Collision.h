@@ -28,18 +28,24 @@ struct CollisionContactPair
 	std::vector<CollisionContactPoint> contacts;
 };
 
+struct CollisionEndContactPair
+{
+	GameObject* A;
+	GameObject* B;
+};
+
 struct Collision
 {
 	std::vector<SharedPtr<CollisionContactPair>> contactPairs;
+	std::vector<CollisionEndContactPair> endContactPairs;
 
-	std::vector<ID> collisionBegin;
 	std::vector<ID> collisionEnd;
+	size_t collisionBeginCount = 0;
 
 	inline void Clear()
 	{
 		contactPairs.clear();
-		collisionBegin.clear();
-		collisionEnd.clear();
+		endContactPairs.clear();
 	}
 };
 

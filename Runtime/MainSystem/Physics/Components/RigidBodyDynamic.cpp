@@ -93,4 +93,11 @@ AABox RigidBodyDynamic::GetGlobalAABB()
 	return AABox();
 }
 
+void RigidBodyDynamic::SetMass(float mass)
+{
+	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
+	pxRigidBody->setMass(mass);
+	pxRigidBody->setMassSpaceInertiaTensor(PxVec3(0.f));
+}
+
 NAMESPACE_END

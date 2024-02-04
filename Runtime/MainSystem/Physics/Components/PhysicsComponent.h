@@ -32,19 +32,23 @@ struct PhysicsCollisionResult
 	inline void ForEachCollisionBegin(Fn callback)
 	{
 		auto& _collision = *collision.Read();
-		for (auto idx : _collision.collisionBegin)
+		auto count = _collision.collisionBeginCount;
+
+		for (size_t i = 0; i < count; i++)
 		{
-			callback(_collision.contactPairs[idx]);
+			callback(_collision.contactPairs[i]);
 		}
 	}
 
 	template <typename Fn>
 	inline void ForEachCollisionEnd(Fn callback)
 	{
-		auto& _collision = *(collision.Buffers()[(collision.GetWriteIdx() + 3 - 2) % 3]);
-		for (auto idx : _collision.collisionEnd)
+		auto& _prevCollision = *(collision.Buffers()[(collision.GetWriteIdx() + 3 - 2) % 3]);
+		auto& _curCollision = *collision.Read();
+
+		for (auto idx : _curCollision.collisionEnd)
 		{
-			callback(_collision.contactPairs[idx]);
+			callback(_prevCollision.contactPairs[idx]);
 		}
 	}
 

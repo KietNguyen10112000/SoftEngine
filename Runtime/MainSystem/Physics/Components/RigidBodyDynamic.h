@@ -47,6 +47,9 @@ public:
 
 	AABox GetGlobalAABB() override;
 
+public:
+	void SetMass(float mass);
+
 };
 
 NAMESPACE_END

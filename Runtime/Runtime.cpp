@@ -395,7 +395,7 @@ void Runtime::Setup()
 	}*/
 
 
-	auto material = std::make_shared<PhysicsMaterial>(0.5f, 0.5f, 0.6f);
+	auto material = std::make_shared<PhysicsMaterial>(0.9f, 0.9f, 0.6f);
 
 	{
 		auto obj = mheap::New<GameObject>();
@@ -420,7 +420,9 @@ void Runtime::Setup()
 			obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
 
 			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 5.0f), material);
-			obj->NewComponent<RigidBodyDynamic>(shape);//->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+			auto dyn = obj->NewComponent<RigidBodyDynamic>(shape);//->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+			dyn->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+			dyn->SetMass(100);
 
 			//obj->NewComponent<TestScript2>();
 
