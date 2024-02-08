@@ -1,0 +1,12 @@
+#pragma once
+
+#include "Core/TypeDef.h"
+
+NAMESPACE_BEGIN
+
+enum PHYSICS_FILTER_DATA
+{
+	PHYSICS_FILTER_DATA_CCT = 1,
+};
+
+NAMESPACE_END

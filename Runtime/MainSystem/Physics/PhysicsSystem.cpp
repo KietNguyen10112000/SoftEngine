@@ -8,6 +8,8 @@
 
 #include "Scene/GameObject.h"
 
+#include "FILTER_DATA.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -18,18 +20,30 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 {
 	PX_UNUSED(attributes0);
 	PX_UNUSED(attributes1);
-	PX_UNUSED(filterData0);
-	PX_UNUSED(filterData1);
+	//PX_UNUSED(filterData0);
+	//PX_UNUSED(filterData1);
 	PX_UNUSED(constantBlockSize);
 	PX_UNUSED(constantBlock);
 
-	// all initial and persisting reports for everything, with per-point data
-	pairFlags = PxPairFlag::eSOLVE_CONTACT 
-		| PxPairFlag::eDETECT_DISCRETE_CONTACT
-		| PxPairFlag::eNOTIFY_TOUCH_FOUND 
-		| PxPairFlag::eNOTIFY_TOUCH_LOST
-		//| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
-		| PxPairFlag::eNOTIFY_CONTACT_POINTS;
+	auto filterDataWord0 = filterData0.word0 != 0 ? filterData0.word0 : filterData1.word0;
+	switch (filterDataWord0)
+	{
+	case PHYSICS_FILTER_DATA_CCT:
+		pairFlags =  PxPairFlag::eDETECT_DISCRETE_CONTACT
+			| PxPairFlag::eNOTIFY_TOUCH_FOUND
+			| PxPairFlag::eNOTIFY_TOUCH_LOST
+			//| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
+			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
+		break;
+	default:
+		pairFlags = PxPairFlag::eSOLVE_CONTACT
+			| PxPairFlag::eDETECT_DISCRETE_CONTACT
+			| PxPairFlag::eNOTIFY_TOUCH_FOUND
+			| PxPairFlag::eNOTIFY_TOUCH_LOST
+			//| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
+			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
+		break;
+	}
 
 	return PxFilterFlag::eDEFAULT;
 }

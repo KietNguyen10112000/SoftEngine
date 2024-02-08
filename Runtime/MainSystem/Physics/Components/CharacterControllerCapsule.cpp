@@ -6,6 +6,8 @@
 #include "Graphics/DebugGraphics.h"
 #include "Graphics/Graphics.h"
 
+#include "../FILTER_DATA.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -27,6 +29,16 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 	m_pxCharacterController = scene->GetPhysicsSystem()->m_pxControllerManager->createController(pxDesc);
 
 	m_pxCharacterController->getActor()->userData = this;
+
+	PxShape* shape = nullptr;
+	m_pxCharacterController->getActor()->getShapes(&shape, 1);
+
+	if (shape)
+	{
+		PxFilterData data;
+		data.word0 = PHYSICS_FILTER_DATA_CCT;
+		shape->setSimulationFilterData(data);
+	}
 }
 
 void CharacterControllerCapsule::OnDrawDebug()
