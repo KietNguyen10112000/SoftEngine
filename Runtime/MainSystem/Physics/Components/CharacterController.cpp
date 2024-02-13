@@ -7,6 +7,8 @@
 #include "Scene/Scene.h"
 #include "Scene/GameObject.h"
 
+#include "../Materials/PhysicsMaterial.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -86,7 +88,7 @@ public:
 		CollisionContactPoint contactPoint;
 		contactPoint.position = reinterpret_cast<const Vec3&>(hit.worldPos);
 		contactPoint.normal = reinterpret_cast<const Vec3&>(hit.worldNormal);
-		contactPoint.impluse = reinterpret_cast<const Vec3&>(hit.dir * hit.length);
+		contactPoint.impulse = reinterpret_cast<const Vec3&>(hit.dir * hit.length);
 
 		contactPair->contacts.push_back(contactPoint);
 	}
@@ -150,9 +152,68 @@ void CharacterController::OnPhysicsTransformChanged()
 
 void CharacterController::OnUpdate(float dt)
 {
-	m_velocity += m_gravity * dt;
+	auto mass = m_pxCharacterController->getActor()->getMass();
+	mass = mass <= 0 ? 1 : mass;
 
-	// TODO 
+	if (HasCollisionBegin() || HasCollisionEnd())
+	{
+		m_velocity = Vec3::ZERO;
+
+		Vec3 sumF = Vec3::ZERO;
+
+		auto collisionCount = m_collisionResult->GetCollisionCount();
+
+		/*if (collisionCount == 1)
+		{
+			int x = 3;
+		}*/
+
+		auto gForce = m_gravity * mass;
+		auto eachForce = gForce / (float)collisionCount;
+
+		m_collisionResult->ForEachCollision([&](const SharedPtr<CollisionContactPair>& contact)
+			{
+				auto& contactPoints = contact->contacts;
+				auto F = eachForce / contactPoints.size();
+				auto nF = F.Normal();
+
+				bool isA = contact->A == GetGameObject() ? true : false;
+
+				for (auto& point : contactPoints)
+				{
+					auto normal = point.normal;
+					if (isA)
+					{
+						normal = -normal;
+					}
+
+					auto cosA = normal.Dot(nF);
+					auto Fn = cosA * F;
+					auto Ft = F - Fn;
+
+					auto FnLen = Fn.Length();
+
+					auto staticFrictionForce = FnLen * point.staticFriction;
+					auto dynamicFrictionForce = Fn * point.dynamicFriction;
+
+					if (staticFrictionForce < FnLen && Ft.Length2() > dynamicFrictionForce.Length2())
+					{
+						sumF += (Ft - dynamicFrictionForce);
+					}
+				}
+			}
+		);
+
+		m_sumF = sumF;
+	}
+
+	if (m_sumF == Vec3::ZERO && !HasCollision())
+	{
+		m_sumF = m_gravity * mass;
+		m_velocity.y = -10.0f;
+	}
+
+	m_velocity += (m_sumF / mass)  * dt;
 }
 
 void CharacterController::OnPostUpdate(float dt)
@@ -161,6 +222,8 @@ void CharacterController::OnPostUpdate(float dt)
 
 	disp += m_velocity * dt;
 	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.05f, dt, g_defaultPxControllerFilters);
+
+	//std::cout << m_sumF.y << "\n";
 
 	disp = Vec3::ZERO;
 }

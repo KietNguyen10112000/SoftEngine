@@ -2,6 +2,8 @@
 
 #include "PxPhysicsAPI.h"
 
+#include "Scene/GameObject.h"
+
 NAMESPACE_BEGIN
 
 PhysicsComponent::~PhysicsComponent() 
@@ -18,6 +20,26 @@ PhysicsComponent::~PhysicsComponent()
 		m_collisionResult = nullptr;
 	}
 };
+
+bool PhysicsComponent::HasCollisionBegin()
+{
+	return m_collisionResult
+		&& GetGameObject()->GetScene()->GetIterationCount() == m_collisionResult->lastActiveIterationCount + 1
+		&& m_collisionResult->collision.Read()->collisionBeginCount != 0;
+}
+
+bool PhysicsComponent::HasCollisionEnd()
+{
+	return m_collisionResult
+		&& GetGameObject()->GetScene()->GetIterationCount() == m_collisionResult->lastActiveIterationCount + 1
+		&& m_collisionResult->collision.Read()->collisionEnd.size() != 0;
+}
+
+bool PhysicsComponent::HasCollision()
+{
+	return m_collisionResult
+		&& m_collisionResult->collision.Read()->contactPairs.size() != 0;
+}
 
 void PhysicsComponent::SetPhysicsFlag(PHYSICS_FLAG flag, bool value)
 {

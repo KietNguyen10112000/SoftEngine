@@ -47,37 +47,37 @@ void TestScript::OnUpdate(float dt)
 		motion.z += d;
 	}
 
-	bool jumped = false;
-	if (Input()->IsKeyDown(KEYBOARD::SPACE))
-	{
-		m_motionY = 0.2f;
-		jumped = true;
-	}
+	//bool jumped = false;
+	//if (Input()->IsKeyDown(KEYBOARD::SPACE))
+	//{
+	//	m_motionY = 0.5f;
+	//	jumped = true;
+	//}
 
-	if (m_motionY > -900)
-		m_motionY -= 9.81f * dt;
+	//if (m_motionY > -900)
+	//	m_motionY -= 9.81f * dt;
 
-	auto& globalPosition = GetGameObject()->ReadGlobalTransformMat().Position();
+	//auto& globalPosition = GetGameObject()->ReadGlobalTransformMat().Position();
 
-	/*if (!jumped)
-	{
-		if (m_prevPosY == globalPosition.y)
-		{
-			m_motionY = 0;
-		}
-	}*/
-	if (!jumped)
-	{
-		if (m_prevPosY1 == globalPosition.y && m_prevPosY1 == m_prevPosY2)
-		{
-			m_motionY = 0;
-		}
-	}
+	///*if (!jumped)
+	//{
+	//	if (m_prevPosY == globalPosition.y)
+	//	{
+	//		m_motionY = 0;
+	//	}
+	//}*/
+	//if (!jumped)
+	//{
+	//	if (m_prevPosY1 == globalPosition.y && m_prevPosY1 == m_prevPosY2)
+	//	{
+	//		m_motionY = 0;
+	//	}
+	//}
 
-	m_prevPosY2 = m_prevPosY1;
-	m_prevPosY1 = globalPosition.y;
+	//m_prevPosY2 = m_prevPosY1;
+	//m_prevPosY1 = globalPosition.y;
 
-	motion.y = m_motionY;
+	//motion.y = m_motionY;
 
 	if (motion.Length2() != 0)
 	{

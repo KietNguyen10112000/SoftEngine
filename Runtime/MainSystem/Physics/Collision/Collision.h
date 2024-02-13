@@ -10,6 +10,7 @@
 NAMESPACE_BEGIN
 
 class GameObject;
+class PhysicsMaterial;
 
 struct CollisionContactPoint
 {
@@ -18,7 +19,13 @@ struct CollisionContactPoint
 	// normal from B to A
 	Vec3 normal;
 
-	Vec3 impluse;
+	Vec3 impulse;
+
+	float dynamicFriction;
+	float staticFriction;
+
+	//SharedPtr<PhysicsMaterial> ASurfaceMaterial;
+	//SharedPtr<PhysicsMaterial> BSurfaceMaterial;
 };
 
 struct CollisionContactPair

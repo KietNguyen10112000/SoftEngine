@@ -21,6 +21,8 @@ RigidBodyStatic::RigidBodyStatic(const SharedPtr<PhysicsShape>& shape)
 
 	m_pxActor = body;
 	m_pxActor->userData = this;
+
+	m_shapes.push_back(shape);
 }
 
 RigidBodyStatic::~RigidBodyStatic()

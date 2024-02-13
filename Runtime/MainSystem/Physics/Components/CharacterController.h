@@ -20,6 +20,8 @@ protected:
 	Vec3 m_gravity = Vec3::ZERO;
 	Vec3 m_velocity = Vec3::ZERO;
 
+	Vec3 m_sumF = Vec3::ZERO;
+
 	Vec3 m_sumDisp[2] = { Vec3::ZERO, Vec3::ZERO };
 	size_t m_lastMoveIterationCount = 0;
 

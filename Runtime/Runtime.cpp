@@ -60,6 +60,7 @@
 #include "MainSystem/Scripting/ScriptMeta.h"
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
 #include "MainSystem/Scripting/Components/TestScript.h"
+#include "MainSystem/Physics/PhysicsSystem.h"
 
 #include "Common/Base/Serializer.h"
 
@@ -412,6 +413,23 @@ void Runtime::Setup()
 		scene->AddObject(obj);
 	}
 
+	{
+		auto obj = mheap::New<GameObject>();
+		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
+
+		auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 16.0f), material);
+		obj->NewComponent<RigidBodyStatic>(shape);
+
+		transform = {};
+		transform.Scale() = Vec3(2.5f, 2.5f, 8.0f);
+		transform.Position() = { 10, 0.0f, 10 };
+		transform.Rotation() = Mat4::Rotation(Vec3::X_AXIS, -PI / 6.0f);
+		//transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
+		obj->SetLocalTransform(transform);
+
+		scene->AddObject(obj);
+	}
+
 	for (size_t y = 0; y < 1; y++)
 	{
 		for (size_t x = 0; x < 1; x++)
@@ -444,19 +462,21 @@ void Runtime::Setup()
 			CharacterControllerCapsuleDesc desc = {};
 			desc.capsule = Capsule(Vec3::ZERO + Vec3::UP, 1.0f, 0.5f);
 			desc.material = material;
-			obj->NewComponent<CharacterControllerCapsule>(scene, desc)->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
-		}
+			auto cct = obj->NewComponent<CharacterControllerCapsule>(scene, desc);
+			cct->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 
-		{
 			obj->NewComponent<TestScript>();
+
+			transform = {};
+			transform.Position() = Vec3::ZERO + Vec3::UP;
+			transform.Position().y = 100;
+			//transform.Position().z = 10;
+			obj->SetLocalTransform(transform);
+
+			scene->AddObject(obj);
+
+			cct->SetGravity(scene->GetPhysicsSystem()->GetGravity());
 		}
-
-		transform = {};
-		transform.Position() = Vec3::ZERO + Vec3::UP;
-		transform.Position().z = 10;
-		obj->SetLocalTransform(transform);
-
-		scene->AddObject(obj);
 	}
 
 }

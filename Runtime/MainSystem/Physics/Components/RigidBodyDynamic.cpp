@@ -22,6 +22,8 @@ RigidBodyDynamic::RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape)
 	m_pxActor = body;
 	m_pxActor->userData = this;
 	//body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+
+	m_shapes.push_back(shape);
 }
 
 RigidBodyDynamic::~RigidBodyDynamic()

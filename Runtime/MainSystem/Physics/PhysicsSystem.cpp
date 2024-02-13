@@ -6,6 +6,8 @@
 #include "Components/RigidBodyDynamic.h"
 #include "Components/CharacterController.h"
 
+#include "Shapes/PhysicsShape.h"
+
 #include "Scene/GameObject.h"
 
 #include "FILTER_DATA.h"
@@ -181,29 +183,82 @@ public:
 			BContactPairs->push_back(contactPair);
 		}
 
+		auto AActor = (PxRigidActor*)pairHeader.actors[0];
+		auto BActor = (PxRigidActor*)pairHeader.actors[1];
+
+		/*PxShape* shape = nullptr;
+		PxMaterial* material = nullptr;
+		PhysicsShape* myShape = nullptr;*/
+
 		for (PxU32 i = 0; i < nbPairs; i++)
 		{
-			PxU32 contactCount = pairs[i].contactCount;
-			if (contactCount)
+			const PxContactPair& cp = pairs[i];
+
+			PxContactStreamIterator iter(cp.contactPatches, cp.contactPoints, cp.getInternalFaceIndices(), cp.patchCount, cp.contactCount);
+
+			const PxReal* impulses = cp.contactImpulses;
+
+			PxU32 flippedContacts = (cp.flags & PxContactPairFlag::eINTERNAL_CONTACTS_ARE_FLIPPED);
+			PxU32 hasImpulses = (cp.flags & PxContactPairFlag::eINTERNAL_HAS_IMPULSES);
+			PxU32 nbContacts = 0;
+
+			while (iter.hasNextPatch())
 			{
-				if (contactCount > m_contactPairPoints.size())
-					m_contactPairPoints.resize(contactCount);
-
-				auto& pair = pairs[i];
-				pair.extractContacts(&m_contactPairPoints[0], contactCount);
-
-				for (size_t j = 0; j < contactCount; j++)
+				iter.nextPatch();
+				while (iter.hasNextContact())
 				{
-					auto& pxPoint = m_contactPairPoints[j];
-					CollisionContactPoint contactPoint;
-					contactPoint.position = reinterpret_cast<const Vec3&>(pxPoint.position);
-					contactPoint.normal = reinterpret_cast<const Vec3&>(pxPoint.normal);
-					contactPoint.impluse = reinterpret_cast<const Vec3&>(pxPoint.impulse);
+					iter.nextContact();
 
-					contactPair->contacts.push_back(contactPoint);
+					CollisionContactPoint dst = {};
+					dst.position = reinterpret_cast<const Vec3&>(iter.getContactPoint());
+					dst.normal = reinterpret_cast<const Vec3&>(iter.getContactNormal());
+					dst.impulse = hasImpulses ? dst.normal * impulses[nbContacts] : Vec3::ZERO;
+					dst.staticFriction = iter.getStaticFriction();
+					dst.dynamicFriction = iter.getDynamicFriction();
+
+					contactPair->contacts.push_back(dst);
+
+					/*PxU32 internalFaceIndex0 = flippedContacts ?
+						iter.getFaceIndex1() : iter.getFaceIndex0();
+					PxU32 internalFaceIndex1 = flippedContacts ?
+						iter.getFaceIndex0() : iter.getFaceIndex1();*/
+					//...
+					nbContacts++;
 				}
 			}
 		}
+
+		//for (PxU32 i = 0; i < nbPairs; i++)
+		//{
+		//	PxU32 contactCount = pairs[i].contactCount;
+		//	if (contactCount)
+		//	{
+		//		if (contactCount > m_contactPairPoints.size())
+		//			m_contactPairPoints.resize(contactCount);
+
+		//		auto& pair = pairs[i];
+		//		pair.extractContacts(&m_contactPairPoints[0], contactCount);
+
+		//		for (size_t j = 0; j < contactCount; j++)
+		//		{
+		//			auto& pxPoint = m_contactPairPoints[j];
+		//			CollisionContactPoint contactPoint;
+		//			contactPoint.position = reinterpret_cast<const Vec3&>(pxPoint.position);
+		//			contactPoint.normal = reinterpret_cast<const Vec3&>(pxPoint.normal);
+		//			contactPoint.impluse = reinterpret_cast<const Vec3&>(pxPoint.impulse);
+
+		//			/*AActor->getShapes(&shape, 1, pxPoint.internalFaceIndex0);
+		//			myShape = (PhysicsShape*)shape->userData;
+		//			contactPoint.ASurfaceMaterial = myShape->GetFirstMaterial();
+
+		//			BActor->getShapes(&shape, 1, pxPoint.internalFaceIndex1);
+		//			myShape = (PhysicsShape*)shape->userData;
+		//			contactPoint.BSurfaceMaterial = myShape->GetFirstMaterial();*/
+
+		//			contactPair->contacts.push_back(contactPoint);
+		//		}
+		//	}
+		//}
 
 		//std::cout << "collision\n";
 	}
@@ -554,7 +609,7 @@ void PhysicsSystem::Iteration(float dt)
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
 
-	if (dt <= 0)
+	if (dt <= 0 || dt >= 0.1f)
 	{
 		dt = 1.0f / 120.0f;
 	}

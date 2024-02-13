@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/TypeDef.h"
+#include "Core/Memory/SmartPointers.h"
 
 #include "PHYSICS_SHAPE_TYPE.h"
 
@@ -13,6 +14,8 @@ namespace physx
 
 NAMESPACE_BEGIN
 
+class PhysicsMaterial;
+
 class PhysicsShape
 {
 protected:
@@ -20,11 +23,18 @@ protected:
 
 	physx::PxShape* m_pxShape = nullptr;
 
+	SharedPtr<PhysicsMaterial> m_meterial;
+
 public:
 	virtual ~PhysicsShape();
 
 public:
 	virtual PHYSICS_SHAPE_TYPE GetType() const = 0;
+
+	inline const auto& GetFirstMaterial()
+	{
+		return m_meterial;
+	}
 
 };
 

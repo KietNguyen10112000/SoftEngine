@@ -157,7 +157,7 @@ public:
 
 	void UnschedulePostUpdate(PhysicsComponent* comp);
 
-	inline auto& GetGraviry() const
+	inline auto& GetGravity() const
 	{
 		return m_gravity;
 	}

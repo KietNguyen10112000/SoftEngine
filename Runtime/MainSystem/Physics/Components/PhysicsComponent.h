@@ -28,6 +28,7 @@ struct PhysicsCollisionResult
 
 	size_t lastActiveIterationCount = 0;
 
+	// callback: void (const SharedPtr<CollisionContactPair>& contact);
 	template <typename Fn>
 	inline void ForEachCollisionBegin(Fn callback)
 	{
@@ -40,6 +41,7 @@ struct PhysicsCollisionResult
 		}
 	}
 
+	// callback: void (const SharedPtr<CollisionContactPair>& contact);
 	template <typename Fn>
 	inline void ForEachCollisionEnd(Fn callback)
 	{
@@ -52,6 +54,7 @@ struct PhysicsCollisionResult
 		}
 	}
 
+	// callback: void (const SharedPtr<CollisionContactPair>& contact);
 	template <typename Fn>
 	inline void ForEachCollision(Fn callback)
 	{
@@ -60,6 +63,21 @@ struct PhysicsCollisionResult
 		{
 			callback(e);
 		}
+	}
+
+	inline auto GetCollisionBeginCount()
+	{
+		return collision.Read()->collisionBeginCount;
+	}
+
+	inline auto GetCollisionEndCount()
+	{
+		return collision.Read()->collisionEnd.size();
+	}
+
+	inline auto GetCollisionCount()
+	{
+		return collision.Read()->contactPairs.size();
 	}
 
 	inline void Clear()
@@ -125,6 +143,15 @@ protected:
 	inline bool& IsPostUpdateIdRemoved()
 	{
 		return *(bool*)&m_doubleBVHId[1].ulistId;
+	}
+
+	bool HasCollisionBegin();
+	bool HasCollisionEnd();
+	bool HasCollision();
+
+	inline auto* GetCollision()
+	{
+		return m_collisionResult->collision.Read();
 	}
 	
 public:

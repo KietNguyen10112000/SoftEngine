@@ -13,6 +13,9 @@ PhysicsShapeCapsule::PhysicsShapeCapsule(float h, float r, const SharedPtr<Physi
 	auto physics = PhysX::Get()->GetPxPhysics();
 	auto& m = *(material->m_pxMaterial);
 	m_pxShape = physics->createShape(PxCapsuleGeometry(r, h / 2.0f), m, isExclusive);
+
+	m_pxShape->userData = this;
+	m_meterial = material;
 }
 
 NAMESPACE_END
