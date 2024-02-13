@@ -22,23 +22,26 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 	pxDesc.upDirection = reinterpret_cast<const PxVec3&>(desc.capsule.m_up);
 	pxDesc.position = PxExtendedVec3(desc.capsule.m_center.x, desc.capsule.m_center.y, desc.capsule.m_center.z);
 	pxDesc.material = desc.material->m_pxMaterial;
-	pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
+	//pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
 	pxDesc.scaleCoeff = 1.0f;
-	pxDesc.contactOffset = 0.00001f;
+	pxDesc.contactOffset = 0.01f;
 
 	m_pxCharacterController = scene->GetPhysicsSystem()->m_pxControllerManager->createController(pxDesc);
 
-	m_pxCharacterController->getActor()->userData = this;
+	auto pxActor = m_pxCharacterController->getActor();
+	pxActor->userData = this;
 
 	PxShape* shape = nullptr;
-	m_pxCharacterController->getActor()->getShapes(&shape, 1);
-
+	pxActor->getShapes(&shape, 1);
 	if (shape)
 	{
 		PxFilterData data;
 		data.word0 = PHYSICS_FILTER_DATA_CCT;
 		shape->setSimulationFilterData(data);
+
+		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 2.0f * pxDesc.contactOffset + 0.01f, pxDesc.height / 2.0f + 2.0f * pxDesc.contactOffset + 0.01f));
 	}
+
 }
 
 void CharacterControllerCapsule::OnDrawDebug()

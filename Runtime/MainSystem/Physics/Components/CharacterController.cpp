@@ -187,19 +187,32 @@ void CharacterController::OnUpdate(float dt)
 						normal = -normal;
 					}
 
+					// normal is AB, A is this controller
+
 					auto cosA = normal.Dot(nF);
-					auto Fn = cosA * F;
+					auto Fn = cosA * F.Length() * normal;
 					auto Ft = F - Fn;
 
 					auto FnLen = Fn.Length();
 
 					auto staticFrictionForce = FnLen * point.staticFriction;
-					auto dynamicFrictionForce = Fn * point.dynamicFriction;
+					auto dynamicFrictionForce = FnLen * point.dynamicFriction;
 
-					if (staticFrictionForce < FnLen && Ft.Length2() > dynamicFrictionForce.Length2())
+					/*if (std::abs(normal.y) != 1)
 					{
-						sumF += (Ft - dynamicFrictionForce);
+						int x = 3;
+					}*/
+
+					auto FtLen = Ft.Length();
+					if (staticFrictionForce < FnLen && FtLen > dynamicFrictionForce)
+					{
+						sumF += (Ft - (FtLen - dynamicFrictionForce) * Ft.Normal());
 					}
+
+					/*if (staticFrictionForce < FnLen)
+					{
+						sumF += (Ft);
+					}*/
 				}
 			}
 		);
@@ -214,6 +227,36 @@ void CharacterController::OnUpdate(float dt)
 	}
 
 	m_velocity += (m_sumF / mass)  * dt;
+
+	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	if (HasCollision())
+	{
+		auto& firstContact = m_collisionResult->collision.Read()->contactPairs[0];
+		auto& firstPoint = firstContact->contacts[0];
+
+		auto& normal = firstPoint.normal;
+		bool isA = firstContact->A == GetGameObject() ? true : false;
+		if (!isA)
+		{
+			normal = -normal;
+		}
+
+		float dot = normal.Dot(m_gravity.Normal());
+
+		if (dot < 0)
+		{
+			auto dispLen = disp.Length();
+
+			if (dispLen != 0)
+			{
+				auto dispDir = disp.Normal();
+				auto rotation = Quaternion::RotationFromTo(Vec3::UP, normal);
+				dispDir = (Vec4(dispDir, 0.0f) * Mat4::Rotation(rotation)).xyz();
+
+				disp = dispDir * dispLen;
+			}
+		}
+	}
 }
 
 void CharacterController::OnPostUpdate(float dt)
@@ -221,9 +264,9 @@ void CharacterController::OnPostUpdate(float dt)
 	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
 
 	disp += m_velocity * dt;
-	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.05f, dt, g_defaultPxControllerFilters);
+	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
 
-	//std::cout << m_sumF.y << "\n";
+	//std::cout << disp.y << "\n";
 
 	disp = Vec3::ZERO;
 }
@@ -277,7 +320,7 @@ void CharacterController::Move(const Vec3& disp)
 			}
 
 			auto& disp = controller->m_sumDisp[controller->GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.05f, dt, g_defaultPxControllerFilters);
+			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
 			disp = Vec3::ZERO;
 		}
 	);
