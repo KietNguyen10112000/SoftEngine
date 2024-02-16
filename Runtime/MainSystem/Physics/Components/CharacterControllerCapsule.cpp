@@ -39,7 +39,7 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 		data.word0 = PHYSICS_FILTER_DATA_CCT;
 		shape->setSimulationFilterData(data);
 
-		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 2.0f * pxDesc.contactOffset + 0.01f, pxDesc.height / 2.0f + 2.0f * pxDesc.contactOffset + 0.01f));
+		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 2.0f * pxDesc.contactOffset + 0.05f, pxDesc.height / 2.0f + 2.0f * pxDesc.contactOffset + 0.05f));
 	}
 
 }

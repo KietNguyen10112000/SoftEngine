@@ -34,7 +34,7 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 		pairFlags =  PxPairFlag::eDETECT_DISCRETE_CONTACT
 			| PxPairFlag::eNOTIFY_TOUCH_FOUND
 			| PxPairFlag::eNOTIFY_TOUCH_LOST
-			//| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
+			| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
 			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
 		break;
 	default:
@@ -42,7 +42,7 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 			| PxPairFlag::eDETECT_DISCRETE_CONTACT
 			| PxPairFlag::eNOTIFY_TOUCH_FOUND
 			| PxPairFlag::eNOTIFY_TOUCH_LOST
-			//| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
+			| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
 			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
 		break;
 	}
@@ -69,7 +69,24 @@ public:
 
 	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs)
 	{
-		//std::cout << "CONTACT\n";
+		/*if (!pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH) && !pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_HAS_FIRST_TOUCH))
+		{
+			std::cout << "CONTACT changed\n";
+			return;
+		}*/
+
+		//std::cout << "onContact\n";
+
+		/*if (pairs[0].events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS))
+		{
+			assert(!pairs[0].events.isSet(PxPairFlag::eNOTIFY_TOUCH_FOUND) && !pairs[0].events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST));
+
+			std::cout << "eNOTIFY_TOUCH_PERSISTS\n";
+
+			return;
+		}*/
+
+		auto& events = pairs[0].events;
 
 		auto& activeComponentsHasContact = m_system->m_activeComponentsHasContact;
 		for (auto a : pairHeader.actors)
@@ -83,12 +100,14 @@ public:
 			}
 		}
 
-		if (nbPairs == 0)
-		{
-			//std::cout << "CONTACT LOST\n";
-			assert(0);
-			return;
-		}
+		//if (nbPairs == 0)
+		//{
+		//	//std::cout << "CONTACT LOST\n";
+		//	assert(0);
+		//	return;
+		//}
+
+		assert(nbPairs != 0);
 
 		/*if (pairHeader.flags)
 		{
@@ -109,7 +128,7 @@ public:
 		auto A = (PhysicsComponent*)pairHeader.actors[0]->userData;
 		auto B = (PhysicsComponent*)pairHeader.actors[1]->userData;
 
-		if (pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH))
+		if (events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST) || events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS))
 		{
 			auto AEndContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->endContactPairs : nullptr;
 			auto BEndContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->endContactPairs : nullptr;
@@ -127,10 +146,13 @@ public:
 				BEndContactPairs->push_back(endContactPair);
 			}
 
-			return;
+			if (events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST))
+			{
+				return;
+			}
 		}
 
-		assert(pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_HAS_FIRST_TOUCH));
+		assert(events.isSet(PxPairFlag::eNOTIFY_TOUCH_FOUND) || events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS));
 
 		//auto AType = A->GetPhysicsType();
 		//auto BType = B->GetPhysicsType();
@@ -264,6 +286,11 @@ public:
 	}
 };
 
+//class PhysXSimulationCallback_ : public PxContactModifyCallback
+//{
+//
+//};
+
 PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 {
 	InitializeAsyncTaskRunnerForMainComponent(m_asyncTaskRunner);
@@ -281,6 +308,7 @@ PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 	sceneDesc.filterShader = PhysicsContactReportFilterShader;
 	sceneDesc.kineKineFilteringMode = PxPairFilteringMode::eKEEP;
 	sceneDesc.staticKineFilteringMode = PxPairFilteringMode::eKEEP;
+	//sceneDesc.contactModifyCallback = 
 
 	m_pxScene = physics->createScene(sceneDesc);
 

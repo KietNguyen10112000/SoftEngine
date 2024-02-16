@@ -157,11 +157,16 @@ void CharacterController::OnUpdate(float dt)
 
 	if (HasCollisionBegin() || HasCollisionEnd())
 	{
-		m_velocity = Vec3::ZERO;
+		m_collisionPlanes.clear();
 
 		Vec3 sumF = Vec3::ZERO;
 
 		auto collisionCount = m_collisionResult->GetCollisionCount();
+
+		////if (collisionCount == 0)
+		//{
+		//	m_velocity = Vec3::ZERO;
+		//}
 
 		/*if (collisionCount == 1)
 		{
@@ -189,30 +194,60 @@ void CharacterController::OnUpdate(float dt)
 
 					// normal is AB, A is this controller
 
-					auto cosA = normal.Dot(nF);
-					auto Fn = cosA * F.Length() * normal;
-					auto Ft = F - Fn;
-
-					auto FnLen = Fn.Length();
-
-					auto staticFrictionForce = FnLen * point.staticFriction;
-					auto dynamicFrictionForce = FnLen * point.dynamicFriction;
-
-					/*if (std::abs(normal.y) != 1)
+					CollisionPlane plane;
+					plane.normal = -normal;
+					plane.staticFriction = point.staticFriction;
+					plane.dynamicFriction = point.dynamicFriction;
+					plane.isApplyedDynamicFriction = false;
+					if (normal.Dot(m_gravity) > 0)
 					{
-						int x = 3;
-					}*/
-
-					auto FtLen = Ft.Length();
-					if (staticFrictionForce < FnLen && FtLen > dynamicFrictionForce)
+						// ground
+						plane.isGround = true;
+					}
+					else
 					{
-						sumF += (Ft - (FtLen - dynamicFrictionForce) * Ft.Normal());
+						// not ground
+						plane.isGround = false;
+
+						//sumF += F;
 					}
 
-					/*if (staticFrictionForce < FnLen)
+					if (normal.Dot(m_velocity) > 0)
 					{
-						sumF += (Ft);
-					}*/
+						m_velocity = Vec3::ZERO;
+					}
+
+					if (plane.isGround) 
+					{
+						auto cosA = normal.Dot(nF);
+						auto Fn = cosA * F.Length() * normal;
+						auto Ft = F - Fn;
+
+						auto FnLen = Fn.Length();
+
+						auto staticFrictionForce = FnLen * point.staticFriction;
+						auto dynamicFrictionForce = FnLen * point.dynamicFriction;
+
+						/*if (std::abs(normal.y) != 1)
+						{
+							int x = 3;
+						}*/
+
+						auto FtLen = Ft.Length();
+						if (staticFrictionForce < FnLen && FtLen > dynamicFrictionForce)
+						{
+							sumF += (Ft - (FtLen - dynamicFrictionForce) * Ft.Normal());
+
+							plane.isApplyedDynamicFriction = true;
+						}
+
+						/*if (staticFrictionForce < FnLen)
+						{
+							sumF += (Ft);
+						}*/
+					}
+
+					m_collisionPlanes.push_back(plane);
 				}
 			}
 		);
@@ -241,7 +276,7 @@ void CharacterController::OnUpdate(float dt)
 			normal = -normal;
 		}
 
-		float dot = normal.Dot(m_gravity.Normal());
+		float dot = normal.Dot(m_gravity);
 
 		if (dot < 0)
 		{

@@ -418,7 +418,7 @@ void Runtime::Setup()
 		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
 
 		auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 16.0f), material);
-		obj->NewComponent<RigidBodyStatic>(shape);
+		obj->NewComponent<RigidBodyDynamic>(shape)->SetKinematic(true);
 
 		transform = {};
 		transform.Scale() = Vec3(2.5f, 2.5f, 8.0f);

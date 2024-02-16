@@ -31,6 +31,48 @@ RigidBodyDynamic::~RigidBodyDynamic()
 
 }
 
+void RigidBodyDynamic::OnTransformChanged()
+{
+	auto gameObject = GetGameObject();
+
+	auto& globalTransform = gameObject->ReadGlobalTransformMat();
+
+	//auto pxRigidBody = m_pxActor->is<PxRigidBody>();
+
+	//assert(pxRigidBody && "something wrong here!");
+
+	PxRigidDynamic* pxRigidBody = m_pxActor->is<PxRigidDynamic>();
+
+	//auto pxTransform = pxRigidBody->getGlobalPose();
+
+	if (::memcmp(&m_lastGlobalTransform, &globalTransform, sizeof(Mat4)) != 0)
+	{
+		Vec3 scale;
+		Vec3 pos;
+		Quaternion rot;
+		globalTransform.Decompose(scale, rot, pos);
+
+		PxTransform pxTransform;
+		pxTransform.p = reinterpret_cast<PxVec3&>(pos);
+		pxTransform.q.x = rot.x;
+		pxTransform.q.y = rot.y;
+		pxTransform.q.z = rot.z;
+		pxTransform.q.w = rot.w;
+
+		/*if (m_isKinematic)
+		{
+			pxRigidBody->setKinematicTarget(pxTransform);
+		}
+		else*/
+		{
+			pxRigidBody->setGlobalPose(pxTransform);
+			pxRigidBody->setKinematicTarget(pxTransform);
+		}
+
+		m_lastGlobalTransform = globalTransform;
+	}
+}
+
 void RigidBodyDynamic::OnPhysicsTransformChanged()
 {
 	auto obj = GetGameObject();
@@ -57,7 +99,7 @@ void RigidBodyDynamic::TransformContributor(GameObject* object, Transform& local
 	Mat4& myMat = reinterpret_cast<Mat4&>(shapePose);
 
 	global = Mat4::Scaling(local.Scale()) * myMat;
-	lastGlobalTransform = myMat;
+	lastGlobalTransform = global;
 	rigidBody->GetGameObject()->m_isNeedRecalculateLocalTransform = true;
 }
 
@@ -100,6 +142,14 @@ void RigidBodyDynamic::SetMass(float mass)
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
 	pxRigidBody->setMass(mass);
 	pxRigidBody->setMassSpaceInertiaTensor(PxVec3(0.f));
+}
+
+void RigidBodyDynamic::SetKinematic(bool enable)
+{
+	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
+	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
+
+	m_isKinematic = enable;
 }
 
 NAMESPACE_END

@@ -12,6 +12,8 @@ class PhysicsShape;
 class RigidBodyDynamic : public RigidBody
 {
 public:
+	bool m_isKinematic = false;
+
 	COMPONENT_CLASS(RigidBodyDynamic);
 
 	RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape);
@@ -45,10 +47,14 @@ public:
 
 	void OnComponentRemoved() override;
 
+	void OnTransformChanged() override;
+
 	AABox GetGlobalAABB() override;
 
 public:
 	void SetMass(float mass);
+
+	void SetKinematic(bool enable);
 
 };
 

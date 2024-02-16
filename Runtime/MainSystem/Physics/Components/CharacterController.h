@@ -14,6 +14,18 @@ class CharacterController : public PhysicsComponent
 protected:
 	friend class PhysXSimulationCallback;
 
+	struct CollisionPlane
+	{
+		Vec3 normal;
+		
+		float staticFriction;
+		float dynamicFriction;
+
+		bool isGround;
+		bool isApplyedDynamicFriction;
+
+	};
+
 	Mat4 m_lastGlobalTransform;
 
 	physx::PxController* m_pxCharacterController = nullptr;
@@ -24,6 +36,8 @@ protected:
 
 	Vec3 m_sumDisp[2] = { Vec3::ZERO, Vec3::ZERO };
 	size_t m_lastMoveIterationCount = 0;
+
+	std::vector<CollisionPlane> m_collisionPlanes;
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
