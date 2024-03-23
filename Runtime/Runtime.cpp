@@ -400,6 +400,7 @@ void Runtime::Setup()
 
 	{
 		auto obj = mheap::New<GameObject>();
+		obj->Name() = "Ground";
 		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/white.png");
 
 		auto shape = std::make_shared<PhysicsShapePlane>(material);
@@ -415,6 +416,7 @@ void Runtime::Setup()
 
 	{
 		auto obj = mheap::New<GameObject>();
+		obj->Name() = "Kinematic";
 		obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
 
 		auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 16.0f), material);
@@ -435,6 +437,7 @@ void Runtime::Setup()
 		for (size_t x = 0; x < 1; x++)
 		{
 			auto obj = mheap::New<GameObject>();
+			obj->Name() = "Center Cube";
 			obj->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
 
 			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 5.0f), material);
@@ -456,6 +459,7 @@ void Runtime::Setup()
 
 	{
 		auto obj = mheap::New<GameObject>();
+		obj->Name() = "CCT";
 		//obj->NewComponent<MeshBasicRenderer>("Default/capsule.obj", "Default/green.png");
 
 		{

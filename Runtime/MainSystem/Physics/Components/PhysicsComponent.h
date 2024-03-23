@@ -28,56 +28,146 @@ struct PhysicsCollisionResult
 
 	size_t lastActiveIterationCount = 0;
 
-	// callback: void (const SharedPtr<CollisionContactPair>& contact);
+	// callback: void (const SharedPtr<CollisionContact>&, const SharedPtr<CollisionContactPair>& , const CollisionContactPoint&);
 	template <typename Fn>
-	inline void ForEachCollisionBegin(Fn callback)
+	inline void ForEachBeginContactPoints(Fn callback)
 	{
 		auto& _collision = *collision.Read();
-		auto count = _collision.collisionBeginCount;
-
-		for (size_t i = 0; i < count; i++)
+		for (auto& contact : _collision.contacts)
 		{
-			callback(_collision.contactPairs[i]);
+			auto& ids = contact->beginContactPairsIds;
+			auto& pairs = contact->contactPairs;
+			for (auto idx : ids)
+			{
+				auto& pair = pairs[idx];
+				for (auto& point : pair->contactPoints)
+				{
+					callback(contact, pair, point);
+				}
+			}
 		}
 	}
 
-	// callback: void (const SharedPtr<CollisionContactPair>& contact);
+	// callback: void (const SharedPtr<CollisionContact>&, const SharedPtr<CollisionContactPair>&);
 	template <typename Fn>
-	inline void ForEachCollisionEnd(Fn callback)
-	{
-		auto& _prevCollision = *(collision.Buffers()[(collision.GetWriteIdx() + 3 - 2) % 3]);
-		auto& _curCollision = *collision.Read();
-
-		for (auto idx : _curCollision.collisionEnd)
-		{
-			callback(_prevCollision.contactPairs[idx]);
-		}
-	}
-
-	// callback: void (const SharedPtr<CollisionContactPair>& contact);
-	template <typename Fn>
-	inline void ForEachCollision(Fn callback)
+	inline void ForEachBeginContactPairs(Fn callback)
 	{
 		auto& _collision = *collision.Read();
-		for (auto& e : _collision.contactPairs)
+		for (auto& contact : _collision.contacts)
 		{
-			callback(e);
+			auto& ids = contact->beginContactPairsIds;
+			auto& pairs = contact->contactPairs;
+			for (auto idx : ids)
+			{
+				auto& pair = pairs[idx];
+				callback(contact, pair);
+			}
 		}
 	}
 
-	inline auto GetCollisionBeginCount()
+	// callback: void (const SharedPtr<CollisionContact>&, const SharedPtr<CollisionContactPair>&);
+	template <typename Fn>
+	inline void ForEachEndContactPairs(Fn callback)
 	{
-		return collision.Read()->collisionBeginCount;
+		auto& _collision = *collision.Read();
+
+		for (auto& contact : _collision.endContacts)
+		{
+			auto& pairs = contact->contactPairs;
+			for (auto& pair : pairs)
+			{
+				callback(contact, pair);
+			}
+		}
+
+		for (auto& contact : _collision.contacts)
+		{
+			if (contact->oldCollisionContact == (void*)INVALID_ID)
+			{
+				continue;
+			}
+
+			auto& ids = contact->endContactPairsIds;
+			auto& pairs = contact->oldCollisionContact->contactPairs;
+			for (auto idx : ids)
+			{
+				auto& pair = pairs[idx];
+				callback(contact, pair);
+			}
+		}
 	}
 
-	inline auto GetCollisionEndCount()
+	// callback: void (const SharedPtr<CollisionContact>&, const SharedPtr<CollisionContactPair>&);
+	template <typename Fn>
+	inline void ForEachContactPairs(Fn callback)
 	{
-		return collision.Read()->collisionEnd.size();
+		auto& _collision = *collision.Read();
+		for (auto& contact : _collision.contacts)
+		{
+			for (auto& pair : contact->contactPairs)
+			{
+				//if (pair->contactPoints.size() != 0)
+				assert(pair->contactPoints.size() != 0);
+
+				callback(contact, pair);
+			}
+		}
 	}
 
-	inline auto GetCollisionCount()
+	// callback: void (const SharedPtr<CollisionContact>&)
+	template <typename Fn>
+	inline void ForEachBeginContacts(Fn callback)
 	{
-		return collision.Read()->contactPairs.size();
+		auto& _collision = *collision.Read();
+		for (auto& contact : _collision.contacts)
+		{
+			if (contact->oldCollisionContact == (void*)INVALID_ID)
+			{
+				callback(contact);
+			}
+		}
+	}
+
+	// callback: void (const SharedPtr<CollisionContact>&)
+	template <typename Fn>
+	inline void ForEachEndContacts(Fn callback)
+	{
+		auto& _collision = *collision.Read();
+		for (auto& contact : _collision.endContacts)
+		{
+			callback(contact);
+		}
+	}
+
+	// callback: void (const SharedPtr<CollisionContact>&)
+	template <typename Fn>
+	inline void ForEachContacts(Fn callback)
+	{
+		auto& _collision = *collision.Read();
+		for (auto& contact : _collision.contacts)
+		{
+			callback(contact);
+		}
+	}
+
+	inline auto GetBeginContactPairsCount()
+	{
+		return collision.Read()->beginContactPairsCount;
+	}
+
+	inline auto GetEndContactPairsCount()
+	{
+		return collision.Read()->endContactPairsCount;
+	}
+
+	inline auto GetContactPairsCount()
+	{
+		return collision.Read()->contactPairsCount;
+	}
+
+	inline auto GetContactPointsCount()
+	{
+		return collision.Read()->contactPointsCount;
 	}
 
 	inline void Clear()
@@ -107,7 +197,17 @@ protected:
 
 	PhysicsCollisionResult* m_collisionResult = nullptr;
 
-	bool isInPrevFrame[8] = {};
+	uint32_t m_refContactIdx[8] = {
+		(uint32_t)INVALID_ID,
+		(uint32_t)INVALID_ID,
+		(uint32_t)INVALID_ID,
+		(uint32_t)INVALID_ID,
+
+		(uint32_t)INVALID_ID,
+		(uint32_t)INVALID_ID,
+		(uint32_t)INVALID_ID,
+		(uint32_t)INVALID_ID,
+	};
 
 public:
 	virtual ~PhysicsComponent();
@@ -145,9 +245,11 @@ protected:
 		return *(bool*)&m_doubleBVHId[1].ulistId;
 	}
 
-	bool HasCollisionBegin();
-	bool HasCollisionEnd();
-	bool HasCollision();
+	bool HasCollisionContactPairsBegin();
+	bool HasCollisionContactPairsEnd();
+	bool HasCollisionContactPairs();
+	//bool HasCollisionModified();
+	bool HasCollisionAnyChanged();
 
 	inline auto* GetCollision()
 	{

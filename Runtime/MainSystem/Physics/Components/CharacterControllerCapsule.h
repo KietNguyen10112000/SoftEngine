@@ -8,6 +8,8 @@
 
 NAMESPACE_BEGIN
 
+class PhysicsShape;
+
 struct CharacterControllerCapsuleDesc
 {
 	Capsule capsule = {};
@@ -18,6 +20,8 @@ class CharacterControllerCapsule : public CharacterController
 {
 public:
 	COMPONENT_CLASS(CharacterControllerCapsule);
+
+	SharedPtr<PhysicsShape> m_shape;
 
 	CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc);
 

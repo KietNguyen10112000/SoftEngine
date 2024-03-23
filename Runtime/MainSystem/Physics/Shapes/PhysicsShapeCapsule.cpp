@@ -8,6 +8,15 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
+PhysicsShapeCapsule::PhysicsShapeCapsule(void* pxShape, float h, float r, const SharedPtr<PhysicsMaterial>& material, bool isExclusive)
+{
+	m_pxShape = (PxShape*)pxShape;
+	m_pxShape->acquireReference();
+	m_pxShape->userData = this;
+	m_meterial = material;
+}
+
+
 PhysicsShapeCapsule::PhysicsShapeCapsule(float h, float r, const SharedPtr<PhysicsMaterial>& material, bool isExclusive)
 {
 	auto physics = PhysX::Get()->GetPxPhysics();

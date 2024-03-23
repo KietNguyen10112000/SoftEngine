@@ -33,64 +33,64 @@ public:
 			return;
 		}*/
 
-		auto controller = (CharacterController*)hit.controller->getActor()->userData;
-		auto system = controller->GetGameObject()->GetScene()->GetPhysicsSystem();
+		//auto controller = (CharacterController*)hit.controller->getActor()->userData;
+		//auto system = controller->GetGameObject()->GetScene()->GetPhysicsSystem();
 
-		std::cout << "onShapeHit all " << system->GetScene()->GetIterationCount() << "\n";
+		//std::cout << "onShapeHit all " << system->GetScene()->GetIterationCount() << "\n";
 
-		auto& activeComponentsHasContact = system->m_activeComponentsHasContact;
+		//auto& activeComponentsHasContact = system->m_activeComponentsHasContact;
 
-		PxActor* actors[2] = { hit.controller->getActor(), hit.actor };
+		//PxActor* actors[2] = { hit.controller->getActor(), hit.actor };
 
-		for (auto a : actors)
-		{
-			auto comp = (PhysicsComponent*)a->userData;
-			if (comp && comp->HasPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION)
-				&& comp->m_collisionResult->lastActiveIterationCount != system->GetScene()->GetIterationCount())
-			{
-				comp->m_collisionResult->lastActiveIterationCount = system->GetScene()->GetIterationCount();
-				activeComponentsHasContact.push_back(comp);
-			}
-		}
-
-		//if (hit.actor->is<PxRigidDynamic>())
+		//for (auto a : actors)
 		//{
-		//	//int x = 3;
-		//	//std::cout << "onShapeHit dynamic " << system->GetScene()->GetIterationCount() << "\n";
+		//	auto comp = (PhysicsComponent*)a->userData;
+		//	if (comp && comp->HasPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION)
+		//		&& comp->m_collisionResult->lastActiveIterationCount != system->GetScene()->GetIterationCount())
+		//	{
+		//		comp->m_collisionResult->lastActiveIterationCount = system->GetScene()->GetIterationCount();
+		//		activeComponentsHasContact.push_back(comp);
+		//	}
 		//}
 
-		auto A = (PhysicsComponent*)actors[0]->userData;
-		auto B = (PhysicsComponent*)actors[1]->userData;
+		////if (hit.actor->is<PxRigidDynamic>())
+		////{
+		////	//int x = 3;
+		////	//std::cout << "onShapeHit dynamic " << system->GetScene()->GetIterationCount() << "\n";
+		////}
 
-		auto AContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
-		auto BContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
+		//auto A = (PhysicsComponent*)actors[0]->userData;
+		//auto B = (PhysicsComponent*)actors[1]->userData;
 
-		if (!AContactPairs && !BContactPairs)
-		{
-			return;
-		}
+		//auto AContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
+		//auto BContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
 
-		SharedPtr<CollisionContactPair> contactPair = std::make_shared<CollisionContactPair>();
+		//if (!AContactPairs && !BContactPairs)
+		//{
+		//	return;
+		//}
 
-		contactPair->A = A->GetGameObject();
-		contactPair->B = B->GetGameObject();
+		//SharedPtr<CollisionContactPair> contactPair = std::make_shared<CollisionContactPair>();
 
-		if (AContactPairs)
-		{
-			AContactPairs->push_back(contactPair);
-		}
+		//contactPair->A = A->GetGameObject();
+		//contactPair->B = B->GetGameObject();
 
-		if (BContactPairs)
-		{
-			BContactPairs->push_back(contactPair);
-		}
+		//if (AContactPairs)
+		//{
+		//	AContactPairs->push_back(contactPair);
+		//}
 
-		CollisionContactPoint contactPoint;
-		contactPoint.position = reinterpret_cast<const Vec3&>(hit.worldPos);
-		contactPoint.normal = reinterpret_cast<const Vec3&>(hit.worldNormal);
-		contactPoint.impulse = reinterpret_cast<const Vec3&>(hit.dir * hit.length);
+		//if (BContactPairs)
+		//{
+		//	BContactPairs->push_back(contactPair);
+		//}
 
-		contactPair->contacts.push_back(contactPoint);
+		//CollisionContactPoint contactPoint;
+		//contactPoint.position = reinterpret_cast<const Vec3&>(hit.worldPos);
+		//contactPoint.normal = reinterpret_cast<const Vec3&>(hit.worldNormal);
+		//contactPoint.impulse = reinterpret_cast<const Vec3&>(hit.dir * hit.length);
+
+		//contactPair->contacts.push_back(contactPoint);
 	}
 
 	void onControllerHit(const PxControllersHit& hit) override
@@ -155,13 +155,13 @@ void CharacterController::OnUpdate(float dt)
 	auto mass = m_pxCharacterController->getActor()->getMass();
 	mass = mass <= 0 ? 1 : mass;
 
-	if (HasCollisionBegin() || HasCollisionEnd())
+	if (HasCollisionAnyChanged())
 	{
 		m_collisionPlanes.clear();
 
 		Vec3 sumF = Vec3::ZERO;
 
-		auto collisionCount = m_collisionResult->GetCollisionCount();
+		auto collisionCount = m_collisionResult->GetContactPointsCount();
 
 		////if (collisionCount == 0)
 		//{
@@ -176,9 +176,10 @@ void CharacterController::OnUpdate(float dt)
 		auto gForce = m_gravity * mass;
 		auto eachForce = gForce / (float)collisionCount;
 
-		m_collisionResult->ForEachCollision([&](const SharedPtr<CollisionContactPair>& contact)
+		m_collisionResult->ForEachContactPairs(
+			[&](const SharedPtr<CollisionContact>& contact, const SharedPtr<CollisionContactPair>& pair)
 			{
-				auto& contactPoints = contact->contacts;
+				auto& contactPoints = pair->contactPoints;
 				auto F = eachForce / contactPoints.size();
 				auto nF = F.Normal();
 
@@ -212,7 +213,7 @@ void CharacterController::OnUpdate(float dt)
 						//sumF += F;
 					}
 
-					if (normal.Dot(m_velocity) > 0)
+					if (normal.Dot(m_velocity) > 0.001f)
 					{
 						m_velocity = Vec3::ZERO;
 					}
@@ -255,7 +256,7 @@ void CharacterController::OnUpdate(float dt)
 		m_sumF = sumF;
 	}
 
-	if (m_sumF == Vec3::ZERO && !HasCollision())
+	if (m_sumF == Vec3::ZERO && !HasCollisionContactPairs())
 	{
 		m_sumF = m_gravity * mass;
 		m_velocity.y = -10.0f;
@@ -264,10 +265,10 @@ void CharacterController::OnUpdate(float dt)
 	m_velocity += (m_sumF / mass)  * dt;
 
 	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-	if (HasCollision())
+	if (HasCollisionContactPairs())
 	{
-		auto& firstContact = m_collisionResult->collision.Read()->contactPairs[0];
-		auto& firstPoint = firstContact->contacts[0];
+		auto& firstContact = m_collisionResult->collision.Read()->contacts[0];
+		auto& firstPoint = firstContact->contactPairs[0]->contactPoints[0];
 
 		auto& normal = firstPoint.normal;
 		bool isA = firstContact->A == GetGameObject() ? true : false;

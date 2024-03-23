@@ -16,14 +16,20 @@ NAMESPACE_BEGIN
 
 class PhysicsMaterial;
 
-class PhysicsShape
+class PhysicsShape : std::enable_shared_from_this<PhysicsShape>
 {
 protected:
+	friend class PhysicsSystem;
 	PHYSICS_FRIEND_CLASSES();
 
 	physx::PxShape* m_pxShape = nullptr;
 
 	SharedPtr<PhysicsMaterial> m_meterial;
+
+	// 0: not in frame
+	// 1: in frame
+	// 2: in frame but lost contact
+	byte m_inFrameType[8] = {};
 
 public:
 	virtual ~PhysicsShape();

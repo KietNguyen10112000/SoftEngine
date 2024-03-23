@@ -12,7 +12,7 @@ class PhysicsShape;
 class RigidBodyDynamic : public RigidBody
 {
 public:
-	bool m_isKinematic = false;
+	byte m_isKinematic = 0;
 
 	COMPONENT_CLASS(RigidBodyDynamic);
 

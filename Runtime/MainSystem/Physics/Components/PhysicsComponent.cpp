@@ -21,24 +21,37 @@ PhysicsComponent::~PhysicsComponent()
 	}
 };
 
-bool PhysicsComponent::HasCollisionBegin()
+bool PhysicsComponent::HasCollisionContactPairsBegin()
 {
 	return m_collisionResult
 		&& GetGameObject()->GetScene()->GetIterationCount() == m_collisionResult->lastActiveIterationCount + 1
-		&& m_collisionResult->collision.Read()->collisionBeginCount != 0;
+		&& m_collisionResult->GetBeginContactPairsCount() != 0;
 }
 
-bool PhysicsComponent::HasCollisionEnd()
+bool PhysicsComponent::HasCollisionContactPairsEnd()
 {
 	return m_collisionResult
 		&& GetGameObject()->GetScene()->GetIterationCount() == m_collisionResult->lastActiveIterationCount + 1
-		&& m_collisionResult->collision.Read()->collisionEnd.size() != 0;
+		&& m_collisionResult->GetEndContactPairsCount() != 0;
 }
 
-bool PhysicsComponent::HasCollision()
+bool PhysicsComponent::HasCollisionContactPairs()
 {
 	return m_collisionResult
-		&& m_collisionResult->collision.Read()->contactPairs.size() != 0;
+		&& m_collisionResult->GetContactPairsCount() != 0;
+}
+
+//bool PhysicsComponent::HasCollisionModified()
+//{
+//	return m_collisionResult
+//		&& GetGameObject()->GetScene()->GetIterationCount() == m_collisionResult->lastActiveIterationCount + 1
+//		&& m_collisionResult->collision.Read()->collisionModifiedIds.size() != 0;
+//}
+
+bool PhysicsComponent::HasCollisionAnyChanged()
+{
+	return m_collisionResult
+		&& GetGameObject()->GetScene()->GetIterationCount() == m_collisionResult->lastActiveIterationCount + 1;
 }
 
 void PhysicsComponent::SetPhysicsFlag(PHYSICS_FLAG flag, bool value)

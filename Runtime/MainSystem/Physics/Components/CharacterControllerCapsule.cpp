@@ -8,6 +8,8 @@
 
 #include "../FILTER_DATA.h"
 
+#include "../Shapes/PhysicsShapeCapsule.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -33,6 +35,9 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 
 	PxShape* shape = nullptr;
 	pxActor->getShapes(&shape, 1);
+
+	m_shape = PhysicsShapeCapsule::MakeDummy(shape, desc.capsule.m_height, desc.capsule.m_radius, desc.material, true);
+
 	if (shape)
 	{
 		PxFilterData data;
@@ -56,7 +61,7 @@ void CharacterControllerCapsule::OnDrawDebug()
 		Vec4 color = Vec4(0, 0, 0, 1);
 		if (m_collisionResult)
 		{
-			auto size = m_collisionResult->collision.Read()->contactPairs.size();
+			auto size = m_collisionResult->GetContactPairsCount();
 			if (size == 1)
 			{
 				color = { 1,0,0,1 };

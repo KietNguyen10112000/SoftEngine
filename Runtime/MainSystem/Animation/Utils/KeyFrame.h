@@ -40,6 +40,11 @@ struct KeyFrames
 		auto& keyFrames = scaling;
 		uint32_t num = (uint32_t)keyFrames.size();
 
+		if (num == 0)
+		{
+			return Vec3(1, 1, 1);
+		}
+
 		assert(startIndex < num);
 
 		for (uint32_t i = startIndex; i < num; i++)
@@ -83,6 +88,11 @@ struct KeyFrames
 	{
 		auto& keyFrames = rotation;
 		auto num = (uint32_t)keyFrames.size();
+
+		if (num == 0)
+		{
+			return Quaternion();
+		}
 
 		assert(startIndex < num);
 
@@ -128,6 +138,11 @@ struct KeyFrames
 		auto& keyFrames = translation;
 		auto num = (uint32_t)keyFrames.size();
 
+		if (num == 0)
+		{
+			return Vec3(0,0,0);
+		}
+
 		assert(startIndex < num);
 
 		for (uint32_t i = startIndex; i < num; i++)
@@ -172,6 +187,12 @@ struct KeyFrames
 	{
 		auto& keyFrames = scaling;
 		uint32_t num = (uint32_t)keyFrames.size();
+
+		if (num == 0)
+		{
+			return Vec3(1, 1, 1);
+		}
+
 		uint32_t count = num;
 		uint32_t idx = 0;
 
@@ -230,6 +251,12 @@ struct KeyFrames
 	{
 		auto& keyFrames = rotation;
 		uint32_t num = (uint32_t)keyFrames.size();
+
+		if (num == 0)
+		{
+			return Quaternion();
+		}
+
 		uint32_t count = num;
 		uint32_t idx = 0;
 
@@ -282,6 +309,12 @@ struct KeyFrames
 	{
 		auto& keyFrames = translation;
 		uint32_t num = (uint32_t)keyFrames.size();
+
+		if (num == 0)
+		{
+			return Vec3(0,0,0);
+		}
+
 		uint32_t count = num;
 		uint32_t idx = 0;
 

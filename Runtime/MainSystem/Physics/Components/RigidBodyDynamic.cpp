@@ -59,14 +59,18 @@ void RigidBodyDynamic::OnTransformChanged()
 		pxTransform.q.z = rot.z;
 		pxTransform.q.w = rot.w;
 
-		/*if (m_isKinematic)
+		if (m_isKinematic)
 		{
+			if (m_isKinematic == 1)
+			{
+				pxRigidBody->setGlobalPose(pxTransform);
+				m_isKinematic = 2;
+			}
 			pxRigidBody->setKinematicTarget(pxTransform);
 		}
-		else*/
+		else
 		{
 			pxRigidBody->setGlobalPose(pxTransform);
-			pxRigidBody->setKinematicTarget(pxTransform);
 		}
 
 		m_lastGlobalTransform = globalTransform;
@@ -149,7 +153,7 @@ void RigidBodyDynamic::SetKinematic(bool enable)
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
 	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
 
-	m_isKinematic = enable;
+	m_isKinematic = (byte)enable;
 }
 
 NAMESPACE_END

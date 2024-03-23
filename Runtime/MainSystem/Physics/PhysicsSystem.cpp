@@ -69,25 +69,6 @@ public:
 
 	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs)
 	{
-		/*if (!pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH) && !pairs[0].flags.isSet(PxContactPairFlag::eACTOR_PAIR_HAS_FIRST_TOUCH))
-		{
-			std::cout << "CONTACT changed\n";
-			return;
-		}*/
-
-		//std::cout << "onContact\n";
-
-		/*if (pairs[0].events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS))
-		{
-			assert(!pairs[0].events.isSet(PxPairFlag::eNOTIFY_TOUCH_FOUND) && !pairs[0].events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST));
-
-			std::cout << "eNOTIFY_TOUCH_PERSISTS\n";
-
-			return;
-		}*/
-
-		auto& events = pairs[0].events;
-
 		auto& activeComponentsHasContact = m_system->m_activeComponentsHasContact;
 		for (auto a : pairHeader.actors)
 		{
@@ -100,121 +81,59 @@ public:
 			}
 		}
 
-		//if (nbPairs == 0)
-		//{
-		//	//std::cout << "CONTACT LOST\n";
-		//	assert(0);
-		//	return;
-		//}
-
-		assert(nbPairs != 0);
-
-		/*if (pairHeader.flags)
-		{
-			return;
-		}*/
-
-		/*{
-			for (PxU32 i = 0; i < nbPairs; i++)
-			{
-				if (pairs[i].flags.isSet(PxContactPairFlag::eACTOR_PAIR_LOST_TOUCH))
-				{
-					std::cout << "CONTACT LOST\n";
-					return;
-				}
-			}
-		}*/
-
-		auto A = (PhysicsComponent*)pairHeader.actors[0]->userData;
-		auto B = (PhysicsComponent*)pairHeader.actors[1]->userData;
-
-		if (events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST) || events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS))
-		{
-			auto AEndContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->endContactPairs : nullptr;
-			auto BEndContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->endContactPairs : nullptr;
-
-			CollisionEndContactPair endContactPair = { A->GetGameObject(), B->GetGameObject() };
-
-			if (AEndContactPairs)
-			{
-				AEndContactPairs->push_back(endContactPair);
-			}
-
-			if (BEndContactPairs)
-			{
-				std::swap(endContactPair.A, endContactPair.B);
-				BEndContactPairs->push_back(endContactPair);
-			}
-
-			if (events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST))
-			{
-				return;
-			}
-		}
-
-		assert(events.isSet(PxPairFlag::eNOTIFY_TOUCH_FOUND) || events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS));
-
-		//auto AType = A->GetPhysicsType();
-		//auto BType = B->GetPhysicsType();
-
-		//{
-		//	CharacterController* controller = nullptr;
-		//	if (AType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
-		//	{
-		//		controller = (CharacterController*)A;
-		//	}
-
-		//	if (BType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
-		//	{
-		//		controller = (CharacterController*)B;
-		//		assert((void*)controller != (void*)A);
-		//	}
-
-		//	/*if (controller)
-		//	{
-		//		std::cout << "CONTACT CONTROLLER --- " << controller->IsHasNextMove() << "\n";
-		//	}*/
-
-		//	if (controller && controller->IsHasNextMove())
-		//	{
-		//		//std::cout << "CONTACT CONTROLLER\n";
-		//		return;
-		//	}
-		//}
-
-		auto AContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
-		auto BContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
-
-		if (!AContactPairs && !BContactPairs)
-		{
-			return;
-		}
-
-		SharedPtr<CollisionContactPair> contactPair = std::make_shared<CollisionContactPair>();
-
-		contactPair->A = A->GetGameObject();
-		contactPair->B = B->GetGameObject();
-
-		if (AContactPairs)
-		{
-			AContactPairs->push_back(contactPair);
-		}
-
-		if (BContactPairs)
-		{
-			BContactPairs->push_back(contactPair);
-		}
-
 		auto AActor = (PxRigidActor*)pairHeader.actors[0];
 		auto BActor = (PxRigidActor*)pairHeader.actors[1];
 
-		/*PxShape* shape = nullptr;
-		PxMaterial* material = nullptr;
-		PhysicsShape* myShape = nullptr;*/
+		auto A = (PhysicsComponent*)AActor->userData;
+		auto B = (PhysicsComponent*)BActor->userData;
+
+		auto AContacts = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contacts : nullptr;
+		auto BContacts = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contacts : nullptr;
+
+		if (!AContacts && !BContacts)
+		{
+			return;
+		}
+
+		SharedPtr<CollisionContact> contact = std::make_shared<CollisionContact>();
+		contact->A = A->GetGameObject();
+		contact->B = B->GetGameObject();
+
+		if (AContacts)
+		{
+			AContacts->push_back(contact);
+		}
+
+		if (BContacts)
+		{
+			BContacts->push_back(contact);
+		}
 
 		for (PxU32 i = 0; i < nbPairs; i++)
 		{
 			const PxContactPair& cp = pairs[i];
+
+			auto AShape = (PhysicsShape*)cp.shapes[0]->userData;
+			auto BShape = (PhysicsShape*)cp.shapes[1]->userData;
+
+			if (cp.events.isSet(PxPairFlag::eNOTIFY_TOUCH_LOST))
+			{
+				contact->endContactPairs.push_back({ AShape, BShape });
+				continue;
+			}
+			else if (cp.events.isSet(PxPairFlag::eNOTIFY_TOUCH_FOUND))
+			{
+				contact->beginContactPairsIds.push_back(contact->contactPairs.size());
+			} 
+			else if (cp.events.isSet(PxPairFlag::eNOTIFY_TOUCH_PERSISTS))
+			{
+				contact->modifiedContactPairsIds.push_back(contact->contactPairs.size());
+			}
+
+			auto contactPair = std::make_shared<CollisionContactPair>();
+			contact->contactPairs.push_back(contactPair);
+			contactPair->AShape = AShape;
+			contactPair->BShape = BShape;
 
 			PxContactStreamIterator iter(cp.contactPatches, cp.contactPoints, cp.getInternalFaceIndices(), cp.patchCount, cp.contactCount);
 
@@ -238,7 +157,7 @@ public:
 					dst.staticFriction = iter.getStaticFriction();
 					dst.dynamicFriction = iter.getDynamicFriction();
 
-					contactPair->contacts.push_back(dst);
+					contactPair->contactPoints.push_back(dst);
 
 					/*PxU32 internalFaceIndex0 = flippedContacts ?
 						iter.getFaceIndex1() : iter.getFaceIndex0();
@@ -250,39 +169,6 @@ public:
 			}
 		}
 
-		//for (PxU32 i = 0; i < nbPairs; i++)
-		//{
-		//	PxU32 contactCount = pairs[i].contactCount;
-		//	if (contactCount)
-		//	{
-		//		if (contactCount > m_contactPairPoints.size())
-		//			m_contactPairPoints.resize(contactCount);
-
-		//		auto& pair = pairs[i];
-		//		pair.extractContacts(&m_contactPairPoints[0], contactCount);
-
-		//		for (size_t j = 0; j < contactCount; j++)
-		//		{
-		//			auto& pxPoint = m_contactPairPoints[j];
-		//			CollisionContactPoint contactPoint;
-		//			contactPoint.position = reinterpret_cast<const Vec3&>(pxPoint.position);
-		//			contactPoint.normal = reinterpret_cast<const Vec3&>(pxPoint.normal);
-		//			contactPoint.impluse = reinterpret_cast<const Vec3&>(pxPoint.impulse);
-
-		//			/*AActor->getShapes(&shape, 1, pxPoint.internalFaceIndex0);
-		//			myShape = (PhysicsShape*)shape->userData;
-		//			contactPoint.ASurfaceMaterial = myShape->GetFirstMaterial();
-
-		//			BActor->getShapes(&shape, 1, pxPoint.internalFaceIndex1);
-		//			myShape = (PhysicsShape*)shape->userData;
-		//			contactPoint.BSurfaceMaterial = myShape->GetFirstMaterial();*/
-
-		//			contactPair->contacts.push_back(contactPoint);
-		//		}
-		//	}
-		//}
-
-		//std::cout << "collision\n";
 	}
 };
 
@@ -426,155 +312,174 @@ void PhysicsSystem::ProcessPostUpdateList()
 
 void PhysicsSystem::ProcessCollisionList()
 {
-	//// collect sleeping collision pairs from previous frame
-	//for (auto comp : m_activeComponentsHasContact)
-	//{
-	//	auto obj = comp->GetGameObject();
-	//	auto prevCollision = comp->m_collisionResult->collision.Read();
-	//	auto curCollision = comp->m_collisionResult->collision.ForceWrite();
+	// collect sleeping collision pairs from previous frame
 
-	//	auto compType = comp->GetPhysicsType();
-
-	//	for (auto& pair : curCollision->contactPairs)
-	//	{
-	//		auto B = pair->A == obj ? pair->B : pair->A;
-	//		B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = true;
-	//	}
-
-	//	/*if (compType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
-	//	{
-	//		continue;
-	//	}*/
-
-	//	for (auto& pair : prevCollision->contactPairs)
-	//	{
-	//		auto B = pair->A == obj ? pair->B : pair->A;
-
-	//		auto& BisInCurFrame = B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0];
-
-	//		if (BisInCurFrame)
-	//		{
-	//			continue;
-	//		}
-
-	//		auto BpxActor = B->GetComponentRaw<PhysicsComponent>()->m_pxActor;
-
-	//		if (BpxActor->getScene() != m_pxScene)
-	//		{
-	//			continue;
-	//		}
-	//		
-	//		auto BdynamicRigidActor = BpxActor->is<PxRigidDynamic>();
-
-	//		/*if (!BdynamicRigidActor)
-	//		{
-	//			curCollision->contactPairs.push_back(pair);
-	//		}*/
-
-	//		if (BdynamicRigidActor && BdynamicRigidActor->isSleeping())
-	//		{
-	//			curCollision->contactPairs.push_back(pair);
-	//		}
-	//	}
-
-	//	for (auto& pair : curCollision->contactPairs)
-	//	{
-	//		auto B = pair->A == obj ? pair->B : pair->A;
-	//		B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = false;
-	//	}
-	//}
-
-	for (auto comp : m_activeComponentsHasContact)
+	for (auto& comp : m_activeComponentsHasContact)
 	{
 		auto obj = comp->GetGameObject();
 		auto prevCollision = comp->m_collisionResult->collision.Read();
 		auto curCollision = comp->m_collisionResult->collision.ForceWrite();
 
-		auto& curContactPairsBegin = curCollision->contactPairs;
+		auto& prevContacts = prevCollision->contacts;
+		auto& curContacts = curCollision->contacts;
 
-		auto& curContactPairs = curCollision->contactPairs;
-		curCollision->collisionBeginCount = curContactPairs.size();
-
-		auto& prevContactPairs = prevCollision->contactPairs;
-
-		auto& curContactPairsEnded = curCollision->endContactPairs;
-		for (auto& pair : curContactPairsEnded)
+		// calculate count
 		{
-			pair.B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = true;
-		}
-
-		auto length = prevContactPairs.size();
-		for (size_t i = 0; i < length; i++)
-		{
-			auto& pair = prevContactPairs[i];
-			auto B = pair->A == obj ? pair->B : pair->A;
-			if (B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] != true)
+			size_t count1 = 0;
+			size_t count2 = 0;
+			for (auto& contact : curContacts)
 			{
-				// still in contact
-				curContactPairs.push_back(pair);
-				continue;
+				count1 += contact->beginContactPairsIds.size();
+				count2 += contact->endContactPairs.size();
 			}
 
-			// lost contact
-			curCollision->collisionEnd.push_back(i);
+			curCollision->beginContactPairsCount = count1;
+			curCollision->endContactPairsCount = count2;
 		}
 
-		for (auto& pair : curContactPairsEnded)
+		// refering back curent contact with previous contact
 		{
-			pair.B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = false;
+			uint32_t idx = 0;
+			for (auto& contact : curContacts)
+			{
+				auto B = contact->A == obj ? contact->B : contact->A;
+				B->GetComponentRaw<PhysicsComponent>()->m_refContactIdx[0] = idx;
+				idx++;
+			}
+
+			for (auto& contact : prevContacts)
+			{
+				auto B = contact->A == obj ? contact->B : contact->A;
+				auto& refIdx = B->GetComponentRaw<PhysicsComponent>()->m_refContactIdx[0];
+
+				//contact->newCollisionContactIdx = INVALID_ID;
+				contact->oldCollisionContact = (CollisionContact*)(INVALID_ID - 1);
+				if (refIdx != (uint32_t)INVALID_ID)
+				{
+					curContacts[refIdx]->oldCollisionContact = contact.get();
+					//contact->newCollisionContactIdx = refIdx;
+
+					//refIdx = (uint32_t)INVALID_ID;
+				}
+			}
+		}
+
+		// process contact pairs
+		{
+			for (auto& contact : curContacts)
+			{
+				auto oldContact = contact->oldCollisionContact;
+				if (oldContact == (void*)INVALID_ID)
+				{
+					continue;
+				}
+
+				auto BIdx = contact->A == obj ? 1 : 0;
+
+				for (auto& pair : contact->contactPairs)
+				{
+					auto& BShape = pair->shapes[BIdx];
+					BShape->m_inFrameType[0] = 1;
+				}
+
+				for (auto& pair : contact->endContactPairs)
+				{
+					auto& BShape = pair.shapes[BIdx];
+					BShape->m_inFrameType[0] = 2;
+				}
+
+				uint32_t idx = 0;
+				auto oldBIdx = oldContact->A == obj ? 1 : 0;
+				for (auto& pair : oldContact->contactPairs)
+				{
+					auto& BShape = pair->shapes[oldBIdx];
+					auto& inFrameType = BShape->m_inFrameType[0];
+
+					// this pair is still in touch and nothing changed
+					if (inFrameType == 0)
+					{
+						contact->contactPairs.push_back(pair);
+					}
+					else if (inFrameType == 2)
+					{
+						contact->endContactPairsIds.push_back(idx);
+					}
+
+					idx++;
+				}
+
+				for (auto& pair : contact->contactPairs)
+				{
+					auto& BShape = pair->shapes[BIdx];
+					BShape->m_inFrameType[0] = 0;
+				}
+
+				for (auto& pair : contact->endContactPairs)
+				{
+					auto& BShape = pair.shapes[BIdx];
+					BShape->m_inFrameType[0] = 0;
+				}
+			}
+		}
+
+		// process contact
+		{
+			for (auto& contact : prevContacts)
+			{
+				auto B = contact->A == obj ? contact->B : contact->A;
+				auto& refIdx = B->GetComponentRaw<PhysicsComponent>()->m_refContactIdx[0];
+
+				if (refIdx == (uint32_t)INVALID_ID)
+				{
+					curContacts.push_back(contact);
+				}
+			}
+
+			// reset m_refContactIdx
+			for (auto& contact : curContacts)
+			{
+				auto B = contact->A == obj ? contact->B : contact->A;
+				B->GetComponentRaw<PhysicsComponent>()->m_refContactIdx[0] = (uint32_t)INVALID_ID;
+			}
+		}
+
+		// remove all lost contacts
+		{
+			for (size_t i = 0; i < curContacts.size(); i++)
+			{
+				auto& contact = curContacts[i];
+				if (contact->oldCollisionContact == (void*)INVALID_ID || contact->oldCollisionContact == (void*)(INVALID_ID - 1))
+				{
+					continue;
+				}
+
+				if (contact->endContactPairs.size() == contact->oldCollisionContact->contactPairs.size())
+				{
+					curCollision->endContacts.push_back(contact->oldCollisionContact);
+					STD_VECTOR_ROLL_TO_FILL_BLANK_2(curContacts, i);
+					i--;
+				}
+			}
+		}
+
+		// calculate count
+		{
+			size_t count1 = 0;
+			size_t count2 = 0;
+			for (auto& contact : curContacts)
+			{
+				for (auto& pair : contact->contactPairs)
+				{
+					count2 += pair->contactPoints.size();
+				}
+
+				count1 += contact->contactPairs.size();
+			}
+
+			curCollision->contactPairsCount = count1;
+			curCollision->contactPointsCount = count2;
 		}
 	}
-
-	//// collect collision begin, collision end
-	//for (auto comp : m_activeComponentsHasContact)
-	//{
-	//	auto obj = comp->GetGameObject();
-	//	auto prevCollision = comp->m_collisionResult->collision.Read();
-	//	auto curCollision = comp->m_collisionResult->collision.ForceWrite();
-
-	//	auto compType = comp->GetPhysicsType();
-
-	//	auto& collisionBegin = comp->m_collisionResult->collision.ForceWrite()->collisionBegin;
-	//	auto& collisionEnd = comp->m_collisionResult->collision.ForceWrite()->collisionEnd;
-
-	//	for (auto& pair : prevCollision->contactPairs)
-	//	{
-	//		auto B = pair->A == obj ? pair->B : pair->A;
-	//		B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0] = true;
-	//	}
-
-	//	size_t i = 0;
-	//	for (auto& pair : curCollision->contactPairs)
-	//	{
-	//		auto B = pair->A == obj ? pair->B : pair->A;
-	//		auto& BisInPrevFrame = B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0];
-
-	//		if (BisInPrevFrame == false)
-	//		{
-	//			collisionBegin.push_back(i);
-	//		}
-
-	//		BisInPrevFrame = false;
-
-	//		i++;
-	//	}
-
-	//	i = 0;
-	//	for (auto& pair : prevCollision->contactPairs)
-	//	{
-	//		auto B = pair->A == obj ? pair->B : pair->A;
-	//		auto& BisInPrevFrame = B->GetComponentRaw<PhysicsComponent>()->isInPrevFrame[0];
-
-	//		if (BisInPrevFrame == true)
-	//		{
-	//			collisionEnd.push_back(i);
-	//		}
-
-	//		BisInPrevFrame = false;
-
-	//		i++;
-	//	}
-	//}
 
 	// update for other subsystems
 	for (auto comp : m_activeComponentsHasContact)
