@@ -47,6 +47,11 @@ void TestScript::OnUpdate(float dt)
 		motion.z += d;
 	}
 
+	if (Input()->IsKeyDown(KEYBOARD::SPACE) && controller->CCTIsOnGround())
+	{
+		controller->CCTApplyImpulse({ 0,12,0 });
+	}
+
 	//bool jumped = false;
 	//if (Input()->IsKeyDown(KEYBOARD::SPACE))
 	//{

@@ -5,9 +5,10 @@ namespace math
 
 inline bool Line::Intersect(const Plane& plane, Vec3& intersectPoint) const noexcept
 {
-	auto vec = plane.VecDistance(m_point);
+	//auto vec = plane.VecDistance(m_point);
 
-	auto length = vec.Length();
+	//auto length = vec.Length();
+	auto length = plane.Distance(m_point);
 
 	if (length == 0) 
 	{
@@ -15,14 +16,14 @@ inline bool Line::Intersect(const Plane& plane, Vec3& intersectPoint) const noex
 		return true;
 	}
 
-	auto dot = vec.Normal().Dot(m_direction);
+	auto dot = plane.normal.Dot(m_direction);//vec.Normal().Dot(m_direction);
 
 	if (dot == 0)
 	{
 		return false;
 	}
 
-	intersectPoint = m_point - (m_direction * length) / dot;
+	intersectPoint = m_point - m_direction * (length / dot);
 	return true;
 }
 

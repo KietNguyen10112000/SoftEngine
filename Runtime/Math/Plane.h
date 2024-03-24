@@ -132,6 +132,47 @@ public:
 		return (0 < val) - (val < 0);
 	}
 
+	inline bool Project(const Vec3& point, const Vec3& direction, Vec3& output) const
+	{
+		auto line = Line(point, direction);
+		return line.Intersect(*this, output);
+	}
+
+	// the matrix that project any point onto the plane
+	// ProjectedPoint = (Vec4(Point, 1.0f) * ProjectionMatrix).xyz()
+	inline bool GetProjectionMatrix(const Vec3& direction, Mat4& output) const
+	{
+		// p + (d / std::abs(dot)) * plane.ValueOf(p);
+
+		auto dot = std::abs(normal.Dot(direction));
+
+		if (dot == 0)
+		{
+			return false;
+		}
+
+		auto v = direction / dot;
+		
+		auto m = Mat4(
+			v.x * a, v.y * a, v.z * a, 0,
+			v.x * b, v.y * b, v.z * b, 0,
+			v.x * c, v.y * c, v.z * c, 0,
+			v.x * d, v.y * d, v.z * d, 0
+		);
+
+		auto i = Mat4(
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 0
+		);
+
+		m = i + m;
+
+		output = m;
+
+		return true;
+	}
 };
 
 }

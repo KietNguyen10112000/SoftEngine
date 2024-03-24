@@ -47,6 +47,9 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 2.0f * pxDesc.contactOffset + 0.05f, pxDesc.height / 2.0f + 2.0f * pxDesc.contactOffset + 0.05f));
 	}
 
+	auto mass = m_pxCharacterController->getActor()->getMass();
+	mass = mass <= 0 ? 1 : mass;
+	m_mass = mass;
 }
 
 void CharacterControllerCapsule::OnDrawDebug()

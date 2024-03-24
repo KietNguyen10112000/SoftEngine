@@ -682,6 +682,11 @@ private:
         reinterpret_cast<glm::mat3&>(*this) = mat;
     }
 
+    Mat3(const glm::mat3& mat)
+    {
+        *this = mat;
+    };
+
 public:
     using Base::Base;
 
@@ -723,6 +728,54 @@ public:
         };
 
         return ret;
+    }
+
+    inline Mat3& operator+=(const Mat3& mat)
+    {
+        GLMMat() += mat.GLMMatConst();
+        return *this;
+    }
+
+    inline Mat3 operator+(const Mat3& mat)
+    {
+        auto ret = GLMMat() + mat.GLMMatConst();
+        return ret;
+    }
+
+    inline Mat3 operator-(const Mat3& mat)
+    {
+        auto ret = GLMMat() - mat.GLMMatConst();
+        return ret;
+    }
+
+    inline Mat3& operator-=(const Mat3& mat)
+    {
+        GLMMat() -= mat.GLMMatConst();
+        return *this;
+    }
+
+    inline Mat3 operator*(const float& scala)
+    {
+        auto ret = GLMMat() * scala;
+        return ret;
+    }
+
+    inline Mat3 operator*=(const float& scala)
+    {
+        GLMMat() *= scala;
+        return *this;
+    }
+
+    inline Mat3 operator/(const float& scala)
+    {
+        auto ret = GLMMat() / scala;
+        return ret;
+    }
+
+    inline Mat3 operator/=(const float& scala)
+    {
+        GLMMat() /= scala;
+        return *this;
     }
 
 public:
@@ -940,6 +993,18 @@ public:
     {
         auto ret = GLMMat() + mat.GLMMatConst();
         return ret;
+    }
+
+    inline Mat4 operator-(const Mat4& mat)
+    {
+        auto ret = GLMMat() - mat.GLMMatConst();
+        return ret;
+    }
+
+    inline Mat4& operator-=(const Mat4& mat)
+    {
+        GLMMat() -= mat.GLMMatConst();
+        return *this;
     }
 
     inline Mat4 operator*(const float& scala)

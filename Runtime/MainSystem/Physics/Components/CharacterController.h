@@ -16,6 +16,7 @@ protected:
 
 	struct CollisionPlane
 	{
+		Vec3 position;
 		Vec3 normal;
 		
 		float staticFriction;
@@ -23,7 +24,7 @@ protected:
 
 		bool isGround;
 		bool isApplyedDynamicFriction;
-
+		bool isGroundForMotion = false;
 	};
 
 	Mat4 m_lastGlobalTransform;
@@ -38,6 +39,10 @@ protected:
 	size_t m_lastMoveIterationCount = 0;
 
 	std::vector<CollisionPlane> m_collisionPlanes;
+
+	float m_mass = 1;
+
+	bool m_isOnGround = false;
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
@@ -68,6 +73,9 @@ public:
 
 	// to unset gravity, let g = { 0,0,0 }
 	void SetGravity(const Vec3& g);
+
+	void CCTApplyImpulse(const Vec3& impulse);
+	bool CCTIsOnGround();
 
 };
 
