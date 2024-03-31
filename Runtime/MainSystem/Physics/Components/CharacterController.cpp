@@ -372,6 +372,11 @@ void CharacterController::OnPostUpdate(float dt)
 	disp += m_velocity * dt;
 	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
 
+	/*if (m_velocity.Length() != 0)
+	{
+		std::cout << m_velocity.y << "\n";
+	}*/
+
 	//std::cout << disp.y << "\n";
 
 	disp = Vec3::ZERO;
@@ -479,7 +484,7 @@ void CharacterController::SetGravity(const Vec3& g)
 	taskRunner->RunAsync(this, &task);
 }
 
-void CharacterController::CCTApplyImpulse(const Vec3& impulse)
+void CharacterController::CCTApplyVelocity(const Vec3& velocity)
 {
 	auto system = GetGameObject()->GetScene()->GetPhysicsSystem();
 	auto taskRunner = system->AsyncTaskRunner();
@@ -501,9 +506,14 @@ void CharacterController::CCTApplyImpulse(const Vec3& impulse)
 
 	auto param = taskRunner->CreateParam<Param>(&task);
 	param->controller = this;
-	param->addVelocity = impulse / m_mass;
+	param->addVelocity = velocity;
 
 	taskRunner->RunAsync(this, &task);
+}
+
+void CharacterController::CCTApplyImpulse(const Vec3& impulse)
+{
+	CCTApplyVelocity(impulse / m_mass);
 }
 
 bool CharacterController::CCTIsOnGround()

@@ -4,6 +4,7 @@
 NAMESPACE_BEGIN
 
 class CharacterController;
+class CameraTPP;
 
 class TestScript : public Script
 {
@@ -16,6 +17,8 @@ protected:
 	inline void Trace(Tracer* tracer)
 	{
 		Base::Trace(tracer);
+
+		tracer->Trace(m_camera);
 	}
 
 	CharacterController* controller = nullptr;
@@ -23,6 +26,13 @@ protected:
 	float m_motionY = 0;
 	float m_prevPosY1 = 0;
 	float m_prevPosY2 = 0;
+
+public:
+	Handle<CameraTPP> m_camera;
+	float m_rotateX = 0;
+	//float m_rotateY = 0;
+	float m_rotationSensi = 0.12f;
+	Vec3 m_viewPoint = Vec3(5, 5, 5);
 
 protected:
 	virtual void OnStart() override;

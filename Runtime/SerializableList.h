@@ -3,6 +3,7 @@
 #include "Common/Base/SerializableDB.h"
 
 #include "MainSystem/Rendering/Components/Camera.h"
+#include "MainSystem/Rendering/Components/CameraTPP.h"
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/Components/AnimMeshRenderer.h"
 
@@ -26,6 +27,7 @@ public:
 
 		// built-in rendering components
 		SerializableDB::Get()->Register<Camera>();
+		SerializableDB::Get()->Register<CameraTPP>();
 		SerializableDB::Get()->Register<MeshBasicRenderer>();
 		SerializableDB::Get()->Register<AnimMeshRenderer>();
 

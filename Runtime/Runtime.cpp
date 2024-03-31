@@ -44,6 +44,7 @@
 #include "FileSystem/FileSystem.h"
 
 #include "MainSystem/Rendering/Components/Camera.h"
+#include "MainSystem/Rendering/Components/CameraTPP.h"
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/BuiltinConstantBuffers.h"
 #include "MainSystem/Rendering/DisplayService.h"
@@ -266,8 +267,8 @@ void Runtime::Setup()
 
 	auto cameraObj = mheap::New<GameObject>();
 	cameraObj->Name() = "#camera";
-	cameraObj->NewComponent<FPPCameraScript>();
-	auto camera = cameraObj->NewComponent<Camera>();
+	//cameraObj->NewComponent<FPPCameraScript>();
+	auto camera = cameraObj->NewComponent<CameraTPP>();
 	camera->Projection().SetPerspectiveFovLH(
 		PI / 3.0f,
 		Graphics::Get()->GetWindowWidth() / (float)Graphics::Get()->GetWindowHeight(),
@@ -469,7 +470,7 @@ void Runtime::Setup()
 			auto cct = obj->NewComponent<CharacterControllerCapsule>(scene, desc);
 			cct->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 
-			obj->NewComponent<TestScript>();
+			obj->NewComponent<TestScript>()->m_camera = camera;
 
 			transform = {};
 			transform.Position() = Vec3::ZERO + Vec3::UP;
@@ -481,6 +482,8 @@ void Runtime::Setup()
 
 			cct->SetGravity(scene->GetPhysicsSystem()->GetGravity());
 		}
+
+		camera->SetTarget(obj);
 	}
 
 }

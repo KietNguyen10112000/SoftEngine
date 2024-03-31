@@ -34,6 +34,9 @@ public:
 		}
 	}
 
+	inline virtual void OnCameraRenderBegin() {};
+	inline virtual void OnCameraRenderEnd() {};
+
 	inline auto& Projection()
 	{
 		return m_proj;

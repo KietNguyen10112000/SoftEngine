@@ -147,7 +147,7 @@ void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
 	m_cameraData.proj = camera->Projection();
 	m_cameraData.view = camera->GetView();
 	m_cameraData.vp = m_cameraData.view * m_cameraData.proj;
-	m_cameraData.inversedVp = m_cameraData.proj.GetInverse() * camera->GlobalTransform();
+	m_cameraData.inversedVp = m_cameraData.vp.GetInverse();//m_cameraData.proj.GetInverse() * camera->GlobalTransform();
 
 	/*ImGui::Begin("Debug info");
 	ImGui::DragFloat4("row1", &m_cameraData.transform[0][0]);
@@ -173,6 +173,8 @@ void RenderingSystem::RenderForEachCamera()
 		auto& pipeline = cam->m_pipeline;
 		//auto& input = m_collectInputForCameraRets[i]->Result();
 
+		cam->OnCameraRenderBegin();
+
 		EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_RENDER_CAMERA, cam);
 
 		SetBuiltinConstantBufferForCamera(cam);
@@ -181,6 +183,8 @@ void RenderingSystem::RenderForEachCamera()
 		pipeline->Run();
 
 		EventDispatcher()->Dispatch(EVENT::EVENT_END_RENDER_CAMERA, cam);
+
+		cam->OnCameraRenderEnd();
 	}
 }
 

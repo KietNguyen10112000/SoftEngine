@@ -10,6 +10,8 @@
 
 #include "../Shapes/PhysicsShapeCapsule.h"
 
+#include "Scene/GameObject.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -59,7 +61,7 @@ void CharacterControllerCapsule::OnDrawDebug()
 	{
 		auto pxController = (PxCapsuleController*)m_pxCharacterController;
 
-		auto& pos = pxController->getPosition();
+		auto& pos = GetGameObject()->ReadGlobalTransformMat().Position();//pxController->getPosition();
 
 		Vec4 color = Vec4(0, 0, 0, 1);
 		if (m_collisionResult)

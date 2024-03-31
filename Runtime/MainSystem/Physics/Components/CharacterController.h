@@ -74,6 +74,7 @@ public:
 	// to unset gravity, let g = { 0,0,0 }
 	void SetGravity(const Vec3& g);
 
+	void CCTApplyVelocity(const Vec3& velocity);
 	void CCTApplyImpulse(const Vec3& impulse);
 	bool CCTIsOnGround();
 
