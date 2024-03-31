@@ -267,7 +267,7 @@ void Runtime::Setup()
 
 	auto cameraObj = mheap::New<GameObject>();
 	cameraObj->Name() = "#camera";
-	//cameraObj->NewComponent<FPPCameraScript>();
+	auto fppCamScript = cameraObj->NewComponent<FPPCameraScript>();
 	auto camera = cameraObj->NewComponent<CameraTPP>();
 	camera->Projection().SetPerspectiveFovLH(
 		PI / 3.0f,
@@ -275,6 +275,8 @@ void Runtime::Setup()
 		0.5f,
 		1000.0f
 	);
+	camera->SetTPPEnabled(false);
+	fppCamScript->SetFPPScriptEnable(true);
 	scene->AddObject(cameraObj);
 
 	/*auto rotationMat = Mat4::Rotation(Vec3::UP, PI / 3.0f);
@@ -470,7 +472,9 @@ void Runtime::Setup()
 			auto cct = obj->NewComponent<CharacterControllerCapsule>(scene, desc);
 			cct->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 
-			obj->NewComponent<TestScript>()->m_camera = camera;
+			auto script = obj->NewComponent<TestScript>();
+			script->m_camera = camera;
+			script->m_fppCamScript = fppCamScript;
 
 			transform = {};
 			transform.Position() = Vec3::ZERO + Vec3::UP;
@@ -485,6 +489,8 @@ void Runtime::Setup()
 
 		camera->SetTarget(obj);
 	}
+
+
 
 }
 

@@ -10,6 +10,8 @@ protected:
 	Handle<GameObject> m_target;
 	Mat4 m_view;
 
+	bool m_enableTPP = true;
+
 	void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_target);
@@ -25,6 +27,13 @@ public:
 	void SetTarget(const Handle<GameObject>& object);
 
 	void SetViewPoint(const Vec3& point, const Vec3& up = Vec3::UP);
+
+	void SetTPPEnabled(bool enable);
+
+	inline auto IsTPPEnabled() const
+	{
+		return m_enableTPP;
+	}
 
 };
 

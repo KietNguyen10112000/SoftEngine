@@ -17,6 +17,11 @@ CameraTPP::CameraTPP()
 
 void CameraTPP::OnCameraRenderBegin()
 {
+	if (!m_enableTPP)
+	{
+		return;
+	}
+
 	m_globalTransform = Mat4::Translation(-m_target->ReadGlobalTransformMat().Position()) * m_view;
 	m_globalTransform.Inverse();
 }
@@ -69,6 +74,11 @@ void CameraTPP::SetViewPoint(const Vec3& point, const Vec3& up)
 	param->view = view;
 
 	taskRunner->RunAsync(&task);
+}
+
+void CameraTPP::SetTPPEnabled(bool enable)
+{
+	m_enableTPP = enable;
 }
 
 NAMESPACE_END

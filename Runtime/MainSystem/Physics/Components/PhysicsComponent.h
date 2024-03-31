@@ -12,6 +12,8 @@
 
 #include "../Collision/Collision.h"
 
+#include "../PhysicsClasses.h"
+
 //#include <bitset>
 
 namespace physx
@@ -187,6 +189,7 @@ private:
 	friend class PhysXSimulationCallback;
 	friend class CharacterControllerHitCallback;
 	MAIN_SYSTEM_FRIEND_CLASSES();
+	PHYSICS_FRIEND_CLASSES();
 	constexpr static ID COMPONENT_ID = MainSystemInfo::PHYSICS_ID;
 
 private:

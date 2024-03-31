@@ -76,6 +76,8 @@ file(
     "MainSystem/Physics/Materials/*.cpp"
     "MainSystem/Physics/Shapes/*.h"
     "MainSystem/Physics/Shapes/*.cpp"
+    "MainSystem/Physics/Joints/*.h"
+    "MainSystem/Physics/Joints/*.cpp"
 
     "MainSystem/Scripting/*.h"
     "MainSystem/Scripting/*.cpp"

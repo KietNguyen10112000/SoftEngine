@@ -10,6 +10,8 @@
 
 #include "MainSystem/Physics/Components/CharacterController.h"
 
+#include "FPPCameraScript.h"
+
 NAMESPACE_BEGIN
 
 void TestScript::OnStart()
@@ -27,6 +29,23 @@ void TestScript::OnUpdate(float dt)
 	{
 		std::cout << "ESC pressed\n";
 		Input()->SetCursorLock(!Input()->GetCursorLock());
+	}
+
+	if (Input()->IsKeyUp('1'))
+	{
+		std::cout << "1 pressed\n";
+		m_camera->SetTPPEnabled(!m_camera->IsTPPEnabled());
+		m_fppCamScript->SetFPPScriptEnable(!m_fppCamScript->IsFPPScriptEnabled());
+
+		if (m_fppCamScript->IsFPPScriptEnabled())
+		{
+			m_fppCamScript->FPPResetTransform(m_camera->GetView().GetInverse());
+		}
+	}
+
+	if (!m_camera->IsTPPEnabled())
+	{
+		return;
 	}
 
 	if (!Input()->GetCursorLock())

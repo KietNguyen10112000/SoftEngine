@@ -10,4 +10,5 @@ friend class RigidBodyDynamic;						\
 friend class RigidBodyStatic;						\
 friend class CharacterController;					\
 friend class CharacterControllerCapsule;			\
-friend class CharacterControllerBox;
+friend class CharacterControllerBox;				\
+friend class RevoluteJoint;					

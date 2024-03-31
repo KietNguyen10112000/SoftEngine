@@ -14,19 +14,21 @@ void FPPCameraScript::OnStart()
 {
 	auto transform = GetGameObject()->GetLocalTransform().ToTransformMatrix();
 
-	m_position = transform.Position();
-	Vec3 direction = transform.Forward().Normal();
-	m_rotateX = asin(direction.y);
-	m_rotateY = atan2(direction.x, direction.z);
+	FPPResetTransform(transform);
 }
 
 void FPPCameraScript::OnUpdate(float dt)
 {
-	if (Input()->IsKeyUp(KEYBOARD::ESC))
+	if (!m_enableFPP)
+	{
+		return;
+	}
+
+	/*if (Input()->IsKeyUp(KEYBOARD::ESC))
 	{
 		std::cout << "ESC pressed\n";
 		Input()->SetCursorLock(!Input()->GetCursorLock());
-	}
+	}*/
 
 	if (!Input()->GetCursorLock())
 	{
@@ -146,6 +148,14 @@ Handle<ClassMetadata> FPPCameraScript::GetMetadata(size_t sign)
 	metadata->AddProperty(Accessor::For("Rotation sensitivity", m_rotationSensi, this));
 
 	return metadata;
+}
+
+void FPPCameraScript::FPPResetTransform(const Mat4& transform)
+{
+	m_position = transform.Position();
+	Vec3 direction = transform.Forward().Normal();
+	m_rotateX = asin(direction.y);
+	m_rotateY = atan2(direction.x, direction.z);
 }
 
 NAMESPACE_END

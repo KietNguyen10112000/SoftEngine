@@ -18,6 +18,8 @@ protected:
 	float m_speed = 10;
 	float m_rotationSensi = 0.12f;
 
+	bool m_enableFPP = true;
+
 protected:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -31,6 +33,19 @@ protected:
 	virtual void OnUpdate(float dt) override;
 
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+
+public:
+	inline void SetFPPScriptEnable(bool enable)
+	{
+		m_enableFPP = enable;
+	}
+
+	inline auto IsFPPScriptEnabled() const
+	{
+		return m_enableFPP;
+	}
+
+	void FPPResetTransform(const Mat4& transform);
 
 };
 
