@@ -6,6 +6,7 @@ friend class PhysicsShapePlane;						\
 friend class PhysicsShapeSphere;					\
 friend class PhysicsShapeConvexMesh;				\
 friend class PhysicsShapeConvexTriangleMesh;		\
+friend class RigidBody;								\
 friend class RigidBodyDynamic;						\
 friend class RigidBodyStatic;						\
 friend class CharacterController;					\

@@ -9,6 +9,7 @@
 #include "MainSystem/Rendering/Components/CameraTPP.h"
 
 #include "MainSystem/Physics/Components/CharacterController.h"
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 
 #include "FPPCameraScript.h"
 
@@ -21,10 +22,41 @@ void TestScript::OnStart()
 	m_prevPosY2 = m_prevPosY1;
 
 	m_rotateX = -std::asin(m_viewPoint.y / m_viewPoint.Length());
+
+	// object with mass >= 100 doesn't react when colliding with this cct
+	GetGameObject()->GetComponentRaw<CharacterController>()->CCTSetContactFilterCallback(
+		[](
+			GameObject* self, PhysicsShape* selfShape, PHYSICS_TYPE selfType,
+			GameObject* another, PhysicsShape* anotherShape, PHYSICS_TYPE anotherType,
+			size_t& pairFlags
+		) {
+			pairFlags = PhysicsCollisionPairFlag::DETECT_DISCRETE_CONTACT
+				| PhysicsCollisionPairFlag::NOTIFY_TOUCH_FOUND
+				| PhysicsCollisionPairFlag::NOTIFY_TOUCH_LOST
+				| PhysicsCollisionPairFlag::NOTIFY_TOUCH_PERSISTS
+				| PhysicsCollisionPairFlag::NOTIFY_CONTACT_POINTS;
+
+			if (anotherType != PHYSICS_TYPE::PHYSICS_TYPE_RIGID_BODY_DYNAMIC || another->GetComponentRaw<RigidBodyDynamic>()->GetMass() < 100)
+			{
+				// pass this contact to narrow phase
+				pairFlags |= PhysicsCollisionPairFlag::SOLVE_CONTACT;
+			}
+		}
+	);
 }
 
 void TestScript::OnUpdate(float dt)
 {
+	if (Input()->IsKeyUp('O') && m_testBody)
+	{
+		m_testBody->AddForceAtLocalPos({ 0,0,10000 }, { 2.5f,0,0 });
+	}
+
+	if (Input()->IsKeyUp('P') && m_testBody)
+	{
+		m_testBody->AddForceAtLocalPos({ 0,0,-10000 }, { 2.5f,0,0 });
+	}
+
 	if (Input()->IsKeyUp(KEYBOARD::ESC))
 	{
 		std::cout << "ESC pressed\n";

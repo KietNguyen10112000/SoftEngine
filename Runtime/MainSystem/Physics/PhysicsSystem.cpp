@@ -27,11 +27,12 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 	PX_UNUSED(constantBlockSize);
 	PX_UNUSED(constantBlock);
 
-	auto filterDataWord0 = filterData0.word0 != 0 ? filterData0.word0 : filterData1.word0;
+	/*auto filterDataWord0 = filterData0.word0 != 0 ? filterData0.word0 : filterData1.word0;
 	switch (filterDataWord0)
 	{
 	case PHYSICS_FILTER_DATA_CCT:
-		pairFlags =  PxPairFlag::eDETECT_DISCRETE_CONTACT
+		pairFlags = PxPairFlag::eSOLVE_CONTACT
+			| PxPairFlag::eDETECT_DISCRETE_CONTACT
 			| PxPairFlag::eNOTIFY_TOUCH_FOUND
 			| PxPairFlag::eNOTIFY_TOUCH_LOST
 			| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
@@ -45,9 +46,19 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 			| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
 			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
 		break;
-	}
+	}*/
 
-	return PxFilterFlag::eDEFAULT;
+	pairFlags = PxPairFlag::eSOLVE_CONTACT
+		| PxPairFlag::eDETECT_DISCRETE_CONTACT
+		| PxPairFlag::eNOTIFY_TOUCH_FOUND
+		| PxPairFlag::eNOTIFY_TOUCH_LOST
+		| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
+		| PxPairFlag::eNOTIFY_CONTACT_POINTS;
+
+	auto filterDataWord0 = filterData0.word0 | filterData1.word0;
+
+	return PxFilterFlag::eDEFAULT 
+		| ((filterDataWord0 & PHYSICS_FILTER_DATA_CALLBACK) ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT);
 }
 
 class PhysXSimulationCallback : public PxSimulationEventCallback
@@ -177,11 +188,83 @@ public:
 //
 //};
 
+class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
+{
+	// Inherited via PxSimulationFilterCallback
+	PxFilterFlags pairFound(PxU64 pairID, 
+		PxFilterObjectAttributes attributes0, 
+		PxFilterData filterData0, 
+		const PxActor* a0, const PxShape* s0, 
+		PxFilterObjectAttributes attributes1, 
+		PxFilterData filterData1, 
+		const PxActor* a1, const PxShape* s1, 
+		PxPairFlags& pairFlags) override
+	{
+		auto AComp = (PhysicsComponent*)a0->userData;
+		auto BComp = (PhysicsComponent*)a1->userData;
+
+		auto A = AComp->GetGameObject();
+		auto B = BComp->GetGameObject();
+
+		auto AShape = (PhysicsShape*)s0->userData;
+		auto BShape = (PhysicsShape*)s1->userData;
+
+		auto AType = AComp->GetPhysicsType();
+		auto BType = BComp->GetPhysicsType();
+
+		size_t myPairFlags = 0;
+
+		if (
+			(AType == PHYSICS_TYPE_RIGID_BODY_STATIC || AType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+			&& (BType == PHYSICS_TYPE_RIGID_BODY_STATIC || BType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		) {
+			// rigid vs rigid
+
+			auto ABody = (RigidBody*)AComp;
+			auto BBody = (RigidBody*)BComp;
+
+			if (ABody->m_contactFilterCallback)
+			{
+				ABody->m_contactFilterCallback(A, AShape, AType, B, BShape, BType, *((size_t*)&myPairFlags));
+			}
+
+			if (BBody->m_contactFilterCallback)
+			{
+				BBody->m_contactFilterCallback(B, BShape, BType, A, AShape, AType, *((size_t*)&myPairFlags));
+			}
+		}
+
+		if (AType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
+		{
+			auto A_CCT = (CharacterController*)AComp;
+			A_CCT->m_contactFilterCallback(A, AShape, AType, B, BShape, BType, *((size_t*)&myPairFlags));
+		}
+
+		if (BType == PHYSICS_TYPE_CHARACTER_CONTROLLER)
+		{
+			auto B_CCT = (CharacterController*)BComp;
+			B_CCT->m_contactFilterCallback(B, BShape, BType, A, AShape, AType, *((size_t*)&myPairFlags));
+		}
+
+		pairFlags = (PxPairFlags)myPairFlags;
+
+		return PxFilterFlag::eDEFAULT;
+	}
+	void pairLost(PxU64 pairID, PxFilterObjectAttributes attributes0, PxFilterData filterData0, PxFilterObjectAttributes attributes1, PxFilterData filterData1, bool objectRemoved) override
+	{
+	}
+	bool statusChange(PxU64& pairID, PxPairFlags& pairFlags, PxFilterFlags& filterFlags) override
+	{
+		return false;
+	}
+};
+
 PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 {
 	InitializeAsyncTaskRunnerForMainComponent(m_asyncTaskRunner);
 
 	auto callback = new (&m_physxSimulationCallback) PhysXSimulationCallback(this);
+	auto filterCallback = new (&m_physXSimulationFilterCallback) PhysXSimulationFilterCallback();
 
 	auto physics = PhysX::Get()->GetPxPhysics();
 	PxSceneDesc sceneDesc(physics->getTolerancesScale());
@@ -190,10 +273,12 @@ PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
 	sceneDesc.flags |= PxSceneFlag::eENABLE_ACTIVE_ACTORS;
 	sceneDesc.userData = this;
-	sceneDesc.simulationEventCallback = callback;
 	sceneDesc.filterShader = PhysicsContactReportFilterShader;
 	sceneDesc.kineKineFilteringMode = PxPairFilteringMode::eKEEP;
 	sceneDesc.staticKineFilteringMode = PxPairFilteringMode::eKEEP;
+
+	sceneDesc.simulationEventCallback = callback;
+	sceneDesc.filterCallback = filterCallback;
 	//sceneDesc.contactModifyCallback = 
 
 	m_pxScene = physics->createScene(sceneDesc);
@@ -206,6 +291,7 @@ PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 PhysicsSystem::~PhysicsSystem()
 {
 	((PhysXSimulationCallback*)(&m_physxSimulationCallback))->~PhysXSimulationCallback();
+	((PhysXSimulationFilterCallback*)(&m_physXSimulationFilterCallback))->~PhysXSimulationFilterCallback();
 
 	m_pxControllerManager->release();
 	m_pxScene->release();

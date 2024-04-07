@@ -16,14 +16,20 @@ RevoluteJoint::RevoluteJoint(const Handle<RigidBody>& body0, const Transform& lo
 	auto a0 = body0->m_pxActor;
 	auto a1 = body1->m_pxActor;
 
-	auto j = PxRevoluteJointCreate(*px,
+	auto joint = PxRevoluteJointCreate(*px,
 		a0->is<PxRigidActor>(),
 		PhysXUtils::ToPxTransform(localFrame0),
-		a0->is<PxRigidActor>(),
+		a1->is<PxRigidActor>(),
 		PhysXUtils::ToPxTransform(localFrame1)
 	);
 
-	InitJoint(j, body0, body1);
+	/*joint->setLimit(PxJointAngularLimitPair(-PxPi / 4, PxPi / 4));
+	joint->setRevoluteJointFlag(PxRevoluteJointFlag::eLIMIT_ENABLED, true);
+
+	joint->setDriveVelocity(10.0f);
+	joint->setRevoluteJointFlag(PxRevoluteJointFlag::eDRIVE_ENABLED, true);*/
+
+	InitJoint(joint, body0, body1);
 }
 
 NAMESPACE_END

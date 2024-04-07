@@ -3,11 +3,13 @@
 #include "PhysX/PhysX.h"
 
 #include "MainSystem/Physics/PhysicsSystem.h"
+#include "MainSystem/MainSystemTaskPacking.h"
 
 #include "Scene/Scene.h"
 #include "Scene/GameObject.h"
 
 #include "../Materials/PhysicsMaterial.h"
+#include "../FILTER_DATA.h"
 
 using namespace physx;
 
@@ -409,7 +411,7 @@ void CharacterController::Move(const Vec3& disp)
 	m_lastMoveIterationCount = iteration;
 
 	auto system = scene->GetPhysicsSystem();
-	auto taskRunner = system->AsyncTaskRunner();
+	auto taskRunner = system->AsyncTaskRunnerST();
 
 	struct Param
 	{
@@ -449,66 +451,32 @@ void CharacterController::Move(const Vec3& disp)
 
 void CharacterController::SetGravity(const Vec3& g)
 {
-	auto system = GetGameObject()->GetScene()->GetPhysicsSystem();
-	auto taskRunner = system->AsyncTaskRunner();
-
-	struct Param
-	{
-		CharacterController* controller;
-		Vec3 g;
-	};
-
-	auto task = taskRunner->CreateTask(
-		[](PhysicsSystem* system, void* p)
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunner, g,
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, g);
-
-			controller->m_gravity = g;
+			self->m_gravity = g;
 
 			if (g == Vec3::ZERO)
 			{
-				system->UnscheduleUpdate(controller);
-				system->UnschedulePostUpdate(controller);
+				system->UnscheduleUpdate(self);
+				system->UnschedulePostUpdate(self);
 				return;
 			}
 
-			system->ScheduleUpdate(controller);
-			system->SchedulePostUpdate(controller);
+			system->ScheduleUpdate(self);
+			system->SchedulePostUpdate(self);
 		}
 	);
-
-	auto param = taskRunner->CreateParam<Param>(&task);
-	param->controller = this;
-	param->g = g;
-
-	taskRunner->RunAsync(this, &task);
 }
 
 void CharacterController::CCTApplyVelocity(const Vec3& velocity)
 {
-	auto system = GetGameObject()->GetScene()->GetPhysicsSystem();
-	auto taskRunner = system->AsyncTaskRunner();
-
-	struct Param
-	{
-		CharacterController* controller;
-		Vec3 addVelocity;
-	};
-
-	auto task = taskRunner->CreateTask(
-		[](PhysicsSystem* system, void* p)
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunner, velocity,
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, addVelocity);
-
-			controller->m_velocity += addVelocity;
+			self->m_velocity += velocity;
 		}
 	);
-
-	auto param = taskRunner->CreateParam<Param>(&task);
-	param->controller = this;
-	param->addVelocity = velocity;
-
-	taskRunner->RunAsync(this, &task);
 }
 
 void CharacterController::CCTApplyImpulse(const Vec3& impulse)
@@ -519,6 +487,24 @@ void CharacterController::CCTApplyImpulse(const Vec3& impulse)
 bool CharacterController::CCTIsOnGround()
 {
 	return m_isOnGround;
+}
+
+void CharacterController::CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback)
+{
+	m_contactFilterCallback = callback;
+
+	MAIN_SYSTEM_TASK_0(
+		PhysicsSystem, AsyncTaskRunnerST,
+		{
+			PxFilterData data = {};
+			data.word0 = PHYSICS_FILTER_DATA_CALLBACK | PHYSICS_FILTER_DATA_CCT;
+
+			PxShape* shape = nullptr;
+			auto pxActor = self->m_pxCharacterController->getActor();
+			pxActor->getShapes(&shape, 1);
+			shape->setSimulationFilterData(data);
+		}
+	);
 }
 
 NAMESPACE_END

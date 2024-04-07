@@ -33,9 +33,11 @@ public:
 	Handle<CameraTPP> m_camera;
 	Handle<FPPCameraScript> m_fppCamScript;
 
+	Handle<RigidBodyDynamic> m_testBody;
+
 	float m_rotateX = 0;
 	//float m_rotateY = 0;
-	float m_rotationSensi = 0.12f;
+	float m_rotationSensi = 0.25f;
 	Vec3 m_viewPoint = Vec3(5, 5, 5);
 
 

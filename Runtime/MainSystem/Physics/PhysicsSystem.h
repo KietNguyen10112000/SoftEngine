@@ -29,6 +29,7 @@ private:
 
 	friend class PhysXSimulationCallback;
 	friend class CharacterControllerHitCallback;
+	friend class PhysXSimulationFilterCallback;
 
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
 
@@ -56,7 +57,8 @@ private:
 
 	std::vector<PhysicsComponent*> m_activeComponentsHasContact;
 
-	size_t m_physxSimulationCallback[2] = {};
+	size_t m_physxSimulationCallback[8] = {};
+	size_t m_physXSimulationFilterCallback[2] = {};
 
 public:
 	PhysicsSystem(Scene* scene);

@@ -4,6 +4,7 @@
 
 #include "MainSystem/Animation/AnimationSystem.h"
 #include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
+#include "MainSystem/MainSystemTaskPacking.h"
 
 NAMESPACE_BEGIN
 
@@ -56,28 +57,20 @@ void AnimatorSkeletalArray::SetDuration(float sec)
 		return;
 	}
 
+	float newTicksPerSecond = tickDuration / sec;
+
 	if (!GetGameObject()->IsInAnyScene())
 	{
-		ticksPerSecond = tickDuration / sec;
+		ticksPerSecond = newTicksPerSecond;
 		return;
 	}
 
-	auto system = GetGameObject()->GetScene()->GetAnimationSystem();
-	auto taskRunner = system->AsyncTaskRunner();
-
-	auto task = taskRunner->CreateTask(
-		[](AnimationSystem* system, void* p)
+	MAIN_SYSTEM_TASK_1(
+		AnimationSystem, AsyncTaskRunner, newTicksPerSecond, 
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, animator, sec);
-			animator->m_currentAnimTrack->ticksPerSecond = sec;
+			self->m_currentAnimTrack->ticksPerSecond = newTicksPerSecond;
 		}
 	);
-
-	auto param = taskRunner->CreateParam<Param>(&task);
-	param->animator = this;
-	param->sec = tickDuration / sec;
-
-	taskRunner->RunAsync(this, &task);
 }
 
 void AnimatorSkeletalArray::SetDuration(float sec, ID animationId)
@@ -132,24 +125,12 @@ void AnimatorSkeletalArray::Play(float startTransitTime, ID animationId, float s
 
 	scene->EndWrite(buffer);
 
-	auto system = scene->GetAnimationSystem();
-	auto taskRunner = system->AsyncTaskRunner();
-
-	auto task = taskRunner->CreateTask(
-		[](AnimationSystem* system, void* p)
+	MAIN_SYSTEM_TASK_3(
+		AnimationSystem, AsyncTaskRunner, blendTime, startTime, startTransitTime, 
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_4(Param, p, animator, blendTime, startTime, startTransitTime);
-			animator->SetAnimationImpl(startTransitTime, blendTime, startTime);
+			self->SetAnimationImpl(startTransitTime, blendTime, startTime);
 		}
 	);
-
-	auto param = taskRunner->CreateParam<Param>(&task);
-	param->animator = this;
-	param->blendTime = blendTime;
-	param->startTime = startTime;
-	param->startTransitTime = startTransitTime;
-
-	taskRunner->RunAsync(this, &task);
 }
 
 void AnimatorSkeletalArray::SetPause(bool pause)
@@ -159,41 +140,25 @@ void AnimatorSkeletalArray::SetPause(bool pause)
 
 void AnimatorSkeletalArray::SetTime(float t)
 {
-	struct Param
-	{
-		AnimatorSkeletalArray* animator;
-		float sec;
-	};
-
 	if (!GetGameObject()->IsInAnyScene())
 	{
 		SetTimeImpl(t);
 		return;
 	}
 
-	auto system = GetGameObject()->GetScene()->GetAnimationSystem();
-	auto taskRunner = system->AsyncTaskRunner();
-
-	auto task = taskRunner->CreateTask(
-		[](AnimationSystem* system, void* p)
+	MAIN_SYSTEM_TASK_1(
+		AnimationSystem, AsyncTaskRunner, t, 
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, animator, sec);
-			animator->SetTimeImpl(sec);
+			self->SetTimeImpl(t);
 
-			if (animator->m_paused) 
+			if (self->m_paused)
 			{
-				animator->m_paused = false;
-				animator->Update(system->GetScene(), 0.0f);
-				animator->m_paused = true;
+				self->m_paused = false;
+				self->Update(system->GetScene(), 0.0f);
+				self->m_paused = true;
 			}
 		}
 	);
-
-	auto param = taskRunner->CreateParam<Param>(&task);
-	param->animator = this;
-	param->sec = t;
-
-	taskRunner->RunAsync(this, &task);
 }
 
 void AnimatorSkeletalArray::Serialize(Serializer* serializer)

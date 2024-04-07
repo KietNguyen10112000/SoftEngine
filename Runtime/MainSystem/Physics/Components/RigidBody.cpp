@@ -7,6 +7,12 @@
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
 
+#include "MainSystem/MainSystemTaskPacking.h"
+#include "MainSystem/Physics/PhysicsSystem.h"
+
+#include "../Shapes/PhysicsShape.h"
+#include "../FILTER_DATA.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -47,6 +53,8 @@ void RigidBody::OnTransformChanged()
 
 void RigidBody::OnDrawDebug()
 {
+	return;
+
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 
 	if (!debugGraphics)
@@ -137,6 +145,24 @@ void RigidBody::OnDrawDebug()
 			break;
 		}
 	}
+}
+
+void RigidBody::SetContactFilterCallback(ContactReportFilterCallback callback)
+{
+	m_contactFilterCallback = callback;
+
+	MAIN_SYSTEM_TASK_0(
+		PhysicsSystem, AsyncTaskRunnerST,
+		{
+			PxFilterData data = {};
+			data.word0 = PHYSICS_FILTER_DATA_CALLBACK;
+
+			for (auto& shape : self->m_shapes)
+			{
+				shape->m_pxShape->setSimulationFilterData(data);
+			}
+		}
+	);
 }
 
 NAMESPACE_END

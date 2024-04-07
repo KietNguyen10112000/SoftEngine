@@ -55,6 +55,7 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
 #include "MainSystem/Physics/Materials/PhysicsMaterial.h"
+#include "MainSystem/Physics/Joints/RevoluteJoint.h"
 
 #include "SerializableList.h"
 
@@ -435,9 +436,11 @@ void Runtime::Setup()
 		scene->AddObject(obj);
 	}
 
-	for (size_t y = 0; y < 1; y++)
+	Handle<RigidBodyDynamic> testBody;
+	//auto material2 = std::make_shared<PhysicsMaterial>(0.1f, 0.1f, 0.1f);
+	for (size_t y = 1; y < 2; y++)
 	{
-		for (size_t x = 0; x < 1; x++)
+		for (size_t x = 1; x < 2; x++)
 		{
 			auto obj = mheap::New<GameObject>();
 			obj->Name() = "Center Cube";
@@ -446,18 +449,55 @@ void Runtime::Setup()
 			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 5.0f), material);
 			auto dyn = obj->NewComponent<RigidBodyDynamic>(shape);//->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 			dyn->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
-			dyn->SetMass(100);
+			dyn->SetDensity(2.5f);
 
 			//obj->NewComponent<TestScript2>();
 
 			transform = {};
 			transform.Scale() = Vec3(2.5f);
-			transform.Position() = { x * 5.0f, 2.5f, y * 5.0f };
+			transform.Position() = { x * 15.0f, 4.0f, y * 15.0f };
 			//transform.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, PI / 2);
 			obj->SetLocalTransform(transform);
 
 			scene->AddObject(obj);
 		}
+	}
+
+	{
+		auto obj1 = mheap::New<GameObject>();
+		obj1->Name() = "Wall1";
+		obj1->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
+
+		auto shape0 = std::make_shared<PhysicsShapeBox>(Vec3(10.0f, 5.0f, 0.2f), material);
+		auto body0 = obj1->NewComponent<RigidBodyStatic>(shape0);
+
+		Transform transform1 = {};
+		transform1.Scale() = Vec3(10.0f, 5.0f, 0.2f) / 2.0f;
+		transform1.Position() = { -15, 2.5f, 0 };
+		//transform1.Rotation() = Mat4::Rotation(Vec3::X_AXIS, -PI / 6.0f);
+		obj1->SetLocalTransform(transform1);
+
+
+		auto obj2 = mheap::New<GameObject>();
+		obj2->Name() = "Wall2";
+		obj2->NewComponent<MeshBasicRenderer>("Default/cube1.obj", "Default/green.png");
+
+		auto shape1 = std::make_shared<PhysicsShapeBox>(Vec3(3.0f, 4.0f, 0.2f), material);
+		auto body1 = obj2->NewComponent<RigidBodyDynamic>(shape1);
+		body1->SetDensity(1.f);
+
+		Transform transform2 = {};
+		transform2.Scale() = Vec3(3.0f, 4.0f, 0.2f) / 2.0f;
+		transform2.Position() = { -15.0f - 5.0f - 2.0f, 2.5f, 0 };
+		//transform2.Rotation() = Mat4::Rotation(Vec3::X_AXIS, -PI / 6.0f);
+		obj2->SetLocalTransform(transform2);
+
+		auto joint = mheap::New<RevoluteJoint>(body0, transform1, body1, transform2);
+
+		scene->AddObject(obj1);
+		scene->AddObject(obj2);
+
+		testBody = body1;
 	}
 
 	{
@@ -475,6 +515,7 @@ void Runtime::Setup()
 			auto script = obj->NewComponent<TestScript>();
 			script->m_camera = camera;
 			script->m_fppCamScript = fppCamScript;
+			script->m_testBody = testBody;
 
 			transform = {};
 			transform.Position() = Vec3::ZERO + Vec3::UP;
@@ -489,8 +530,6 @@ void Runtime::Setup()
 
 		camera->SetTarget(obj);
 	}
-
-
 
 }
 

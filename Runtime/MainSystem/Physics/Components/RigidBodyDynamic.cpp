@@ -6,7 +6,11 @@
 
 #include "PhysX/PhysX.h"
 
+#include "MainSystem/MainSystemTaskPacking.h"
+
 #include "../Shapes/PhysicsShape.h"
+
+#include "../PhysicsSystem.h"
 
 using namespace physx;
 
@@ -141,11 +145,21 @@ AABox RigidBodyDynamic::GetGlobalAABB()
 	return AABox();
 }
 
-void RigidBodyDynamic::SetMass(float mass)
+void RigidBodyDynamic::SetDensity(float density)
 {
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
-	pxRigidBody->setMass(mass);
-	pxRigidBody->setMassSpaceInertiaTensor(PxVec3(0.f));
+	//pxRigidBody->setMass(mass);
+	//pxRigidBody->setMassSpaceInertiaTensor(PxVec3(1.f));
+	/*pxRigidBody->setLinearVelocity({ 0,0,0 });
+	pxRigidBody->setAngularVelocity({ 0,0,0 });
+	pxRigidBody->setForceAndTorque({ 0,0,0 }, { 0,0,0 });*/
+	PxRigidBodyExt::updateMassAndInertia(*pxRigidBody, density);
+}
+
+float RigidBodyDynamic::GetMass()
+{
+	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
+	return pxRigidBody->getMass();
 }
 
 void RigidBodyDynamic::SetKinematic(bool enable)
@@ -154,6 +168,28 @@ void RigidBodyDynamic::SetKinematic(bool enable)
 	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
 
 	m_isKinematic = (byte)enable;
+}
+
+void RigidBodyDynamic::AddForce(const Vec3& f)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, f, 
+		{
+			auto pxRigidBody = (PxRigidDynamic*)self->m_pxActor;
+			pxRigidBody->addForce(reinterpret_cast<const PxVec3&>(f));
+		}
+	);
+}
+
+void RigidBodyDynamic::AddForceAtLocalPos(const Vec3& f, const Vec3& pos)
+{
+	MAIN_SYSTEM_TASK_2(
+		PhysicsSystem, AsyncTaskRunnerST, f, pos,
+		{
+			auto pxRigidBody = (PxRigidDynamic*)self->m_pxActor;
+			PxRigidBodyExt::addForceAtLocalPos(*pxRigidBody, reinterpret_cast<const PxVec3&>(f), reinterpret_cast<const PxVec3&>(pos));
+		}
+	);
 }
 
 NAMESPACE_END

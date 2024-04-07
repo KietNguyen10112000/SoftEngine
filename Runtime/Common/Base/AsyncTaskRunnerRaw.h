@@ -136,6 +136,12 @@ public:
 		m_tasks.Add(*task);
 	}
 
+	template <typename MainComponent_>
+	inline void RunAsync(MainComponent_* dummy, AsyncTask* task)
+	{
+		m_tasks.Add(*task);
+	}
+
 };
 
 template <typename _C>

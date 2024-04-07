@@ -16,7 +16,7 @@ protected:
 	Vec3 m_position = {};
 
 	float m_speed = 10;
-	float m_rotationSensi = 0.12f;
+	float m_rotationSensi = 0.25f;
 
 	bool m_enableFPP = true;
 

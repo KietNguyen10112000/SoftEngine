@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PhysicsComponent.h"
+#include "RigidBody.h"
 
 namespace physx
 {
@@ -11,8 +12,12 @@ NAMESPACE_BEGIN
 
 class CharacterController : public PhysicsComponent
 {
-protected:
+private:
+	friend class PhysXSimulationFilterCallback;
 	friend class PhysXSimulationCallback;
+	RigidBody::ContactReportFilterCallback m_contactFilterCallback = nullptr;
+
+protected:
 
 	struct CollisionPlane
 	{
@@ -77,6 +82,7 @@ public:
 	void CCTApplyVelocity(const Vec3& velocity);
 	void CCTApplyImpulse(const Vec3& impulse);
 	bool CCTIsOnGround();
+	void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
 
 };
 

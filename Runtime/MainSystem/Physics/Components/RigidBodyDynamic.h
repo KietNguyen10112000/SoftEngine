@@ -52,9 +52,13 @@ public:
 	AABox GetGlobalAABB() override;
 
 public:
-	void SetMass(float mass);
+	void SetDensity(float density);
+	float GetMass();
 
 	void SetKinematic(bool enable);
+
+	void AddForce(const Vec3& f);
+	void AddForceAtLocalPos(const Vec3& f, const Vec3& pos);
 
 };
 
