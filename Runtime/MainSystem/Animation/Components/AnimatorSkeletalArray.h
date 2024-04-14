@@ -195,6 +195,8 @@ public:
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue);
 
 	void Update(Scene* scene, float dt);
+
+	virtual void OnDrawDebug() override;
 };
 
 

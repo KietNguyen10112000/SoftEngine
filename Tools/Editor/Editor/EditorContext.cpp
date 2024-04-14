@@ -8,6 +8,7 @@
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 #include "MainSystem/Scripting/Components/Script.h"
 #include "MainSystem/Physics/Components/PhysicsComponent.h"
+#include "MainSystem/Animation/Components/AnimationComponent.h"
 
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
@@ -620,6 +621,18 @@ void EditorContext::OnRenderInGameDebugGraphics()
 		if (physicsComp)
 		{
 			physicsComp->OnDrawDebug();
+		}
+
+		auto renderingComp = obj->GetComponentRaw<RenderingComponent>();
+		if (renderingComp)
+		{
+			renderingComp->OnDrawDebug();
+		}
+
+		auto animationComp = obj->GetComponentRaw<AnimationComponent>();
+		if (animationComp)
+		{
+			animationComp->OnDrawDebug();
 		}
 	}
 

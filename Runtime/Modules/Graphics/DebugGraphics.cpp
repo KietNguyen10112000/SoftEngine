@@ -463,6 +463,27 @@ void DebugGraphics::InitSphereRenderer()
 	m_meshRenderer.Init(true);
 }
 
+void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Vec4& color)
+{
+	auto direction = end - begin;
+	auto dir = direction.Normal();
+	Quaternion quat = Quaternion::RotationFromTo(Vec3::UP, dir);
+
+	auto rot = Mat4::Rotation(quat);
+
+	Mat4 transform = Mat4::Identity();
+	transform *= rot;
+	transform *= Mat4::Translation(begin + direction - dir * 0.2f);
+
+	auto d = (begin - end).Length() / 2.0f;
+	Mat4 cubeTransform = Mat4::Identity();
+	cubeTransform *= Mat4::Scaling(0.005f, d, 0.005f);
+	cubeTransform *= Mat4::Translation(Vec3::UP * d);
+	cubeTransform *= rot;
+	cubeTransform *= Mat4::Translation(begin);
+	DrawCube(cubeTransform, color, true);
+}
+
 void DebugGraphics::DrawDirection(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor)
 {
 	auto dir = direction.Normal();
@@ -496,7 +517,7 @@ void DebugGraphics::DrawDirection(const Vec3& origin, const Vec3& direction, con
 	cubeTransform *= Mat4::Translation(Vec3::UP * d);
 	cubeTransform *= rot;
 	cubeTransform *= Mat4::Translation(origin);
-	DrawCube(cubeTransform, tailColor);
+	DrawCube(cubeTransform, tailColor, true);
 
 	renderer.lock.unlock();
 }
@@ -529,9 +550,9 @@ void DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
 	renderer.lock.unlock();
 }
 
-void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color)
+void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color, bool solid)
 {
-	auto& renderer = m_wireFrameCubeRenderer;
+	auto& renderer = solid ? m_solidCubeRenderer : m_wireFrameCubeRenderer;
 
 	renderer.lock.lock();
 

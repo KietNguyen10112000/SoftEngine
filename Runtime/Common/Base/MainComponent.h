@@ -52,6 +52,8 @@ public:
 
 	virtual AABox GetGlobalAABB() = 0;
 
+	inline virtual void OnDrawDebug() {};
+
 public:
 	inline GameObject* GetGameObject()
 	{

@@ -6,6 +6,8 @@
 #include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
 #include "MainSystem/MainSystemTaskPacking.h"
 
+#include "Graphics/DebugGraphics.h"
+
 NAMESPACE_BEGIN
 
 AnimatorSkeletalArray::AnimatorSkeletalArray() : Animator(ANIMATION_TYPE_SKELETAL_ARRAY)
@@ -775,6 +777,40 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 	else
 	{
 		UpdateNoBlend(scene);
+	}
+}
+
+void AnimatorSkeletalArray::OnDrawDebug()
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics)
+	{
+		return;
+	}
+
+	auto& offsetMatrix = m_model3D->m_boneOffsetMatrixs;
+	std::vector<Vec3> bonePos;
+	bonePos.reserve(offsetMatrix.size());
+
+	auto& rootTrans = GetGameObject()->ReadGlobalTransformMat();
+
+	for (auto& bone : m_model3D->m_boneOffsetMatrixs)
+	{
+		bonePos.push_back((bone.GetInverse() * rootTrans).Position());
+	}
+
+	size_t i = 0;
+	auto& nodes = m_model3D->m_nodes;
+	for (auto& node : nodes)
+	{
+		if (node.boneId != INVALID_ID && node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
+		{
+			auto cur = (Vec4(bonePos[node.boneId], 1.0f) * m_globalTransforms[i]).xyz() + Vec3(0, 0, 3);
+			auto parent = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f) * m_globalTransforms[node.parentId]).xyz() + Vec3(0, 0, 3);
+
+			debugGraphics->DrawLineSegment(parent, cur);
+		}
+		i++;
 	}
 }
 
