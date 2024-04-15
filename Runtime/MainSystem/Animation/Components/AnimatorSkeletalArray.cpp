@@ -8,6 +8,8 @@
 
 #include "Graphics/DebugGraphics.h"
 
+#include "imgui/imgui.h"
+
 NAMESPACE_BEGIN
 
 AnimatorSkeletalArray::AnimatorSkeletalArray() : Animator(ANIMATION_TYPE_SKELETAL_ARRAY)
@@ -780,6 +782,26 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 	}
 }
 
+struct MyData
+{
+	struct Joint
+	{
+		float angle;
+		float length;
+
+		Vec3 head;
+		Vec3 tail;
+	};
+
+	Vec3 targetPos = { -5,-5,2 };
+	Vec3 origin = { 0,-5,2 };
+
+	std::vector<Joint> joints;
+	std::vector<float> angles;
+};
+
+MyData* g_data = nullptr;
+
 void AnimatorSkeletalArray::OnDrawDebug()
 {
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
@@ -811,6 +833,131 @@ void AnimatorSkeletalArray::OnDrawDebug()
 			debugGraphics->DrawLineSegment(parent, cur);
 		}
 		i++;
+	}
+
+	{
+		ImGui::Begin("Debug");
+
+		if (!g_data)
+		{
+			g_data = new MyData();
+			auto& joints = g_data->joints;
+			joints.push_back({ PI / 3.0f, 2 });
+			joints.push_back({ PI / 6.0f, 2 });
+			joints.push_back({ PI / 6.0f, 2 });
+
+			g_data->angles.resize(joints.size());
+		}
+
+		auto Forward = [](std::vector<float>& angles) -> Vec3
+		{
+			auto& joints = g_data->joints;
+			for (size_t i = 0; i < joints.size(); i++)
+			{
+				auto& joint = joints[i];
+
+				Vec3 tail;
+				if (i != 0)
+				{
+					auto& parent = joints[i - 1];
+					auto dir = (parent.tail - parent.head).Normal();
+					tail = parent.tail + (Mat4::Translation(dir * joint.length) * Mat4::Rotation(Vec3::Z_AXIS, angles[i])).Position();
+				}
+				else
+				{
+					tail = g_data->origin + (Mat4::Translation(joint.length, 0, 0) * Mat4::Rotation(Vec3::Z_AXIS, angles[i])).Position();
+				}
+
+				Vec3 head;
+				if (i != 0)
+				{
+					auto& parent = joints[i - 1];
+					head = parent.tail;
+				}
+				else
+				{
+					head = g_data->origin;
+				}
+
+				joint.head = head;
+				joint.tail = tail;
+			}
+
+			return joints.back().tail;
+		};
+
+		auto& joints = g_data->joints;
+		for (size_t i = 0; i < joints.size(); i++)
+		{
+			Vec4 color = { 0,0,0,1 };
+			color[i] = 1;
+			auto& joint = joints[i];
+
+			Vec3 tail;
+			if (i != 0)
+			{
+				auto& parent = joints[i - 1];
+				auto dir = (parent.tail - parent.head).Normal();
+				tail = parent.tail + (Mat4::Translation(dir * joint.length) * Mat4::Rotation(Vec3::Z_AXIS, joint.angle)).Position();
+			}
+			else
+			{
+				tail = g_data->origin + (Mat4::Translation(joint.length, 0, 0) * Mat4::Rotation(Vec3::Z_AXIS, joint.angle)).Position();
+			}
+
+			Vec3 head;
+			if (i != 0)
+			{
+				auto& parent = joints[i - 1];
+				head = parent.tail;
+			}
+			else
+			{
+				head = g_data->origin;
+			}
+
+			joint.head = head;
+			joint.tail = tail;
+
+			//auto len = (head - tail).Length();
+
+			debugGraphics->DrawLineSegment(head, tail, color);
+
+			ImGui::PushID(i);
+			ImGui::DragFloat("Angle", &joint.angle, 0.001f, -INFINITY, INFINITY);
+			ImGui::PopID();
+		}
+
+		ImGui::DragFloat3("Target Pos", &g_data->targetPos[0], 0.001f, -INFINITY, INFINITY);
+
+		auto& angles = g_data->angles;
+		for (size_t i = 0; i < joints.size(); i++)
+		{
+			angles[i] = joints[i].angle;
+		}
+
+		auto endEffector = Forward(angles);
+		auto d = (endEffector - g_data->targetPos).Length();
+		if (d > 0.001f)
+		{
+			for (size_t i = 0; i < joints.size(); i++)
+			{
+				angles[i] += 0.1f;
+				auto curEffector = Forward(angles);
+				auto curD = (curEffector - g_data->targetPos).Length();
+				auto gradient = curD - d;
+
+				angles[i] -= 0.1f;
+				angles[i] -= gradient * 0.1f;
+			}
+
+			for (size_t i = 0; i < joints.size(); i++)
+			{
+				joints[i].angle = angles[i];
+			}
+		}
+
+		ImGui::End();
 	}
 }
 
