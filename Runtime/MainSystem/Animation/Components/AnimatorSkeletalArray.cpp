@@ -784,20 +784,20 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 
 struct MyData
 {
-	struct Joint
-	{
-		float angle;
-		float length;
-
-		Vec3 head;
-		Vec3 tail;
-	};
-
-	Vec3 targetPos = { -5,-5,2 };
+	Vec3 targetPos = { 0.5f,1.5f,0 };
 	Vec3 origin = { 0,-5,2 };
 
-	std::vector<Joint> joints;
-	std::vector<float> angles;
+	std::vector<float>		jointLength;
+	std::vector<Quaternion> jointRotation;
+	std::vector<int>		jointBoneIds;
+	std::vector<int>		jointBoneGlobalTransformIds;
+	std::vector<Vec3>		tempRot;
+
+	std::vector<Quaternion> rotations;
+
+	std::vector<Mat4>		oriGlobalTransform;
+
+	bool runningGradientDescent = false;
 };
 
 MyData* g_data = nullptr;
@@ -838,99 +838,50 @@ void AnimatorSkeletalArray::OnDrawDebug()
 	{
 		ImGui::Begin("Debug");
 
+		if (ImGui::Button("Pause"))
+		{
+			g_data->oriGlobalTransform = m_globalTransforms;
+			SetPause(true);
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Resume"))
+		{
+			SetPause(false);
+		}
+
 		if (!g_data)
 		{
 			g_data = new MyData();
-			auto& joints = g_data->joints;
-			joints.push_back({ PI / 3.0f, 2 });
-			joints.push_back({ PI / 6.0f, 2 });
-			joints.push_back({ PI / 6.0f, 2 });
-
-			g_data->angles.resize(joints.size());
 		}
 
-		auto Forward = [](std::vector<float>& angles) -> Vec3
+		auto Forward = [](std::vector<Quaternion>& rotations, void(*callback)(size_t, const Vec3&, const Vec3&, const Quaternion&) = nullptr) -> Vec3
 		{
-			auto& joints = g_data->joints;
-			for (size_t i = 0; i < joints.size(); i++)
+			auto& jointLength = g_data->jointLength;
+			auto rotation = Mat4::Identity();
+			auto p = g_data->origin;
+			for (size_t i = 0; i < jointLength.size(); i++)
 			{
-				auto& joint = joints[i];
+				auto& jointLen = jointLength[i];
 
-				Vec3 tail;
-				if (i != 0)
+				rotation *= Mat4::Rotation(rotations[i]);
+
+				auto next = p + rotation.Transform(Vec3(0, jointLen, 0));
+
+				if (callback)
 				{
-					auto& parent = joints[i - 1];
-					auto dir = (parent.tail - parent.head).Normal();
-					tail = parent.tail + (Mat4::Translation(dir * joint.length) * Mat4::Rotation(Vec3::Z_AXIS, angles[i])).Position();
-				}
-				else
-				{
-					tail = g_data->origin + (Mat4::Translation(joint.length, 0, 0) * Mat4::Rotation(Vec3::Z_AXIS, angles[i])).Position();
+					callback(i, p, next, rotation);
 				}
 
-				Vec3 head;
-				if (i != 0)
-				{
-					auto& parent = joints[i - 1];
-					head = parent.tail;
-				}
-				else
-				{
-					head = g_data->origin;
-				}
-
-				joint.head = head;
-				joint.tail = tail;
+				p = next;
 			}
-
-			return joints.back().tail;
+			return p;
 		};
-
-		auto& joints = g_data->joints;
-		for (size_t i = 0; i < joints.size(); i++)
-		{
-			Vec4 color = { 0,0,0,1 };
-			color[i] = 1;
-			auto& joint = joints[i];
-
-			Vec3 tail;
-			if (i != 0)
-			{
-				auto& parent = joints[i - 1];
-				auto dir = (parent.tail - parent.head).Normal();
-				tail = parent.tail + (Mat4::Translation(dir * joint.length) * Mat4::Rotation(Vec3::Z_AXIS, joint.angle)).Position();
-			}
-			else
-			{
-				tail = g_data->origin + (Mat4::Translation(joint.length, 0, 0) * Mat4::Rotation(Vec3::Z_AXIS, joint.angle)).Position();
-			}
-
-			Vec3 head;
-			if (i != 0)
-			{
-				auto& parent = joints[i - 1];
-				head = parent.tail;
-			}
-			else
-			{
-				head = g_data->origin;
-			}
-
-			joint.head = head;
-			joint.tail = tail;
-
-			//auto len = (head - tail).Length();
-
-			debugGraphics->DrawLineSegment(head, tail, color);
-
-			ImGui::PushID(i);
-			ImGui::DragFloat("Angle", &joint.angle, 0.001f, -INFINITY, INFINITY);
-			ImGui::PopID();
-		}
 
 		ImGui::DragFloat3("Target Pos", &g_data->targetPos[0], 0.001f, -INFINITY, INFINITY);
 
-		auto& angles = g_data->angles;
+		/*auto& angles = g_data->angles;
 		for (size_t i = 0; i < joints.size(); i++)
 		{
 			angles[i] = joints[i].angle;
@@ -955,7 +906,265 @@ void AnimatorSkeletalArray::OnDrawDebug()
 			{
 				joints[i].angle = angles[i];
 			}
+		}*/
+
+		if (ImGui::Button("MakeJoint"))
+		{
+			auto& jointLengths = g_data->jointLength;
+			auto& jointRotations = g_data->jointRotation;
+			auto& jointBoneIds = g_data->jointBoneIds;
+			auto& jointBoneGlobalTransformIds = g_data->jointBoneGlobalTransformIds;
+
+			jointLengths.clear();
+			jointRotations.clear();
+			jointBoneIds.clear();
+			jointBoneGlobalTransformIds.clear();
+
+			std::vector<int> boneChildCount;
+			boneChildCount.resize(offsetMatrix.size());
+
+			boneChildCount[m_model3D->m_boneIds["mixamorig:LeftShoulder"]] = -1;
+			//boneChildCount[m_model3D->m_boneIds["mixamorig:LeftForeArm"]] = 1;
+
+			auto rotation = Mat4::Identity();
+
+			bool first = true;
+			auto p = Vec3();
+			i = 0;
+			for (auto& node : nodes)
+			{
+				if (node.boneId == INVALID_ID)
+				{
+					goto Continue;
+				}
+
+				if (node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID && boneChildCount[nodes[node.parentId].boneId] <= 0)
+				{
+					auto tail = (Vec4(bonePos[node.boneId], 1.0f) * m_globalTransforms[i]).xyz();
+					auto head = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f) * m_globalTransforms[node.parentId]).xyz();
+
+					/*auto tail = bonePos[node.boneId] + Vec3(0, 0, 9);
+					auto head = bonePos[nodes[node.parentId].boneId] + Vec3(0, 0, 9);*/
+
+					Quaternion jointRotation;
+					auto len = (head - tail).Length();
+					auto dir = (tail - head).Normal();
+
+					boneChildCount[nodes[node.parentId].boneId]++;
+
+					if (first)
+					{
+						g_data->origin = head;
+						first = false;
+
+						jointRotation = Quaternion::RotationFromTo(Vec3::X_AXIS, dir);
+					}
+					else
+					{
+						jointRotation = Quaternion::RotationFromTo((head - p).Normal(), dir);
+					}
+
+					p = head;
+
+					/*auto next = p + rotation.Transform(Vec3(len, 0, 0));
+					assert(next == tail);*/
+
+					jointLengths.push_back(len);
+					jointRotations.push_back({});
+					jointBoneIds.push_back(nodes[node.parentId].boneId);
+					jointBoneGlobalTransformIds.push_back(node.parentId);
+				}
+				else 
+				{
+					boneChildCount[node.boneId]++;
+				}
+
+			Continue:
+				i++;
+			}
+
+			g_data->tempRot.clear();
+			g_data->tempRot.resize(jointLengths.size());
 		}
+
+		{
+			i = 0;
+			for (auto& node : nodes)
+			{
+				if (node.boneId == INVALID_ID)
+				{
+					i++;
+					continue;
+				}
+
+				if (node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
+				{
+					auto tail = bonePos[node.boneId] + Vec3(0, 0, 6);
+					auto head = bonePos[nodes[node.parentId].boneId] + Vec3(0, 0, 6);
+
+					auto color = Vec4(0, 0, 0, 1);
+					color[i % 3] = 1;
+					debugGraphics->DrawLineSegment(head, tail, color);
+				}
+
+				i++;
+			}
+		}
+
+		{
+			// render joints
+			Forward(g_data->jointRotation, 
+				[](size_t i, const Vec3& head, const Vec3& tail, const Quaternion&)
+				{
+					auto color = Vec4(0, 0, 0, 1);
+					color[i % 3] = 1;
+					auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+					debugGraphics->DrawLineSegment(head, tail, color, 0.007f);
+				}
+			);
+
+			i = 0;
+			for (auto& r : g_data->tempRot)
+			{
+				ImGui::PushID(i++);
+				if (ImGui::DragFloat3("Angle ", &r[0], 0.001f, -INFINITY, INFINITY))
+				{
+					//r.Normalize();
+					g_data->jointRotation[i - 1] = Quaternion(r);
+				}
+				ImGui::PopID();
+			}
+		}
+
+		if (ImGui::Button("Run IK"))
+		{
+			g_data->runningGradientDescent = !g_data->runningGradientDescent;
+		}
+
+		if (g_data->runningGradientDescent)
+		{
+			auto& rotations = g_data->rotations;
+			auto& jointLengths = g_data->jointLength;
+			auto& jointRotations = g_data->jointRotation;
+			rotations.resize(jointRotations.size());
+
+			for (size_t i = 0; i < jointRotations.size(); i++)
+			{
+				rotations[i] = jointRotations[i];
+			}
+
+			auto endEffector = Forward(rotations);
+			auto d = (endEffector - g_data->targetPos).Length();
+			if (d > 0.001f)
+			{
+				for (size_t i = 0; i < rotations.size(); i++)
+				{
+					auto& rotation = rotations[i];
+					for (size_t j = 0; j < 4; j++)
+					{
+						auto& v = rotation[j];
+
+						v += 0.1f;
+						auto curEffector = Forward(rotations);
+						auto curD = (curEffector - g_data->targetPos).Length();
+						auto gradient = curD - d;
+
+						v -= 0.1f;
+						v -= gradient * 0.1f;
+					}
+
+					rotation.Normalize();
+				}
+
+				for (size_t i = 0; i < rotations.size(); i++)
+				{
+					jointRotations[i] = rotations[i];
+				}
+			}
+
+			auto scene = GetGameObject()->GetScene();
+			scene->BeginWrite<false>(m_animMeshRenderingBuffer->buffer);
+			auto& bones = m_animMeshRenderingBuffer->buffer.Write()->bones;
+
+			auto rotation = Mat4::Identity();
+			auto p = g_data->origin;
+			std::vector<Mat4>& oriGlobalTransform = g_data->oriGlobalTransform;
+			for (size_t i = 0; i < g_data->jointRotation.size(); i++)
+			{
+				auto nodeIdx = g_data->jointBoneGlobalTransformIds[i];
+				auto boneIdx = g_data->jointBoneIds[i];
+
+				auto& globalTransform = oriGlobalTransform[nodeIdx];
+
+				if (nodes[nodeIdx].parentId == INVALID_ID)
+				{
+					globalTransform = Mat4::Rotation(g_data->jointRotation[i]) * globalTransform;
+					continue;
+				}
+
+				auto& jointLen = g_data->jointLength[i];
+
+				rotation *= Mat4::Rotation(rotations[i]);
+
+				auto next = p + rotation.Transform(Vec3(jointLen, 0, 0));
+
+				auto& parentGlobalTransform = oriGlobalTransform[nodes[nodeIdx].parentId];
+				auto localTransform = globalTransform * parentGlobalTransform.GetInverse();
+
+				// replace rotation component with joint rotation component
+				Vec3 pos, scale;
+				Quaternion rot;
+				localTransform.Decompose(scale, rot, pos);
+
+				//localTransform = Mat4::Scaling(scale) * (Mat4::Rotation(g_data->tempRot[i]) * Mat4::Rotation(rot)) * Mat4::Translation(pos);
+				localTransform = Mat4::Scaling(scale) * Mat4::Rotation(g_data->jointRotation[i]) * Mat4::Translation(pos);
+
+				if (i == 0)
+				{
+					parentGlobalTransform.Decompose(scale, rot, pos);
+					m_globalTransforms[nodeIdx] = localTransform * (Mat4::Scaling(scale) * Mat4::Translation(pos));
+				}
+				else
+				{
+					m_globalTransforms[nodeIdx] = localTransform * m_globalTransforms[nodes[nodeIdx].parentId];
+				}
+
+				p = next;
+			}
+
+			for (size_t i = 0; i < nodes.size(); i++)
+			{
+				auto& node = nodes[i];
+				auto& globalTransform = m_globalTransforms[i];
+
+				if (node.boneId != INVALID_ID)
+				{
+					bones[node.boneId] = offsetMatrix[node.boneId] * globalTransform;
+				}
+			}
+
+			//static auto* _bones = &bones;
+			//static auto* _globalTransforms = &m_globalTransforms;
+			//static auto* _offsetMatrix = &offsetMatrix;
+			//_bones = &bones;
+			//_globalTransforms = &m_globalTransforms;
+			//_offsetMatrix = &offsetMatrix;
+
+			//Forward(g_data->jointRotation,
+			//	[](size_t i, const Vec3& head, const Vec3& tail, const Quaternion& r)
+			//	{
+			//		auto& bones = *_bones;
+			//		auto globalTransform = (*_offsetMatrix)[g_data->jointBoneIds[i]] * Mat4::Rotation(r) * (*_globalTransforms)[g_data->jointBoneGlobalTransformIds[i]];
+			//		//globalTransform.SetPosition(head);
+			//		bones[g_data->jointBoneIds[i]] =  globalTransform;
+			//	}
+			//);
+
+			scene->EndWrite(m_animMeshRenderingBuffer->buffer);
+
+		}
+
+		debugGraphics->DrawAABox(AABox(g_data->targetPos, Vec3(0.05f)));
 
 		ImGui::End();
 	}

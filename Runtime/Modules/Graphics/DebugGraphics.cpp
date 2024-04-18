@@ -463,7 +463,7 @@ void DebugGraphics::InitSphereRenderer()
 	m_meshRenderer.Init(true);
 }
 
-void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Vec4& color)
+void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Vec4& color, float width)
 {
 	auto direction = end - begin;
 	auto dir = direction.Normal();
@@ -477,7 +477,7 @@ void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Ve
 
 	auto d = (begin - end).Length() / 2.0f;
 	Mat4 cubeTransform = Mat4::Identity();
-	cubeTransform *= Mat4::Scaling(0.005f, d, 0.005f);
+	cubeTransform *= Mat4::Scaling(width, d, width);
 	cubeTransform *= Mat4::Translation(Vec3::UP * d);
 	cubeTransform *= rot;
 	cubeTransform *= Mat4::Translation(begin);

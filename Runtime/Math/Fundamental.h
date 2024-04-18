@@ -1184,6 +1184,11 @@ public:
         return false;
     }
 
+    inline Vec3 Transform(const Vec3& p, float w = 1.0f) const
+    {
+        return (Vec4(p, w) * (*this)).xyz();
+    }
+
 public:
     // get forward direction of this transform matrix
     inline const Vec3& Forward() const

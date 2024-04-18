@@ -143,7 +143,7 @@ private:
 public:
 	//void SetWireframe(bool on);
 
-	void DrawLineSegment(const Vec3& begin, const Vec3& end, const Vec4& color = { 0,1,0,1 });
+	void DrawLineSegment(const Vec3& begin, const Vec3& end, const Vec4& color = { 0,1,0,1 }, float width = 0.005f);
 	void DrawDirection(const Vec3& origin, const Vec3& direction, const Vec4& headColor = { 0,1,0,1 }, const Vec4& tailColor = { 1,1,0,1 });
 	void DrawAABox(const AABox& aaBox, const Vec4& color = { 1,1,1,1 });
 	void DrawCube(const Mat4& transform, const Vec4& color = { 1,1,1,1 }, bool solid = false);

@@ -63,7 +63,7 @@ void TestScript::OnUpdate(float dt)
 		Input()->SetCursorLock(!Input()->GetCursorLock());
 	}
 
-	if (Input()->IsKeyUp('1'))
+	if (Input()->IsKeyUp('V'))
 	{
 		std::cout << "1 pressed\n";
 		m_camera->SetTPPEnabled(!m_camera->IsTPPEnabled());
