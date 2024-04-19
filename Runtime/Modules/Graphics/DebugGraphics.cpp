@@ -522,7 +522,7 @@ void DebugGraphics::DrawDirection(const Vec3& origin, const Vec3& direction, con
 	renderer.lock.unlock();
 }
 
-void DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
+void DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color, bool solid)
 {
 	auto center = aaBox.GetCenter();
 	auto halfDims = aaBox.GetHalfDimensions();
@@ -531,7 +531,7 @@ void DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color)
 	transform *= Mat4::Scaling(halfDims);
 	transform *= Mat4::Translation(center);
 
-	auto& renderer = m_wireFrameCubeRenderer;
+	auto& renderer = solid ? m_solidCubeRenderer : m_wireFrameCubeRenderer;
 
 	renderer.lock.lock();
 

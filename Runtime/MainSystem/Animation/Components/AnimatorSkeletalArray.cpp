@@ -785,18 +785,31 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 struct MyData
 {
 	Vec3 targetPos = { 0.5f,1.5f,0 };
-	Vec3 origin = { 0,-5,2 };
 
-	std::vector<float>		jointLength;
-	std::vector<Quaternion> jointRotation;
-	std::vector<int>		jointBoneIds;
-	std::vector<int>		jointBoneGlobalTransformIds;
-	std::vector<Vec3>		tempRot;
+	Mat4 origin;
 
-	std::vector<Quaternion> rotations;
+	struct Joint
+	{
+		int nodeId;
+		int parentNodeId;
 
-	std::vector<Mat4>		oriGlobalTransform;
+		Vec3 scale;
+		Vec3 position;
+	};
 
+	struct NodeEffectedByJoint
+	{
+		int nodeId;
+		Mat4 localTransform;
+	};
+
+	std::vector<Joint>		joints;
+	std::vector<Vec3>		jointRotations;
+	//std::vector<Vec3>		jointRotationEulers;
+
+	std::vector<NodeEffectedByJoint> nodesEffectedByJoint;
+
+	std::vector<Vec3>		rotations;
 	bool runningGradientDescent = false;
 };
 
@@ -840,7 +853,6 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 		if (ImGui::Button("Pause"))
 		{
-			g_data->oriGlobalTransform = m_globalTransforms;
 			SetPause(true);
 		}
 
@@ -856,27 +868,29 @@ void AnimatorSkeletalArray::OnDrawDebug()
 			g_data = new MyData();
 		}
 
-		auto Forward = [](std::vector<Quaternion>& rotations, void(*callback)(size_t, const Vec3&, const Vec3&, const Quaternion&) = nullptr) -> Vec3
+		auto Forward = [&](std::vector<Vec3>& rotations, void(*callback)(size_t, const Vec3&, const Vec3&, const Quaternion&) = nullptr) -> Vec3
 		{
-			auto& jointLength = g_data->jointLength;
-			auto rotation = Mat4::Identity();
-			auto p = g_data->origin;
-			for (size_t i = 0; i < jointLength.size(); i++)
+			auto transform = g_data->origin;
+			auto& joints = g_data->joints;
+			for (size_t i = 0; i < joints.size(); i++)
 			{
-				auto& jointLen = jointLength[i];
+				auto& joint = joints[i];
 
-				rotation *= Mat4::Rotation(rotations[i]);
+				auto curTransform = 
+					Mat4::Scaling(joint.scale)
+					* Mat4::Rotation(rotations[i])
+					* Mat4::Translation(joint.position)
+					* transform;
 
-				auto next = p + rotation.Transform(Vec3(0, jointLen, 0));
+				auto parent = (Vec4(bonePos[nodes[nodes[joint.nodeId].parentId].boneId], 1.0f) * transform).xyz();
+				auto cur = (Vec4(bonePos[nodes[joint.nodeId].boneId], 1.0f) * curTransform).xyz();
 
-				if (callback)
-				{
-					callback(i, p, next, rotation);
-				}
+				if (callback) callback(i, parent, cur, {});
 
-				p = next;
+				transform = curTransform;
 			}
-			return p;
+
+			return transform.Position();
 		};
 
 		ImGui::DragFloat3("Target Pos", &g_data->targetPos[0], 0.001f, -INFINITY, INFINITY);
@@ -910,21 +924,20 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 		if (ImGui::Button("MakeJoint"))
 		{
-			auto& jointLengths = g_data->jointLength;
-			auto& jointRotations = g_data->jointRotation;
-			auto& jointBoneIds = g_data->jointBoneIds;
-			auto& jointBoneGlobalTransformIds = g_data->jointBoneGlobalTransformIds;
-
-			jointLengths.clear();
+			auto& joints = g_data->joints;
+			auto& jointRotations = g_data->jointRotations;
+			joints.clear();
 			jointRotations.clear();
-			jointBoneIds.clear();
-			jointBoneGlobalTransformIds.clear();
+			//g_data->jointRotationEulers.clear();
 
 			std::vector<int> boneChildCount;
 			boneChildCount.resize(offsetMatrix.size());
 
+			std::vector<int> isJoint;
+			isJoint.resize(nodes.size(), 0);
+
 			boneChildCount[m_model3D->m_boneIds["mixamorig:LeftShoulder"]] = -1;
-			//boneChildCount[m_model3D->m_boneIds["mixamorig:LeftForeArm"]] = 1;
+			boneChildCount[m_model3D->m_boneIds["mixamorig:LeftHand"]] = 1;
 
 			auto rotation = Mat4::Identity();
 
@@ -940,39 +953,27 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 				if (node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID && boneChildCount[nodes[node.parentId].boneId] <= 0)
 				{
-					auto tail = (Vec4(bonePos[node.boneId], 1.0f) * m_globalTransforms[i]).xyz();
-					auto head = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f) * m_globalTransforms[node.parentId]).xyz();
+					auto& parentTransform = m_globalTransforms[node.parentId];
+					auto& globalTransform = m_globalTransforms[i];
+					auto& localTransform = globalTransform * parentTransform.GetInverse();
 
-					/*auto tail = bonePos[node.boneId] + Vec3(0, 0, 9);
-					auto head = bonePos[nodes[node.parentId].boneId] + Vec3(0, 0, 9);*/
-
-					Quaternion jointRotation;
-					auto len = (head - tail).Length();
-					auto dir = (tail - head).Normal();
+					Transform transform;
+					localTransform.Decompose(transform.Scale(), transform.Rotation(), transform.Translation());
 
 					boneChildCount[nodes[node.parentId].boneId]++;
 
 					if (first)
 					{
-						g_data->origin = head;
+						g_data->origin = parentTransform;
 						first = false;
-
-						jointRotation = Quaternion::RotationFromTo(Vec3::X_AXIS, dir);
 					}
-					else
-					{
-						jointRotation = Quaternion::RotationFromTo((head - p).Normal(), dir);
-					}
+					
+					joints.push_back({ (int)i, (int)node.parentId, transform.Scale(), transform.Translation() });
+					jointRotations.push_back(transform.Rotation().ToEulerAngles());
 
-					p = head;
+					//g_data->jointRotationEulers.push_back(transform.Rotation().ToEulerAngles());
 
-					/*auto next = p + rotation.Transform(Vec3(len, 0, 0));
-					assert(next == tail);*/
-
-					jointLengths.push_back(len);
-					jointRotations.push_back({});
-					jointBoneIds.push_back(nodes[node.parentId].boneId);
-					jointBoneGlobalTransformIds.push_back(node.parentId);
+					isJoint[i] = 1;
 				}
 				else 
 				{
@@ -983,37 +984,33 @@ void AnimatorSkeletalArray::OnDrawDebug()
 				i++;
 			}
 
-			g_data->tempRot.clear();
-			g_data->tempRot.resize(jointLengths.size());
-		}
-
-		{
+			auto& nodesEffectedByJoint = g_data->nodesEffectedByJoint;
 			i = 0;
 			for (auto& node : nodes)
 			{
-				if (node.boneId == INVALID_ID)
+				/*if (node.boneId == INVALID_ID)
 				{
-					i++;
-					continue;
+					goto Continue1;
+				}*/
+
+				if (node.parentId != INVALID_ID && isJoint[i] == 0 && isJoint[node.parentId] == 1)
+				{
+					auto& parentTransform = m_globalTransforms[node.parentId];
+					auto& globalTransform = m_globalTransforms[i];
+					auto& localTransform = globalTransform * parentTransform.GetInverse();
+
+					nodesEffectedByJoint.push_back({ (int)i,localTransform });
+					isJoint[i] = 1;
 				}
 
-				if (node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
-				{
-					auto tail = bonePos[node.boneId] + Vec3(0, 0, 6);
-					auto head = bonePos[nodes[node.parentId].boneId] + Vec3(0, 0, 6);
-
-					auto color = Vec4(0, 0, 0, 1);
-					color[i % 3] = 1;
-					debugGraphics->DrawLineSegment(head, tail, color);
-				}
-
+			Continue1:
 				i++;
 			}
 		}
 
 		{
 			// render joints
-			Forward(g_data->jointRotation, 
+			auto endEffector = Forward(g_data->jointRotations,
 				[](size_t i, const Vec3& head, const Vec3& tail, const Quaternion&)
 				{
 					auto color = Vec4(0, 0, 0, 1);
@@ -1023,17 +1020,65 @@ void AnimatorSkeletalArray::OnDrawDebug()
 				}
 			);
 
+			debugGraphics->DrawAABox(AABox(endEffector, Vec3(0.05f)), { 1,1,0.5f,1 }, true);
+
 			i = 0;
-			for (auto& r : g_data->tempRot)
+			for (auto& r : g_data->jointRotations)
 			{
 				ImGui::PushID(i++);
 				if (ImGui::DragFloat3("Angle ", &r[0], 0.001f, -INFINITY, INFINITY))
 				{
 					//r.Normalize();
-					g_data->jointRotation[i - 1] = Quaternion(r);
+					//g_data->jointRotations[i - 1] = Quaternion(r);
 				}
 				ImGui::PopID();
 			}
+		}
+
+		if (!g_data->joints.empty())
+		{
+			auto scene = GetGameObject()->GetScene();
+			scene->BeginWrite<false>(m_animMeshRenderingBuffer->buffer);
+			auto& bones = m_animMeshRenderingBuffer->buffer.Write()->bones;
+
+			auto transform = g_data->origin;
+			auto& joints = g_data->joints;
+			auto& jointRotations = g_data->jointRotations;
+			auto& nodesEffectedByJoint = g_data->nodesEffectedByJoint;
+
+			for (size_t i = 0; i < joints.size(); i++)
+			{
+				auto& joint = joints[i];
+
+				auto curTransform =
+					Mat4::Scaling(joint.scale)
+					* Mat4::Rotation(jointRotations[i])
+					* Mat4::Translation(joint.position)
+					* transform;
+
+				m_globalTransforms[joint.nodeId] = curTransform;
+
+				transform = curTransform;
+			}
+
+			for (size_t i = 0; i < nodesEffectedByJoint.size(); i++)
+			{
+				auto& node = nodesEffectedByJoint[i];
+				m_globalTransforms[node.nodeId] = node.localTransform * m_globalTransforms[nodes[node.nodeId].parentId];
+			}
+
+			for (size_t i = 0; i < nodes.size(); i++)
+			{
+				auto& node = nodes[i];
+				auto& globalTransform = m_globalTransforms[i];
+
+				if (node.boneId != INVALID_ID)
+				{
+					bones[node.boneId] = offsetMatrix[node.boneId] * globalTransform;
+				}
+			}
+
+			scene->EndWrite(m_animMeshRenderingBuffer->buffer);
 		}
 
 		if (ImGui::Button("Run IK"))
@@ -1043,9 +1088,8 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 		if (g_data->runningGradientDescent)
 		{
+			auto& jointRotations = g_data->jointRotations;
 			auto& rotations = g_data->rotations;
-			auto& jointLengths = g_data->jointLength;
-			auto& jointRotations = g_data->jointRotation;
 			rotations.resize(jointRotations.size());
 
 			for (size_t i = 0; i < jointRotations.size(); i++)
@@ -1060,20 +1104,20 @@ void AnimatorSkeletalArray::OnDrawDebug()
 				for (size_t i = 0; i < rotations.size(); i++)
 				{
 					auto& rotation = rotations[i];
-					for (size_t j = 0; j < 4; j++)
+					for (size_t j = 0; j < 3; j++)
 					{
 						auto& v = rotation[j];
 
 						v += 0.1f;
 						auto curEffector = Forward(rotations);
 						auto curD = (curEffector - g_data->targetPos).Length();
-						auto gradient = curD - d;
+						auto gradient = (curD - d) / 0.1f;
 
 						v -= 0.1f;
-						v -= gradient * 0.1f;
+						v -= gradient * 0.01f;
 					}
 
-					rotation.Normalize();
+					//rotation.Normalize();
 				}
 
 				for (size_t i = 0; i < rotations.size(); i++)
@@ -1082,89 +1126,10 @@ void AnimatorSkeletalArray::OnDrawDebug()
 				}
 			}
 
-			auto scene = GetGameObject()->GetScene();
-			scene->BeginWrite<false>(m_animMeshRenderingBuffer->buffer);
-			auto& bones = m_animMeshRenderingBuffer->buffer.Write()->bones;
-
-			auto rotation = Mat4::Identity();
-			auto p = g_data->origin;
-			std::vector<Mat4>& oriGlobalTransform = g_data->oriGlobalTransform;
-			for (size_t i = 0; i < g_data->jointRotation.size(); i++)
-			{
-				auto nodeIdx = g_data->jointBoneGlobalTransformIds[i];
-				auto boneIdx = g_data->jointBoneIds[i];
-
-				auto& globalTransform = oriGlobalTransform[nodeIdx];
-
-				if (nodes[nodeIdx].parentId == INVALID_ID)
-				{
-					globalTransform = Mat4::Rotation(g_data->jointRotation[i]) * globalTransform;
-					continue;
-				}
-
-				auto& jointLen = g_data->jointLength[i];
-
-				rotation *= Mat4::Rotation(rotations[i]);
-
-				auto next = p + rotation.Transform(Vec3(jointLen, 0, 0));
-
-				auto& parentGlobalTransform = oriGlobalTransform[nodes[nodeIdx].parentId];
-				auto localTransform = globalTransform * parentGlobalTransform.GetInverse();
-
-				// replace rotation component with joint rotation component
-				Vec3 pos, scale;
-				Quaternion rot;
-				localTransform.Decompose(scale, rot, pos);
-
-				//localTransform = Mat4::Scaling(scale) * (Mat4::Rotation(g_data->tempRot[i]) * Mat4::Rotation(rot)) * Mat4::Translation(pos);
-				localTransform = Mat4::Scaling(scale) * Mat4::Rotation(g_data->jointRotation[i]) * Mat4::Translation(pos);
-
-				if (i == 0)
-				{
-					parentGlobalTransform.Decompose(scale, rot, pos);
-					m_globalTransforms[nodeIdx] = localTransform * (Mat4::Scaling(scale) * Mat4::Translation(pos));
-				}
-				else
-				{
-					m_globalTransforms[nodeIdx] = localTransform * m_globalTransforms[nodes[nodeIdx].parentId];
-				}
-
-				p = next;
-			}
-
-			for (size_t i = 0; i < nodes.size(); i++)
-			{
-				auto& node = nodes[i];
-				auto& globalTransform = m_globalTransforms[i];
-
-				if (node.boneId != INVALID_ID)
-				{
-					bones[node.boneId] = offsetMatrix[node.boneId] * globalTransform;
-				}
-			}
-
-			//static auto* _bones = &bones;
-			//static auto* _globalTransforms = &m_globalTransforms;
-			//static auto* _offsetMatrix = &offsetMatrix;
-			//_bones = &bones;
-			//_globalTransforms = &m_globalTransforms;
-			//_offsetMatrix = &offsetMatrix;
-
-			//Forward(g_data->jointRotation,
-			//	[](size_t i, const Vec3& head, const Vec3& tail, const Quaternion& r)
-			//	{
-			//		auto& bones = *_bones;
-			//		auto globalTransform = (*_offsetMatrix)[g_data->jointBoneIds[i]] * Mat4::Rotation(r) * (*_globalTransforms)[g_data->jointBoneGlobalTransformIds[i]];
-			//		//globalTransform.SetPosition(head);
-			//		bones[g_data->jointBoneIds[i]] =  globalTransform;
-			//	}
-			//);
-
-			scene->EndWrite(m_animMeshRenderingBuffer->buffer);
-
+			ImGui::Text("%f", d);
 		}
 
-		debugGraphics->DrawAABox(AABox(g_data->targetPos, Vec3(0.05f)));
+		debugGraphics->DrawAABox(AABox(g_data->targetPos, Vec3(0.05f)), { 1,1,1,1 }, true);
 
 		ImGui::End();
 	}
