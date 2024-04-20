@@ -301,7 +301,7 @@ Handle<Serializable> AnimatorSkeletalArray::Clone(Serializer* serializer)
 	ret->m_model3D = m_model3D;
 
 	ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
-	ret->m_globalTransforms.resize(m_globalTransforms.size());
+	ret->m_nodesData.resize(m_nodesData.size());
 	ret->m_keyFramesIndex.resize(m_keyFramesIndex.size());
 
 	ret->m_blendAabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
@@ -356,7 +356,7 @@ void AnimatorSkeletalArray::UpdateNoBlend(Scene* scene)
 	{
 		auto& nodes = m_model3D->m_nodes;
 		auto num = nodes.size();
-		auto& channels = m_model3D->m_animations[animationId].channels;
+		auto& channels = m_model3D->m_animations[animationId]->GetChannels();
 
 		auto& boneBuffer = m_animMeshRenderingBuffer->buffer;
 
@@ -368,12 +368,13 @@ void AnimatorSkeletalArray::UpdateNoBlend(Scene* scene)
 
 		{
 			auto& node = nodes[0];
+			auto& nodeData = m_nodesData[0];
 
-			m_globalTransforms[0] = GetGameObject()->ReadGlobalTransformMat();
+			nodeData.globalTransform = GetGameObject()->ReadGlobalTransformMat();
 
-			if (node.boneId != INVALID_ID)
+			if (nodeData.updatedChannelIdIterationCount == m_updatedIterationCount)
 			{
-				auto& channel = channels[node.boneId];
+				auto& channel = channels[nodeData.channelId];
 				auto& index = m_keyFramesIndex[node.boneId];
 
 				Mat4 scaling;
@@ -383,14 +384,14 @@ void AnimatorSkeletalArray::UpdateNoBlend(Scene* scene)
 				Mat4 translation;
 				channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
 
-				m_globalTransforms[0] = scaling * rotation * translation;
+				nodeData.globalTransform = scaling * rotation * translation;
 			}
 
 			assert(node.parentId == INVALID_ID);
 
 			if (node.boneId != INVALID_ID)
 			{
-				bones[node.boneId] = offsets[node.boneId] * m_globalTransforms[0];
+				bones[node.boneId] = offsets[node.boneId] * nodeData.globalTransform;
 			}
 		}
 

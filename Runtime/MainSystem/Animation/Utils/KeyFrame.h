@@ -481,54 +481,54 @@ struct AnimationTrack
 	float startTick;
 };
 
-struct Animation
-{
-	String name;
-	float tickDuration = 0;
-	float ticksPerSecond = 0;
-
-	std::vector<KeyFrames> channels;
-
-	// keyframes of each anim mesh's AABox when animation is applied to,
-	// it will be refered by AnimMesh::m_model3DIdx
-	std::vector<AABoxKeyFrames> animMeshLocalAABoxKeyFrames;
-
-	// time in sec
-	inline void InitializeTrack(AnimationTrack* track, float startTime, float endTime)
-	{
-		auto startTick = startTime < 0 ? 0 : startTime * ticksPerSecond;
-		auto endTick = endTime < 0 ? tickDuration : endTime * ticksPerSecond;
-
-		auto& startIndex = track->startKeyFramesIndex;
-		auto& startAABBIndex = track->startAABBKeyFrameIndex;
-
-		auto num = (uint32_t)channels.size();
-		startIndex.resize(num);
-
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& channel = channels[i];
-			auto& index = startIndex[i];
-
-			channel.BinaryFindScale(startTick, &index.s);
-			channel.BinaryFindRotation(startTick, &index.r);
-			channel.BinaryFindTranslation(startTick, &index.t);
-		}
-
-		num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
-		startAABBIndex.resize(num);
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& channel = animMeshLocalAABoxKeyFrames[i];
-			auto& index = startAABBIndex[i];
-
-			channel.BinaryFind(startTick, &index);
-		}
-
-		track->startTick = startTick;
-		track->tickDuration = endTick - startTick;
-		track->ticksPerSecond = ticksPerSecond;
-	}
-};
+//struct Animation
+//{
+//	String name;
+//	float tickDuration = 0;
+//	float ticksPerSecond = 0;
+//
+//	std::vector<KeyFrames> channels;
+//
+//	// keyframes of each anim mesh's AABox when animation is applied to,
+//	// it will be refered by AnimMesh::m_model3DIdx
+//	std::vector<AABoxKeyFrames> animMeshLocalAABoxKeyFrames;
+//
+//	// time in sec
+//	inline void InitializeTrack(AnimationTrack* track, float startTime, float endTime)
+//	{
+//		auto startTick = startTime < 0 ? 0 : startTime * ticksPerSecond;
+//		auto endTick = endTime < 0 ? tickDuration : endTime * ticksPerSecond;
+//
+//		auto& startIndex = track->startKeyFramesIndex;
+//		auto& startAABBIndex = track->startAABBKeyFrameIndex;
+//
+//		auto num = (uint32_t)channels.size();
+//		startIndex.resize(num);
+//
+//		for (uint32_t i = 0; i < num; i++)
+//		{
+//			auto& channel = channels[i];
+//			auto& index = startIndex[i];
+//
+//			channel.BinaryFindScale(startTick, &index.s);
+//			channel.BinaryFindRotation(startTick, &index.r);
+//			channel.BinaryFindTranslation(startTick, &index.t);
+//		}
+//
+//		num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
+//		startAABBIndex.resize(num);
+//		for (uint32_t i = 0; i < num; i++)
+//		{
+//			auto& channel = animMeshLocalAABoxKeyFrames[i];
+//			auto& index = startAABBIndex[i];
+//
+//			channel.BinaryFind(startTick, &index);
+//		}
+//
+//		track->startTick = startTick;
+//		track->tickDuration = endTick - startTick;
+//		track->ticksPerSecond = ticksPerSecond;
+//	}
+//};
 
 NAMESPACE_END

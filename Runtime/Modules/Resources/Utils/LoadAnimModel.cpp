@@ -22,6 +22,8 @@ namespace ResourceUtils
 {
 extern void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bool ignoreBones);
 
+extern void LoadAnimMotion(String, void*, std::vector<Resource<AnimMotion>>&);
+
 Mat4 ConvertAssimpMat4(const aiMatrix4x4& from)
 {
 	Mat4 to;
@@ -329,144 +331,144 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 	model->m_animMeshes.resize(count);
 }
 
-void LoadAnimModelAnimation(AnimModelLoadingCtx* ctx, Resource<AnimModel>& model, const aiScene* scene)
-{
-	constexpr static auto ExtractScaling = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
-	{
-		auto num = aiNode->mNumScalingKeys;
-		auto aiScalings = aiNode->mScalingKeys;
-
-		keyFrames.scaling.resize(num);
-
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& aiScaling = aiScalings[i];
-			auto& scaling = keyFrames.scaling[i];
-
-			scaling.time = aiScaling.mTime;
-			scaling.value.x = aiScaling.mValue.x;
-			scaling.value.y = aiScaling.mValue.y;
-			scaling.value.z = aiScaling.mValue.z;
-		}
-	};
-
-	constexpr static auto ExtractRotation = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
-	{
-		auto num = aiNode->mNumRotationKeys;
-		auto aiKeys = aiNode->mRotationKeys;
-
-		keyFrames.rotation.resize(num);
-
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& aiKey = aiKeys[i];
-			auto& key = keyFrames.rotation[i];
-
-			key.time = aiKey.mTime;
-			key.value.x = aiKey.mValue.x;
-			key.value.y = aiKey.mValue.y;
-			key.value.z = aiKey.mValue.z;
-			key.value.w = aiKey.mValue.w;
-		}
-	};
-
-	constexpr static auto ExtractTranslation = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
-	{
-		auto num = aiNode->mNumPositionKeys;
-		auto aiKeys = aiNode->mPositionKeys;
-
-		keyFrames.translation.resize(num);
-
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& aiKey = aiKeys[i];
-			auto& key = keyFrames.translation[i];
-
-			key.time = aiKey.mTime;
-			key.value.x = aiKey.mValue.x;
-			key.value.y = aiKey.mValue.y;
-			key.value.z = aiKey.mValue.z;
-		}
-	};
-
-	auto numAnimations = scene->mNumAnimations;
-
-	auto& animations = model->m_animations;
-	animations.resize(numAnimations);
-
-	auto numBones = model->m_boneIds.size();
-
-	auto& boneIds = model->m_boneIds;
-
-	for (uint32_t i = 0; i < numAnimations; i++)
-	{
-		auto& animation = animations[i];
-		animation.channels.resize(numBones);
-		animation.animMeshLocalAABoxKeyFrames.resize(model->m_animMeshes.size());
-	}
-
-	for (uint32_t i = 0; i < numAnimations; i++)
-	{
-		auto aiAnim = scene->mAnimations[i];
-		auto& animation = animations[i];
-
-		animation.name = aiAnim->mName.C_Str();
-		animation.tickDuration = aiAnim->mDuration;
-		animation.ticksPerSecond = aiAnim->mTicksPerSecond;
-
-		auto numChannels = aiAnim->mNumChannels;
-		for (uint32_t j = 0; j < numChannels; j++)
-		{
-			auto aiAnimNode = aiAnim->mChannels[j];
-			String affectedNodeName = aiAnimNode->mNodeName.C_Str();
-
-			//assert(boneIds.find(affectedNodeName) != boneIds.end());
-
-			if (boneIds.find(affectedNodeName) == boneIds.end())
-			{
-				for (auto& a : animations)
-				{
-					assert(a.channels.size() == boneIds.size());
-					a.channels.emplace_back();
-				}
-
-				auto& buf = ctx->animMeshRenderingBuffer->buffer.Buffers();
-				for (auto& b : buf)
-				{
-					b.bones.emplace_back();
-				}
-
-				auto boneId = boneIds.size();
-				boneIds.insert({ affectedNodeName, boneId });
-
-				model->m_boneOffsetMatrixs.emplace_back();
-
-				//assert(ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end());
-
-				if (ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end())
-				{
-					auto obj = ctx->objectMap[affectedNodeName];
-					if (obj->GetComponentRaw<AnimSkeletalGameObject>() == nullptr)
-					{
-						auto comp = obj->NewComponent<AnimSkeletalGameObject>();
-						comp->m_model3D = model;
-						comp->m_boneId = boneId;
-						comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
-						comp->m_animator = ctx->animator;
-					}
-				}
-				
-			}
-
-			auto affectedBoneId = boneIds[affectedNodeName];
-			auto& channel = animation.channels[affectedBoneId];
-			
-			ExtractScaling(aiAnimNode, channel);
-			ExtractRotation(aiAnimNode, channel);
-			ExtractTranslation(aiAnimNode, channel);
-		}
-	}
-}
+//void LoadAnimModelAnimation(AnimModelLoadingCtx* ctx, Resource<AnimModel>& model, const aiScene* scene)
+//{
+//	constexpr static auto ExtractScaling = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
+//	{
+//		auto num = aiNode->mNumScalingKeys;
+//		auto aiScalings = aiNode->mScalingKeys;
+//
+//		keyFrames.scaling.resize(num);
+//
+//		for (uint32_t i = 0; i < num; i++)
+//		{
+//			auto& aiScaling = aiScalings[i];
+//			auto& scaling = keyFrames.scaling[i];
+//
+//			scaling.time = aiScaling.mTime;
+//			scaling.value.x = aiScaling.mValue.x;
+//			scaling.value.y = aiScaling.mValue.y;
+//			scaling.value.z = aiScaling.mValue.z;
+//		}
+//	};
+//
+//	constexpr static auto ExtractRotation = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
+//	{
+//		auto num = aiNode->mNumRotationKeys;
+//		auto aiKeys = aiNode->mRotationKeys;
+//
+//		keyFrames.rotation.resize(num);
+//
+//		for (uint32_t i = 0; i < num; i++)
+//		{
+//			auto& aiKey = aiKeys[i];
+//			auto& key = keyFrames.rotation[i];
+//
+//			key.time = aiKey.mTime;
+//			key.value.x = aiKey.mValue.x;
+//			key.value.y = aiKey.mValue.y;
+//			key.value.z = aiKey.mValue.z;
+//			key.value.w = aiKey.mValue.w;
+//		}
+//	};
+//
+//	constexpr static auto ExtractTranslation = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
+//	{
+//		auto num = aiNode->mNumPositionKeys;
+//		auto aiKeys = aiNode->mPositionKeys;
+//
+//		keyFrames.translation.resize(num);
+//
+//		for (uint32_t i = 0; i < num; i++)
+//		{
+//			auto& aiKey = aiKeys[i];
+//			auto& key = keyFrames.translation[i];
+//
+//			key.time = aiKey.mTime;
+//			key.value.x = aiKey.mValue.x;
+//			key.value.y = aiKey.mValue.y;
+//			key.value.z = aiKey.mValue.z;
+//		}
+//	};
+//
+//	auto numAnimations = scene->mNumAnimations;
+//
+//	auto& animations = model->m_animations;
+//	animations.resize(numAnimations);
+//
+//	auto numBones = model->m_boneIds.size();
+//
+//	auto& boneIds = model->m_boneIds;
+//
+//	for (uint32_t i = 0; i < numAnimations; i++)
+//	{
+//		auto& animation = animations[i];
+//		animation.channels.resize(numBones);
+//		animation.animMeshLocalAABoxKeyFrames.resize(model->m_animMeshes.size());
+//	}
+//
+//	for (uint32_t i = 0; i < numAnimations; i++)
+//	{
+//		auto aiAnim = scene->mAnimations[i];
+//		auto& animation = animations[i];
+//
+//		animation.name = aiAnim->mName.C_Str();
+//		animation.tickDuration = aiAnim->mDuration;
+//		animation.ticksPerSecond = aiAnim->mTicksPerSecond;
+//
+//		auto numChannels = aiAnim->mNumChannels;
+//		for (uint32_t j = 0; j < numChannels; j++)
+//		{
+//			auto aiAnimNode = aiAnim->mChannels[j];
+//			String affectedNodeName = aiAnimNode->mNodeName.C_Str();
+//
+//			//assert(boneIds.find(affectedNodeName) != boneIds.end());
+//
+//			if (boneIds.find(affectedNodeName) == boneIds.end())
+//			{
+//				for (auto& a : animations)
+//				{
+//					assert(a.channels.size() == boneIds.size());
+//					a.channels.emplace_back();
+//				}
+//
+//				auto& buf = ctx->animMeshRenderingBuffer->buffer.Buffers();
+//				for (auto& b : buf)
+//				{
+//					b.bones.emplace_back();
+//				}
+//
+//				auto boneId = boneIds.size();
+//				boneIds.insert({ affectedNodeName, boneId });
+//
+//				model->m_boneOffsetMatrixs.emplace_back();
+//
+//				//assert(ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end());
+//
+//				if (ctx->objectMap.find(affectedNodeName) != ctx->objectMap.end())
+//				{
+//					auto obj = ctx->objectMap[affectedNodeName];
+//					if (obj->GetComponentRaw<AnimSkeletalGameObject>() == nullptr)
+//					{
+//						auto comp = obj->NewComponent<AnimSkeletalGameObject>();
+//						comp->m_model3D = model;
+//						comp->m_boneId = boneId;
+//						comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+//						comp->m_animator = ctx->animator;
+//					}
+//				}
+//				
+//			}
+//
+//			auto affectedBoneId = boneIds[affectedNodeName];
+//			auto& channel = animation.channels[affectedBoneId];
+//			
+//			ExtractScaling(aiAnimNode, channel);
+//			ExtractRotation(aiAnimNode, channel);
+//			ExtractTranslation(aiAnimNode, channel);
+//		}
+//	}
+//}
 
 void LoadAnimMeshVertices(AnimModelLoadingCtx* ctx, AnimModelLoadingCtx::AnimMeshVertices* animMeshVertices, AnimModel* model, aiMesh* mesh)
 {
@@ -542,12 +544,16 @@ void FlattenAnimModelHierarchy(AnimModelLoadingCtx* ctx, Resource<AnimModel>& mo
 		String maybeBoneName = aiNode->mName.C_Str();
 		if (!maybeBoneName.empty())
 		{
+			String name = maybeBoneName;
 			auto it = model->m_boneIds.find(maybeBoneName);
 			if (it != model->m_boneIds.end())
 			{
 				// this node is a bone
 				node.boneId = it->second;
+				name = it->first;
 			}
+
+			model->m_nodeIds[name] = ctx->nodes.size();
 		}
 
 		ctx->nodes.push_back(node);
@@ -1229,14 +1235,22 @@ Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath)
 
 	if (model3D->m_animations.size() == 0)
 	{
-		LoadAnimModelAnimation(&ctx, model3D, scene);
+		//LoadAnimModelAnimation(&ctx, model3D, scene);
 
-		CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+		//CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+
+		std::vector<Resource<AnimMotion>> motions;
+		LoadAnimMotion(path, (void*)scene, motions);
+
+		for (auto& motion : motions)
+		{
+			model3D->AddAnimation(motion);
+		}
 	}
 
 	ctx.animator->m_animationId = 0;
-	ctx.animator->m_ticksPerSecond = model3D->m_animations[0].ticksPerSecond;
-	ctx.animator->m_tickDuration = model3D->m_animations[0].tickDuration;
+	ctx.animator->m_ticksPerSecond = model3D->m_animations[0]->GetTicksPerSecond();
+	ctx.animator->m_tickDuration = model3D->m_animations[0]->GetTickDuration();
 	ctx.animator->m_aabbKeyFrameIndex.resize(model3D->m_animMeshes.size());
 
 	Runtime::Get()->GameObjectCache()->Store("AnimatorSkeletalGameObject|" + model3D->GetPath(), ret);
@@ -1447,13 +1461,6 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 
 	LoadAnimModelHierarchyArray(&ctx, ret, model3D, diffuseTextures, scene);
 
-	if (model3D->m_animations.size() == 0)
-	{
-		LoadAnimModelAnimation(&ctx, model3D, scene);
-
-		CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
-	}
-
 	ctx.animatorArray->m_keyFramesIndex.resize(model3D->m_boneIds.size());
 	ctx.animatorArray->m_blendKeyFramesIndex.resize(model3D->m_boneIds.size());
 
@@ -1470,6 +1477,21 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 			destNode.boneId = srcNode.boneId;
 			destNode.parentId = srcNode.parentId;
 			destNode.localTransform = srcNode.localTransform;
+		}
+	}
+
+	if (model3D->m_animations.size() == 0)
+	{
+		//LoadAnimModelAnimation(&ctx, model3D, scene);
+
+		//CreateAABoxKeyFramesForAnimModel(path, ctx, model3D, scene);
+
+		std::vector<Resource<AnimMotion>> motions;
+		LoadAnimMotion(path, (void*)scene, motions);
+
+		for (auto& motion : motions)
+		{
+			model3D->AddAnimation(motion);
 		}
 	}
 

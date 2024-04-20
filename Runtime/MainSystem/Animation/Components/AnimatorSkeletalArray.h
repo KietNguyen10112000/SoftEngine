@@ -16,6 +16,13 @@ public:
 		Transform localTransform;
 	};*/
 
+	struct NodeData
+	{
+		Mat4 globalTransform;
+		ID channelId;
+		size_t updatedChannelIdIterationCount = 0;
+	};
+
 	ID m_animationSystemId = 0;
 
 	SharedPtr<AnimModel::AnimMeshRenderingBuffer> m_animMeshRenderingBuffer;
@@ -23,7 +30,7 @@ public:
 	// include both animMesh and static mesh
 	Array<Handle<GameObject>> m_meshRendererObjs;
 
-	std::vector<Mat4> m_globalTransforms;
+	std::vector<NodeData> m_nodesData;
 
 	std::vector<KeyFramesIndex> m_keyFramesIndex;
 
@@ -54,6 +61,8 @@ public:
 
 	bool m_paused = false;
 	bool m_padd[7];
+
+	size_t m_updatedIterationCount = 0;
 
 protected:
 	TRACEABLE_FRIEND();

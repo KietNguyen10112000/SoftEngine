@@ -5,7 +5,7 @@
 #include "Graphics/Graphics.h"
 #include "FileSystem/FileSystem.h"
 
-#include "MainSystem/Animation/Utils/KeyFrame.h"
+#include "MainSystem/Animation/Utils/Animation.h"
 #include "Scene/DeferredBuffer.h"
 
 #include "Model3DBasic.h"
@@ -193,8 +193,11 @@ public:
 	// id - name
 	std::vector<String> m_boneNames;
 
+	// nodeName - node idx in m_nodes
+	std::map<String, ID> m_nodeIds;
+
 	// list of model animation
-	std::vector<Animation> m_animations;
+	std::vector<UniquePtr<Animation>> m_animations;
 
 	// inversed of node's global transform
 	std::vector<Mat4> m_boneOffsetMatrixs;
@@ -204,13 +207,17 @@ public:
 	// refer node for static mesh, INVALID_ID if animMesh
 	std::vector<ID> m_boundNodeIds;
 
+	friend class AnimMotion;
+
 	AnimModel(String path, bool placeholder = false);
 
 	inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
 	{
-		m_animations[animationId].InitializeTrack(track, startTime, endTime);
+		m_animations[animationId]->InitializeTrack(track, startTime, endTime);
 		track->animationId = animationId;
 	}
+
+	ID AddAnimation(const Resource<AnimMotion>& motion);
 
 };
 
