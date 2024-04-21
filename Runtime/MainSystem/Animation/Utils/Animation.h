@@ -12,7 +12,7 @@ private:
 	friend class AnimModel;
 
 	Resource<AnimMotion> m_motion;
-	std::vector<ID> m_channelToNodeId;
+	std::vector<ID> m_nodeToChannelId;
 	std::vector<AABoxKeyFrames> m_animMeshLocalAABoxKeyFrames;
 
 	inline Animation() {};
@@ -33,9 +33,14 @@ public:
 		return m_motion->m_channels;
 	}
 
-	inline AABoxKeyFrames& GetAABBKeyFrames(size_t boneId)
+	inline auto& GetMeshLocalAABBKeyFrames()
 	{
-		return m_animMeshLocalAABoxKeyFrames[boneId];
+		return m_animMeshLocalAABoxKeyFrames;
+	}
+
+	inline auto& GetNodeToChannelId()
+	{
+		return m_nodeToChannelId;
 	}
 
 	inline float GetTicksPerSecond() const
@@ -46,48 +51,6 @@ public:
 	inline float GetTickDuration() const
 	{
 		return m_motion->m_tickDuration;
-	}
-
-	inline void InitializeTrack(AnimationTrack* track, float startTime, float endTime)
-	{
-		auto startTick = startTime < 0 ? 0 : startTime * GetTicksPerSecond();
-		auto endTick = endTime < 0 ? GetTickDuration() : endTime * GetTicksPerSecond();
-
-		auto& startIndex = track->startKeyFramesIndex;
-		auto& startAABBIndex = track->startAABBKeyFrameIndex;
-
-		auto num = (uint32_t)m_boneToChannelId.size();
-		startIndex.resize(num);
-
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto pChannel = GetKeyFrames(i);
-			if (!pChannel)
-			{
-				continue;
-			}
-
-			auto& channel = *pChannel;
-			auto& index = startIndex[i];
-
-			channel.BinaryFindScale(startTick, &index.s);
-			channel.BinaryFindRotation(startTick, &index.r);
-			channel.BinaryFindTranslation(startTick, &index.t);
-		}
-
-		num = (uint32_t)m_animMeshLocalAABoxKeyFrames.size();
-		startAABBIndex.resize(num);
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& channel = m_animMeshLocalAABoxKeyFrames[i];
-			auto& index = startAABBIndex[i];
-
-			channel.BinaryFind(startTick, &index);
-		}
-
-		track->startTick = startTick;
-		track->tickDuration = endTick - startTick;
-		track->ticksPerSecond = GetTicksPerSecond();
 	}
 
 };

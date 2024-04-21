@@ -60,6 +60,8 @@ file(
     "MainSystem/Animation/*.cpp"
     "MainSystem/Animation/Components/*.h"
     "MainSystem/Animation/Components/*.cpp"
+    "MainSystem/Animation/AnimLayer/*.h"
+    "MainSystem/Animation/AnimLayer/*.cpp"
 
     "MainSystem/Rendering/*.h"
     "MainSystem/Rendering/*.cpp"

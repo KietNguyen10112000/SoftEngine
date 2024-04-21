@@ -3,6 +3,8 @@
 #include "Scene/GameObject.h"
 
 #include "MainSystem/Animation/AnimationSystem.h"
+#include "MainSystem/Animation/AnimLayer/AnimLayer.h"
+
 #include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
 #include "MainSystem/MainSystemTaskPacking.h"
 
@@ -14,12 +16,22 @@ NAMESPACE_BEGIN
 
 AnimatorSkeletalArray::AnimatorSkeletalArray() : Animator(ANIMATION_TYPE_SKELETAL_ARRAY)
 {
-	m_currentAnimTrack = (decltype(m_currentAnimTrack))m_currentAnimTrackBuffer.Read();
-	m_blendingAnimTrack = nullptr;
+
+}
+
+void AnimatorSkeletalArray::InitAnimLayer(AnimLayer* animLayer)
+{
+	animLayer->m_model = m_model3D;
+	animLayer->m_globalTransforms.resize(m_model3D->m_nodes.size());
+	animLayer->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
 }
 
 void AnimatorSkeletalArray::OnComponentAdded()
 {
+	for (auto& v : m_animLayers)
+	{
+		v->m_owner = GetGameObject();
+	}
 }
 
 void AnimatorSkeletalArray::OnComponentRemoved()
