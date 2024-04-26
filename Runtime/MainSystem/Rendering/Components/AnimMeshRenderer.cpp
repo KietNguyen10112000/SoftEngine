@@ -27,7 +27,7 @@ void AnimMeshRenderer::OnPropertyChanged(const UnknownAddress& var, const Varian
 {
 }
 
-Handle<Serializable> AnimMeshRenderer::Clone(Serializer* serializer)
+void AnimMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	struct CloneParam
 	{
@@ -35,7 +35,7 @@ Handle<Serializable> AnimMeshRenderer::Clone(Serializer* serializer)
 		AnimMeshRenderer* dest;
 	};
 
-	auto ret = mheap::New<AnimMeshRenderer>();
+	auto ret = this;
 
 	ret->m_model3D = m_model3D;
 	ret->m_mesh = m_mesh;
@@ -56,12 +56,10 @@ Handle<Serializable> AnimMeshRenderer::Clone(Serializer* serializer)
 	);
 
 	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = this;
-	param->dest = ret.Get();
+	param->src = (AnimMeshRenderer*)another;
+	param->dest = ret;
 
 	callbackRunner->RunAsync(&task);
-
-	return ret;
 }
 
 void AnimMeshRenderer::OnComponentAdded()

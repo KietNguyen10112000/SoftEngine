@@ -15,6 +15,11 @@ NAMESPACE_BEGIN
 private: friend class SerializableDB;										\
 private: friend class ClassMetadata;										\
 inline static const char* ___GetClassName() {return # className;};			\
+protected: inline virtual Handle<Serializable> _MakeInstance() override		\
+{																			\
+	static_assert(std::is_base_of_v<Serializable, className>);				\
+	return  mheap::New<className>();										\
+};																			\
 public: inline virtual const char* GetClassName() override					\
 {																			\
 	static_assert(std::is_base_of_v<Serializable, className>);				\
@@ -35,6 +40,10 @@ public:
 
 	Serializable() : m_UUID(UUIDCounter::GetUUID()) {};
 	virtual ~Serializable() {};
+
+protected:
+	virtual Handle<Serializable> _MakeInstance() = 0;
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
 
 public:
 	/// 
@@ -95,7 +104,14 @@ public:
 
 	virtual const char* GetClassName() = 0;
 
-	inline virtual Handle<Serializable> Clone(Serializer* serializer) { return nullptr; };
+	//inline virtual Handle<Serializable> Clone(Serializer* serializer) { return nullptr; };
+
+	inline Handle<Serializable> Clone(Serializer* serializer)
+	{
+		auto ret = _MakeInstance();
+		ret->CloneFrom(serializer, this);
+		return ret;
+	};
 
 	inline const ID GetUUID() const
 	{

@@ -50,7 +50,7 @@ void AnimSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, const 
 {
 }
 
-Handle<Serializable> AnimSkeletalGameObject::Clone(Serializer* serializer)
+void AnimSkeletalGameObject::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	struct CloneParam
 	{
@@ -58,7 +58,7 @@ Handle<Serializable> AnimSkeletalGameObject::Clone(Serializer* serializer)
 		AnimSkeletalGameObject* dest;
 	};
 
-	auto ret = mheap::New<AnimSkeletalGameObject>();
+	auto ret = this;
 
 	ret->m_model3D = m_model3D;
 	
@@ -80,8 +80,8 @@ Handle<Serializable> AnimSkeletalGameObject::Clone(Serializer* serializer)
 	);
 
 	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = this;
-	param->dest = ret.Get();
+	param->src = (AnimSkeletalGameObject*)another;
+	param->dest = ret;
 
 	callbackRunner->RunAsync(&task);
 	
@@ -106,8 +106,6 @@ Handle<Serializable> AnimSkeletalGameObject::Clone(Serializer* serializer)
 	}
 	
 	ret->m_boneId = m_boneId;
-
-	return ret;
 }
 
 void AnimSkeletalGameObject::Update(float dt)

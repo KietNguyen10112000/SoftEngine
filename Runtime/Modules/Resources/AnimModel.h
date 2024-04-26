@@ -186,6 +186,12 @@ public:
 		}
 	};
 
+	struct AnimMeshVertices
+	{
+		std::vector<AnimModel::AnimVertex::PositionVertex16> vertices;
+		std::vector<uint32_t> indices;
+	};
+
 	std::vector<AnimMesh> m_animMeshes;
 
 	// name - id
@@ -211,13 +217,22 @@ public:
 
 	AnimModel(String path, bool placeholder = false);
 
-	inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
+	/*inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
 	{
 		m_animations[animationId]->InitializeTrack(track, startTime, endTime);
 		track->animationId = animationId;
-	}
+	}*/
 
-	ID AddAnimation(const Resource<AnimMotion>& motion);
+	ID AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
+
+	// LoadAnimation(PlaceHolderAnimation(motion)) same as AddAnimation(motion)
+	ID PlaceHolderAnimation(const Resource<AnimMotion>& motion);
+	void LoadAnimation(ID animationId, const AnimMotion* motion, AnimMeshVertices* vertices = nullptr);
+
+private:
+	void CreateCache(Animation* animation, ByteStream& stream, const String& streamPath);
+	void ReadCache(Animation* animation, ByteStream& stream);
+	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
 
 };
 

@@ -16,7 +16,7 @@ void AnimMotion::LoadFromFile(const String& path)
 {
 }
 
-String AnimMotion::GetModelFilePath()
+String AnimMotion::GetModelFilePath() const
 {
 	auto ret = GetPath();
 

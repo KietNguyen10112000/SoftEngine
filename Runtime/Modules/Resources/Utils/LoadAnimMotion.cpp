@@ -95,7 +95,7 @@ void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMo
 			auto aiAnimNode = aiAnim->mChannels[j];
 			String affectedNodeName = aiAnimNode->mNodeName.C_Str();
 
-			animMotion->m_nodeNameEffectedByChannel[affectedNodeName] = j;
+			animMotion->m_nodeNameEffectedByChannel.push_back(affectedNodeName);
 
 			auto& channel = animMotion->m_channels[j];
 			

@@ -20,15 +20,13 @@ void AnimModelStaticMeshRenderer::OnTransformChanged()
 	m_globalTransform = *m_myGlobalTransform.Read();
 }
 
-Handle<Serializable> AnimModelStaticMeshRenderer::Clone(Serializer* serializer)
+void AnimModelStaticMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 {
-	auto ret = mheap::New<AnimModelStaticMeshRenderer>(false);
+	auto ret = this;
 
 	ret->m_model3D = m_model3D;
 	ret->m_mesh = m_mesh;
 	ret->m_texture = m_texture;
-
-	return ret;
 }
 
 NAMESPACE_END

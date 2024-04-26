@@ -28,7 +28,7 @@ private:
 
 	std::vector<KeyFrames> m_channels;
 
-	std::map<String, ID> m_nodeNameEffectedByChannel;
+	std::vector<String> m_nodeNameEffectedByChannel;
 
 public:
 	// *.AnimMotion
@@ -39,7 +39,7 @@ private:
 
 public:
 	// the path where motion loaded from (eg: FBX, CDE, ...)
-	String GetModelFilePath();
+	String GetModelFilePath() const;
 
 };
 

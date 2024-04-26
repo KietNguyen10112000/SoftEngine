@@ -36,6 +36,9 @@ public:
 private:
 	void InitAnimLayer(AnimLayer*);
 
+protected:
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
+
 public:
 
 	// Inherited via Animator
@@ -68,8 +71,6 @@ public:
 	virtual void Serialize(Serializer* serializer);
 
 	virtual void Deserialize(Serializer* serializer);
-
-	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 
 	virtual void CleanUp();
 

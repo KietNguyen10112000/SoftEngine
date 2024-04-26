@@ -217,7 +217,7 @@ void AnimatorSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, co
 	}
 }
 
-Handle<Serializable> AnimatorSkeletalGameObject::Clone(Serializer* serializer)
+void AnimatorSkeletalGameObject::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	struct CloneParam
 	{
@@ -225,12 +225,12 @@ Handle<Serializable> AnimatorSkeletalGameObject::Clone(Serializer* serializer)
 		AnimatorSkeletalGameObject* dest;
 	};
 
-	auto ret = mheap::New<AnimatorSkeletalGameObject>();
+	auto ret = this;
 
 	auto& addresses = serializer->GetAddressMap();
 
 	{
-		addresses.insert({ this, ret.Get() });
+		addresses.insert({ another, ret });
 	}
 
 	auto callbackRunner = serializer->GetCallbackRunner();
@@ -257,8 +257,8 @@ Handle<Serializable> AnimatorSkeletalGameObject::Clone(Serializer* serializer)
 	);
 
 	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = this;
-	param->dest = ret.Get();
+	param->src = (AnimatorSkeletalGameObject*)another;
+	param->dest = ret;
 
 	callbackRunner->RunAsync(&task);
 
@@ -268,8 +268,6 @@ Handle<Serializable> AnimatorSkeletalGameObject::Clone(Serializer* serializer)
 	ret->m_ticksPerSecond = m_ticksPerSecond;
 
 	ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
-
-	return ret;
 }
 
 NAMESPACE_END

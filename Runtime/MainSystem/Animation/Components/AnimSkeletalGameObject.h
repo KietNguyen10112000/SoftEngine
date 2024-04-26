@@ -39,7 +39,10 @@ public:
 	COMPONENT_CLASS(AnimSkeletalGameObject);
 
 	AnimSkeletalGameObject();
+protected:
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
 
+public:
 	// Inherited via AnimationComponent
 	virtual void OnComponentAdded() override;
 	virtual void OnComponentRemoved() override;
@@ -51,14 +54,12 @@ public:
 	virtual Handle<ClassMetadata> GetMetadata(size_t sign);
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue);
 
-	virtual Handle<Serializable> Clone(Serializer* serializer) override;
-
 public:
 	void Update(float dt);
 
 	inline const auto& GetKeyFrames() const
 	{
-		auto& keyFrames = m_model3D->m_animations[m_animator->GetCurrentAnimationId()].channels[m_boneId];
+		auto& keyFrames = m_model3D->m_animations[m_animator->GetCurrentAnimationId()]->GetChannels()[m_boneId];
 		return keyFrames;
 	}
 

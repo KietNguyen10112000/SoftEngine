@@ -57,6 +57,9 @@ private:
 		m_ticksPerSecond = animation.ticksPerSecond;
 	}
 
+protected:
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
+
 public:
 
 	inline virtual ID GetCurrentAnimationId() const override
@@ -108,7 +111,7 @@ public:
 
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue);
 
-	virtual Handle<Serializable> Clone(Serializer* serializer) override;
+	
 
 };
 

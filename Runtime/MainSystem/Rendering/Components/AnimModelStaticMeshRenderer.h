@@ -21,7 +21,8 @@ public:
 
 	virtual void OnTransformChanged() override;
 
-	virtual Handle<Serializable> Clone(Serializer* serializer) override;
+protected:
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
 
 };
 

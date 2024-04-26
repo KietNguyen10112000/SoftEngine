@@ -23,6 +23,10 @@ public:
 
 	inline virtual ~MeshBasicRenderer() {};
 
+protected:
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
+
+public:
 	// Inherited via RenderingComponent
 	virtual void Serialize(Serializer* serializer) override;
 
@@ -33,8 +37,6 @@ public:
 	virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
-
-	virtual Handle<Serializable> Clone(Serializer* serializer) override;
 
 	virtual void OnComponentAdded() override;
 
