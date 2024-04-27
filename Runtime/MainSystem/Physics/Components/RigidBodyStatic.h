@@ -14,11 +14,14 @@ class RigidBodyStatic : public RigidBody
 public:
 	COMPONENT_CLASS(RigidBodyStatic);
 
+	
 	RigidBodyStatic(const SharedPtr<PhysicsShape>& shape);
 	~RigidBodyStatic();
 
 protected:
+	inline RigidBodyStatic() {};
 	virtual void OnPhysicsTransformChanged() override;
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
 
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 

@@ -35,11 +35,12 @@ void AnimMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 		AnimMeshRenderer* dest;
 	};
 
+	auto src = (AnimMeshRenderer*)another;
 	auto ret = this;
 
-	ret->m_model3D = m_model3D;
-	ret->m_mesh = m_mesh;
-	ret->m_texture = m_texture;
+	ret->m_model3D = src->m_model3D;
+	ret->m_mesh = src->m_mesh;
+	ret->m_texture = src->m_texture;
 
 	auto callbackRunner = serializer->GetCallbackRunner();
 	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)

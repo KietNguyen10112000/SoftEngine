@@ -1,6 +1,9 @@
 #pragma once
 
-#define MAIN_SYSTEM_TASK_BASE(MainSystemClassName, RunnerName, VTypes, ParamVTypesDecl, VTypesAssignment,TASK_SYSTEM_UNPACK_PARAM_REF_NUM, funcBody)	\
+// =====================================================================================================
+// for use of class isn't a kind of MainComponent
+
+#define MAIN_SYSTEM_TASK_EXT_BASE(mainComponent, MainSystemClassName, RunnerName, VTypes, ParamVTypesDecl, VTypesAssignment,TASK_SYSTEM_UNPACK_PARAM_REF_NUM, funcBody)	\
 {																						\
 	auto system = GetGameObject()->GetScene()->Get##MainSystemClassName();				\
 	auto taskRunner = system->RunnerName();												\
@@ -21,35 +24,11 @@
 	auto param = taskRunner->CreateParam<Param>(&task);									\
 	param->self = this;																	\
 	VTypesAssignment																	\
-	taskRunner->RunAsync(this, &task);													\
+	taskRunner->RunAsync(mainComponent, &task);											\
 }
 
-//#define MAIN_SYSTEM_TASK_1(MainSystemClassName, RunnerName, v0, funcBody)				\
-//{																						\
-//	auto system = GetGameObject()->GetScene()->Get##MainSystemClassName();				\
-//	auto taskRunner = system->RunnerName();												\
-//	using SelfType = std::remove_reference<decltype(*this)>::type;						\
-//	using V0Type = std::decay<decltype(v0)>::type;										\
-//	struct Param																		\
-//	{																					\
-//		SelfType* self;																	\
-//		V0Type v0;																		\
-//	};																					\
-//	auto task = taskRunner->CreateTask(													\
-//		[](MainSystemClassName* system, void* p)										\
-//		{																				\
-//			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, self, v0);							\
-//			funcBody																	\
-//		}																				\
-//	);																					\
-//	auto param = taskRunner->CreateParam<Param>(&task);									\
-//	param->self = this;																	\
-//	param->v0 = v0;																		\
-//	taskRunner->RunAsync(this, &task);													\
-//}
-
-#define MAIN_SYSTEM_TASK_0(MainSystemClassName, RunnerName, funcBody)				\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_0(mainComponent, MainSystemClassName, RunnerName, funcBody)				\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
  ,																					\
@@ -59,8 +38,8 @@ TASK_SYSTEM_UNPACK_PARAM_REF_1(Param, p, self);,									\
 funcBody																			\
 )
 
-#define MAIN_SYSTEM_TASK_1(MainSystemClassName, RunnerName, v0, funcBody)			\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_1(mainComponent, MainSystemClassName, RunnerName, v0, funcBody)			\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
 using V0Type = std::decay<decltype(v0)>::type;,										\
@@ -70,8 +49,8 @@ TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, self, v0);,								\
 funcBody																			\
 )
 
-#define MAIN_SYSTEM_TASK_2(MainSystemClassName, RunnerName, v0, v1, funcBody)		\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_2(mainComponent, MainSystemClassName, RunnerName, v0, v1, funcBody)		\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
 using V0Type = std::decay<decltype(v0)>::type;										\
@@ -82,8 +61,8 @@ TASK_SYSTEM_UNPACK_PARAM_REF_3(Param, p, self, v0, v1);,							\
 funcBody																			\
 )
 
-#define MAIN_SYSTEM_TASK_3(MainSystemClassName, RunnerName, v0, v1, v2, funcBody)	\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_3(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)	\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
 using V0Type = std::decay<decltype(v0)>::type;										\
@@ -95,8 +74,8 @@ TASK_SYSTEM_UNPACK_PARAM_REF_4(Param, p, self, v0, v1, v2);,						\
 funcBody																			\
 )
 
-#define MAIN_SYSTEM_TASK_4(MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)	\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_4(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)	\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
 using V0Type = std::decay<decltype(v0)>::type;										\
@@ -109,8 +88,8 @@ TASK_SYSTEM_UNPACK_PARAM_REF_5(Param, p, self, v0, v1, v2, v3);,					\
 funcBody																			\
 )
 
-#define MAIN_SYSTEM_TASK_5(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)	\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_5(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)	\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
 using V0Type = std::decay<decltype(v0)>::type;										\
@@ -124,8 +103,8 @@ TASK_SYSTEM_UNPACK_PARAM_REF_6(Param, p, self, v0, v1, v2, v3, v4);,				\
 funcBody																			\
 )
 
-#define MAIN_SYSTEM_TASK_6(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)	\
-MAIN_SYSTEM_TASK_BASE(																\
+#define MAIN_SYSTEM_TASK_EXT_6(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)	\
+MAIN_SYSTEM_TASK_EXT_BASE(mainComponent,											\
 MainSystemClassName,																\
 RunnerName,																			\
 using V0Type = std::decay<decltype(v0)>::type;										\
@@ -139,3 +118,31 @@ param->v0 = v0; param->v1 = v1; param->v2 = v2; param->v3 = v3; param->v4 = v4; 
 TASK_SYSTEM_UNPACK_PARAM_REF_7(Param, p, self, v0, v1, v2, v3, v4, v5);,			\
 funcBody																			\
 )
+
+
+// =====================================================================================================
+// =====================================================================================================
+// =====================================================================================================
+// =====================================================================================================
+// for use of class is a kind of MainComponent
+
+#define MAIN_SYSTEM_TASK_0(MainSystemClassName, RunnerName, funcBody)									\
+MAIN_SYSTEM_TASK_EXT_0(this, MainSystemClassName, RunnerName, funcBody)
+
+#define MAIN_SYSTEM_TASK_1(MainSystemClassName, RunnerName, v0, funcBody)								\
+MAIN_SYSTEM_TASK_EXT_1(this, MainSystemClassName, RunnerName, v0, funcBody)
+
+#define MAIN_SYSTEM_TASK_2(MainSystemClassName, RunnerName, v0, v1, funcBody)							\
+MAIN_SYSTEM_TASK_EXT_2(this, MainSystemClassName, RunnerName, v0, v1, funcBody)
+
+#define MAIN_SYSTEM_TASK_3(MainSystemClassName, RunnerName, v0, v1, v2, funcBody)						\
+MAIN_SYSTEM_TASK_EXT_3(this, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)
+
+#define MAIN_SYSTEM_TASK_4(MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)					\
+MAIN_SYSTEM_TASK_EXT_4(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)
+
+#define MAIN_SYSTEM_TASK_5(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)				\
+MAIN_SYSTEM_TASK_EXT_5(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)
+
+#define MAIN_SYSTEM_TASK_6(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)			\
+MAIN_SYSTEM_TASK_EXT_6(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)

@@ -32,6 +32,7 @@ public:
 	COMPONENT_CLASS(AnimatorSkeletalArray);
 
 	AnimatorSkeletalArray();
+	~AnimatorSkeletalArray();
 
 private:
 	void InitAnimLayer(AnimLayer*);

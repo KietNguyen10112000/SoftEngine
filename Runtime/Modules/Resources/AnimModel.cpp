@@ -296,7 +296,7 @@ ID AnimModel::PlaceHolderAnimation(const Resource<AnimMotion>& motion)
 
 	animation->m_animMeshLocalAABoxKeyFrames.resize(m_animMeshes.size());
 
-	m_animations.push_back(animation);
+	m_animations.push_back(std::move(animation));
 	return animationId;
 }
 

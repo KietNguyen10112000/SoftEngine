@@ -385,13 +385,14 @@ void GameObject::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	//assert(!IsInAnyScene());
 
+	auto src = (GameObject*)another;
+
 	auto& addresses = serializer->GetAddressMap();
 
 	Handle<GameObject> ret = this;
 
-	addresses.insert({ ret, (GameObject*)another });
+	addresses.insert({ src, ret });
 
-	auto src = (GameObject*)another;
 	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 	{
 		auto& comp = src->m_mainComponents[i];

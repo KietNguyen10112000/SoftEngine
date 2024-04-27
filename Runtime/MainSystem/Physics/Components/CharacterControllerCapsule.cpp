@@ -103,6 +103,10 @@ void CharacterControllerCapsule::Deserialize(Serializer* serializer)
 {
 }
 
+void CharacterControllerCapsule::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
 void CharacterControllerCapsule::CleanUp()
 {
 }

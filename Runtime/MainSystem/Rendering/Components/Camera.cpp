@@ -155,4 +155,8 @@ void Camera::SetProjection(const Mat4& projMat)
 	taskRunner->RunAsync(&task);
 }
 
+void Camera::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
 NAMESPACE_END

@@ -53,8 +53,8 @@ private:
 		m_numAnimIterationCount++;
 
 		auto& animation = m_model3D->m_animations[m_animationId];
-		m_tickDuration = animation.tickDuration;
-		m_ticksPerSecond = animation.ticksPerSecond;
+		m_tickDuration = animation->GetTickDuration();
+		m_ticksPerSecond = animation->GetTicksPerSecond();
 	}
 
 protected:

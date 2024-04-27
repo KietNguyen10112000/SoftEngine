@@ -82,6 +82,8 @@ protected:
 
 	virtual AABox GetGlobalAABB() override;
 
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+
 public:
 	void SetProjection(const Mat4& projMat);
 

@@ -192,4 +192,8 @@ void RigidBodyDynamic::AddForceAtLocalPos(const Vec3& f, const Vec3& pos)
 	);
 }
 
+void RigidBodyDynamic::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
 NAMESPACE_END

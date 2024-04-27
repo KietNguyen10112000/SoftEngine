@@ -534,7 +534,7 @@ public:
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 protected:
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
 
 public:
 	inline const Transform& ReadLocalTransform() const

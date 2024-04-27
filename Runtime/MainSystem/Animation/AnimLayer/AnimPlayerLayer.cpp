@@ -1,5 +1,6 @@
 #include "AnimPlayerLayer.h"
 
+#include "MainSystem/Animation/Components/AnimationComponent.h"
 #include "MainSystem/Animation/AnimationSystem.h"
 #include "MainSystem/MainSystemTaskPacking.h"
 
@@ -140,17 +141,56 @@ void AnimPlayerLayer::SetAnimationImpl(ID animationId, float startTime, float en
 
 void AnimPlayerLayer::SetAnimation(ID animationId, float startTime, float endTime)
 {
-	if (!GetGameObject())
+	if (!GetGameObject() || !GetGameObject()->IsInAnyScene())
 	{
 		this->SetAnimationImpl(animationId, startTime, endTime);
+		return;
 	}
 
-	MAIN_SYSTEM_TASK_3(
+	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, animationId, startTime, endTime,
 		{
 			self->SetAnimationImpl(animationId, startTime, endTime);
 		}
 	);
+}
+
+void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
+{
+	AnimLayer::CloneFrom(serializer, another);
+
+	auto src = (AnimPlayerLayer*)another;
+	m_animation				= src->m_animation;
+	m_keyFramesIndex		= src->m_keyFramesIndex;
+	m_aabbKeyFrameIndex		= src->m_aabbKeyFrameIndex;
+	m_keyFramesIndex		= src->m_startKeyFrameIndex;
+	m_aabbKeyFrameIndex		= src->m_startAABBKeyFrameIndex;
+	m_tickDuration			= src->m_tickDuration;
+	m_ticksPerSecond		= src->m_ticksPerSecond;
+	m_startTick				= src->m_startTick;
+	m_t						= src->m_t;
+
+}
+
+void AnimPlayerLayer::Serialize(Serializer* serializer)
+{
+}
+
+void AnimPlayerLayer::Deserialize(Serializer* serializer)
+{
+}
+
+void AnimPlayerLayer::CleanUp()
+{
+}
+
+Handle<ClassMetadata> AnimPlayerLayer::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void AnimPlayerLayer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
 }
 
 NAMESPACE_END

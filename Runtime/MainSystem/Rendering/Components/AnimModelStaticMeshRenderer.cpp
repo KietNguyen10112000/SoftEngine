@@ -22,11 +22,13 @@ void AnimModelStaticMeshRenderer::OnTransformChanged()
 
 void AnimModelStaticMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 {
+	auto src = (AnimModelStaticMeshRenderer*)another;
+
 	auto ret = this;
 
-	ret->m_model3D = m_model3D;
-	ret->m_mesh = m_mesh;
-	ret->m_texture = m_texture;
+	ret->m_model3D = src->m_model3D;
+	ret->m_mesh = src->m_mesh;
+	ret->m_texture = src->m_texture;
 }
 
 NAMESPACE_END

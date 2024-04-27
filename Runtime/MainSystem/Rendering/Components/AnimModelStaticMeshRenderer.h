@@ -22,7 +22,7 @@ public:
 	virtual void OnTransformChanged() override;
 
 protected:
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
 
 };
 

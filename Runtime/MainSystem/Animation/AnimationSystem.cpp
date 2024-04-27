@@ -90,7 +90,7 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	for (uint32_t i = 0; i < num; i++)
 	{
 		auto& index = aabbIndex[i];
-		write->meshesAABB[i] = animation.animMeshLocalAABoxKeyFrames[i].Find(&index, index, animator->m_t);
+		write->meshesAABB[i] = animation->m_animMeshLocalAABoxKeyFrames[i].Find(&index, index, animator->m_t);
 		if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
 		{
 			update = true;

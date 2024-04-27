@@ -8,6 +8,8 @@
 #include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
 #include "MainSystem/Animation/Components/AnimatorSkeletalGameObject.h"
 #include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
+#include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimBlendingLayer.h"
 
 #include "Runtime/Runtime.h"
 #include "Scene/GameObjectCache.h"
@@ -1517,6 +1519,10 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 			i++;
 		}
 	}
+
+	auto l1 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
+	//auto l2 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
+	l1->SetAnimation(0, -1, -1);
 
 	ctx.animatorArray->Play(-1, 0, 0, -1, -1, 0);
 

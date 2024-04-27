@@ -35,7 +35,7 @@ ID AnimatorSkeletalGameObject::FindAnimation(const String& name)
 	size_t count = 0;
 	for (auto& anim : anims)
 	{
-		if (anim.name == name)
+		if (anim->Name() == name)
 		{
 			return count;
 		}
@@ -51,7 +51,7 @@ void AnimatorSkeletalGameObject::GetAnimationsName(std::vector<String>& output) 
 	auto& anims = m_model3D->m_animations;
 	for (auto& anim : anims)
 	{
-		output.push_back(anim.name);
+		output.push_back(anim->Name());
 	}
 }
 
@@ -179,7 +179,7 @@ Handle<ClassMetadata> AnimatorSkeletalGameObject::GetMetadata(size_t sign)
 		{
 			auto animator = ((AnimatorSkeletalGameObject*)instance);
 			auto ret = Variant(VARIANT_TYPE::STRING);
-			ret.As<String>() = animator->m_model3D->m_animations[animator->m_animationId].name;
+			ret.As<String>() = animator->m_model3D->m_animations[animator->m_animationId]->Name();
 			return ret;
 		},
 		this

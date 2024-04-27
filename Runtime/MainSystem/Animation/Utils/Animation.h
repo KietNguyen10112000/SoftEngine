@@ -10,14 +10,16 @@ class Animation
 private:
 	friend class AnimMotion;
 	friend class AnimModel;
+	friend class AnimationSystem;
+	friend class AnimatorSkeletalGameObject;
 
 	Resource<AnimMotion> m_motion;
 	std::vector<ID> m_nodeToChannelId;
 	std::vector<AABoxKeyFrames> m_animMeshLocalAABoxKeyFrames;
 
+public:
 	inline Animation() {};
 
-public:
 	/*inline KeyFrames* GetKeyFrames(size_t boneId)
 	{
 		auto id = m_boneToChannelId[boneId];
@@ -51,6 +53,11 @@ public:
 	inline float GetTickDuration() const
 	{
 		return m_motion->m_tickDuration;
+	}
+
+	inline auto Name() const
+	{
+		return m_motion->m_name;
 	}
 
 };

@@ -40,7 +40,7 @@ public:
 
 	AnimSkeletalGameObject();
 protected:
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
 
 public:
 	// Inherited via AnimationComponent

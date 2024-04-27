@@ -23,7 +23,9 @@ private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
 protected:
-	virtual void OnPhysicsTransformChanged() override;
+	inline RigidBodyDynamic() {};
+	virtual void OnPhysicsTransformChanged() override; 
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
 
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 

@@ -70,4 +70,8 @@ AABox RigidBodyStatic::GetGlobalAABB()
 	return AABox();
 }
 
+void RigidBodyStatic::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
 NAMESPACE_END

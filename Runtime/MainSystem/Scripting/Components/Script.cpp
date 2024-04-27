@@ -73,4 +73,8 @@ void Script::OnGUI()
 {
 }
 
+void Script::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
 NAMESPACE_END

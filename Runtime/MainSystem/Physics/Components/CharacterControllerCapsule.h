@@ -26,7 +26,9 @@ public:
 	CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc);
 
 protected:
+	inline CharacterControllerCapsule() {};
 	virtual void OnDrawDebug() override;
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
 
 public:
 	// Inherited via CharacterController

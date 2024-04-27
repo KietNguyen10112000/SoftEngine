@@ -1,19 +1,25 @@
 #pragma once
 
+#include "Common/Base/Serializer.h"
+#include "Common/Base/Serializable.h"
+
+#include "MainSystem/Animation/Components/AnimationComponent.h"
+
 #include "../Utils/Animation.h"
 
 NAMESPACE_BEGIN
 
-class AnimLayer
+class AnimLayer : public Serializable
 {
 private:
 	friend class AnimatorSkeletalArray;
 	friend class GameObject;
+	friend class AnimationComponent;
 
 	bool m_isEnable = true;
 	bool m_padd[7];
 
-	GameObject* m_owner = nullptr;
+	AnimationComponent* m_ownerComp = nullptr;
 
 protected:
 	AnimModel* m_model = nullptr;
@@ -23,18 +29,24 @@ protected:
 
 	inline AnimLayer() {};
 
+	inline void CloneFrom(Serializer* serializer, Serializable* another) override
+	{
+		auto& addresses = serializer->GetAddressMap();
+		auto it = addresses.find(m_ownerComp);
+		assert(it != addresses.end());
+
+		m_ownerComp = (AnimationComponent*)it->second;
+
+		auto src = (AnimLayer*)another;
+		m_model				= src->m_model;
+		m_globalTransforms	= src->m_globalTransforms;
+		m_meshesAABB		= src->m_meshesAABB;
+	}
+
 public:
 	inline virtual ~AnimLayer() {};
 
 	virtual void Run(float dt) = 0;
-
-	virtual AnimLayer* MakeInstance() = 0;
-
-	inline virtual void CloneFrom(AnimLayer* anotherLayer)
-	{
-		m_globalTransforms = anotherLayer->m_globalTransforms;
-		m_meshesAABB = anotherLayer->m_meshesAABB;
-	}
 
 	inline virtual AnimLayer* GetOutput()
 	{
@@ -63,7 +75,12 @@ public:
 
 	inline auto* GetGameObject()
 	{
-		return m_owner;
+		return m_ownerComp->GetGameObject();
+	}
+
+	inline auto* GetComponent()
+	{
+		return m_ownerComp;
 	}
 
 };

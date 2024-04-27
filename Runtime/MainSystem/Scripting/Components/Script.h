@@ -70,6 +70,8 @@ private:
 
 	virtual AABox GetGlobalAABB() override;
 
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+
 	void FlushAsync();
 	void OnRecordAsync();
 

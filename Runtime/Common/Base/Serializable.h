@@ -14,6 +14,8 @@ NAMESPACE_BEGIN
 #define SERIALIZABLE_CLASS(className)										\
 private: friend class SerializableDB;										\
 private: friend class ClassMetadata;										\
+template<typename T, typename ...Args>										\
+friend void mheap::CallConstructor(T* begin, size_t n, Args&&... args);		\
 inline static const char* ___GetClassName() {return # className;};			\
 protected: inline virtual Handle<Serializable> _MakeInstance() override		\
 {																			\

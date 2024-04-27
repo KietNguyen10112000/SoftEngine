@@ -19,19 +19,26 @@ AnimatorSkeletalArray::AnimatorSkeletalArray() : Animator(ANIMATION_TYPE_SKELETA
 
 }
 
+AnimatorSkeletalArray::~AnimatorSkeletalArray()
+{
+	for (auto& layer : m_animLayers)
+	{
+		delete layer;
+	}
+	m_animLayers.clear();
+}
+
 void AnimatorSkeletalArray::InitAnimLayer(AnimLayer* animLayer)
 {
 	animLayer->m_model = m_model3D;
+	animLayer->m_ownerComp = this;
 	animLayer->m_globalTransforms.resize(m_model3D->m_nodes.size());
 	animLayer->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
 }
 
 void AnimatorSkeletalArray::OnComponentAdded()
 {
-	for (auto& v : m_animLayers)
-	{
-		v->m_owner = GetGameObject();
-	}
+	
 }
 
 void AnimatorSkeletalArray::OnComponentRemoved()
@@ -105,48 +112,7 @@ ID AnimatorSkeletalArray::GetCurrentAnimationId() const
 
 void AnimatorSkeletalArray::Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime)
 {
-	/*struct Param
-	{
-		AnimatorSkeletalArray* animator;
-		float blendTime;
-		float startTime;
-
-		float startTransitTime = 0;
-		float padd;
-	};
-
-	startTime = std::max(0.0f, std::clamp(startTime, beginTime, endTime));
-
-	blendTime = std::max(0.0f, blendTime);
-
-	if (animationId >= m_model3D->m_animations.size())
-	{
-		return;
-	}
-
-	if (!GetGameObject()->IsInAnyScene())
-	{
-		m_model3D->InitializeAnimationTrack(animationId, m_currentAnimTrack, beginTime, endTime);
-		SetAnimationImpl(startTransitTime, blendTime, startTime);
-		return;
-	}
-
-	auto scene = GetGameObject()->GetScene();
-
-	auto& buffer = blendTime > 0 ? m_blendingAnimTrackBuffer : m_currentAnimTrackBuffer;
-	scene->BeginWrite<false>(buffer);
-
-	auto track = buffer.Write();
-	m_model3D->InitializeAnimationTrack(animationId, track, beginTime, endTime);
-
-	scene->EndWrite(buffer);
-
-	MAIN_SYSTEM_TASK_3(
-		AnimationSystem, AsyncTaskRunner, blendTime, startTime, startTransitTime, 
-		{
-			self->SetAnimationImpl(startTransitTime, blendTime, startTime);
-		}
-	);*/
+	
 }
 
 void AnimatorSkeletalArray::SetPause(bool pause)
@@ -240,6 +206,7 @@ Handle<ClassMetadata> AnimatorSkeletalArray::GetMetadata(size_t sign)
 	metadata->AddProperty(accessor);
 
 	return metadata;*/
+	return nullptr;
 }
 
 void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
@@ -257,109 +224,145 @@ void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const V
 
 void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* another)
 {
-	//struct CloneParam
-	//{
-	//	AnimatorSkeletalArray* src;
-	//	AnimatorSkeletalArray* dest;
-	//};
+	struct CloneParam
+	{
+		AnimatorSkeletalArray* src;
+		AnimatorSkeletalArray* dest;
+	};
 
-	//auto ret = mheap::New<AnimatorSkeletalArray>();
+	auto dest = this;
+	auto src = (AnimatorSkeletalArray*)another;
 
-	//auto& addresses = serializer->GetAddressMap();
-	///*auto& addresses = serializer->GetAddressMap();
+	auto& addresses = serializer->GetAddressMap();
+	/*auto& addresses = serializer->GetAddressMap();
 
-	//{
-	//	addresses.insert({ this, ret.Get() });
-	//}*/
+	{
+		addresses.insert({ this, ret.Get() });
+	}*/
 
-	//auto callbackRunner = serializer->GetCallbackRunner();
-	//auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
-	//	{
-	//		TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
+	auto callbackRunner = serializer->GetCallbackRunner();
+	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
+		{
+			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
 
-	//		auto& addresses = serializer->GetAddressMap();
+			auto& addresses = serializer->GetAddressMap();
 
-	//		auto& objs = src->m_meshRendererObjs;
-	//		for (auto& obj : objs)
-	//		{
-	//			auto it = addresses.find(obj.Get());
-	//			assert(it != addresses.end());
-	//			dest->m_meshRendererObjs.Push((GameObject*)(it->second));
-	//		}
+			auto& objs = src->m_meshRendererObjs;
+			for (auto& obj : objs)
+			{
+				auto it = addresses.find(obj.Get());
+				assert(it != addresses.end());
+				dest->m_meshRendererObjs.Push((GameObject*)(it->second));
+			}
 
-	//		/*{
-	//			auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
-	//			assert(it != addresses.end());
-	//			dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
-	//		}*/
-	//	}
-	//);
+			/*{
+				auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
+				assert(it != addresses.end());
+				dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
+			}*/
+		}
+	);
 
-	//AnimModel::AnimMeshRenderingBufferData buffer;
-	//buffer.bones.resize(m_model3D->m_boneIds.size());
-	//buffer.meshesAABB.resize(m_model3D->m_animMeshes.size());
-	//auto buf = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
-	//buf->buffer.Initialize(buffer);
+	AnimModel::AnimMeshRenderingBufferData buffer;
+	buffer.bones.resize(src->m_model3D->m_boneIds.size());
+	buffer.meshesAABB.resize(src->m_model3D->m_animMeshes.size());
+	auto buf = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
+	buf->buffer.Initialize(buffer);
 
-	//ret->m_animMeshRenderingBuffer = buf;
-	//addresses.insert({ m_animMeshRenderingBuffer.get(), &ret->m_animMeshRenderingBuffer });
+	dest->m_animMeshRenderingBuffer = buf;
+	addresses.insert({ src->m_animMeshRenderingBuffer.get(), &dest->m_animMeshRenderingBuffer });
 
-	//auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	//param->src = this;
-	//param->dest = ret.Get();
+	auto param = callbackRunner->CreateParam<CloneParam>(&task);
+	param->src = src;
+	param->dest = dest;
 
-	//callbackRunner->RunAsync(&task);
+	callbackRunner->RunAsync(&task);
 
-	//ret->m_model3D = m_model3D;
-
-	//ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
-	//ret->m_nodesData.resize(m_nodesData.size());
-	//ret->m_keyFramesIndex.resize(m_keyFramesIndex.size());
-
-	//ret->m_blendAabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
-	//ret->m_blendKeyFramesIndex.resize(m_keyFramesIndex.size());
-
-	//m_model3D->InitializeAnimationTrack(
-	//	m_currentAnimTrack->animationId,
-	//	ret->m_currentAnimTrack,
-	//	m_currentAnimTrack->startTick / m_currentAnimTrack->ticksPerSecond,
-	//	(m_currentAnimTrack->startTick + m_currentAnimTrack->tickDuration) / m_currentAnimTrack->ticksPerSecond
-	//);
-
-	//ret->m_t = 0;
-	//ret->m_blendTime = 0;
-	//ret->m_blendingAnimTrack = nullptr;
-
-	//if (m_blendingAnimTrack)
-	//{
-	//	ret->m_blendingAnimTrack = (decltype(m_blendingAnimTrack))(ret->m_blendingAnimTrackBuffer.Read());
-
-	//	m_model3D->InitializeAnimationTrack(
-	//		m_blendingAnimTrack->animationId,
-	//		ret->m_blendingAnimTrack,
-	//		m_blendingAnimTrack->startTick / m_blendingAnimTrack->ticksPerSecond,
-	//		(m_blendingAnimTrack->startTick + m_blendingAnimTrack->tickDuration) / m_blendingAnimTrack->ticksPerSecond
-	//	);
-
-	//	std::memcpy(ret->m_blendKeyFramesIndex.data(), m_blendingAnimTrack->startKeyFramesIndex.data(),
-	//		m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
-
-	//	std::memcpy(ret->m_blendAabbKeyFrameIndex.data(), m_blendingAnimTrack->startAABBKeyFrameIndex.data(),
-	//		m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
-	//}
-
-	//std::memcpy(ret->m_keyFramesIndex.data(), m_currentAnimTrack->startKeyFramesIndex.data(),
-	//	m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
-
-	//std::memcpy(ret->m_aabbKeyFrameIndex.data(), m_currentAnimTrack->startAABBKeyFrameIndex.data(),
-	//	m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
-
-	//return ret;
+	dest->m_model3D = src->m_model3D;
 }
 
 void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 {
-	
+	AnimLayer* last = nullptr;
+	for (auto& layer : m_animLayers)
+	{
+		if (layer && layer->IsEnable())
+		{
+			layer->Run(dt);
+			last = layer;
+		}
+	}
+
+	if (last)
+	{
+		auto& globalTransforms = last->m_globalTransforms;
+		auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();
+		auto& buffer = animMeshRenderingBuffer->buffer;
+
+		//auto& index = m_aabbKeyFrameIndex;
+
+		bool update = false;
+
+		scene->BeginWrite<false>(buffer);
+
+		auto read = buffer.Read();
+		auto write = buffer.Write();
+
+		auto num = write->meshesAABB.size();
+		for (uint32_t i = 0; i < num; i++)
+		{
+			write->meshesAABB[i] = last->m_meshesAABB[i];
+			if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
+			{
+				update = true;
+			}
+		}
+
+		auto& boundNodeIds = m_model3D->m_boundNodeIds;
+
+		if (update)
+		{
+			scene->EndWrite<true>(buffer);
+
+			num = m_meshRendererObjs.size();
+			for (size_t i = 0; i < num; i++)
+			{
+				if (boundNodeIds[i] == INVALID_ID)
+				{
+					auto& obj = m_meshRendererObjs[i];
+					if (obj->GetScene() == scene)
+						scene->OnObjectTransformChanged(obj);
+				}
+			}
+		}
+		else
+		{
+			scene->EndWrite<false>(buffer);
+		}
+
+		num = m_meshRendererObjs.size();
+		for (size_t i = 0; i < num; i++)
+		{
+			if (boundNodeIds[i] != INVALID_ID)
+			{
+				auto& obj = m_meshRendererObjs[i];
+
+				auto& boundNodeTransform = globalTransforms[boundNodeIds[i]];
+
+				auto& buffer = obj->GetComponentRaw<AnimModelStaticMeshRenderer>()->m_myGlobalTransform;
+
+				scene->BeginWrite<false>(buffer);
+
+				auto buf = buffer.Write();
+				*buf = boundNodeTransform;
+
+				scene->EndWrite(buffer);
+
+				scene->OnObjectTransformChanged(obj);
+			}
+		}
+	}
+
 }
 
 struct MyData

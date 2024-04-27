@@ -130,7 +130,7 @@ void AnimSkeletalGameObject::Update(float dt)
 		m_numAnimIterationCount = m_animator->m_numAnimIterationCount;
 	}
 
-	auto& channel = m_model3D->m_animations[m_animator->GetCurrentAnimationId()].channels[m_boneId];
+	auto& channel = m_model3D->m_animations[m_animator->GetCurrentAnimationId()]->GetChannels()[m_boneId];
 
 	Transform transform;
 	transform.Scale() = channel.FindScale(&m_keyFramesIndex.s, m_keyFramesIndex.s, m_animator->m_t);
