@@ -230,10 +230,18 @@ void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* anot
 		AnimatorSkeletalArray* dest;
 	};
 
+	auto& addresses = serializer->GetAddressMap();
+
 	auto dest = this;
 	auto src = (AnimatorSkeletalArray*)another;
 
-	auto& addresses = serializer->GetAddressMap();
+	addresses.insert({ src, dest });
+
+	for (auto& layer : src->m_animLayers)
+	{
+		dest->m_animLayers.push_back((AnimLayer*)layer->CloneRaw(serializer));
+	}
+
 	/*auto& addresses = serializer->GetAddressMap();
 
 	{
@@ -295,10 +303,32 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 
 	if (last)
 	{
+		last = last->GetOutput();
+
 		auto& globalTransforms = last->m_globalTransforms;
 		auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();
 		auto& buffer = animMeshRenderingBuffer->buffer;
 
+		{
+			auto& offsets = m_model3D->m_boneOffsetMatrixs;
+			auto& boneBuffer = m_animMeshRenderingBuffer->buffer;
+			scene->BeginWrite<false>(boneBuffer);
+			auto& bones = boneBuffer.Write()->bones;
+			auto& nodes = m_model3D->m_nodes;
+
+			size_t i = 0;
+			for (auto& node : nodes)
+			{
+				if (node.boneId != INVALID_ID)
+				{
+					bones[node.boneId] = offsets[node.boneId] * globalTransforms[i];
+				}
+				i++;
+			}
+
+			scene->EndWrite(boneBuffer);
+		}
+		
 		//auto& index = m_aabbKeyFrameIndex;
 
 		bool update = false;

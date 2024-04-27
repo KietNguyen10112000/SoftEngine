@@ -388,6 +388,42 @@ public:
 		return ret;
 	};
 
+	String ReplaceAll(const String& oldVal, const String& newVal) const
+	{
+		std::string s = c_str();
+		size_t pos = 0;
+		while ((pos = s.find(oldVal.c_str(), pos)) != std::string::npos) 
+		{
+			s.replace(pos, oldVal.length(), newVal.c_str());
+			pos += newVal.length();
+		}
+		return s.c_str();
+	};
+
+	String ReplaceAll(const char& oldVal, const char& newVal) const
+	{
+		std::string s = c_str();
+		for (auto& c : s)
+		{
+			if (c == oldVal)
+			{
+				c = newVal;
+			}
+		}
+		return s.c_str();
+	};
+
+	String Replace(const String& oldVal, const String& newVal) const
+	{
+		std::string s = c_str();
+		return s.replace(s.find(oldVal.c_str()), oldVal.length(), newVal.c_str()).c_str();
+	};
+
+	size_t FindFirstOf(const String& val) const
+	{
+		std::string_view s = c_str();
+		return s.find_first_of(val.c_str());
+	}
 };
 
 NAMESPACE_END

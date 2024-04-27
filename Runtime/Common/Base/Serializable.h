@@ -22,6 +22,7 @@ protected: inline virtual Handle<Serializable> _MakeInstance() override		\
 	static_assert(std::is_base_of_v<Serializable, className>);				\
 	return  mheap::New<className>();										\
 };																			\
+inline virtual Serializable* _MakeInstanceRaw() override { return new className(); };	\
 public: inline virtual const char* GetClassName() override					\
 {																			\
 	static_assert(std::is_base_of_v<Serializable, className>);				\
@@ -45,6 +46,7 @@ public:
 
 protected:
 	virtual Handle<Serializable> _MakeInstance() = 0;
+	virtual Serializable* _MakeInstanceRaw() { return nullptr; };
 	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
 
 public:
@@ -111,6 +113,13 @@ public:
 	inline Handle<Serializable> Clone(Serializer* serializer)
 	{
 		auto ret = _MakeInstance();
+		ret->CloneFrom(serializer, this);
+		return ret;
+	};
+
+	inline Serializable* CloneRaw(Serializer* serializer)
+	{
+		auto ret = _MakeInstanceRaw();
 		ret->CloneFrom(serializer, this);
 		return ret;
 	};

@@ -31,13 +31,13 @@ protected:
 
 	inline void CloneFrom(Serializer* serializer, Serializable* another) override
 	{
+		auto src = (AnimLayer*)another;
 		auto& addresses = serializer->GetAddressMap();
-		auto it = addresses.find(m_ownerComp);
+		auto it = addresses.find(src->m_ownerComp);
 		assert(it != addresses.end());
 
 		m_ownerComp = (AnimationComponent*)it->second;
 
-		auto src = (AnimLayer*)another;
 		m_model				= src->m_model;
 		m_globalTransforms	= src->m_globalTransforms;
 		m_meshesAABB		= src->m_meshesAABB;

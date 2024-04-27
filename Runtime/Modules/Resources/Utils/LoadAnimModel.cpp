@@ -1518,6 +1518,8 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 
 			i++;
 		}
+
+		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 	}
 
 	auto l1 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();

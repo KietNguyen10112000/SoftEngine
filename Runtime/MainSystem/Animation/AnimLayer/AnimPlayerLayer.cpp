@@ -14,7 +14,6 @@ NAMESPACE_BEGIN
 void AnimPlayerLayer::Run(float dt)
 {
 	m_t += dt * m_ticksPerSecond;
-	auto t = m_t + m_startTick;
 
 	if (m_t > m_tickDuration)
 	{
@@ -27,6 +26,8 @@ void AnimPlayerLayer::Run(float dt)
 		std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
 			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 	}
+
+	auto t = m_t + m_startTick;
 
 	auto& nodes = m_model->m_nodes;
 	auto& globalTransforms = m_globalTransforms;
@@ -100,7 +101,7 @@ void AnimPlayerLayer::Run(float dt)
 
 void AnimPlayerLayer::SetAnimationImpl(ID animationId, float startTime, float endTime)
 {
-	m_animation = m_model->m_animations[animationId].get();
+	m_animation = m_model->m_animations[animationId];
 
 	auto& channels = m_animation->GetChannels();
 	auto& animMeshLocalAABoxKeyFrames = m_animation->GetMeshLocalAABBKeyFrames();
@@ -113,6 +114,7 @@ void AnimPlayerLayer::SetAnimationImpl(ID animationId, float startTime, float en
 
 	auto num = (uint32_t)channels.size();
 	startIndex.resize(num);
+	m_keyFramesIndex.resize(num);
 
 	for (uint32_t i = 0; i < num; i++)
 	{
@@ -126,6 +128,8 @@ void AnimPlayerLayer::SetAnimationImpl(ID animationId, float startTime, float en
 
 	num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
 	startAABBIndex.resize(num);
+	m_aabbKeyFrameIndex.resize(num);
+
 	for (uint32_t i = 0; i < num; i++)
 	{
 		auto& channel = animMeshLocalAABoxKeyFrames[i];
@@ -160,15 +164,15 @@ void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
 	AnimLayer::CloneFrom(serializer, another);
 
 	auto src = (AnimPlayerLayer*)another;
-	m_animation				= src->m_animation;
-	m_keyFramesIndex		= src->m_keyFramesIndex;
-	m_aabbKeyFrameIndex		= src->m_aabbKeyFrameIndex;
-	m_keyFramesIndex		= src->m_startKeyFrameIndex;
-	m_aabbKeyFrameIndex		= src->m_startAABBKeyFrameIndex;
-	m_tickDuration			= src->m_tickDuration;
-	m_ticksPerSecond		= src->m_ticksPerSecond;
-	m_startTick				= src->m_startTick;
-	m_t						= src->m_t;
+	m_animation					= src->m_animation;
+	m_keyFramesIndex			= src->m_keyFramesIndex;
+	m_aabbKeyFrameIndex			= src->m_aabbKeyFrameIndex;
+	m_startKeyFrameIndex		= src->m_startKeyFrameIndex;
+	m_startAABBKeyFrameIndex	= src->m_startAABBKeyFrameIndex;
+	m_tickDuration				= src->m_tickDuration;
+	m_ticksPerSecond			= src->m_ticksPerSecond;
+	m_startTick					= src->m_startTick;
+	m_t							= src->m_t;
 
 }
 

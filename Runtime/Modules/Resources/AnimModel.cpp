@@ -10,6 +10,15 @@ AnimModel::AnimModel(String path, bool placeholder) : Model3DBasic(path, true)
 {
 }
 
+AnimModel::~AnimModel()
+{
+	for (auto& anim : m_animations)
+	{
+		delete anim;
+	}
+	m_animations.clear();
+}
+
 void AnimModel::CreateCache(Animation* animation, ByteStream& stream, const String& streamPath)
 {
 	{
@@ -178,7 +187,7 @@ void AnimModel::LoadAABoxAnimMesh(AnimModel::AnimMesh* animMesh, Animation* anim
 	globalTransform.resize(nodes.size());
 
 	std::vector<KeyFramesIndex> keyFramesIndex;
-	keyFramesIndex.resize(nodes.size());
+	keyFramesIndex.resize(channels.size());
 
 	std::vector<Mat4> bones;
 	bones.resize(m_boneOffsetMatrixs.size());
@@ -218,9 +227,10 @@ void AnimModel::LoadAABoxAnimMesh(AnimModel::AnimMesh* animMesh, Animation* anim
 				assert(node.id > node.parentId);
 			}*/
 
-			if (channelId != INVALID_ID)
+			if (node.boneId != INVALID_ID)
 			{
 				bones[node.boneId] = m_boneOffsetMatrixs[node.boneId] * globalTransform[i];
+				//assert(node.boneId == channelId);
 			}
 		}
 
@@ -270,13 +280,13 @@ void AnimModel::LoadAABoxAnimMesh(AnimModel::AnimMesh* animMesh, Animation* anim
 ID AnimModel::PlaceHolderAnimation(const Resource<AnimMotion>& motion)
 {
 	auto animationId = m_animations.size();
-	auto animation = std::make_unique<Animation>();
+	auto animation = new Animation();
 
 	animation->m_motion = motion;
 
 	auto& nodes = m_nodes;
 	auto numNode = nodes.size();
-	animation->m_nodeToChannelId.resize(numNode);
+	animation->m_nodeToChannelId.resize(numNode, INVALID_ID);
 
 	auto& channels = animation->GetChannels();
 	auto& channelsName = animation->m_motion->m_nodeNameEffectedByChannel;
@@ -288,6 +298,8 @@ ID AnimModel::PlaceHolderAnimation(const Resource<AnimMotion>& motion)
 		auto& nodeName = channelsName[i];
 		auto it = m_nodeIds.find(nodeName);
 
+		//assert(it != m_nodeIds.end());
+
 		if (it != m_nodeIds.end())
 		{
 			animation->m_nodeToChannelId[it->second] = i;
@@ -296,13 +308,13 @@ ID AnimModel::PlaceHolderAnimation(const Resource<AnimMotion>& motion)
 
 	animation->m_animMeshLocalAABoxKeyFrames.resize(m_animMeshes.size());
 
-	m_animations.push_back(std::move(animation));
+	m_animations.push_back(animation);
 	return animationId;
 }
 
 void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMeshVertices* vertices)
 {
-	auto animation = m_animations[animationId].get();
+	auto animation = m_animations[animationId];
 
 	if (vertices == nullptr)
 	{
@@ -314,12 +326,12 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 	// load AABB key frames for this animation
 
 	auto myPath = GetPath();
-	auto modelPath = motion->GetModelFilePath();
+	auto motionPath = motion->GetModelFilePath();
+	auto motionFileName = FileUtils::GetLastName(motionPath.c_str());
 	ByteStream stream;
-	modelPath = "Resources/" + modelPath;
-	auto streamPath = (myPath + "." + modelPath + "." + String::From(animationId) + "." + AnimModel::CACHE_EXTENSION);
+	auto streamPath = (myPath + "." + motionFileName + "." + motion->m_name.ReplaceAll('|', '-') + AnimModel::CACHE_EXTENSION);
 	if (FileSystem::Get()->IsFileChanged(myPath.c_str())
-		|| FileSystem::Get()->IsFileChanged(modelPath.c_str())
+		|| FileSystem::Get()->IsFileChanged(motionPath.c_str())
 		|| !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
 	{
 		struct Param

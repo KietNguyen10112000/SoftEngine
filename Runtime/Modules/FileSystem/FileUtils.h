@@ -80,6 +80,20 @@ inline bool IsExist(const char* path)
 	return std::fs::exists(path);
 }
 
+inline String GetLastName(const char* path)
+{
+	std::string_view str = path;
+	auto idx = str.find_last_of('/');
+	if (idx == std::string_view::npos)
+	{
+		return path;
+	}
+
+	idx++;
+
+	return String(path + idx, str.length() - idx);
+}
+
 }
 
 NAMESPACE_FILE_SYSTEM_END

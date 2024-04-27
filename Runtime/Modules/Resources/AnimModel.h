@@ -203,7 +203,7 @@ public:
 	std::map<String, ID> m_nodeIds;
 
 	// list of model animation
-	std::vector<UniquePtr<Animation>> m_animations;
+	std::vector<Animation*> m_animations;
 
 	// inversed of node's global transform
 	std::vector<Mat4> m_boneOffsetMatrixs;
@@ -216,6 +216,7 @@ public:
 	friend class AnimMotion;
 
 	AnimModel(String path, bool placeholder = false);
+	~AnimModel();
 
 	/*inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
 	{
