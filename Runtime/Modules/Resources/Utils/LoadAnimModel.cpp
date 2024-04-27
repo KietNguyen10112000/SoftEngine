@@ -9,7 +9,7 @@
 #include "MainSystem/Animation/Components/AnimatorSkeletalGameObject.h"
 #include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 #include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
-#include "MainSystem/Animation/AnimLayer/AnimBlendingLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
 
 #include "Runtime/Runtime.h"
 #include "Scene/GameObjectCache.h"
@@ -468,7 +468,7 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 //	}
 //}
 
-void LoadAnimMeshVertices(AnimModelLoadingCtx* ctx, AnimModelLoadingCtx::AnimMeshVertices* animMeshVertices, AnimModel* model, aiMesh* mesh)
+void LoadAnimMeshVertices(AnimModelLoadingCtx::AnimMeshVertices* animMeshVertices, AnimModel* model, aiMesh* mesh)
 {
 	auto& vertices = animMeshVertices->vertices;
 	auto numVertices = mesh->mNumVertices;
@@ -531,7 +531,7 @@ void FlattenAnimModelHierarchy(AnimModelLoadingCtx* ctx, Resource<AnimModel>& mo
 			}
 
 			auto animMeshId = ((AnimModel::AnimMesh*)ctx->meshes[aiNode->mMeshes[i]])->m_model3DIdx;
-			LoadAnimMeshVertices(ctx, &ctx->animMeshesVertices[animMeshId], model, aiMesh);
+			LoadAnimMeshVertices(&ctx->animMeshesVertices[animMeshId], model, aiMesh);
 		}
 
 		AnimModelLoadingCtx::Node node = {};
@@ -1523,8 +1523,9 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 	}
 
 	auto l1 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
-	//auto l2 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
-	l1->SetAnimation(0, -1, -1);
+	auto l2 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
+	auto l3 = ctx.animatorArray->NewAnimLayer<AnimBlendLayer>();
+	//l1->SetAnimation(0, -1, -1);
 
 	ctx.animatorArray->Play(-1, 0, 0, -1, -1, 0);
 
