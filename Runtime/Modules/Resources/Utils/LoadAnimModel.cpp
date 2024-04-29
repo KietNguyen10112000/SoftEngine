@@ -1525,7 +1525,10 @@ Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath)
 	auto l1 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
 	auto l2 = ctx.animatorArray->NewAnimLayer<AnimPlayerLayer>();
 	auto l3 = ctx.animatorArray->NewAnimLayer<AnimBlendLayer>();
-	//l1->SetAnimation(0, -1, -1);
+
+	l1->SetAnimation(0, -1, -1);
+	l2->SetAnimation(0, -1, -1);
+	l3->SetInput(l1, l2);
 
 	ctx.animatorArray->Play(-1, 0, 0, -1, -1, 0);
 

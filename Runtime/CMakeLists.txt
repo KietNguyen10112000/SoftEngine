@@ -120,10 +120,16 @@ file(
     "Modules/PhysX/*.h"
     "Modules/PhysX/*.cpp"
 
+    "Modules/UUID/*.h"
+    "Modules/UUID/*.cpp"
+    "Modules/JSON/*.h"
+
     "Runtime.h"
     "Runtime.cpp"
     "StartupConfig.h"
     "StartupConfig.cpp"
+
+    "Libraries/nlohmann/nlohmann_json.natvis"
 )
 
 
@@ -206,6 +212,7 @@ include_directories(PUBLIC
      "${CMAKE_SOURCE_DIR}/Libraries/assimp/include"
      "${CMAKE_SOURCE_DIR}/Libraries/build/include"
      "${CMAKE_SOURCE_DIR}/Libraries/PhysX/physx/include"
+     "${CMAKE_SOURCE_DIR}/Libraries/nlohmann/single_include"
 )
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")

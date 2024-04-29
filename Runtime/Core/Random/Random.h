@@ -17,6 +17,12 @@ public:
 	static void Initialize(size_t* seeds = 0);
 
 public:
+	inline static int32_t RangeInt16(int16_t min, int16_t max)
+	{
+		std::uniform_int_distribution<int16_t> distribution(min, max);
+		return distribution(generators[Thread::GetID()]);
+	}
+
 	inline static int32_t RangeInt32(int32_t min, int32_t max)
 	{
 		std::uniform_int_distribution<int32_t> distribution(min, max);
@@ -39,6 +45,11 @@ public:
 	{
 		std::uniform_real_distribution<double> distribution(min, max);
 		return distribution(generators[Thread::GetID()]);
+	}
+
+	inline static uint32_t Rand()
+	{
+		return generators[Thread::GetID()]();
 	}
 
 };

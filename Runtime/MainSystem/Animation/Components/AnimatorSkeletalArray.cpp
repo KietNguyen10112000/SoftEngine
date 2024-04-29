@@ -297,13 +297,17 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 		if (layer && layer->IsEnable())
 		{
 			layer->Run(dt);
-			last = layer;
+		}
+
+		if (layer)
+		{
+			last = layer->GetOutput();
 		}
 	}
 
 	if (last)
 	{
-		last = last->GetOutput();
+		//last = last->GetOutput();
 
 		auto& globalTransforms = last->m_globalTransforms;
 		auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();

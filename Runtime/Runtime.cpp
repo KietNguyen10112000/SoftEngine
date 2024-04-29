@@ -23,6 +23,8 @@
 
 #include "Plugins/Plugin.h"
 #include "Plugins/PluginLoader.h"
+#include "UUID/UUID.h"
+#include "JSON/JSON.h"
 
 #include "StartupConfig.h"
 #include "RUNTIME_EVENT.h"
@@ -89,6 +91,7 @@ float g_sumDt = 0;
 
 Handle<Runtime> Runtime::Initialize()
 {
+	UUIDGenerator::SingletonInitialize();
 	FileSystem::Initialize();
 	MetadataParser::Initialize();
 	resource::internal::Initialize();
@@ -128,6 +131,7 @@ void Runtime::Finalize()
 	PhysX::SingletonFinalize();
 	MetadataParser::Finalize();
 	FileSystem::Finalize();
+	UUIDGenerator::SingletonFinalize();
 }
 
 Runtime::Runtime() : m_eventDispatcher(this)

@@ -41,6 +41,8 @@ protected:
 		m_model				= src->m_model;
 		m_globalTransforms	= src->m_globalTransforms;
 		m_meshesAABB		= src->m_meshesAABB;
+
+		addresses.insert({ src, this });
 	}
 
 public:

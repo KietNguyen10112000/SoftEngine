@@ -9,6 +9,8 @@
 
 #include "../Stream/ByteStream.h"
 
+#include "UUID/UUID.h"
+
 NAMESPACE_BEGIN
 
 #define SERIALIZABLE_CLASS(className)										\
@@ -31,17 +33,12 @@ public: inline virtual const char* GetClassName() override					\
 
 //class 
 
-struct API UUIDCounter
-{
-	static ID GetUUID();
-};
-
 class Serializable
 {
 public:
-	const ID m_UUID;
+	const UUID m_UUID;
 
-	Serializable() : m_UUID(UUIDCounter::GetUUID()) {};
+	Serializable() : m_UUID(UUIDGenerator::Get()->GetUUID()) {};
 	virtual ~Serializable() {};
 
 protected:
@@ -124,7 +121,7 @@ public:
 		return ret;
 	};
 
-	inline const ID GetUUID() const
+	inline const UUID& GetUUID() const
 	{
 		return m_UUID;
 	}

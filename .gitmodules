@@ -19,3 +19,6 @@
 [submodule "Libraries/stb"]
 	path = Libraries/stb
 	url = git@github.com:nothings/stb.git
+[submodule "Libraries/nlohmann"]
+	path = Libraries/nlohmann
+	url = git@github.com:nlohmann/json.git
