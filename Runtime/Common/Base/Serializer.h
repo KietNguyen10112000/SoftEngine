@@ -2,86 +2,224 @@
 
 #include "Metadata.h"
 
+#include "Core/Memory/SmartPointers.h"
+
 #include "../Stream/ByteStream.h"
 
 #include "Common/Base/AsyncTaskRunnerRaw.h"
+
+#include "UUID/UUID.h"
+#include "JSON/JSON.h"
 
 NAMESPACE_BEGIN
 
 class API Serializer
 {
+public:
+	enum MODE
+	{
+		MODE_BINARY,
+		MODE_JSON
+	};
+
 private:
 	constexpr static size_t DEBUG_SIGN = 0xffeeddffaaffccbb;
 
-	ByteStream* m_byteStream = nullptr;
+	struct SerializedRecord
+	{
+		enum TYPE
+		{
+			HANDLE,
+			SHARED,
+			RAW
+		};
 
-	ByteStreamRead m_read;
+		ID idx;
+		uint32_t classNameIdx;
+		uint32_t type;
+	};
 
-	// to convert from Debug version to Release version
-	bool m_debug;
-	bool m_padd[3];
+	struct DeserializedPtr
+	{
+		SharedPtr<Serializable> shared = nullptr;
+		Serializable* raw = nullptr;
+	};
 
-	std::map<ID, void*> m_IDMap;
+	struct SerializedBinary
+	{
+		UUID uuid;
+		UniquePtr<ByteStream> stream;
+		SerializedRecord record;
+	};
 
-	std::map<void*, void*> m_addressMap;
+	struct SerializedJson
+	{
+		UUID uuid;
+		UniquePtr<json> j;
+		SerializedRecord record;
+	};
 
-	raw::AsyncTaskRunner<Serializer> m_asyncTaskRunner;
+	//ByteStream* m_byteStream = nullptr;
+
+	//ByteStreamRead m_read;
+
+	//// to convert from Debug version to Release version
+	//bool m_debug;
+	//bool m_padd[3];
+
+	//std::map<ID, void*> m_IDMap;
+
+	//std::map<void*, void*> m_addressMap;
+
+	//raw::AsyncTaskRunner<Serializer> m_asyncTaskRunner;
+
+	std::vector<SerializedBinary> m_binaries;
+	std::vector<SerializedJson> m_jsons;
+	std::map<UUID, SerializedRecord> m_serializedObjects;
+
+	Array<Handle<Serializable>> m_deserializedObjects;
+	std::vector<DeserializedPtr> m_rawOrSharedDeserializedObjects;
+
+	std::map<String, ID> m_classNameIds;
+	std::vector<String> m_classNames;
+
+	const MODE m_mode = MODE::MODE_JSON;
+
+	UUID m_rootUUID = {};
+
+private:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_deserializedObjects);
+	}
 
 public:
+	Serializer(MODE mode = MODE::MODE_JSON);
 	~Serializer();
 
 private:
-	Handle<Serializable> Deserialize(const char* className);
+	void TrySerialize(
+		Serializable* obj,
+		SerializedRecord::TYPE type
+	);
+
+	void TryDeserialize(
+		const UUID& uuid, 
+		Handle<Serializable>* output0,
+		Serializable** output1,
+		SharedPtr<Serializable>* output2
+	);
+
+	void WriteToFileJson(const String& path);
+	void WriteToFileBinary(const String& path);
+
+	void ReadFromFileJson(const String& path);
+	void ReadFromFileBinary(const String& path);
 
 public:
-	void Reset(ByteStream* byteStream, bool debug = true);
-
-	void Serialize(Serializable* object);
-
-	template <typename SerializableType>
-	Handle<SerializableType> Deserialize()
+	template <typename T>
+	Handle<T> Clone(const Handle<T>& obj)
 	{
-		auto ret = Deserialize(SerializableType::___GetClassName());
-		return DynamicCast<SerializableType>(ret);
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		auto ret = DynamicCast<T>(obj->_MakeInstance());
+		ret->CloneFrom(this, obj);
+		return ret;
 	}
 
-	inline void BeginClone()
+	template <typename T>
+	T* Clone(T* obj)
 	{
+		static_assert(std::is_base_of_v<Serializable, T>);
 
+		auto ret = dynamic_cast<T>(obj->_MakeInstanceRaw());
+		ret->CloneFrom(this, obj);
+		return ret;
 	}
 
-	inline void EndClone()
+	template <typename T>
+	SharedPtr<T> Clone(SharedPtr<T> obj)
 	{
-		m_asyncTaskRunner.ProcessAllTasks(this);
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		auto ret = std::dynamic_pointer_cast<T>(obj->_MakeInstanceShared());
+		ret->CloneFrom(this, obj.get());
+		return ret;
 	}
 
-	inline auto& GetWriteStream()
+	template <typename T>
+	UUID Serialize(const Handle<T>& obj)
 	{
-		return *m_byteStream;
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TrySerialize(obj, SerializedRecord::HANDLE);
+		return obj->GetUUID();
 	}
 
-	inline auto GetReadStream()
+	template <typename T>
+	UUID Serialize(const SharedPtr<T>& obj)
 	{
-		return m_read;
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TrySerialize(obj.get(), SerializedRecord::SHARED);
+		return obj->GetUUID();
 	}
 
-	// to store shared resource, each serializable has a UUID, from which, we can detect whenever shared resource is serialized/deserialized
-	inline auto& GetIDMap()
+	template <typename T>
+	UUID Serialize(T* obj)
 	{
-		return m_IDMap;
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TrySerialize(obj, SerializedRecord::RAW);
+		return obj->GetUUID();
 	}
 
-	inline auto& GetAddressMap()
+	template <typename T>
+	Handle<T> Deserialize(const UUID& uuid)
 	{
-		return m_addressMap;
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		Handle<T> ret = nullptr;
+		TryDeserialize(uuid, &ret, nullptr, nullptr);
+		return ret;
 	}
 
-	inline auto* GetCallbackRunner()
+	template <typename T>
+	void Deserialize(const UUID& uuid, Handle<T>& output)
 	{
-		return &m_asyncTaskRunner;
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TryDeserialize(uuid, &output, nullptr, nullptr);
 	}
 
-	Handle<Serializable> Clone(Serializable* obj);
+	template <typename T>
+	void Deserialize(const UUID& uuid, T*& output)
+	{
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TryDeserialize(uuid, nullptr, &output, nullptr);
+	}
+
+	template <typename T>
+	void Deserialize(const UUID& uuid, SharedPtr<T>& output)
+	{
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TryDeserialize(uuid, nullptr, nullptr, &output);
+	}
+
+public:
+	void WriteToFile(const String& path);
+	void ReadFromFile(const String& path);
+
+	void SetRootUUID(const UUID& uuid);
+
+	inline const auto& GetRootUUID() const
+	{
+		return m_rootUUID;
+	}
+
 };
 
 NAMESPACE_END

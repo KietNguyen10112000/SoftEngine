@@ -3,6 +3,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Structures/String.h"
 
+#include "UUID/UUID.h"
+
 #include "Math/Math.h"
 
 #include "nlohmann/json.hpp"
@@ -109,3 +111,17 @@ inline void from_json(const json& ret, Transform& transform)
 }
 
 //NAMESPACE_END
+
+NAMESPACE_BEGIN
+
+inline void to_json(json& ret, const UUID& uuid)
+{
+	ret = uuid.ToHexString().c_str();
+}
+
+inline void from_json(const json& ret, UUID& uuid)
+{
+	uuid = UUID::FromHexString(ret.dump().c_str());
+}
+
+NAMESPACE_END

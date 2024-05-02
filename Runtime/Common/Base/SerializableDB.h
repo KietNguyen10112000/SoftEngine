@@ -10,7 +10,9 @@ NAMESPACE_BEGIN
 class API SerializableDB : public Singleton<SerializableDB>
 {
 public:
-	using SerializableCtor = Handle<Serializable> (*)();
+	using SerializableCtor			= Handle<Serializable> (*)();
+	using SerializableCtorRaw		= Serializable* (*)();
+	using SerializableCtorShared	= SharedPtr<Serializable>(*)();
 
 	struct SerializableRecord
 	{
@@ -18,7 +20,9 @@ public:
 		String name;
 
 		// managed memory, so just ctor is enough, no need dtor
-		SerializableCtor ctor = nullptr;
+		SerializableCtor		ctor				= nullptr;
+		SerializableCtorRaw		ctorRaw				= nullptr;
+		SerializableCtorShared	ctorShared			= nullptr;
 
 		inline bool operator<(const SerializableRecord& another)
 		{
@@ -60,9 +64,20 @@ public:
 		}
 
 		record.name = SerializableType::___GetClassName();
+
 		record.ctor = []() -> Handle<Serializable>
 		{
 			return mheap::New<SerializableType>();
+		};
+
+		record.ctorRaw = []() -> Serializable*
+		{
+			return new SerializableType();
+		};
+
+		record.ctorShared = []() -> SharedPtr<Serializable>
+		{
+			return std::make_shared<SerializableType>();
 		};
 
 		AddRecord(record);

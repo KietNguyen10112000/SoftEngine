@@ -4,12 +4,16 @@
 #undef GetClassName
 #endif // GetClassName
 
+#include "Core/Memory/SmartPointers.h"
+
 #include "Metadata.h"
 #include "Serializer.h"
 
 #include "../Stream/ByteStream.h"
 
 #include "UUID/UUID.h"
+
+#include "JSON/JSON.h"
 
 NAMESPACE_BEGIN
 
@@ -25,7 +29,8 @@ protected: inline virtual Handle<Serializable> _MakeInstance() override		\
 	return  mheap::New<className>();										\
 };																			\
 inline virtual Serializable* _MakeInstanceRaw() override { return new className(); };	\
-public: inline virtual const char* GetClassName() override					\
+inline virtual SharedPtr<Serializable> _MakeInstanceShared() override { return std::make_shared<className>(); };	\
+public: inline virtual const char* GetClassName() const						\
 {																			\
 	static_assert(std::is_base_of_v<Serializable, className>);				\
 	return  # className; 													\
@@ -36,40 +41,34 @@ public: inline virtual const char* GetClassName() override					\
 class Serializable
 {
 public:
+	friend class Serializer;
+
 	const UUID m_UUID;
 
 	Serializable() : m_UUID(UUIDGenerator::Get()->GetUUID()) {};
 	virtual ~Serializable() {};
 
 protected:
+	// we have 3 type of pointers using in this project
 	virtual Handle<Serializable> _MakeInstance() = 0;
-	virtual Serializable* _MakeInstanceRaw() { return nullptr; };
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
+	virtual Serializable* _MakeInstanceRaw() = 0;
+	virtual SharedPtr<Serializable> _MakeInstanceShared() = 0;
 
-public:
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) const = 0;
+
 	/// 
 	/// for data serialization
 	/// 
-	virtual void Serialize(Serializer* serializer) = 0;
-	virtual void Deserialize(Serializer* serializer) = 0;
+	virtual void SerializeToBinary(Serializer* serializer, ByteStream& stream) const = 0;
+	virtual void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) = 0;
 
-	///
-	/// do something like destructor to start deserialize from byte stream source
-	/// eg:
-	///		GameObject obj = <...>
 	/// 
-	///		// store obj
-	///		obj->Serialize(stream);
+	/// we need json in development phase, in release build, binary will be used
 	/// 
-	///		// clean up
-	///		obj->CleanUp();
-	/// 
-	///		// reload obj from memory source
-	///		obj->Deserialize(readStream);
-	///		
-	/// 
-	virtual void CleanUp() = 0;
+	virtual void SerializeToJson(Serializer* serializer, json& j) const = 0;
+	virtual void DeserializeFromJson(Serializer* serializer, const json& j) = 0;
 
+public:
 	/// 
 	/// for data editor
 	/// 
@@ -103,23 +102,7 @@ public:
 	/// 
 	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) = 0;
 
-	virtual const char* GetClassName() = 0;
-
-	//inline virtual Handle<Serializable> Clone(Serializer* serializer) { return nullptr; };
-
-	inline Handle<Serializable> Clone(Serializer* serializer)
-	{
-		auto ret = _MakeInstance();
-		ret->CloneFrom(serializer, this);
-		return ret;
-	};
-
-	inline Serializable* CloneRaw(Serializer* serializer)
-	{
-		auto ret = _MakeInstanceRaw();
-		ret->CloneFrom(serializer, this);
-		return ret;
-	};
+	virtual const char* GetClassName() const = 0;
 
 	inline const UUID& GetUUID() const
 	{

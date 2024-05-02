@@ -151,7 +151,7 @@ public:
 		return m_header->m_hash;
 	};
 
-	inline String SubString(size_t idx, size_t count = -1)
+	inline String SubString(size_t idx, size_t count = -1) const
 	{
 		assert(idx < length());
 		return String(c_str() + idx, count);
