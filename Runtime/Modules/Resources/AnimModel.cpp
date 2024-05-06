@@ -290,34 +290,6 @@ void AnimModel::LoadAABoxAnimMesh(AnimModel::AnimMesh* animMesh, Animation* anim
 		}
 	}
 
-	//// cal AABB of each key frame
-	//std::vector<Task> tasks;
-	//tasks.resize(aaBoxKeyFrames.size());
-	//
-	//std::vector<AnimModelLoadingCtx::CalAABBTaskParam2> taskParams;
-	//taskParams.resize(aaBoxKeyFrames.size());
-
-	//for (size_t i = 0; i < aaBoxKeyFrames.size(); i++)
-	//{
-	//	auto& task = tasks[i];
-	//	auto& _param = taskParams[i];
-
-	//	task.Params() = &_param;
-	//	task.Entry() = [](void* p)
-	//	{
-	//		TASK_SYSTEM_UNPACK_PARAM_2(AnimModelLoadingCtx::CalAABBTaskParam2, p, output, param1);
-
-	//		LoadAABoxForKeyFrame(output, param);
-	//	};
-	//	
-	//	_param.output = &aaBoxKeyFrames[i];
-	//	_param.param1 = param;
-
-	//	//task.Entry()(task.Params());
-	//}
-
-	//TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
-
 	auto& nodes = m_nodes;
 	auto& vertices = animMeshesVertices->vertices;
 	auto& indices = animMeshesVertices->indices;
