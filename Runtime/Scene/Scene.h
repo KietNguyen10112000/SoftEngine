@@ -27,7 +27,7 @@ class GameObject;
 class Input;
 
 // manage game objects and notify for main systems whenever game object add to scene, remove from scene, changed transform,...
-class API Scene final
+class API Scene final : public Serializable
 {
 public:
 	enum EVENT
@@ -66,6 +66,8 @@ private:
 	friend class Runtime;
 	friend class GameObject;
 	MAIN_SYSTEM_FRIEND_CLASSES();
+
+	SERIALIZABLE_CLASS(Scene);
 
 	constexpr static size_t NUM_TRASH_ARRAY = 2;
 	constexpr static size_t NUM_DEFER_LIST = Config::NUM_DEFER_BUFFER;
@@ -301,6 +303,15 @@ private:
 	void DoAddToParent(GameObject* parent, const Handle<GameObject>& child);
 	void DoRemoveFromParent(GameObject* parent, const Handle<GameObject>& child);
 
+	// Inherited via Serializable
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
 public:
 	// defer implementation, multithreaded
 	void AddObject(const Handle<GameObject>& obj, bool indexedName = false);
@@ -382,9 +393,7 @@ public:
 	}
 
 public:
-	//SERIALIZABLE_CLASS(Scene);
-	void Serialize(Serializer* serializer);
-	void Deserialize(Serializer* serializer);
+	
 
 	void BeginRunning();
 	void EndRunning();
@@ -453,7 +462,7 @@ public:
 	{
 		return m_dt;
 	}
-	
+
 };
 
 NAMESPACE_END

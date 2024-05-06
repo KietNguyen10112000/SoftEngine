@@ -11,49 +11,6 @@
 
 NAMESPACE_BEGIN
 
-void AnimBlendLayer::CloneFrom(Serializer* serializer, Serializable* another)
-{
-	AnimLayer::CloneFrom(serializer, another);
-
-	auto& addresses = serializer->GetAddressMap();
-
-	auto src = (AnimBlendLayer*)another;
-
-	{
-		auto it = addresses.find(src->m_input[0]);
-		assert(it != addresses.end());
-		m_input[0] = (AnimLayer*)it->second;
-	}
-
-	{
-		auto it = addresses.find(src->m_input[1]);
-		assert(it != addresses.end());
-		m_input[1] = (AnimLayer*)it->second;
-	}
-
-}
-
-void AnimBlendLayer::Serialize(Serializer* serializer)
-{
-}
-
-void AnimBlendLayer::Deserialize(Serializer* serializer)
-{
-}
-
-void AnimBlendLayer::CleanUp()
-{
-}
-
-Handle<ClassMetadata> AnimBlendLayer::GetMetadata(size_t sign)
-{
-	return Handle<ClassMetadata>();
-}
-
-void AnimBlendLayer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-}
-
 void AnimBlendLayer::Run(float dt)
 {
 	auto curLayer = m_input[m_currentLayerId];
@@ -148,6 +105,40 @@ void AnimBlendLayer::FadeTo(ID animationId, float startTime, float endTime, floa
 		}
 	);
 
+}
+
+void AnimBlendLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void AnimBlendLayer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void AnimBlendLayer::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void AnimBlendLayer::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+void AnimBlendLayer::CloneFrom(Serializer* serializer, Serializable* another)
+{
+	AnimLayer::CloneFrom(serializer, another);
+
+	auto src = (AnimBlendLayer*)another;
+	m_input[0] = serializer->Clone(src->m_input[0]);
+	m_input[1] = serializer->Clone(src->m_input[1]);
+}
+
+Handle<ClassMetadata> AnimBlendLayer::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void AnimBlendLayer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
 }
 
 NAMESPACE_END

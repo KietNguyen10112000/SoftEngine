@@ -455,10 +455,10 @@ void DebugGraphics::InitCubeRenderer()
 void DebugGraphics::InitSphereRenderer()
 {
 	m_sphereRenderer.Init(true, nullptr, nullptr);
-	m_sphereRenderer.model = resource::Load<Model3DBasic>("Default/sphere_lowpoly.obj");
+	m_sphereRenderer.model = resource::Load<Model3D>("Default/sphere_lowpoly.obj");
 
 	m_capsuleRenderer.Init(true, nullptr, m_sphereRenderer.constantBuffer, "DebugGraphics/Capsule.vs");
-	m_capsuleRenderer.model = resource::Load<Model3DBasic>("Default/capsule.obj");
+	m_capsuleRenderer.model = resource::Load<Model3D>("Default/capsule.obj");
 
 	m_meshRenderer.Init(true);
 }

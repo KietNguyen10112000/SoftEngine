@@ -32,17 +32,12 @@ protected:
 	inline void CloneFrom(Serializer* serializer, Serializable* another) override
 	{
 		auto src = (AnimLayer*)another;
-		auto& addresses = serializer->GetAddressMap();
-		auto it = addresses.find(src->m_ownerComp);
-		assert(it != addresses.end());
 
-		m_ownerComp = (AnimationComponent*)it->second;
+		m_ownerComp = serializer->Clone(m_ownerComp);
 
 		m_model				= src->m_model;
 		m_globalTransforms	= src->m_globalTransforms;
 		m_meshesAABB		= src->m_meshesAABB;
-
-		addresses.insert({ src, this });
 	}
 
 public:

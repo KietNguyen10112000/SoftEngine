@@ -18,6 +18,12 @@ class ByteStream;
 template <typename T>
 class Resource;
 
+namespace resource
+{
+	template <typename _D, typename T>
+	inline Resource<_D> StaticCast(const Resource<T>& rc);
+}
+
 class ResourceBase
 {
 private:
@@ -25,6 +31,9 @@ private:
 	friend class Resource;
 
 	friend class ResourceBaseAccessor;
+
+	template <typename _D, typename T>
+	friend Resource<_D> resource::StaticCast(const Resource<T>& rc);
 
 	std::atomic<size_t> m_refCount = { 0 };
 	String m_path;
@@ -84,8 +93,8 @@ namespace resource
 	template <typename _T, typename... Args>
 	Resource<_T> Load(String path, Args&&... args);
 
-	template <typename _D, typename T>
-	inline Resource<_D> StaticCast(const Resource<T>& rc);
+	//template <typename _D, typename T>
+	//inline Resource<_D> StaticCast(const Resource<T>& rc);
 
 	API void SerializeToJson(Serializer* serializer, json& j);
 	API void DeserializeFromJson(Serializer* serializer, const json& j);
@@ -211,7 +220,7 @@ template<typename _D, typename T>
 Resource<_D> StaticCast(const Resource<T>& rc)
 {
 	Resource<_D> ret;
-	auto ptr = static_cast<_D>(rc.m_rc);
+	auto ptr = static_cast<_D*>(rc.m_rc);
 	if (ptr)
 	{
 		ret.m_rc = ptr;

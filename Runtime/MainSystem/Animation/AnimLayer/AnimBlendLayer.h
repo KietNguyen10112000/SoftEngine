@@ -20,11 +20,13 @@ protected:
 	// Inherited via AnimLayer
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 
-	void Serialize(Serializer* serializer) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
 
-	void Deserialize(Serializer* serializer) override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
 
-	void CleanUp() override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 

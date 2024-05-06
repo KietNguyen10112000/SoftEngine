@@ -37,8 +37,14 @@ public:
 private:
 	void InitAnimLayer(AnimLayer*);
 
-protected:
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
+	// Inherited via Animator
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
 
@@ -68,16 +74,6 @@ public:
 	virtual void SetPause(bool pause) override;
 
 	virtual void SetTime(float t) override;
-
-	virtual void Serialize(Serializer* serializer);
-
-	virtual void Deserialize(Serializer* serializer);
-
-	virtual void CleanUp();
-
-	virtual Handle<ClassMetadata> GetMetadata(size_t sign);
-
-	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue);
 
 	void Update(Scene* scene, float dt);
 

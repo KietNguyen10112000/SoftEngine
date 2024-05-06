@@ -330,14 +330,6 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 	//assert(0);
 }
 
-void GameObject::Serialize(Serializer* serializer)
-{
-}
-
-void GameObject::Deserialize(Serializer* serializer)
-{
-}
-
 Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 {
 	auto metadata = mheap::New<ClassMetadata>("GameObject", this);
@@ -387,23 +379,17 @@ void GameObject::CloneFrom(Serializer* serializer, Serializable* another)
 
 	auto src = (GameObject*)another;
 
-	auto& addresses = serializer->GetAddressMap();
-
-	Handle<GameObject> ret = this;
-
-	addresses.insert({ src, ret });
-
 	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 	{
 		auto& comp = src->m_mainComponents[i];
 		if (comp)
 		{
-			auto newComp = comp->Clone(serializer);
+			auto newComp = serializer->Clone(comp);
 			if (newComp)
 			{
-				ret->m_mainComponents[i] = StaticCast<MainComponent>(newComp);
-				ret->m_mainComponents[i]->m_object = ret;
-				((HasMainComponentState*)ret->m_hasMainComponent.UpToDateRead())->hasComponents[i] = true;
+				m_mainComponents[i] = newComp;
+				m_mainComponents[i]->m_object = this;
+				((HasMainComponentState*)m_hasMainComponent.UpToDateRead())->hasComponents[i] = true;
 			}
 		}
 	}
@@ -411,18 +397,34 @@ void GameObject::CloneFrom(Serializer* serializer, Serializable* another)
 	auto& children = src->ReadChildren();
 	for (size_t i = 0; i < children.size(); i++)
 	{
-		auto child = StaticCast<GameObject>(children[i]->Clone(serializer));
-		ret->AddChild(child);
+		auto child = serializer->Clone(children[i]);
+		AddChild(child);
 	}
 
 	for (size_t i = 0; i < NUM_TRANSFORM_BUFFERS; i++)
 	{
-		ret->m_localTransform[i] = m_localTransform[i];
-		ret->m_globalTransformMat[i] = m_globalTransformMat[i];
-		ret->m_localTransformMat[i] = m_localTransformMat[i];
+		m_localTransform[i]		= src->m_localTransform[i];
+		m_globalTransformMat[i] = src->m_globalTransformMat[i];
+		m_localTransformMat[i]	= src->m_localTransformMat[i];
 	}
 
-	ret->Name() = src->Name();
+	Name() = src->Name();
+}
+
+void GameObject::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void GameObject::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void GameObject::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
+{
 }
 
 NAMESPACE_END

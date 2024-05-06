@@ -11,7 +11,7 @@ MeshBasicRenderer::MeshBasicRenderer(bool loadDefault) : RenderingComponent(REND
 {
 	if (loadDefault)
 	{
-		m_model3D	= resource::Load<Model3DBasic>("Default/cube1.obj");
+		m_model3D	= resource::Load<Model3D>("Default/cube1.obj");
 		m_mesh		= &m_model3D->m_meshes[0];
 		m_texture	= resource::Load<Texture2D>("Default/default.png");
 	}
@@ -19,21 +19,9 @@ MeshBasicRenderer::MeshBasicRenderer(bool loadDefault) : RenderingComponent(REND
 
 MeshBasicRenderer::MeshBasicRenderer(String modelPath, String texture2DPath) : RenderingComponent(RENDER_TYPE_MESH_BASIC_RENDERER)
 {
-	m_model3D	= resource::Load<Model3DBasic>("Default/cube1.obj");
+	m_model3D	= resource::Load<Model3D>("Default/cube1.obj");
 	m_mesh		= &m_model3D->m_meshes[0];
 	m_texture	= resource::Load<Texture2D>(texture2DPath);
-}
-
-void MeshBasicRenderer::Serialize(Serializer* serializer)
-{
-}
-
-void MeshBasicRenderer::Deserialize(Serializer* serializer)
-{
-}
-
-void MeshBasicRenderer::CleanUp()
-{
 }
 
 Handle<ClassMetadata> MeshBasicRenderer::GetMetadata(size_t sign)
@@ -104,6 +92,22 @@ void MeshBasicRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 	ret->m_texture = src->m_texture;
 }
 
+void MeshBasicRenderer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void MeshBasicRenderer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void MeshBasicRenderer::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void MeshBasicRenderer::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
 void MeshBasicRenderer::OnComponentAdded()
 {
 }
@@ -141,7 +145,7 @@ void MeshBasicRenderer::SetModel3D(String path)
 
 	if (!GetGameObject()->IsInAnyScene())
 	{
-		m_model3D = resource::Load<Model3DBasic>(path);
+		m_model3D = resource::Load<Model3D>(path);
 		m_mesh = &m_model3D->m_meshes[0];
 		return;
 	}
@@ -153,7 +157,7 @@ void MeshBasicRenderer::SetModel3D(String path)
 		[](RenderingSystem* system, void* p)
 		{
 			TASK_SYSTEM_UNPACK_PARAM_2(SetModel3DParam, p, model, path);
-			model->m_model3D = resource::Load<Model3DBasic>(path);
+			model->m_model3D = resource::Load<Model3D>(path);
 			model->m_mesh = &model->m_model3D->m_meshes[0];
 		}
 	);

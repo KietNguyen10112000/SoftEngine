@@ -74,7 +74,7 @@ AnimModel::AnimModel(String path) : Model3DBasic(path)
 	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+	const aiScene* scene = importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
 
 	ResourceUtils::LoadMaterialsForAnimModel(basePath, diffuseTextures, scene);
@@ -115,7 +115,7 @@ AnimModel::AnimModel(String path) : Model3DBasic(path)
 		};
 
 		std::vector<Resource<AnimMotion>> motions;
-		ResourceUtils::LoadAnimMotion(path, (void*)scene, motions);
+		ResourceUtils::LoadAnimMotion(FileUtils::ShiftPath(path), (void*)scene, motions);
 
 		std::vector<Task> tasks;
 		std::vector<LoadMotionParam> params;
@@ -579,7 +579,7 @@ ID AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices*
 
 Handle<GameObject> AnimModel::MakeGameObject()
 {
-	auto model = GetSelfResource();
+	auto model = resource::StaticCast<AnimModel>(GetSelfResource());
 	auto ret = mheap::New<GameObject>();
 
 	auto animator = ret->NewComponent<AnimatorSkeletalArray>();
@@ -616,6 +616,7 @@ Handle<GameObject> AnimModel::MakeGameObject()
 		ret->AddChild(obj);
 	}
 
+	auto offset = count;
 	count = m_animMeshes.size();
 	for (size_t i = 0; i < count; i++)
 	{
@@ -624,6 +625,8 @@ Handle<GameObject> AnimModel::MakeGameObject()
 		auto obj = mheap::New<GameObject>();
 		auto c = obj->NewComponent<AnimMeshRenderer>();
 		c->m_model3D = model;
+		c->m_animMeshRenderingBuffer = buffer;
+		c->m_mesh = &model->m_animMeshes[i];
 
 		if (mesh.m_defaultDiffusePath.empty())
 		{
@@ -638,7 +641,44 @@ Handle<GameObject> AnimModel::MakeGameObject()
 		ret->AddChild(obj);
 	}
 
+	auto l1 = animator->NewAnimLayer<AnimPlayerLayer>();
+	auto l2 = animator->NewAnimLayer<AnimPlayerLayer>();
+	auto l3 = animator->NewAnimLayer<AnimBlendLayer>();
+	
+	l1->SetAnimation(0, -1, -1);
+	l2->SetAnimation(0, -1, -1);
+	l3->SetInput(l1, l2);
+
 	return ret;
+}
+
+void AnimModel::AnimMeshRenderingBuffer::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void AnimModel::AnimMeshRenderingBuffer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void AnimModel::AnimMeshRenderingBuffer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void AnimModel::AnimMeshRenderingBuffer::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void AnimModel::AnimMeshRenderingBuffer::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+Handle<ClassMetadata> AnimModel::AnimMeshRenderingBuffer::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void AnimModel::AnimMeshRenderingBuffer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
 }
 
 NAMESPACE_END

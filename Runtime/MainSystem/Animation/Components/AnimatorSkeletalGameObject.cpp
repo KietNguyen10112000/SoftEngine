@@ -140,15 +140,19 @@ void AnimatorSkeletalGameObject::Play(float startTransitTime, ID animationId, fl
 	taskRunner->RunAsync(&task);
 }
 
-void AnimatorSkeletalGameObject::Serialize(Serializer* serializer)
+void AnimatorSkeletalGameObject::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
 {
 }
 
-void AnimatorSkeletalGameObject::Deserialize(Serializer* serializer)
+void AnimatorSkeletalGameObject::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
 {
 }
 
-void AnimatorSkeletalGameObject::CleanUp()
+void AnimatorSkeletalGameObject::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void AnimatorSkeletalGameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 }
 
@@ -219,55 +223,55 @@ void AnimatorSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, co
 
 void AnimatorSkeletalGameObject::CloneFrom(Serializer* serializer, Serializable* another)
 {
-	struct CloneParam
-	{
-		AnimatorSkeletalGameObject* src;
-		AnimatorSkeletalGameObject* dest;
-	};
+	//struct CloneParam
+	//{
+	//	AnimatorSkeletalGameObject* src;
+	//	AnimatorSkeletalGameObject* dest;
+	//};
 
-	auto ret = this;
+	//auto ret = this;
 
-	auto& addresses = serializer->GetAddressMap();
+	//auto& addresses = serializer->GetAddressMap();
 
-	{
-		addresses.insert({ another, ret });
-	}
+	//{
+	//	addresses.insert({ another, ret });
+	//}
 
-	auto callbackRunner = serializer->GetCallbackRunner();
-	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
+	//auto callbackRunner = serializer->GetCallbackRunner();
+	//auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
+	//	{
+	//		TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
 
-			auto& addresses = serializer->GetAddressMap();
+	//		auto& addresses = serializer->GetAddressMap();
 
-			auto& objs = src->m_animMeshRendererObjs;
-			for (auto& obj : objs)
-			{
-				auto it = addresses.find(obj.Get());
-				assert(it != addresses.end());
-				dest->m_animMeshRendererObjs.Push((GameObject*)(it->second));
-			}
+	//		auto& objs = src->m_animMeshRendererObjs;
+	//		for (auto& obj : objs)
+	//		{
+	//			auto it = addresses.find(obj.Get());
+	//			assert(it != addresses.end());
+	//			dest->m_animMeshRendererObjs.Push((GameObject*)(it->second));
+	//		}
 
-			/*{
-				auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
-				assert(it != addresses.end());
-				dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
-			}*/
-		}
-	);
+	//		/*{
+	//			auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
+	//			assert(it != addresses.end());
+	//			dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
+	//		}*/
+	//	}
+	//);
 
-	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = (AnimatorSkeletalGameObject*)another;
-	param->dest = ret;
+	//auto param = callbackRunner->CreateParam<CloneParam>(&task);
+	//param->src = (AnimatorSkeletalGameObject*)another;
+	//param->dest = ret;
 
-	callbackRunner->RunAsync(&task);
+	//callbackRunner->RunAsync(&task);
 
-	ret->m_animationId = m_animationId;
-	ret->m_model3D = m_model3D;
-	ret->m_tickDuration = m_tickDuration;
-	ret->m_ticksPerSecond = m_ticksPerSecond;
+	//ret->m_animationId = m_animationId;
+	//ret->m_model3D = m_model3D;
+	//ret->m_tickDuration = m_tickDuration;
+	//ret->m_ticksPerSecond = m_ticksPerSecond;
 
-	ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
+	//ret->m_aabbKeyFrameIndex.resize(m_aabbKeyFrameIndex.size());
 }
 
 NAMESPACE_END

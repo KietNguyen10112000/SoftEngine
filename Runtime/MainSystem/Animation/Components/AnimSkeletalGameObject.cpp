@@ -52,60 +52,60 @@ void AnimSkeletalGameObject::OnPropertyChanged(const UnknownAddress& var, const 
 
 void AnimSkeletalGameObject::CloneFrom(Serializer* serializer, Serializable* another)
 {
-	struct CloneParam
-	{
-		AnimSkeletalGameObject* src;
-		AnimSkeletalGameObject* dest;
-	};
+	//struct CloneParam
+	//{
+	//	AnimSkeletalGameObject* src;
+	//	AnimSkeletalGameObject* dest;
+	//};
 
-	auto ret = this;
+	//auto ret = this;
 
-	ret->m_model3D = m_model3D;
-	
-	auto& addresses = serializer->GetAddressMap();
+	//ret->m_model3D = m_model3D;
+	//
+	//auto& addresses = serializer->GetAddressMap();
 
-	auto callbackRunner = serializer->GetCallbackRunner();
-	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
+	//auto callbackRunner = serializer->GetCallbackRunner();
+	//auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
+	//	{
+	//		TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
 
-			auto& addresses = serializer->GetAddressMap();
+	//		auto& addresses = serializer->GetAddressMap();
 
-			// clone animator
-			auto it = addresses.find(src->m_animator.Get());
-			assert(it != addresses.end());
+	//		// clone animator
+	//		auto it = addresses.find(src->m_animator.Get());
+	//		assert(it != addresses.end());
 
-			dest->m_animator = (AnimatorSkeletalGameObject*)(it->second);
-		}
-	);
+	//		dest->m_animator = (AnimatorSkeletalGameObject*)(it->second);
+	//	}
+	//);
 
-	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = (AnimSkeletalGameObject*)another;
-	param->dest = ret;
+	//auto param = callbackRunner->CreateParam<CloneParam>(&task);
+	//param->src = (AnimSkeletalGameObject*)another;
+	//param->dest = ret;
 
-	callbackRunner->RunAsync(&task);
-	
-	{
-		// clone render buffer
-		auto it = addresses.find(m_animMeshRenderingBuffer.get());
-		if (it != addresses.end())
-		{
-			ret->m_animMeshRenderingBuffer = *(decltype(m_animMeshRenderingBuffer)*)(it->second);
-		}
-		else
-		{
-			AnimModel::AnimMeshRenderingBufferData buffer;
-			buffer.bones.resize(m_model3D->m_boneIds.size());
-			buffer.meshesAABB.resize(m_model3D->m_animMeshes.size());
-			auto buf = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
-			buf->buffer.Initialize(buffer);
+	//callbackRunner->RunAsync(&task);
+	//
+	//{
+	//	// clone render buffer
+	//	auto it = addresses.find(m_animMeshRenderingBuffer.get());
+	//	if (it != addresses.end())
+	//	{
+	//		ret->m_animMeshRenderingBuffer = *(decltype(m_animMeshRenderingBuffer)*)(it->second);
+	//	}
+	//	else
+	//	{
+	//		AnimModel::AnimMeshRenderingBufferData buffer;
+	//		buffer.bones.resize(m_model3D->m_boneIds.size());
+	//		buffer.meshesAABB.resize(m_model3D->m_animMeshes.size());
+	//		auto buf = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
+	//		buf->buffer.Initialize(buffer);
 
-			ret->m_animMeshRenderingBuffer = buf;
-			addresses.insert({ m_animMeshRenderingBuffer.get(), &ret->m_animMeshRenderingBuffer });
-		}
-	}
-	
-	ret->m_boneId = m_boneId;
+	//		ret->m_animMeshRenderingBuffer = buf;
+	//		addresses.insert({ m_animMeshRenderingBuffer.get(), &ret->m_animMeshRenderingBuffer });
+	//	}
+	//}
+	//
+	//ret->m_boneId = m_boneId;
 }
 
 void AnimSkeletalGameObject::Update(float dt)

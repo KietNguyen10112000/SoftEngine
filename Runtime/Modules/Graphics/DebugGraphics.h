@@ -6,7 +6,7 @@
 
 #include "GraphicsFundamental.h"
 
-#include "Resources/Model3DBasic.h"
+#include "Resources/Model3D.h"
 
 NAMESPACE_BEGIN
 
@@ -66,7 +66,7 @@ private:
 		SharedPtr<GraphicsPipeline> pipeline;
 		SharedPtr<GraphicsConstantBuffer> constantBuffer;
 
-		Resource<Model3DBasic> model;
+		Resource<Model3D> model;
 
 		struct CBuffer
 		{

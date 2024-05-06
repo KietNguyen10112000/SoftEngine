@@ -881,144 +881,144 @@ void FlattenAnimModelHierarchy(AnimModelLoadingCtx* ctx, AnimModel* model, const
 //}
 
 
-void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
-{
-	constexpr static auto ProcessNonAnimMesh =
-		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node) -> void
-	{
-		auto comp = obj->NewComponent<MeshBasicRenderer>(false);
-
-		comp->m_model3D = model;
-		comp->m_mesh = (Model3DBasic::Mesh*)ctx->meshes[node->mMeshes[i]];
-
-		if (aiMesh->mMaterialIndex >= 0)
-		{
-			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
-		}
-		else
-		{
-			comp->m_texture = diffuseTextures.back();
-		}
-	};
-
-	constexpr static auto ProcessAnimMesh =
-		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node) -> void
-	{
-		auto comp = obj->NewComponent<AnimMeshRenderer>();
-
-		comp->m_model3D = model;
-		comp->m_mesh = (AnimModel::AnimMesh*)ctx->meshes[node->mMeshes[i]];
-
-		comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
-
-		ctx->animator->m_animMeshRendererObjs[comp->m_mesh->m_model3DIdx] = obj;
-
-		if (aiMesh->mMaterialIndex >= 0)
-		{
-			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
-		}
-		else
-		{
-			comp->m_texture = diffuseTextures.back();
-		}
-	};
-
-	constexpr static void (*ProcessNode)(AnimModelLoadingCtx*, GameObject*, Resource<AnimModel>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode* ) =
-		[](AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node) -> void
-	{
-		String maybeBoneName = node->mName.C_Str();
-		if (!maybeBoneName.empty())
-		{
-			obj->Name() = maybeBoneName;
-			ctx->objectMap.insert({ maybeBoneName,obj });
-
-			auto it = model->m_boneIds.find(maybeBoneName);
-			if (it != model->m_boneIds.end())
-			{
-				// this node is a bone
-
-				auto comp = obj->NewComponent<AnimSkeletalGameObject>();
-				comp->m_model3D = model;
-				comp->m_boneId = it->second;
-				comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
-				comp->m_animator = ctx->animator;
-			}
-		}
-
-		size_t animMeshCount = 0;
-		if (node->mNumMeshes > 1)
-		{
-			auto compoundObj = mheap::New<GameObject>();
-			for (size_t i = 0; i < node->mNumMeshes; i++)
-			{
-				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
-				auto child = mheap::New<GameObject>();
-				child->Name() = aiMesh->mName.C_Str();
-
-				compoundObj->AddChild(child);
-
-				if (!aiMesh->HasBones())
-				{
-					ProcessNonAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node);
-					continue;
-				}
-				
-				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node);
-
-				animMeshCount++;
-			}
-
-			obj->AddChild(compoundObj);
-		}
-		else if (node->mNumMeshes == 1)
-		{
-			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
-
-			if (!aiMesh->HasBones())
-			{
-				ProcessNonAnimMesh(ctx, 0, obj, model, diffuseTextures, aiMesh, node);
-			}
-			else
-			{
-				ProcessAnimMesh(ctx, 0, obj, model, diffuseTextures, aiMesh, node);
-				animMeshCount++;
-			}
-
-			//obj->Name() = aiMesh->mName.C_Str();
-		}
-
-		aiVector3D scale;
-		aiQuaternion rot;
-		aiVector3D pos;
-
-		if (!animMeshCount)
-		{
-			node->mTransformation.Decompose(scale, rot, pos);
-		}
-		else
-		{
-			//auto mat = node->mParent->mTransformation;
-			auto mat = scene->mRootNode->mTransformation;
-			mat.Inverse().Decompose(scale, rot, pos);
-		}
-
-		Transform transform = {};
-		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
-		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
-		transform.Position() = reinterpret_cast<const Vec3&>(pos);
-
-		obj->SetLocalTransform(transform);
-		
-		for (size_t i = 0; i < node->mNumChildren; i++)
-		{
-			auto child = mheap::New<GameObject>();
-			obj->AddChild(child);
-			ProcessNode(ctx, child, model, diffuseTextures, scene, node->mChildren[i]);
-		}
-	};
-
-	ProcessNode(ctx, obj, model, diffuseTextures, scene, scene->mRootNode);
-}
+//void LoadAnimModelHierarchy(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
+//{
+//	constexpr static auto ProcessNonAnimMesh =
+//		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node) -> void
+//	{
+//		auto comp = obj->NewComponent<MeshBasicRenderer>(false);
+//
+//		comp->m_model3D = model;
+//		comp->m_mesh = (Model3DBasic::Mesh*)ctx->meshes[node->mMeshes[i]];
+//
+//		if (aiMesh->mMaterialIndex >= 0)
+//		{
+//			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+//		}
+//		else
+//		{
+//			comp->m_texture = diffuseTextures.back();
+//		}
+//	};
+//
+//	constexpr static auto ProcessAnimMesh =
+//		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node) -> void
+//	{
+//		auto comp = obj->NewComponent<AnimMeshRenderer>();
+//
+//		comp->m_model3D = model;
+//		comp->m_mesh = (AnimModel::AnimMesh*)ctx->meshes[node->mMeshes[i]];
+//
+//		comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+//
+//		ctx->animator->m_animMeshRendererObjs[comp->m_mesh->m_model3DIdx] = obj;
+//
+//		if (aiMesh->mMaterialIndex >= 0)
+//		{
+//			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+//		}
+//		else
+//		{
+//			comp->m_texture = diffuseTextures.back();
+//		}
+//	};
+//
+//	constexpr static void (*ProcessNode)(AnimModelLoadingCtx*, GameObject*, Resource<AnimModel>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode* ) =
+//		[](AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node) -> void
+//	{
+//		String maybeBoneName = node->mName.C_Str();
+//		if (!maybeBoneName.empty())
+//		{
+//			obj->Name() = maybeBoneName;
+//			ctx->objectMap.insert({ maybeBoneName,obj });
+//
+//			auto it = model->m_boneIds.find(maybeBoneName);
+//			if (it != model->m_boneIds.end())
+//			{
+//				// this node is a bone
+//
+//				auto comp = obj->NewComponent<AnimSkeletalGameObject>();
+//				comp->m_model3D = model;
+//				comp->m_boneId = it->second;
+//				comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+//				comp->m_animator = ctx->animator;
+//			}
+//		}
+//
+//		size_t animMeshCount = 0;
+//		if (node->mNumMeshes > 1)
+//		{
+//			auto compoundObj = mheap::New<GameObject>();
+//			for (size_t i = 0; i < node->mNumMeshes; i++)
+//			{
+//				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
+//				auto child = mheap::New<GameObject>();
+//				child->Name() = aiMesh->mName.C_Str();
+//
+//				compoundObj->AddChild(child);
+//
+//				if (!aiMesh->HasBones())
+//				{
+//					ProcessNonAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node);
+//					continue;
+//				}
+//				
+//				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node);
+//
+//				animMeshCount++;
+//			}
+//
+//			obj->AddChild(compoundObj);
+//		}
+//		else if (node->mNumMeshes == 1)
+//		{
+//			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
+//
+//			if (!aiMesh->HasBones())
+//			{
+//				ProcessNonAnimMesh(ctx, 0, obj, model, diffuseTextures, aiMesh, node);
+//			}
+//			else
+//			{
+//				ProcessAnimMesh(ctx, 0, obj, model, diffuseTextures, aiMesh, node);
+//				animMeshCount++;
+//			}
+//
+//			//obj->Name() = aiMesh->mName.C_Str();
+//		}
+//
+//		aiVector3D scale;
+//		aiQuaternion rot;
+//		aiVector3D pos;
+//
+//		if (!animMeshCount)
+//		{
+//			node->mTransformation.Decompose(scale, rot, pos);
+//		}
+//		else
+//		{
+//			//auto mat = node->mParent->mTransformation;
+//			auto mat = scene->mRootNode->mTransformation;
+//			mat.Inverse().Decompose(scale, rot, pos);
+//		}
+//
+//		Transform transform = {};
+//		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+//		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+//		transform.Position() = reinterpret_cast<const Vec3&>(pos);
+//
+//		obj->SetLocalTransform(transform);
+//		
+//		for (size_t i = 0; i < node->mNumChildren; i++)
+//		{
+//			auto child = mheap::New<GameObject>();
+//			obj->AddChild(child);
+//			ProcessNode(ctx, child, model, diffuseTextures, scene, node->mChildren[i]);
+//		}
+//	};
+//
+//	ProcessNode(ctx, obj, model, diffuseTextures, scene, scene->mRootNode);
+//}
 
 //void AnimModelCreateCache(AnimModelLoadingCtx* ctx, AnimModel* model, ByteStream& stream, const String& streamPath)
 //{
@@ -1260,156 +1260,156 @@ void LoadMaterialsForAnimModel(const String& basePath, std::vector<String>& diff
 //	return StaticCast<GameObject>(serializer.Clone(ret));
 //}
 
-void LoadAnimModelHierarchyArray(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
-{
-	constexpr static auto ProcessNonAnimMesh =
-		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node, ID nodeId, Transform& transform) -> void
-	{
-		auto comp = obj->NewComponent<AnimModelStaticMeshRenderer>(false);
-
-		comp->m_model3D = model;
-		comp->m_mesh = (Model3DBasic::Mesh*)ctx->meshes[node->mMeshes[i]];
-
-		if (aiMesh->mMaterialIndex >= 0)
-		{
-			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
-		}
-		else
-		{
-			comp->m_texture = diffuseTextures.back();
-		}
-	};
-
-	constexpr static auto ProcessAnimMesh =
-		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node, ID nodeId, Transform& transform) -> void
-	{
-		auto comp = obj->NewComponent<AnimMeshRenderer>();
-
-		comp->m_model3D = model;
-		comp->m_mesh = (AnimModel::AnimMesh*)ctx->meshes[node->mMeshes[i]];
-
-		comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
-
-		//ctx->animatorArray->m_meshRendererObjs[comp->m_mesh->m_model3DIdx] = obj;
-
-		if (aiMesh->mMaterialIndex >= 0)
-		{
-			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
-		}
-		else
-		{
-			comp->m_texture = diffuseTextures.back();
-		}
-
-		auto animator = ctx->animatorArray;
-		animator->m_meshRendererObjs.Push(obj);
-		model->m_boundNodeIds.push_back({ INVALID_ID });
-
-		obj->SetLocalTransform(transform);
-	};
-
-	constexpr static void (*ProcessNode)(AnimModelLoadingCtx*, GameObject*, Resource<AnimModel>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode*, ID&) =
-		[](AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node, ID& nodeId)-> void
-	{
-		size_t animMeshCount = 0;
-		aiVector3D scale;
-		aiQuaternion rot;
-		aiVector3D pos;
-
-		//if (!animMeshCount)
-		//{
-			node->mTransformation.Decompose(scale, rot, pos);
-		//}
-		//else
-		//{
-		//	//auto mat = node->mParent->mTransformation;
-		//	auto mat = scene->mRootNode->mTransformation;
-		//	mat.Inverse().Decompose(scale, rot, pos);
-		//}
-
-		Transform transform = {};
-		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
-		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
-		transform.Position() = reinterpret_cast<const Vec3&>(pos);
-
-		if (node->mNumMeshes > 1)
-		{
-			auto compoundObj = mheap::New<GameObject>();
-
-			bool hasStaticMesh = false;
-
-			for (size_t i = 0; i < node->mNumMeshes; i++)
-			{
-				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
-				auto child = mheap::New<GameObject>();
-				child->Name() = aiMesh->mName.C_Str();
-
-				compoundObj->AddChild(child);
-
-				if (!aiMesh->HasBones())
-				{
-					hasStaticMesh = true;
-					ProcessNonAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node, nodeId, transform);
-					continue;
-				}
-
-				auto mat = scene->mRootNode->mTransformation;
-				mat.Inverse().Decompose(scale, rot, pos);
-				transform.Scale() = reinterpret_cast<const Vec3&>(scale);
-				transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
-				transform.Position() = reinterpret_cast<const Vec3&>(pos);
-
-				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node, nodeId, transform);
-
-				animMeshCount++;
-			}
-
-			if (hasStaticMesh)
-			{
-				auto animator = ctx->animatorArray;
-				animator->m_meshRendererObjs.Push(compoundObj);
-				model->m_boundNodeIds.push_back({ nodeId });
-			}
-
-			obj->AddChild(compoundObj);
-		}
-		else if (node->mNumMeshes == 1)
-		{
-			auto compoundObj = mheap::New<GameObject>();
-			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
-
-			if (!aiMesh->HasBones())
-			{
-				ProcessNonAnimMesh(ctx, 0, compoundObj, model, diffuseTextures, aiMesh, node, nodeId, transform);
-				auto animator = ctx->animatorArray;
-				animator->m_meshRendererObjs.Push(compoundObj);
-				model->m_boundNodeIds.push_back({ nodeId });
-			}
-			else
-			{
-				auto mat = scene->mRootNode->mTransformation;
-				mat.Inverse().Decompose(scale, rot, pos);
-				transform.Scale() = reinterpret_cast<const Vec3&>(scale);
-				transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
-				transform.Position() = reinterpret_cast<const Vec3&>(pos);
-
-				ProcessAnimMesh(ctx, 0, compoundObj, model, diffuseTextures, aiMesh, node, nodeId, transform);
-				animMeshCount++;
-			}
-
-			obj->AddChild(compoundObj);
-		}
-
-		nodeId++;
-		for (size_t i = 0; i < node->mNumChildren; i++)
-		{
-			ProcessNode(ctx, obj, model, diffuseTextures, scene, node->mChildren[i], nodeId);
-		}
-	};
-
-	size_t nodeId = 0;
-	ProcessNode(ctx, obj, model, diffuseTextures, scene, scene->mRootNode, nodeId);
-}
+//void LoadAnimModelHierarchyArray(AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene)
+//{
+//	constexpr static auto ProcessNonAnimMesh =
+//		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node, ID nodeId, Transform& transform) -> void
+//	{
+//		auto comp = obj->NewComponent<AnimModelStaticMeshRenderer>(false);
+//
+//		comp->m_model3D = model;
+//		comp->m_mesh = (Model3DBasic::Mesh*)ctx->meshes[node->mMeshes[i]];
+//
+//		if (aiMesh->mMaterialIndex >= 0)
+//		{
+//			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+//		}
+//		else
+//		{
+//			comp->m_texture = diffuseTextures.back();
+//		}
+//	};
+//
+//	constexpr static auto ProcessAnimMesh =
+//		[](AnimModelLoadingCtx* ctx, size_t i, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, aiMesh* aiMesh, aiNode* node, ID nodeId, Transform& transform) -> void
+//	{
+//		auto comp = obj->NewComponent<AnimMeshRenderer>();
+//
+//		comp->m_model3D = model;
+//		comp->m_mesh = (AnimModel::AnimMesh*)ctx->meshes[node->mMeshes[i]];
+//
+//		comp->m_animMeshRenderingBuffer = ctx->animMeshRenderingBuffer;
+//
+//		//ctx->animatorArray->m_meshRendererObjs[comp->m_mesh->m_model3DIdx] = obj;
+//
+//		if (aiMesh->mMaterialIndex >= 0)
+//		{
+//			comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+//		}
+//		else
+//		{
+//			comp->m_texture = diffuseTextures.back();
+//		}
+//
+//		auto animator = ctx->animatorArray;
+//		animator->m_meshRendererObjs.Push(obj);
+//		model->m_boundNodeIds.push_back({ INVALID_ID });
+//
+//		obj->SetLocalTransform(transform);
+//	};
+//
+//	constexpr static void (*ProcessNode)(AnimModelLoadingCtx*, GameObject*, Resource<AnimModel>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode*, ID&) =
+//		[](AnimModelLoadingCtx* ctx, GameObject* obj, Resource<AnimModel>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node, ID& nodeId)-> void
+//	{
+//		size_t animMeshCount = 0;
+//		aiVector3D scale;
+//		aiQuaternion rot;
+//		aiVector3D pos;
+//
+//		//if (!animMeshCount)
+//		//{
+//			node->mTransformation.Decompose(scale, rot, pos);
+//		//}
+//		//else
+//		//{
+//		//	//auto mat = node->mParent->mTransformation;
+//		//	auto mat = scene->mRootNode->mTransformation;
+//		//	mat.Inverse().Decompose(scale, rot, pos);
+//		//}
+//
+//		Transform transform = {};
+//		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+//		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+//		transform.Position() = reinterpret_cast<const Vec3&>(pos);
+//
+//		if (node->mNumMeshes > 1)
+//		{
+//			auto compoundObj = mheap::New<GameObject>();
+//
+//			bool hasStaticMesh = false;
+//
+//			for (size_t i = 0; i < node->mNumMeshes; i++)
+//			{
+//				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
+//				auto child = mheap::New<GameObject>();
+//				child->Name() = aiMesh->mName.C_Str();
+//
+//				compoundObj->AddChild(child);
+//
+//				if (!aiMesh->HasBones())
+//				{
+//					hasStaticMesh = true;
+//					ProcessNonAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node, nodeId, transform);
+//					continue;
+//				}
+//
+//				auto mat = scene->mRootNode->mTransformation;
+//				mat.Inverse().Decompose(scale, rot, pos);
+//				transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+//				transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+//				transform.Position() = reinterpret_cast<const Vec3&>(pos);
+//
+//				ProcessAnimMesh(ctx, i, child, model, diffuseTextures, aiMesh, node, nodeId, transform);
+//
+//				animMeshCount++;
+//			}
+//
+//			if (hasStaticMesh)
+//			{
+//				auto animator = ctx->animatorArray;
+//				animator->m_meshRendererObjs.Push(compoundObj);
+//				model->m_boundNodeIds.push_back({ nodeId });
+//			}
+//
+//			obj->AddChild(compoundObj);
+//		}
+//		else if (node->mNumMeshes == 1)
+//		{
+//			auto compoundObj = mheap::New<GameObject>();
+//			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
+//
+//			if (!aiMesh->HasBones())
+//			{
+//				ProcessNonAnimMesh(ctx, 0, compoundObj, model, diffuseTextures, aiMesh, node, nodeId, transform);
+//				auto animator = ctx->animatorArray;
+//				animator->m_meshRendererObjs.Push(compoundObj);
+//				model->m_boundNodeIds.push_back({ nodeId });
+//			}
+//			else
+//			{
+//				auto mat = scene->mRootNode->mTransformation;
+//				mat.Inverse().Decompose(scale, rot, pos);
+//				transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+//				transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+//				transform.Position() = reinterpret_cast<const Vec3&>(pos);
+//
+//				ProcessAnimMesh(ctx, 0, compoundObj, model, diffuseTextures, aiMesh, node, nodeId, transform);
+//				animMeshCount++;
+//			}
+//
+//			obj->AddChild(compoundObj);
+//		}
+//
+//		nodeId++;
+//		for (size_t i = 0; i < node->mNumChildren; i++)
+//		{
+//			ProcessNode(ctx, obj, model, diffuseTextures, scene, node->mChildren[i], nodeId);
+//		}
+//	};
+//
+//	size_t nodeId = 0;
+//	ProcessNode(ctx, obj, model, diffuseTextures, scene, scene->mRootNode, nodeId);
+//}
 
 //Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath, bool placeHolder)
 //{

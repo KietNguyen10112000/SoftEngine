@@ -16,6 +16,7 @@ public:
 
 	COMPONENT_CLASS(RigidBodyDynamic);
 
+	inline RigidBodyDynamic() {};
 	RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape);
 	~RigidBodyDynamic();
 
@@ -23,9 +24,16 @@ private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
 protected:
-	inline RigidBodyDynamic() {};
 	virtual void OnPhysicsTransformChanged() override; 
+
+	// Inherited via RigidBody
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 
@@ -34,16 +42,6 @@ public:
 	};
 
 public:
-	// Inherited via RigidBody
-	void Serialize(Serializer* serializer) override;
-
-	void Deserialize(Serializer* serializer) override;
-
-	void CleanUp() override;
-
-	Handle<ClassMetadata> GetMetadata(size_t sign) override;
-
-	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 	void OnComponentAdded() override;
 

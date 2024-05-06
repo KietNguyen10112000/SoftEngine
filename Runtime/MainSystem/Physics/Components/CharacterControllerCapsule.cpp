@@ -95,31 +95,6 @@ void CharacterControllerCapsule::OnDrawDebug()
 	}
 }
 
-void CharacterControllerCapsule::Serialize(Serializer* serializer)
-{
-}
-
-void CharacterControllerCapsule::Deserialize(Serializer* serializer)
-{
-}
-
-void CharacterControllerCapsule::CloneFrom(Serializer* serializer, Serializable* another)
-{
-}
-
-void CharacterControllerCapsule::CleanUp()
-{
-}
-
-Handle<ClassMetadata> CharacterControllerCapsule::GetMetadata(size_t sign)
-{
-	return Handle<ClassMetadata>();
-}
-
-void CharacterControllerCapsule::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-}
-
 void CharacterControllerCapsule::OnComponentAdded()
 {
 }
@@ -131,6 +106,35 @@ void CharacterControllerCapsule::OnComponentRemoved()
 AABox CharacterControllerCapsule::GetGlobalAABB()
 {
 	return AABox();
+}
+
+void CharacterControllerCapsule::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void CharacterControllerCapsule::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void CharacterControllerCapsule::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void CharacterControllerCapsule::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void CharacterControllerCapsule::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+Handle<ClassMetadata> CharacterControllerCapsule::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void CharacterControllerCapsule::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
 }
 
 NAMESPACE_END

@@ -143,18 +143,6 @@ void AnimatorSkeletalArray::SetTime(float t)
 	);*/
 }
 
-void AnimatorSkeletalArray::Serialize(Serializer* serializer)
-{
-}
-
-void AnimatorSkeletalArray::Deserialize(Serializer* serializer)
-{
-}
-
-void AnimatorSkeletalArray::CleanUp()
-{
-}
-
 Handle<ClassMetadata> AnimatorSkeletalArray::GetMetadata(size_t sign)
 {
 	/*auto metadata = mheap::New<ClassMetadata>(GetClassName(), this);
@@ -207,86 +195,6 @@ Handle<ClassMetadata> AnimatorSkeletalArray::GetMetadata(size_t sign)
 
 	return metadata;*/
 	return nullptr;
-}
-
-void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-	if (var.Is(1))
-	{
-		Play(-1, newValue.As<ID>(), 0, -1, -1, 0);
-	}
-
-	if (var.Is(3))
-	{
-		SetDuration(newValue.As<float>());
-	}
-}
-
-void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* another)
-{
-	struct CloneParam
-	{
-		AnimatorSkeletalArray* src;
-		AnimatorSkeletalArray* dest;
-	};
-
-	auto& addresses = serializer->GetAddressMap();
-
-	auto dest = this;
-	auto src = (AnimatorSkeletalArray*)another;
-
-	addresses.insert({ src, dest });
-
-	for (auto& layer : src->m_animLayers)
-	{
-		dest->m_animLayers.push_back((AnimLayer*)layer->CloneRaw(serializer));
-	}
-
-	/*auto& addresses = serializer->GetAddressMap();
-
-	{
-		addresses.insert({ this, ret.Get() });
-	}*/
-
-	auto callbackRunner = serializer->GetCallbackRunner();
-	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
-
-			auto& addresses = serializer->GetAddressMap();
-
-			auto& objs = src->m_meshRendererObjs;
-			for (auto& obj : objs)
-			{
-				auto it = addresses.find(obj.Get());
-				assert(it != addresses.end());
-				dest->m_meshRendererObjs.Push((GameObject*)(it->second));
-			}
-
-			/*{
-				auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
-				assert(it != addresses.end());
-				dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
-			}*/
-		}
-	);
-
-	AnimModel::AnimMeshRenderingBufferData buffer;
-	buffer.bones.resize(src->m_model3D->m_boneIds.size());
-	buffer.meshesAABB.resize(src->m_model3D->m_animMeshes.size());
-	auto buf = std::make_shared<AnimModel::AnimMeshRenderingBuffer>();
-	buf->buffer.Initialize(buffer);
-
-	dest->m_animMeshRenderingBuffer = buf;
-	addresses.insert({ src->m_animMeshRenderingBuffer.get(), &dest->m_animMeshRenderingBuffer });
-
-	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = src;
-	param->dest = dest;
-
-	callbackRunner->RunAsync(&task);
-
-	dest->m_model3D = src->m_model3D;
 }
 
 void AnimatorSkeletalArray::Update(Scene* scene, float dt)
@@ -752,6 +660,54 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 	//	ImGui::End();
 	//}
+}
+
+void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* another)
+{
+	auto src = (AnimatorSkeletalArray*)another;
+	for (auto& layer : src->m_animLayers)
+	{
+		m_animLayers.push_back(serializer->Clone(layer));
+	}
+
+	for (auto& obj : src->m_meshRendererObjs)
+	{
+		m_meshRendererObjs.Push(serializer->Clone(obj));
+	}
+
+	m_animMeshRenderingBuffer = serializer->Clone(src->m_animMeshRenderingBuffer);
+
+	m_model3D = src->m_model3D;
+}
+
+void AnimatorSkeletalArray::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void AnimatorSkeletalArray::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void AnimatorSkeletalArray::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+
+void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
+	if (var.Is(1))
+	{
+		Play(-1, newValue.As<ID>(), 0, -1, -1, 0);
+	}
+
+	if (var.Is(3))
+	{
+		SetDuration(newValue.As<float>());
+	}
 }
 
 NAMESPACE_END

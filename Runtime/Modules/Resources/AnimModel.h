@@ -6,6 +6,8 @@
 #include "FileSystem/FileSystem.h"
 
 #include "MainSystem/Animation/Utils/Animation.h"
+#include "Common/Base/Serializable.h"
+
 #include "Scene/DeferredBuffer.h"
 
 #include "Model3DBasic.h"
@@ -45,10 +47,22 @@ public:
 
 	//using AnimMeshRenderingBuffer = DeferredBuffer<AnimMeshRenderingBufferData>;
 
-	struct AnimMeshRenderingBuffer
+	struct AnimMeshRenderingBuffer : public Serializable
 	{
+		SERIALIZABLE_CLASS(AnimMeshRenderingBuffer);
+
 		ID id = INVALID_ID;
 		DeferredBuffer<AnimMeshRenderingBufferData> buffer;
+
+	protected:
+		// Inherited via Serializable
+		void CloneFrom(Serializer* serializer, Serializable* another) override;
+		void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+		void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+		void SerializeToJson(Serializer* serializer, json& j) const override;
+		void DeserializeFromJson(Serializer* serializer, const json& j) override;
+		Handle<ClassMetadata> GetMetadata(size_t sign) override;
+		void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 	};
 
 	struct AnimVertex

@@ -7,7 +7,13 @@
 
 #include "Math/Math.h"
 
-#include "nlohmann/json.hpp"
+#ifdef snprintf
+#undef snprintf
+#endif // snprintf
+
+#include "Libraries/nlohmann/single_include/nlohmann/json.hpp"
+
+#include <cstdio>
 
 using json = ::nlohmann::json;
 

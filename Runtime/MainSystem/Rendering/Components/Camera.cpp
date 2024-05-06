@@ -40,55 +40,6 @@ Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
 //	CleanUp();
 //}
 
-void Camera::Serialize(Serializer* serializer)
-{
-}
-
-void Camera::Deserialize(Serializer* serializer)
-{
-}
-
-void Camera::CleanUp()
-{
-	delete m_pipeline;
-	m_pipeline = nullptr;
-}
-
-Handle<ClassMetadata> Camera::GetMetadata(size_t sign)
-{
-	auto metadata = mheap::New<ClassMetadata>("Camera", this);
-
-	auto accessor = Accessor(
-		"Projection",
-		&Projection(),
-		[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
-		{
-
-		},
-
-		[](UnknownAddress& var, Serializable* instance) -> Variant
-		{
-			auto& mat = var.As<Mat4>();
-			auto ret = Variant(VARIANT_TYPE::PROJECTION_MAT4);
-			ret.As<Mat4>() = mat;
-			return ret;
-		},
-		this
-	);
-
-	metadata->AddProperty(accessor);
-
-	return metadata;
-}
-
-void Camera::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-	if (var.Is(&Projection()))
-	{
-		SetProjection(newValue.As<Mat4>());
-	}
-}
-
 void Camera::OnComponentAdded()
 {
 	auto rdrSys = GetGameObject()->GetScene()->GetRenderingSystem();
@@ -157,6 +108,58 @@ void Camera::SetProjection(const Mat4& projMat)
 
 void Camera::CloneFrom(Serializer* serializer, Serializable* another)
 {
+}
+
+void Camera::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void Camera::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+
+void Camera::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void Camera::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+Handle<ClassMetadata> Camera::GetMetadata(size_t sign)
+{
+	auto metadata = mheap::New<ClassMetadata>("Camera", this);
+
+	auto accessor = Accessor(
+		"Projection",
+		&Projection(),
+		[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+		{
+
+		},
+
+		[](UnknownAddress& var, Serializable* instance) -> Variant
+		{
+			auto& mat = var.As<Mat4>();
+			auto ret = Variant(VARIANT_TYPE::PROJECTION_MAT4);
+			ret.As<Mat4>() = mat;
+			return ret;
+		},
+		this
+	);
+
+	metadata->AddProperty(accessor);
+
+	return metadata;
+}
+
+void Camera::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
+	if (var.Is(&Projection()))
+	{
+		SetProjection(newValue.As<Mat4>());
+	}
 }
 
 NAMESPACE_END

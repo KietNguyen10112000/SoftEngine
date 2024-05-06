@@ -526,17 +526,18 @@ private:
 		func(this);
 	}
 
-public:
-	virtual void Serialize(Serializer* serializer) override;
-	virtual void Deserialize(Serializer* serializer) override;
-	virtual void CleanUp() override {}
-	virtual Handle<ClassMetadata> GetMetadata(size_t sign) override;
-	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
-
 protected:
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
+	// Inherited via Serializable
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 
 public:
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
 	inline const Transform& ReadLocalTransform() const
 	{
 		return m_localTransform[m_transformReadIdx];

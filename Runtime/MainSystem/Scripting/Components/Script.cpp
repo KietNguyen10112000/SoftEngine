@@ -6,32 +6,6 @@
 
 NAMESPACE_BEGIN
 
-void Script::Serialize(Serializer* serializer)
-{
-}
-
-void Script::Deserialize(Serializer* serializer)
-{
-}
-
-void Script::CleanUp()
-{
-}
-
-Handle<ClassMetadata> Script::GetMetadata(size_t sign)
-{
-	return Handle<ClassMetadata>();
-}
-
-void Script::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-}
-
-//const char* Script::GetClassName()
-//{
-//	return nullptr;
-//}
-
 void Script::OnComponentAdded()
 {
 	m_scene = GetGameObject()->GetScene();
@@ -73,7 +47,32 @@ void Script::OnGUI()
 {
 }
 
+void Script::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void Script::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void Script::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void Script::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
 void Script::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+Handle<ClassMetadata> Script::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void Script::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 

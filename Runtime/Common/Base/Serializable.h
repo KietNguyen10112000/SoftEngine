@@ -54,7 +54,7 @@ protected:
 	virtual Serializable* _MakeInstanceRaw() = 0;
 	virtual SharedPtr<Serializable> _MakeInstanceShared() = 0;
 
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) const = 0;
+	virtual void CloneFrom(Serializer* serializer, Serializable* another) = 0;
 
 	/// 
 	/// for data serialization

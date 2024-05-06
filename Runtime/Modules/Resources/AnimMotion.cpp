@@ -25,8 +25,6 @@ AnimMotion::AnimMotion(String path, bool placeHolder) : ResourceBase(path)
 void AnimMotion::LoadFromFile(const String& path)
 {
 	auto modelFilePath = GetModelFilePath();
-	std::vector<Resource<AnimMotion>> motions;
-	motions.push_back(GetSelfResource());
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(modelFilePath.c_str(),

@@ -107,7 +107,7 @@ void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMo
 	{
 		auto aiAnim = scene->mAnimations[i];
 		
-		auto animMotion = resource::Load<AnimMotion>(String::Format("{}|{}", filePath, i));
+		auto animMotion = resource::Load<AnimMotion>(String::Format("{}|{}", filePath, i), true);
 
 		ExtractAnimMotionData(aiAnim, animMotion);
 

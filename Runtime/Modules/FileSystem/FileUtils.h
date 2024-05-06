@@ -94,6 +94,34 @@ inline String GetLastName(const char* path)
 	return String(path + idx, str.length() - idx);
 }
 
+inline String PopPath(const String& path)
+{
+	std::string_view str = path.c_str();
+	auto idx = str.find_last_of('/');
+	if (idx == std::string_view::npos)
+	{
+		return path;
+	}
+
+	idx++;
+
+	return String(path.c_str(), idx);
+}
+
+inline String ShiftPath(const String& path)
+{
+	std::string_view str = path.c_str();
+	auto idx = str.find_first_of('/');
+	if (idx == std::string_view::npos)
+	{
+		return path;
+	}
+
+	idx++;
+
+	return String(path.c_str() + idx);
+}
+
 }
 
 NAMESPACE_FILE_SYSTEM_END

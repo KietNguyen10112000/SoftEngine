@@ -28,7 +28,7 @@ Model3D::Model3D(String path) : Model3DBasic(path)
 	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+	const aiScene* scene = importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
 
 	constexpr static void (*ProcessNode)(Model3D*, const aiScene*, aiNode*, ID) =
@@ -63,12 +63,15 @@ Model3D::Model3D(String path) : Model3DBasic(path)
 				nodes.push_back({ String(),myId,(ID)node->mMeshes[i],{} });
 			}
 		}
-		else
+		else if (node->mNumMeshes > 0)
 		{
 			meshId = node->mMeshes[0];
 			nodes.push_back({ name,parentId,meshId,transform });
 		}
-
+		else
+		{
+			nodes.push_back({ name,parentId,INVALID_ID,transform });
+		}
 
 		for (size_t i = 0; i < node->mNumChildren; i++)
 		{
@@ -110,7 +113,7 @@ Model3D::Model3D(String path) : Model3DBasic(path)
 
 	{
 		uint32_t count = 0;
-		for (uint32_t i = 0; scene->mNumMeshes; i++)
+		for (uint32_t i = 0; i < scene->mNumMeshes; i++)
 		{
 			auto& mesh = scene->mMeshes[i];
 			if (mesh->HasBones())
@@ -181,6 +184,8 @@ Handle<GameObject> Model3D::MakeGameObject()
 		parent->AddChild(obj);
 		objs.push_back(obj);
 	}
+
+	return ret;
 }
 
 NAMESPACE_END

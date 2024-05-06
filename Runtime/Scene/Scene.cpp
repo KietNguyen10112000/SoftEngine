@@ -1015,14 +1015,6 @@ void Scene::Iteration(float dt)
 	EndIteration();
 }
 
-void Scene::Serialize(Serializer* serializer)
-{
-}
-
-void Scene::Deserialize(Serializer* serializer)
-{
-}
-
 void Scene::BeginRunning()
 {
 	EventDispatcher()->Dispatch(EVENT::EVENT_BEGIN_RUNNING);
@@ -1079,6 +1071,35 @@ void Scene::CleanUp()
 	}
 
 	std::cout << "Scene::CleanUp()\n";
+}
+
+void Scene::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void Scene::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void Scene::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void Scene::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void Scene::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+Handle<ClassMetadata> Scene::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void Scene::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
 }
 
 NAMESPACE_END

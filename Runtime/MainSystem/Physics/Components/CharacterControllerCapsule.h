@@ -23,25 +23,22 @@ public:
 
 	SharedPtr<PhysicsShape> m_shape;
 
+	inline CharacterControllerCapsule() {};
 	CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc);
 
 protected:
-	inline CharacterControllerCapsule() {};
 	virtual void OnDrawDebug() override;
-	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
 
-public:
 	// Inherited via CharacterController
-	void Serialize(Serializer* serializer) override;
-
-	void Deserialize(Serializer* serializer) override;
-
-	void CleanUp() override;
-
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
-
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
+public:
 	void OnComponentAdded() override;
 
 	void OnComponentRemoved() override;

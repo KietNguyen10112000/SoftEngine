@@ -125,31 +125,34 @@ public:
 	template <typename T>
 	Handle<T> Clone(const Handle<T>& obj)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
+		/*static_assert(std::is_base_of_v<Serializable, T>);
 
 		auto ret = DynamicCast<T>(obj->_MakeInstance());
 		ret->CloneFrom(this, obj);
-		return ret;
+		return ret;*/
+		return nullptr;
 	}
 
 	template <typename T>
 	T* Clone(T* obj)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
+		/*static_assert(std::is_base_of_v<Serializable, T>);
 
 		auto ret = dynamic_cast<T>(obj->_MakeInstanceRaw());
 		ret->CloneFrom(this, obj);
-		return ret;
+		return ret;*/
+		return nullptr;
 	}
 
 	template <typename T>
 	SharedPtr<T> Clone(SharedPtr<T> obj)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
+		/*static_assert(std::is_base_of_v<Serializable, T>);
 
 		auto ret = std::dynamic_pointer_cast<T>(obj->_MakeInstanceShared());
 		ret->CloneFrom(this, obj.get());
-		return ret;
+		return ret;*/
+		return nullptr;
 	}
 
 	template <typename T>

@@ -59,6 +59,12 @@ private:
 
 protected:
 	virtual void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
 
@@ -100,18 +106,6 @@ public:
 	virtual float GetDuration() const override;
 
 	virtual void Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime) override;
-
-	virtual void Serialize(Serializer* serializer);
-
-	virtual void Deserialize(Serializer* serializer);
-
-	virtual void CleanUp();
-
-	virtual Handle<ClassMetadata> GetMetadata(size_t sign);
-
-	virtual void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue);
-
-	
 
 };
 

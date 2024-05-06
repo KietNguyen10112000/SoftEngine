@@ -6,18 +6,6 @@ AnimMeshRenderer::AnimMeshRenderer() : RenderingComponent(RENDER_TYPE_ANIM_MESH_
 {
 }
 
-void AnimMeshRenderer::Serialize(Serializer* serializer)
-{
-}
-
-void AnimMeshRenderer::Deserialize(Serializer* serializer)
-{
-}
-
-void AnimMeshRenderer::CleanUp()
-{
-}
-
 Handle<ClassMetadata> AnimMeshRenderer::GetMetadata(size_t sign)
 {
 	return Handle<ClassMetadata>();
@@ -29,38 +17,29 @@ void AnimMeshRenderer::OnPropertyChanged(const UnknownAddress& var, const Varian
 
 void AnimMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 {
-	struct CloneParam
-	{
-		AnimMeshRenderer* src;
-		AnimMeshRenderer* dest;
-	};
-
 	auto src = (AnimMeshRenderer*)another;
-	auto ret = this;
 
-	ret->m_model3D = src->m_model3D;
-	ret->m_mesh = src->m_mesh;
-	ret->m_texture = src->m_texture;
+	m_model3D = src->m_model3D;
+	m_mesh = src->m_mesh;
+	m_texture = src->m_texture;
 
-	auto callbackRunner = serializer->GetCallbackRunner();
-	auto task = callbackRunner->CreateTask([](Serializer* serializer, void* p)
-		{
-			TASK_SYSTEM_UNPACK_PARAM_2(CloneParam, p, src, dest);
+	m_animMeshRenderingBuffer = serializer->Clone(m_animMeshRenderingBuffer);
+}
 
-			auto& addresses = serializer->GetAddressMap();
+void AnimMeshRenderer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
 
-			auto it = addresses.find(src->m_animMeshRenderingBuffer.get());
-			assert(it != addresses.end());
+void AnimMeshRenderer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
 
-			dest->m_animMeshRenderingBuffer = *(decltype(dest->m_animMeshRenderingBuffer)*)(it->second);
-		}
-	);
+void AnimMeshRenderer::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
 
-	auto param = callbackRunner->CreateParam<CloneParam>(&task);
-	param->src = (AnimMeshRenderer*)another;
-	param->dest = ret;
-
-	callbackRunner->RunAsync(&task);
+void AnimMeshRenderer::DeserializeFromJson(Serializer* serializer, const json& j)
+{
 }
 
 void AnimMeshRenderer::OnComponentAdded()

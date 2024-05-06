@@ -159,6 +159,22 @@ void AnimPlayerLayer::SetAnimation(ID animationId, float startTime, float endTim
 	);
 }
 
+void AnimPlayerLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void AnimPlayerLayer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void AnimPlayerLayer::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void AnimPlayerLayer::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
 void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	AnimLayer::CloneFrom(serializer, another);
@@ -174,18 +190,6 @@ void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
 	m_startTick					= src->m_startTick;
 	m_t							= src->m_t;
 
-}
-
-void AnimPlayerLayer::Serialize(Serializer* serializer)
-{
-}
-
-void AnimPlayerLayer::Deserialize(Serializer* serializer)
-{
-}
-
-void AnimPlayerLayer::CleanUp()
-{
 }
 
 Handle<ClassMetadata> AnimPlayerLayer::GetMetadata(size_t sign)

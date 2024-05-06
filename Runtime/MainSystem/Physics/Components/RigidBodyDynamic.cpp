@@ -111,26 +111,6 @@ void RigidBodyDynamic::TransformContributor(GameObject* object, Transform& local
 	rigidBody->GetGameObject()->m_isNeedRecalculateLocalTransform = true;
 }
 
-void RigidBodyDynamic::Serialize(Serializer* serializer)
-{
-}
-
-void RigidBodyDynamic::Deserialize(Serializer* serializer)
-{
-}
-
-void RigidBodyDynamic::CleanUp()
-{
-}
-
-Handle<ClassMetadata> RigidBodyDynamic::GetMetadata(size_t sign)
-{
-	return Handle<ClassMetadata>();
-}
-
-void RigidBodyDynamic::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-}
 
 void RigidBodyDynamic::OnComponentAdded()
 {
@@ -193,6 +173,31 @@ void RigidBodyDynamic::AddForceAtLocalPos(const Vec3& f, const Vec3& pos)
 }
 
 void RigidBodyDynamic::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void RigidBodyDynamic::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void RigidBodyDynamic::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void RigidBodyDynamic::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+Handle<ClassMetadata> RigidBodyDynamic::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void RigidBodyDynamic::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 

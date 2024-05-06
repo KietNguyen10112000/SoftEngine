@@ -36,27 +36,6 @@ void RigidBodyStatic::OnPhysicsTransformChanged()
 	assert(0);
 }
 
-void RigidBodyStatic::Serialize(Serializer* serializer)
-{
-}
-
-void RigidBodyStatic::Deserialize(Serializer* serializer)
-{
-}
-
-void RigidBodyStatic::CleanUp()
-{
-}
-
-Handle<ClassMetadata> RigidBodyStatic::GetMetadata(size_t sign)
-{
-	return Handle<ClassMetadata>();
-}
-
-void RigidBodyStatic::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
-{
-}
-
 void RigidBodyStatic::OnComponentAdded()
 {
 }
@@ -71,6 +50,31 @@ AABox RigidBodyStatic::GetGlobalAABB()
 }
 
 void RigidBodyStatic::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void RigidBodyStatic::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void RigidBodyStatic::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void RigidBodyStatic::SerializeToJson(Serializer* serializer, json& j) const
+{
+}
+
+void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+Handle<ClassMetadata> RigidBodyStatic::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void RigidBodyStatic::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 

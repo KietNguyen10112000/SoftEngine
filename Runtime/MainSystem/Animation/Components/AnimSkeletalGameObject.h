@@ -36,7 +36,7 @@ protected:
 	}
 
 public:
-	COMPONENT_CLASS(AnimSkeletalGameObject);
+	//COMPONENT_CLASS(AnimSkeletalGameObject);
 
 	AnimSkeletalGameObject();
 protected:
