@@ -13,6 +13,7 @@ class AnimMotion;
 namespace ResourceUtils
 {
 	void LoadAnimMotion(String, void*, std::vector<Resource<AnimMotion>>&);
+	void ExtractAnimMotionData(void*, AnimMotion*);
 }
 
 class AnimMotion : public ResourceBase
@@ -21,6 +22,7 @@ private:
 	friend class Animation;
 	friend class AnimModel;
 	friend void ResourceUtils::LoadAnimMotion(String, void*, std::vector<Resource<AnimMotion>>&);
+	friend void ResourceUtils::ExtractAnimMotionData(void*, AnimMotion*);
 
 	String m_name;
 	float m_tickDuration = 0;
@@ -32,7 +34,8 @@ private:
 
 public:
 	// *.AnimMotion
-	AnimMotion(String path, bool placeholder = false);
+	// usage resource::Load<AnimMotion>(<model file path> + "|" + <animation index>)
+	AnimMotion(String path, bool placeHolder = false);
 
 private:
 	void LoadFromFile(const String& path);

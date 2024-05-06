@@ -63,7 +63,7 @@
 
 #include "MainSystem/Scripting/ScriptMeta.h"
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
-#include "MainSystem/Scripting/Components/TestScript.h"
+#include "MainSystem/Scripting/Components/TPPCameraScript.h"
 #include "MainSystem/Physics/PhysicsSystem.h"
 
 #include "Common/Base/Serializer.h"
@@ -329,7 +329,7 @@ void Runtime::Setup()
 
 	transform = {};
 	transform.Scale() = { 0.01f,0.01f,0.01f };
-	auto object = ResourceUtils::LoadAnimModelArray("model/Mixamo/FastRun.fbx");
+	auto object = resource::Load<AnimModel>("model/Mixamo/FastRun.fbx")->MakeGameObject(); //ResourceUtils::LoadAnimModelArray("model/Mixamo/FastRun.fbx");
 	//auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
 	//auto object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
@@ -516,7 +516,7 @@ void Runtime::Setup()
 			auto cct = obj->NewComponent<CharacterControllerCapsule>(scene, desc);
 			cct->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 
-			auto script = obj->NewComponent<TestScript>();
+			auto script = obj->NewComponent<TPPCameraScript>();
 			script->m_camera = camera;
 			script->m_fppCamScript = fppCamScript;
 			script->m_testBody = testBody;

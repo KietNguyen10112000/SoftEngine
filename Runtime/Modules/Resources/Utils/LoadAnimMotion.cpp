@@ -13,10 +13,8 @@ NAMESPACE_BEGIN
 namespace ResourceUtils
 {
 
-void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMotion>>& output)
+void ExtractAnimMotionData(void* _aiNode, AnimMotion* animMotion)
 {
-	auto scene = (const aiScene*)_aiScene;
-
 	constexpr static auto ExtractScaling = [](aiNodeAnim* aiNode, KeyFrames& keyFrames)
 	{
 		auto num = aiNode->mNumScalingKeys;
@@ -75,53 +73,62 @@ void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMo
 		}
 	};
 
+	aiAnimation* aiAnim = (aiAnimation*)_aiNode;
+
+	animMotion->m_name = aiAnim->mName.C_Str();
+	animMotion->m_tickDuration = aiAnim->mDuration;
+	animMotion->m_ticksPerSecond = aiAnim->mTicksPerSecond;
+
+	auto numChannels = aiAnim->mNumChannels;
+
+	animMotion->m_channels.resize(numChannels);
+
+	for (uint32_t j = 0; j < numChannels; j++)
+	{
+		auto aiAnimNode = aiAnim->mChannels[j];
+		String affectedNodeName = aiAnimNode->mNodeName.C_Str();
+
+		animMotion->m_nodeNameEffectedByChannel.push_back(affectedNodeName);
+
+		auto& channel = animMotion->m_channels[j];
+
+		ExtractScaling(aiAnimNode, channel);
+		ExtractRotation(aiAnimNode, channel);
+		ExtractTranslation(aiAnimNode, channel);
+	}
+}
+
+void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMotion>>& output)
+{
+	auto scene = (const aiScene*)_aiScene;
+
 	auto numAnimations = scene->mNumAnimations;
 	for (uint32_t i = 0; i < numAnimations; i++)
 	{
 		auto aiAnim = scene->mAnimations[i];
 		
-		auto animMotion = resource::Load<AnimMotion>(String::Format("{}|{}", filePath, i), true);
+		auto animMotion = resource::Load<AnimMotion>(String::Format("{}|{}", filePath, i));
 
-		animMotion->m_name = aiAnim->mName.C_Str();
-		animMotion->m_tickDuration = aiAnim->mDuration;
-		animMotion->m_ticksPerSecond = aiAnim->mTicksPerSecond;
-
-		auto numChannels = aiAnim->mNumChannels;
-
-		animMotion->m_channels.resize(numChannels);
-
-		for (uint32_t j = 0; j < numChannels; j++)
-		{
-			auto aiAnimNode = aiAnim->mChannels[j];
-			String affectedNodeName = aiAnimNode->mNodeName.C_Str();
-
-			animMotion->m_nodeNameEffectedByChannel.push_back(affectedNodeName);
-
-			auto& channel = animMotion->m_channels[j];
-			
-			ExtractScaling(aiAnimNode, channel);
-			ExtractRotation(aiAnimNode, channel);
-			ExtractTranslation(aiAnimNode, channel);
-		}
+		ExtractAnimMotionData(aiAnim, animMotion);
 
 		output.push_back(animMotion);
 	}
 }
 
-std::vector<Resource<AnimMotion>> LoadAnimMotion(String path)
-{
-	auto fs = FileSystem::Get();
-
-	std::vector<Resource<AnimMotion>> motions;
-
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
-		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
-
-	LoadAnimMotion(path, (void*)scene, motions);
-
-	return motions;
-}
+//std::vector<Resource<AnimMotion>> LoadAnimMotion(String path)
+//{
+//	auto fs = FileSystem::Get();
+//
+//	std::vector<Resource<AnimMotion>> motions;
+//
+//	Assimp::Importer importer;
+//	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+//		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+//
+//	LoadAnimMotion(path, (void*)scene, motions);
+//
+//	return motions;
+//}
 
 }
 

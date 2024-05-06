@@ -4,6 +4,9 @@
 
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 
+#include "Runtime/Runtime.h"
+#include "Scene/GameObjectCache.h"
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -138,138 +141,154 @@ void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bo
 	}
 }
 
-Handle<GameObject> LoadModel3DBasic(String path, String defaultDiffusePath)
-{
-	auto fs = FileSystem::Get();
-
-	if (defaultDiffusePath.empty())
-	{
-		defaultDiffusePath = Texture2D::DEFAULT_FILE;
-	}
-
-	auto ret = mheap::New<GameObject>();
-	auto model3D = resource::Load<Model3DBasic>(path, true);
-
-	std::vector<Resource<Texture2D>> diffuseTextures;
-
-	std::string_view pathview(path.c_str());
-	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
-
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(), 
-		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
-
-	constexpr static void (*ProcessNode)(GameObject*, Resource<Model3DBasic>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode*) =
-		[](GameObject* obj, Resource<Model3DBasic>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node) {
-
-		if (node->mNumMeshes > 1)
-		{
-			auto compoundObj = mheap::New<GameObject>();
-			for (size_t i = 0; i < node->mNumMeshes; i++)
-			{
-				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
-				auto child = mheap::New<GameObject>();
-				auto comp = child->NewComponent<MeshBasicRenderer>(false);
-
-				comp->m_model3D		= model;
-				comp->m_mesh		= &model->m_meshes[node->mMeshes[i]];
-
-				if (aiMesh->mMaterialIndex >= 0)
-				{
-					comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
-				}
-				else
-				{
-					comp->m_texture = diffuseTextures.back();
-				}
-
-				child->Name() = aiMesh->mName.C_Str();
-
-				compoundObj->AddChild(child);				
-			}
-
-			obj->AddChild(compoundObj);
-		}
-		else if (node->mNumMeshes == 1)
-		{
-			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
-
-			auto comp = obj->NewComponent<MeshBasicRenderer>(false);
-
-			comp->m_model3D		= model;
-			comp->m_mesh		= &model->m_meshes[node->mMeshes[0]];
-
-			if (aiMesh->mMaterialIndex >= 0)
-			{
-				comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
-			}
-			else
-			{
-				comp->m_texture = diffuseTextures.back();
-			}
-
-			obj->Name() = aiMesh->mName.C_Str();
-		}
-
-		aiVector3D scale;
-		aiQuaternion rot;
-		aiVector3D pos;
-		node->mTransformation.Decompose(scale, rot, pos);
-
-		Transform transform = {};
-		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
-		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
-		transform.Position() = reinterpret_cast<const Vec3&>(pos);
-
-		obj->SetLocalTransform(transform);
-
-		for (size_t i = 0; i < node->mNumChildren; i++)
-		{
-			auto child = mheap::New<GameObject>();
-			obj->AddChild(child);
-			ProcessNode(child, model, diffuseTextures, scene, node->mChildren[i]);
-		}
-	};
-
-	if (scene->HasMaterials())
-	{
-		auto* materials = scene->mMaterials;
-		auto materialsCount = scene->mNumMaterials;
-
-		for (size_t i = 0; i < materialsCount; i++)
-		{
-			auto material = materials[i];
-
-			aiString file;
-			//material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), file);
-			material->GetTexture(aiTextureType_DIFFUSE, 0, &file);
-
-			std::string str = file.C_Str();
-			std::replace(str.begin(), str.end(), '\\', '/');
-			String diffusePath = fs->GetResourcesRelativePath(basePath + str.c_str());
-
-			if (fs->IsResourceExist(diffusePath.c_str()))
-			{
-				diffuseTextures.push_back(resource::Load<Texture2D>(diffusePath.c_str()));
-			}
-			else
-			{
-				diffuseTextures.push_back(resource::Load<Texture2D>(defaultDiffusePath));
-			}
-		}
-	}
-
-	diffuseTextures.push_back(resource::Load<Texture2D>(defaultDiffusePath));
-
-	LoadAllMeshsForModel3DBasic(model3D, scene);
-
-	ProcessNode(ret, model3D, diffuseTextures, scene, scene->mRootNode);
-
-	
-	ret->Name() = path.SubString(pathview.find_last_of('/') + 1);
-
-	return ret;
-}
+//Handle<GameObject> LoadModel3DBasic(String path, String defaultDiffusePath, bool placeHolder)
+//{
+//	auto fs = FileSystem::Get();
+//
+//	if (defaultDiffusePath.empty())
+//	{
+//		defaultDiffusePath = Texture2D::DEFAULT_FILE;
+//	}
+//
+//	auto model3D = resource::Load<Model3DBasic>(path, true);
+//
+//	auto ret = Runtime::Get()->GameObjectCache()->Get("LoadModel3DBasic|" + model3D->GetPath());
+//	if (ret.Get())
+//	{
+//		Serializer serializer;
+//		return StaticCast<GameObject>(serializer.Clone(ret));
+//	}
+//
+//	ret = mheap::New<GameObject>();
+//
+//	std::vector<Resource<Texture2D>> diffuseTextures;
+//
+//	std::string_view pathview(path.c_str());
+//	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
+//
+//	Assimp::Importer importer;
+//	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(), 
+//		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+//
+//	constexpr static void (*ProcessNode)(GameObject*, Resource<Model3DBasic>&, std::vector<Resource<Texture2D>>&, const aiScene*, aiNode*) =
+//		[](GameObject* obj, Resource<Model3DBasic>& model, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene, aiNode* node) {
+//
+//		if (node->mNumMeshes > 1)
+//		{
+//			auto compoundObj = mheap::New<GameObject>();
+//			for (size_t i = 0; i < node->mNumMeshes; i++)
+//			{
+//				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
+//				auto child = mheap::New<GameObject>();
+//				auto comp = child->NewComponent<MeshBasicRenderer>(false);
+//
+//				comp->m_model3D		= model;
+//				comp->m_mesh		= &model->m_meshes[node->mMeshes[i]];
+//
+//				if (aiMesh->mMaterialIndex >= 0)
+//				{
+//					comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+//				}
+//				else
+//				{
+//					comp->m_texture = diffuseTextures.back();
+//				}
+//
+//				child->Name() = aiMesh->mName.C_Str();
+//
+//				compoundObj->AddChild(child);				
+//			}
+//
+//			obj->AddChild(compoundObj);
+//		}
+//		else if (node->mNumMeshes == 1)
+//		{
+//			auto aiMesh = scene->mMeshes[node->mMeshes[0]];
+//
+//			auto comp = obj->NewComponent<MeshBasicRenderer>(false);
+//
+//			comp->m_model3D		= model;
+//			comp->m_mesh		= &model->m_meshes[node->mMeshes[0]];
+//
+//			if (aiMesh->mMaterialIndex >= 0)
+//			{
+//				comp->m_texture = diffuseTextures[aiMesh->mMaterialIndex];
+//			}
+//			else
+//			{
+//				comp->m_texture = diffuseTextures.back();
+//			}
+//
+//			obj->Name() = aiMesh->mName.C_Str();
+//		}
+//
+//		aiVector3D scale;
+//		aiQuaternion rot;
+//		aiVector3D pos;
+//		node->mTransformation.Decompose(scale, rot, pos);
+//
+//		Transform transform = {};
+//		transform.Scale() = reinterpret_cast<const Vec3&>(scale);
+//		transform.Rotation() = { rot.w, rot.x, rot.y, rot.z };
+//		transform.Position() = reinterpret_cast<const Vec3&>(pos);
+//
+//		obj->SetLocalTransform(transform);
+//
+//		for (size_t i = 0; i < node->mNumChildren; i++)
+//		{
+//			auto child = mheap::New<GameObject>();
+//			obj->AddChild(child);
+//			ProcessNode(child, model, diffuseTextures, scene, node->mChildren[i]);
+//		}
+//	};
+//
+//	if (scene->HasMaterials())
+//	{
+//		auto* materials = scene->mMaterials;
+//		auto materialsCount = scene->mNumMaterials;
+//
+//		for (size_t i = 0; i < materialsCount; i++)
+//		{
+//			auto material = materials[i];
+//
+//			aiString file;
+//			//material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), file);
+//			material->GetTexture(aiTextureType_DIFFUSE, 0, &file);
+//
+//			std::string str = file.C_Str();
+//			std::replace(str.begin(), str.end(), '\\', '/');
+//			String diffusePath = fs->GetResourcesRelativePath(basePath + str.c_str());
+//
+//			if (fs->IsResourceExist(diffusePath.c_str()))
+//			{
+//				diffuseTextures.push_back(resource::Load<Texture2D>(diffusePath.c_str()));
+//			}
+//			else
+//			{
+//				diffuseTextures.push_back(resource::Load<Texture2D>(defaultDiffusePath));
+//			}
+//		}
+//	}
+//
+//	diffuseTextures.push_back(resource::Load<Texture2D>(defaultDiffusePath));
+//
+//	LoadAllMeshsForModel3DBasic(model3D, scene);
+//
+//	ProcessNode(ret, model3D, diffuseTextures, scene, scene->mRootNode);
+//
+//	
+//	ret->Name() = path.SubString(pathview.find_last_of('/') + 1);
+//
+//	Runtime::Get()->GameObjectCache()->Store("LoadModel3DBasic|" + model3D->GetPath(), ret);
+//
+//	if (placeHolder)
+//	{
+//		return nullptr;
+//	}
+//
+//	Serializer serializer;
+//	return StaticCast<GameObject>(serializer.Clone(ret));
+//}
 
 }
 

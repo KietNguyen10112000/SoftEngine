@@ -7,6 +7,8 @@
 
 NAMESPACE_BEGIN
 
+class GameObject;
+
 // basic model3d with vertex and uv (textcoord), all static meshes
 class Model3DBasic : public ResourceBase
 {
@@ -23,6 +25,8 @@ public:
 	class Mesh
 	{
 	public:
+		String m_defaultDiffusePath;
+
 		SharedPtr<GraphicsVertexBuffer> m_vertexBuffer;
 		uint32_t m_vertexCount;
 		uint32_t m_model3DIdx;
@@ -46,7 +50,9 @@ public:
 
 	std::vector<Mesh> m_meshes;
 
-	Model3DBasic(String path, bool placeholder = false);
+	Model3DBasic(String path);
+
+	virtual Handle<GameObject> MakeGameObject() = 0;
 
 };
 

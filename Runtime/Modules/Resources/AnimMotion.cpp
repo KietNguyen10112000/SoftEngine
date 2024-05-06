@@ -1,10 +1,20 @@
 #include "AnimMotion.h"
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 NAMESPACE_BEGIN
 
-AnimMotion::AnimMotion(String path, bool placeholder) : ResourceBase(path)
+namespace ResourceUtils
 {
-	if (placeholder)
+	extern void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMotion>>& output);
+	extern void ExtractAnimMotionData(void* _aiNode, AnimMotion* animMotion);
+}
+
+AnimMotion::AnimMotion(String path, bool placeHolder) : ResourceBase(path)
+{
+	if (placeHolder)
 	{
 		return;
 	}
@@ -14,6 +24,24 @@ AnimMotion::AnimMotion(String path, bool placeholder) : ResourceBase(path)
 
 void AnimMotion::LoadFromFile(const String& path)
 {
+	auto modelFilePath = GetModelFilePath();
+	std::vector<Resource<AnimMotion>> motions;
+	motions.push_back(GetSelfResource());
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(modelFilePath.c_str(),
+		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	{
+		auto rcPath = GetPath();
+
+		std::string_view str = rcPath.c_str();
+		auto idx = str.find_last_of('|');
+
+		auto i = std::stoi(str.data() + idx + 1);
+
+		ResourceUtils::ExtractAnimMotionData(scene->mAnimations[i], this);
+	}
 }
 
 String AnimMotion::GetModelFilePath() const

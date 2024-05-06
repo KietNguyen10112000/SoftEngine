@@ -169,6 +169,7 @@ public:
 	class AnimMesh
 	{
 	public:
+		String m_defaultDiffusePath;
 		SharedPtr<GraphicsVertexBuffer> m_vertexBuffer;
 		uint32_t m_vertexCount;
 		uint32_t m_model3DIdx;
@@ -215,7 +216,7 @@ public:
 
 	friend class AnimMotion;
 
-	AnimModel(String path, bool placeholder = false);
+	AnimModel(String path);
 	~AnimModel();
 
 	/*inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
@@ -224,16 +225,19 @@ public:
 		track->animationId = animationId;
 	}*/
 
+private:
+	void CreateCache(Animation* animation, ByteStream& stream, const String& streamPath);
+	void ReadCache(Animation* animation, ByteStream& stream);
+	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
+
+public:
 	ID AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
 
 	// LoadAnimation(PlaceHolderAnimation(motion)) same as AddAnimation(motion)
 	ID PlaceHolderAnimation(const Resource<AnimMotion>& motion);
 	void LoadAnimation(ID animationId, const AnimMotion* motion, AnimMeshVertices* vertices = nullptr);
 
-private:
-	void CreateCache(Animation* animation, ByteStream& stream, const String& streamPath);
-	void ReadCache(Animation* animation, ByteStream& stream);
-	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
+	virtual Handle<GameObject> MakeGameObject() override;
 
 };
 

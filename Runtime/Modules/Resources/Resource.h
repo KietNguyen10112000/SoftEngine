@@ -8,7 +8,12 @@
 
 #include "Runtime/StartupConfig.h"
 
+#include "JSON/JSON.h"
+
 NAMESPACE_BEGIN
+
+class Serializer;
+class ByteStream;
 
 template <typename T>
 class Resource;
@@ -29,11 +34,22 @@ public:
 	ResourceBase(String path) : m_path(path) {};
 	virtual ~ResourceBase() {};
 
+protected:
+	/// 
+	/// for data serialization
+	/// 
+	inline virtual void SerializeExtDataToBinary(Serializer* serializer, ByteStream& stream) const {};
+	inline virtual void DeserializeExtDataFromBinary(Serializer* serializer, const ByteStream& stream) {};
+	inline virtual void SerializeExtDataToJson(Serializer* serializer, json& j) const {};
+	inline virtual void DeserializeExtDataFromJson(Serializer* serializer, const json& j) {};
+
 public:
 	inline auto GetPath() const
 	{
 		return m_path;
 	}
+
+	inline Resource<ResourceBase> GetSelfResource();
 
 };
 
@@ -70,6 +86,12 @@ namespace resource
 
 	template <typename _D, typename T>
 	inline Resource<_D> StaticCast(const Resource<T>& rc);
+
+	API void SerializeToJson(Serializer* serializer, json& j);
+	API void DeserializeFromJson(Serializer* serializer, const json& j);
+
+	API void SerializeToBinary(Serializer* serializer, ByteStream& stream);
+	API void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream);
 }
 
 
@@ -87,6 +109,8 @@ private:
 
 	template <typename _T>
 	friend class Resource;
+
+	friend class ResourceBase;
 
 
 	T* m_rc = nullptr;
@@ -159,6 +183,11 @@ public:
 	}
 
 };
+
+Resource<ResourceBase> ResourceBase::GetSelfResource()
+{
+	return Resource<ResourceBase>(this);
+}
 
 namespace resource
 {

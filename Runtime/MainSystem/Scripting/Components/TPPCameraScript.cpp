@@ -1,4 +1,4 @@
-#include "TestScript.h"
+#include "TPPCameraScript.h"
 
 #include "Input/Input.h"
 
@@ -15,7 +15,7 @@
 
 NAMESPACE_BEGIN
 
-void TestScript::OnStart()
+void TPPCameraScript::OnStart()
 {
 	controller = GetGameObject()->GetComponentRaw<CharacterController>();
 	m_prevPosY1 = GetGameObject()->ReadGlobalTransformMat().Position().y;
@@ -45,7 +45,7 @@ void TestScript::OnStart()
 	);
 }
 
-void TestScript::OnUpdate(float dt)
+void TPPCameraScript::OnUpdate(float dt)
 {
 	if (Input()->IsKeyUp('O') && m_testBody)
 	{
@@ -186,31 +186,31 @@ void TestScript::OnUpdate(float dt)
 	}
 }
 
-Handle<ClassMetadata> TestScript::GetMetadata(size_t sign)
+Handle<ClassMetadata> TPPCameraScript::GetMetadata(size_t sign)
 {
 	auto metadata = ClassMetadata::For(this);
 
 	return metadata;
 }
 
-void TestScript2::OnUpdate(float dt)
-{
-	auto transform = GetLocalTransform();
-	transform.Position() = Vec3::ZERO + m_A * std::sin(m_a) * Vec3::X_AXIS;
-	transform.Position().y = 2.5f;
-	SetLocalTransform(transform);
-
-	m_a += dt * m_speed;
-}
-
-Handle<ClassMetadata> TestScript2::GetMetadata(size_t sign)
-{
-	auto metadata = ClassMetadata::For(this);
-
-	metadata->AddProperty(Accessor::For("A", m_A, this));
-	metadata->AddProperty(Accessor::For("speed", m_speed, this));
-
-	return metadata;
-}
+//void TestScript2::OnUpdate(float dt)
+//{
+//	auto transform = GetLocalTransform();
+//	transform.Position() = Vec3::ZERO + m_A * std::sin(m_a) * Vec3::X_AXIS;
+//	transform.Position().y = 2.5f;
+//	SetLocalTransform(transform);
+//
+//	m_a += dt * m_speed;
+//}
+//
+//Handle<ClassMetadata> TestScript2::GetMetadata(size_t sign)
+//{
+//	auto metadata = ClassMetadata::For(this);
+//
+//	metadata->AddProperty(Accessor::For("A", m_A, this));
+//	metadata->AddProperty(Accessor::For("speed", m_speed, this));
+//
+//	return metadata;
+//}
 
 NAMESPACE_END

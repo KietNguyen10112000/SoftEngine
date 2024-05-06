@@ -6,14 +6,21 @@
 #include "MainSystem/Rendering/Components/CameraTPP.h"
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/Components/AnimMeshRenderer.h"
+#include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
 
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
+#include "MainSystem/Scripting/Components/TPPCameraScript.h"
 
 #include "MainSystem/Animation/Components/AnimSkeletalGameObject.h"
 #include "MainSystem/Animation/Components/AnimatorSkeletalGameObject.h"
 #include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 
+#include "MainSystem/Physics/Components/RigidBodyStatic.h"
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
+#include "MainSystem/Physics/Components/CharacterControllerCapsule.h"
+
 #include "Scene/GameObject.h"
+#include "Scene/Scene.h"
 
 NAMESPACE_BEGIN
 
@@ -23,6 +30,7 @@ class SerializableList
 public:
 	inline static void Initialize()
 	{
+		SerializableDB::Get()->Register<Scene>();
 		SerializableDB::Get()->Register<GameObject>();
 
 		// built-in rendering components
@@ -30,15 +38,22 @@ public:
 		SerializableDB::Get()->Register<CameraTPP>();
 		SerializableDB::Get()->Register<MeshBasicRenderer>();
 		SerializableDB::Get()->Register<AnimMeshRenderer>();
+		SerializableDB::Get()->Register<AnimModelStaticMeshRenderer>();
 
 		// built-in script components
 		SerializableDB::Get()->Register<FPPCameraScript>();
+		SerializableDB::Get()->Register<TPPCameraScript>();
 
 		// built-in animation components
-		SerializableDB::Get()->Register<AnimSkeletalGameObject>();
-		SerializableDB::Get()->Register<AnimatorSkeletalGameObject>();
+		//SerializableDB::Get()->Register<AnimSkeletalGameObject>();
+		//SerializableDB::Get()->Register<AnimatorSkeletalGameObject>();
 		SerializableDB::Get()->Register<AnimatorSkeletalArray>();
 
+
+		// built-in physics components
+		SerializableDB::Get()->Register<RigidBodyStatic>();
+		SerializableDB::Get()->Register<RigidBodyDynamic>();
+		SerializableDB::Get()->Register<CharacterControllerCapsule>();
 	}
 };
 

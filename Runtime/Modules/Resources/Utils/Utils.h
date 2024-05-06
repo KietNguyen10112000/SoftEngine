@@ -13,13 +13,13 @@ NAMESPACE_BEGIN
 namespace ResourceUtils
 {
 
-API Handle<GameObject> LoadModel3DBasic(String path, String defaultDiffusePath = "");
+//API Handle<GameObject> LoadModel3DBasic(String path, String defaultDiffusePath = "", bool placeHolder = false);
 
-API Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath = "");
+//API Handle<GameObject> LoadAnimModel(String path, String defaultDiffusePath = "");
 
-API Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath = "");
+//API Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath = "", bool placeHolder = false);
 
-API std::vector<Resource<AnimMotion>> LoadAnimMotion(String path);
+//API std::vector<Resource<AnimMotion>> LoadAnimMotion(String path);
 
 }
 

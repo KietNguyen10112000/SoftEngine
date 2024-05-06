@@ -11,6 +11,8 @@
 #include "UUID/UUID.h"
 #include "JSON/JSON.h"
 
+#include "Resources/Resource.h"
+
 NAMESPACE_BEGIN
 
 class API Serializer
@@ -86,6 +88,8 @@ private:
 	const MODE m_mode = MODE::MODE_JSON;
 
 	UUID m_rootUUID = {};
+
+	std::vector<Resource<ResourceBase>> m_resourceHolder;
 
 private:
 	TRACEABLE_FRIEND();
@@ -218,6 +222,11 @@ public:
 	inline const auto& GetRootUUID() const
 	{
 		return m_rootUUID;
+	}
+
+	inline auto& GetResourceHolder()
+	{
+		return m_resourceHolder;
 	}
 
 };

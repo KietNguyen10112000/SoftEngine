@@ -85,6 +85,33 @@ void Finalize()
 
 }
 
+void SerializeToJson(Serializer* serializer, json& j)
+{
+	internal::g_rcMapLock.lock();
+
+	auto& map = internal::GetRcMap();
+	for (auto& [key, value] : map)
+	{
+		value->GetPath();
+	}
+
+	internal::g_rcMapLock.unlock();
+}
+
+void DeserializeFromJson(Serializer* serializer, const json& j)
+{
+}
+
+void SerializeToBinary(Serializer* serializer, ByteStream& stream)
+{
+
+}
+
+void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+
+}
+
 }
 
 NAMESPACE_END

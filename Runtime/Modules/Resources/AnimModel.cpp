@@ -6,17 +6,147 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include "Texture2D.h"
+#include "Scene/GameObject.h"
+
+#include "Utils/LoadAnimModel.h"
+
 NAMESPACE_BEGIN
 
 namespace ResourceUtils
 {
+	extern void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene);
+	extern void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bool ignoreBones);
 	extern void LoadAnimMeshVertices(AnimModel::AnimMeshVertices* animMeshVertices, AnimModel* model, aiMesh* mesh);
+	extern void LoadMaterialsForAnimModel(const String& basePath, const String& defaultDiffusePath, std::vector<Resource<Texture2D>>& diffuseTextures, const aiScene* scene);
+
+	inline void LoadAnimModelBoundNodeIds(std::vector<String>& diffuseTextures, AnimModel* model, const aiScene* scene)
+	{
+		constexpr static void (*ProcessNode)(std::vector<String>&, AnimModel*, const aiScene*, aiNode*, ID&, ID&, ID&) =
+		[](std::vector<String>& diffuseTextures, AnimModel* model, const aiScene* scene, aiNode* node, ID& nodeId, ID& staticMeshId, ID& animMeshId)-> void
+		{
+			for (size_t i = 0; i < node->mNumMeshes; i++)
+			{
+				auto aiMesh = scene->mMeshes[node->mMeshes[i]];
+
+				if (!aiMesh->HasBones())
+				{
+					model->m_boundNodeIds.push_back(nodeId);
+
+					if (aiMesh->mMaterialIndex >= 0)
+						model->m_meshes[staticMeshId].m_defaultDiffusePath = diffuseTextures[aiMesh->mMaterialIndex];
+
+					staticMeshId++;
+					continue;
+				}
+
+				if (aiMesh->mMaterialIndex >= 0)
+					model->m_animMeshes[animMeshId].m_defaultDiffusePath = diffuseTextures[aiMesh->mMaterialIndex];
+
+				animMeshId++;
+			}
+			
+			nodeId++;
+			for (size_t i = 0; i < node->mNumChildren; i++)
+			{
+				ProcessNode(diffuseTextures, model, scene, node->mChildren[i], nodeId, staticMeshId, animMeshId);
+			}
+		};
+
+		size_t nodeId = 0;
+		size_t staticMeshId = 0;
+		size_t animMeshId = 0;
+		ProcessNode(diffuseTextures, model, scene, scene->mRootNode, nodeId, staticMeshId, animMeshId);
+
+		model->m_boundNodeIds.resize(model->m_meshes.size() + model->m_animMeshes.size(), INVALID_ID);
+	}
 }
 
 const char* AnimModel::CACHE_EXTENSION = ".AnimModel";
 
-AnimModel::AnimModel(String path, bool placeholder) : Model3DBasic(path, true)
+AnimModel::AnimModel(String path) : Model3DBasic(path)
 {
+	auto fs = FileSystem::Get();
+
+	std::vector<String> diffuseTextures;
+
+	std::string_view pathview(path.c_str());
+	String basePath = path.SubString(0, pathview.find_last_of('/') + 1);
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	ResourceUtils::LoadMaterialsForAnimModel(basePath, diffuseTextures, scene);
+
+	ResourceUtils::LoadAllMeshsForModel3DBasic(this, scene, false);
+
+	ResourceUtils::LoadAllAnimMeshsForAnimModel(this, scene);
+
+	ResourceUtils::AnimModelLoadingCtx ctx(this, scene, false);
+
+	ResourceUtils::FlattenAnimModelHierarchy(&ctx, this, scene);
+
+	ResourceUtils::LoadAnimModelBoundNodeIds(diffuseTextures, this, scene);
+
+	auto& srcNodes = ctx.nodes;
+	auto& destNodes = m_nodes;
+	if (destNodes.empty())
+	{
+		destNodes.resize(srcNodes.size());
+		for (size_t i = 0; i < srcNodes.size(); i++)
+		{
+			auto& srcNode = srcNodes[i];
+			auto& destNode = destNodes[i];
+
+			destNode.boneId = srcNode.boneId;
+			destNode.parentId = srcNode.parentId;
+			destNode.localTransform = srcNode.localTransform;
+		}
+	}
+
+	{
+		struct LoadMotionParam
+		{
+			AnimMotion* motion;
+			ID animationId;
+			AnimModel* model;
+			AnimModel::AnimMeshVertices* vertices;
+		};
+
+		std::vector<Resource<AnimMotion>> motions;
+		ResourceUtils::LoadAnimMotion(path, (void*)scene, motions);
+
+		std::vector<Task> tasks;
+		std::vector<LoadMotionParam> params;
+
+		tasks.resize(motions.size());
+		params.resize(motions.size());
+
+		size_t i = 0;
+		for (auto& motion : motions)
+		{
+			auto& param = params[i];
+			auto& task = tasks[i];
+
+			param.animationId = PlaceHolderAnimation(motion);
+			param.motion = motion;
+			param.model = this;
+			param.vertices = ctx.animMeshesVertices.data();
+
+			task.Params() = &param;
+			task.Entry() = [](void* p)
+				{
+					TASK_SYSTEM_UNPACK_PARAM_REF_4(LoadMotionParam, p, animationId, motion, model, vertices);
+					model->LoadAnimation(animationId, motion, vertices);
+				};
+
+			i++;
+		}
+
+		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
+	}
+	
 }
 
 AnimModel::~AnimModel()
@@ -445,6 +575,70 @@ ID AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices*
 	auto animationId = PlaceHolderAnimation(motion);
 	LoadAnimation(animationId, motion, vertices);
 	return animationId;
+}
+
+Handle<GameObject> AnimModel::MakeGameObject()
+{
+	auto model = GetSelfResource();
+	auto ret = mheap::New<GameObject>();
+
+	auto animator = ret->NewComponent<AnimatorSkeletalArray>();
+
+	SharedPtr<AnimMeshRenderingBuffer> buffer = std::make_shared<AnimMeshRenderingBuffer>();
+	{
+		AnimModel::AnimMeshRenderingBufferData bufferData;
+		bufferData.bones.resize(m_boneIds.size());
+		bufferData.meshesAABB.resize(m_animMeshes.size());
+		buffer->buffer.Initialize(bufferData);
+	}
+	animator->m_animMeshRenderingBuffer = buffer;
+	animator->m_model3D = model;
+
+	auto count = m_meshes.size();
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& mesh = m_meshes[i];
+
+		auto obj = mheap::New<GameObject>();
+		auto c = obj->NewComponent<AnimModelStaticMeshRenderer>();
+		c->m_model3D = model;
+
+		if (mesh.m_defaultDiffusePath.empty())
+		{
+			c->m_texture = resource::Load<Texture2D>(Texture2D::DEFAULT_FILE);
+		}
+		else
+		{
+			c->m_texture = resource::Load<Texture2D>(mesh.m_defaultDiffusePath);
+		}
+
+		animator->m_meshRendererObjs.Push(obj);
+		ret->AddChild(obj);
+	}
+
+	count = m_animMeshes.size();
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& mesh = m_animMeshes[i];
+
+		auto obj = mheap::New<GameObject>();
+		auto c = obj->NewComponent<AnimMeshRenderer>();
+		c->m_model3D = model;
+
+		if (mesh.m_defaultDiffusePath.empty())
+		{
+			c->m_texture = resource::Load<Texture2D>(Texture2D::DEFAULT_FILE);
+		}
+		else
+		{
+			c->m_texture = resource::Load<Texture2D>(mesh.m_defaultDiffusePath);
+		}
+
+		animator->m_meshRendererObjs.Push(obj);
+		ret->AddChild(obj);
+	}
+
+	return ret;
 }
 
 NAMESPACE_END

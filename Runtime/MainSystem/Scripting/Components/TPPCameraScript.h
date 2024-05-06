@@ -7,11 +7,11 @@ class CharacterController;
 class CameraTPP;
 class FPPCameraScript;
 
-class TestScript : public Script
+class TPPCameraScript : public Script
 {
 private:
 	using Base = Script;
-	SCRIPT_DEFAULT_METHOD(TestScript);
+	SCRIPT_DEFAULT_METHOD(TPPCameraScript);
 
 protected:
 	TRACEABLE_FRIEND();
@@ -51,30 +51,30 @@ protected:
 
 };
 
-class TestScript2 : public Script
-{
-private:
-	using Base = Script;
-	SCRIPT_DEFAULT_METHOD(TestScript2);
-
-protected:
-	TRACEABLE_FRIEND();
-	inline void Trace(Tracer* tracer)
-	{
-		Base::Trace(tracer);
-	}
-
-	float m_A = 1;
-	float m_a = 0;
-	float m_speed = PI / 3;
-
-protected:
-	//virtual void OnStart() override;
-
-	virtual void OnUpdate(float dt) override;
-
-	Handle<ClassMetadata> GetMetadata(size_t sign) override;
-
-};
+//class TestScript2 : public Script
+//{
+//private:
+//	using Base = Script;
+//	SCRIPT_DEFAULT_METHOD(TestScript2);
+//
+//protected:
+//	TRACEABLE_FRIEND();
+//	inline void Trace(Tracer* tracer)
+//	{
+//		Base::Trace(tracer);
+//	}
+//
+//	float m_A = 1;
+//	float m_a = 0;
+//	float m_speed = PI / 3;
+//
+//protected:
+//	//virtual void OnStart() override;
+//
+//	virtual void OnUpdate(float dt) override;
+//
+//	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+//
+//};
 
 NAMESPACE_END
