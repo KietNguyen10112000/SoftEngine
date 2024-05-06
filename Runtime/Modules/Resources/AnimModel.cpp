@@ -602,6 +602,7 @@ Handle<GameObject> AnimModel::MakeGameObject()
 		auto obj = mheap::New<GameObject>();
 		auto c = obj->NewComponent<AnimModelStaticMeshRenderer>();
 		c->m_model3D = model;
+		c->m_mesh = &model->m_meshes[i];
 
 		if (mesh.m_defaultDiffusePath.empty())
 		{
