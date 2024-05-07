@@ -1,9 +1,71 @@
 #include "Resource.h"
 
+#include "Core/Pattern/Singleton.h"
+
+#include "Common/Stream/ByteStream.h"
+
+#include "FileSystem/FileSystem.h"
+
 NAMESPACE_BEGIN
 
 namespace resource
 {
+
+class ResourceManager : public Singleton<ResourceManager>
+{
+public:
+	inline static const char* META_PATH = "Meta/.resources";
+
+	std::map<String, UUID> m_uuidMap;
+
+	spinlock m_lock;
+
+	ResourceManager()
+	{
+		ByteStream stream;
+		if (FileSystem::Get()->ReadStream(META_PATH, &stream))
+		{
+			auto size = stream.Get<size_t>();
+			for (size_t i = 0; i < size; i++)
+			{
+				auto uuid = stream.Get<UUID>();
+				auto path = stream.Get<String>();
+				m_uuidMap.insert({ path,uuid });
+			}
+		}
+	}
+
+	~ResourceManager()
+	{
+		ByteStream stream;
+		stream.Put(m_uuidMap.size());
+		for (auto& [key, value] : m_uuidMap)
+		{
+			stream.Put(value);
+			stream.Put(key);
+		}
+
+		FileSystem::Get()->WriteStream(META_PATH, &stream);
+	}
+
+	inline UUID GetResourceUUID(const String& path)
+	{
+		m_lock.lock();
+
+		auto it = m_uuidMap.find(path);
+		if (it != m_uuidMap.end())
+		{
+			m_lock.unlock();
+			return it->second;
+		}
+
+		auto uuid = UUIDGenerator::Get()->GetUUID();
+		m_uuidMap.insert({ path,uuid });
+		m_lock.unlock();
+		return uuid;
+	}
+
+};
 
 namespace internal
 {
@@ -22,6 +84,8 @@ inline auto& GetRcMap()
 template <typename T>
 inline void InitRcMap(T& v)
 {
+	ResourceManager::SingletonInitialize();
+
 	new (&v) RCMap();
 }
 
@@ -29,6 +93,8 @@ template <typename T>
 inline void FreeGcMap(T& gcMap)
 {
 	gcMap.~T();
+
+	ResourceManager::SingletonFinalize();
 }
 
 ResourceBaseClass* TryLoad(String path, const char* resourceClassName)
@@ -66,9 +132,9 @@ void Release(ResourceBaseClass* rc)
 	rheap::Delete(rc);
 }
 
-void Initialize()
+UUID resource::internal::GetResourceUUID(const String& path)
 {
-	InitRcMap(GetRcMap());
+	return ResourceManager::Get()->GetResourceUUID(path);
 }
 
 void Finalize()
@@ -109,6 +175,12 @@ void SerializeToBinary(Serializer* serializer, ByteStream& stream)
 
 void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
 {
+
+}
+
+void internal::Initialize()
+{
+	InitRcMap(GetRcMap());
 
 }
 

@@ -33,7 +33,7 @@ protected:
 	{
 		auto src = (AnimLayer*)another;
 
-		m_ownerComp = serializer->Clone(m_ownerComp);
+		m_ownerComp = serializer->Clone(src->m_ownerComp);
 
 		m_model				= src->m_model;
 		m_globalTransforms	= src->m_globalTransforms;

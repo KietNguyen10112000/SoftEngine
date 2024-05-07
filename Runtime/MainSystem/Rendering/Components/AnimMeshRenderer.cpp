@@ -23,7 +23,7 @@ void AnimMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 	m_mesh = src->m_mesh;
 	m_texture = src->m_texture;
 
-	m_animMeshRenderingBuffer = serializer->Clone(m_animMeshRenderingBuffer);
+	m_animMeshRenderingBuffer = serializer->Clone(src->m_animMeshRenderingBuffer);
 }
 
 void AnimMeshRenderer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const

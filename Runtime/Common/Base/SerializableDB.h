@@ -19,10 +19,12 @@ public:
 		ID COMPONENT_ID = INVALID_ID;
 		String name;
 
+		ID memType;
+
 		// managed memory, so just ctor is enough, no need dtor
 		SerializableCtor		ctor				= nullptr;
-		SerializableCtorRaw		ctorRaw				= nullptr;
 		SerializableCtorShared	ctorShared			= nullptr;
+		SerializableCtorRaw		ctorRaw				= nullptr;
 
 		inline bool operator<(const SerializableRecord& another)
 		{
@@ -63,22 +65,34 @@ public:
 			record.COMPONENT_ID = INVALID_ID;
 		}
 
+		constexpr auto memType = SerializableType::___GetMemoryType();
+
 		record.name = SerializableType::___GetClassName();
+		record.memType = memType;
 
-		record.ctor = []() -> Handle<Serializable>
+		if constexpr (memType == SERIALIZABLE_MEM_MANAGED)
 		{
-			return mheap::New<SerializableType>();
-		};
+			record.ctor = []() -> Handle<Serializable>
+			{
+				return mheap::New<SerializableType>();
+			};
+		}
+		
+		if constexpr (memType == SERIALIZABLE_MEM_SHARED)
+		{
+			record.ctorShared = []() -> SharedPtr<Serializable>
+			{
+				return std::make_shared<SerializableType>();
+			};
+		}
 
-		record.ctorRaw = []() -> Serializable*
+		if constexpr (memType == SERIALIZABLE_MEM_RAW)
 		{
-			return new SerializableType();
-		};
-
-		record.ctorShared = []() -> SharedPtr<Serializable>
-		{
-			return std::make_shared<SerializableType>();
-		};
+			record.ctorRaw = []() -> Serializable*
+			{
+				return new SerializableType();
+			};
+		}
 
 		AddRecord(record);
 	}

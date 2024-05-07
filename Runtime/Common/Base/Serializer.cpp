@@ -18,6 +18,10 @@ Serializer::~Serializer()
 
 void Serializer::TrySerialize(Serializable* obj, SerializedRecord::TYPE type)
 {
+	assert(obj != nullptr);
+
+	type = (SerializedRecord::TYPE)obj->GetMemoryType();
+
 	auto& uuid = obj->GetUUID();
 	
 	auto it = m_serializedObjects.find(uuid);
@@ -84,54 +88,48 @@ Begin:
 	auto& handle = m_deserializedObjects[record.idx];
 	if (handle)
 	{
-		assert(output0 != nullptr);
-		assert(output1 == nullptr);
+		//assert(output0 != nullptr);
+		//assert(output1 == nullptr);
 		assert(output2 == nullptr);
-		*output0 = handle;
+
+		if (output0)
+			*output0 = handle;
+
+		if (output1)
+			*output1 = handle;
+
+		return;
+	}
+
+	auto& rawOrShared = m_rawOrSharedDeserializedObjects[record.idx];
+	if (rawOrShared.shared)
+	{
+		assert(output0 == nullptr);
+		//assert(output1 == nullptr);
+		//assert(output2 != nullptr);
+		assert(rawOrShared.raw == nullptr);
+
+		if (output2)
+			*output2 = rawOrShared.shared;
+
+		if (output1)
+			*output1 = rawOrShared.shared.get();
+
 		return;
 	}
 	
-	auto& rawOrShared = m_rawOrSharedDeserializedObjects[record.idx];
 	if (rawOrShared.raw)
 	{
 		assert(output0 == nullptr);
 		assert(output1 != nullptr);
 		assert(output2 == nullptr);
 		assert(rawOrShared.shared.get() == nullptr);
+
 		*output1 = rawOrShared.raw;
 		return;
 	}
 
-	if (rawOrShared.shared)
-	{
-		assert(output0 == nullptr);
-		assert(output1 == nullptr);
-		assert(output2 != nullptr);
-		assert(rawOrShared.raw == nullptr);
-		*output2 = rawOrShared.shared;
-		return;
-	}
-
 	// this object isn't deserialized
-	SerializedRecord::TYPE memType = SerializedRecord::HANDLE;
-	if (output0)
-	{
-		memType = SerializedRecord::HANDLE;
-	}
-
-	if (output1)
-	{
-		memType = SerializedRecord::RAW;
-	}
-
-	if (output2)
-	{
-		memType = SerializedRecord::SHARED;
-	}
-
-	assert(memType == record.type);
-
-	Serializable* obj = nullptr;
 	auto dbRecord = SerializableDB::Get()->GetSerializableRecord(m_classNames[record.classNameIdx].c_str());
 	if (dbRecord.name.empty())
 	{
@@ -139,6 +137,12 @@ Begin:
 		*((int*)nullptr); // must crash here
 	}
 
+	SerializedRecord::TYPE memType = SerializedRecord::HANDLE;
+	memType = (SerializedRecord::TYPE)dbRecord.memType;
+
+	assert(memType == record.type);
+
+	Serializable* obj = nullptr;
 	if (memType == SerializedRecord::HANDLE)
 	{
 		auto h = dbRecord.ctor();
@@ -178,6 +182,135 @@ Begin:
 	goto Begin;
 }
 
+void Serializer::TryClone(Serializable* obj, Handle<Serializable>* output0, Serializable** output1, SharedPtr<Serializable>* output2)
+{
+	assert(obj != nullptr);
+
+	auto& uuid = obj->GetUUID();
+	auto it = m_clonedObjectIds.find(uuid);
+	ID idx = INVALID_ID;
+
+	if (it == m_clonedObjectIds.end())
+	{
+		auto dbRecord = SerializableDB::Get()->GetSerializableRecord(obj->GetClassName());
+		if (dbRecord.name.empty())
+		{
+			assert(0 && "Register Serializable class to SerializableDB in SerializableList.h");
+			*((int*)nullptr); // must crash here
+		}
+
+		auto memType = (SerializedRecord::TYPE)obj->GetMemoryType();
+		assert(memType == (SerializedRecord::TYPE)dbRecord.memType);
+
+		Serializable* newObj = nullptr;
+		if (memType == SerializedRecord::HANDLE)
+		{
+			auto h = dbRecord.ctor();
+
+			idx = m_rawOrSharedCloneObjects.size();
+			m_clonedObjects.Push(h);
+			m_rawOrSharedCloneObjects.push_back({});
+
+			newObj = h;
+		}
+
+		if (memType == SerializedRecord::RAW)
+		{
+			auto raw = dbRecord.ctorRaw();
+
+			idx = m_rawOrSharedCloneObjects.size();
+			m_clonedObjects.Push(nullptr);
+			m_rawOrSharedCloneObjects.push_back({ nullptr,raw });
+
+			newObj = raw;
+		}
+
+		if (memType == SerializedRecord::SHARED)
+		{
+			auto shared = dbRecord.ctorShared();
+			
+			idx = m_rawOrSharedCloneObjects.size();
+			m_clonedObjects.Push(nullptr);
+			m_rawOrSharedCloneObjects.push_back({ shared,nullptr });
+
+			newObj = shared.get();
+		}
+
+		ID classNameIdx = INVALID_ID;
+		{
+			// indexing className
+
+			String className = obj->GetClassName();
+			auto classNameIt = m_classNameIds.find(className);
+
+			if (classNameIt == m_classNameIds.end())
+			{
+				classNameIdx = m_classNames.size();
+				m_classNames.push_back(className);
+				m_classNameIds.insert({ className,classNameIdx });
+			}
+			else
+			{
+				classNameIdx = classNameIt->second;
+			}
+		}
+
+		m_clonedObjectIds.insert({ uuid,{ idx,(uint32_t)classNameIdx,(uint32_t)memType } });
+
+		newObj->CloneFrom(this, obj);
+	}
+	else
+	{
+		idx = it->second.idx;
+	}
+
+	auto& handle = m_clonedObjects[idx];
+	if (handle)
+	{
+		//assert(output0 != nullptr);
+		//assert(output1 == nullptr);
+		assert(output2 == nullptr);
+
+		if (output0)
+			*output0 = handle;
+
+		if (output1)
+			*output1 = handle;
+
+		return;
+	}
+
+	auto& rawOrShared = m_rawOrSharedCloneObjects[idx];
+	if (rawOrShared.shared)
+	{
+		assert(output0 == nullptr);
+		//assert(output1 == nullptr);
+		//assert(output2 != nullptr);
+		assert(rawOrShared.raw == nullptr);
+
+		if (output2)
+			*output2 = rawOrShared.shared;
+
+		if (output1)
+			*output1 = rawOrShared.shared.get();
+
+		return;
+	}
+
+	if (rawOrShared.raw)
+	{
+		assert(output0 == nullptr);
+		assert(output1 != nullptr);
+		assert(output2 == nullptr);
+		assert(rawOrShared.shared.get() == nullptr);
+
+		*output1 = rawOrShared.raw;
+		return;
+	}
+
+	assert(0);
+}
+
 void Serializer::WriteToFileJson(const String& path)
 {
 	json j;
@@ -207,7 +340,7 @@ void Serializer::WriteToFileJson(const String& path)
 			json j1;
 			j1["UUID"]			= v.uuid;
 			j1["MemType"]		= v.record.type;
-			j1["ClassNameId"]	= v.record.classNameIdx;
+			j1["ClassName"]		= m_classNames[v.record.classNameIdx];
 			j1["Data"]			= data;
 			arr.push_back(j1);
 		}
@@ -252,7 +385,7 @@ void Serializer::ReadFromFileJson(const String& path)
 
 			SerializedRecord record;
 			record.idx			= i;
-			record.classNameIdx = j1["ClassNameId"];
+			record.classNameIdx = uint32_t(m_classNameIds[j1["ClassName"]]);
 			record.type			= j1["MemType"];
 
 			UUID uuid = j1["UUID"];

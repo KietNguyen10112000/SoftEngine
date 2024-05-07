@@ -7,7 +7,7 @@ NAMESPACE_BEGIN
 class AnimBlendLayer : public AnimLayer
 {
 protected:
-	SERIALIZABLE_CLASS(AnimBlendLayer);
+	SERIALIZABLE_CLASS(AnimBlendLayer, SERIALIZABLE_MEM_RAW);
 
 private:
 	AnimLayer* m_input[2] = {};

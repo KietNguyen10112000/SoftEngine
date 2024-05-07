@@ -9,6 +9,7 @@
 #include "Runtime/StartupConfig.h"
 
 #include "JSON/JSON.h"
+#include "UUID/UUID.h"
 
 NAMESPACE_BEGIN
 
@@ -38,9 +39,10 @@ private:
 	std::atomic<size_t> m_refCount = { 0 };
 	String m_path;
 	String m_key;
+	const UUID m_UUID;
 
 public:
-	ResourceBase(String path) : m_path(path) {};
+	inline ResourceBase(String path);
 	virtual ~ResourceBase() {};
 
 protected:
@@ -56,6 +58,11 @@ public:
 	inline auto GetPath() const
 	{
 		return m_path;
+	}
+
+	inline auto& GetUUID() const
+	{
+		return m_UUID;
 	}
 
 	inline Resource<ResourceBase> GetSelfResource();
@@ -86,6 +93,8 @@ namespace resource
 		API void Assign(ResourceBaseClass* rc, const char* resourceClassName);
 		API void Release(ResourceBaseClass* rc);
 
+		API UUID GetResourceUUID(const String& path);
+
 		void Initialize();
 		void Finalize();
 	}
@@ -103,6 +112,9 @@ namespace resource
 	API void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream);
 }
 
+inline ResourceBase::ResourceBase(String path) : m_path(path), m_UUID(resource::internal::GetResourceUUID(path))
+{
+}
 
 template <typename T>
 class Resource

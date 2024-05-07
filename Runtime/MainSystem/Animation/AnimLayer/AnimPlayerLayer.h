@@ -7,7 +7,7 @@ NAMESPACE_BEGIN
 class AnimPlayerLayer : public AnimLayer
 {
 protected:
-	SERIALIZABLE_CLASS(AnimPlayerLayer);
+	SERIALIZABLE_CLASS(AnimPlayerLayer, SERIALIZABLE_MEM_RAW);
 
 	Animation*						m_animation;
 

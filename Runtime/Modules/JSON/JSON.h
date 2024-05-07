@@ -120,6 +120,16 @@ inline void from_json(const json& ret, Transform& transform)
 
 NAMESPACE_BEGIN
 
+inline void to_json(json& ret, const String& str)
+{
+	ret = str.c_str();
+}
+
+inline void from_json(const json& ret, String& str)
+{
+	str = ret.dump().c_str();
+}
+
 inline void to_json(json& ret, const UUID& uuid)
 {
 	ret = uuid.ToHexString().c_str();

@@ -54,7 +54,7 @@ FileSystem::~FileSystem()
 void FileSystem::LoadCache()
 {
 	ByteStream stream;
-	if (ReadStream(".filesystem", &stream))
+	if (ReadCacheStream(".filesystem", &stream))
 	{
 		auto size = stream.Get<size_t>();
 		for (size_t i = 0; i < size; i++)
@@ -89,7 +89,7 @@ void FileSystem::SaveCache()
 		value.Serialize(&stream);
 	}
 
-	WriteStream(".filesystem", &stream);
+	WriteCacheStream(".filesystem", &stream);
 }
 
 bool FileSystem::IsFileExist(const char* path)
@@ -144,9 +144,9 @@ bool FileSystem::IsDirectoryChanged(const char* path, bool updateLastModifiedTim
 	return false;
 }
 
-void FileSystem::WriteStream(const char* path, ByteStreamRead* stream)
+void FileSystem::WriteStream(const String& path, ByteStreamRead* stream)
 {
-	auto fullpath = GetCachePath(path);
+	String fullpath = path;//GetCachePath(path);
 	
 	auto begin = stream->BeginRead();
 	auto end = stream->EndRead();
@@ -166,9 +166,14 @@ void FileSystem::WriteStream(const char* path, ByteStreamRead* stream)
 	fclose(fp);
 }
 
-bool FileSystem::ReadStream(const char* path, ByteStream* output)
+void FileSystem::WriteCacheStream(const String& path, ByteStreamRead* stream)
 {
-	auto fullpath = GetCachePath(path);
+	WriteStream(GetCachePath(path), stream);
+}
+
+bool FileSystem::ReadStream(const String& path, ByteStream* output)
+{
+	String fullpath = path;//GetCachePath(path);
 	if (!IsFileExist(fullpath.c_str()))
 	{
 		return false;
@@ -192,6 +197,11 @@ bool FileSystem::ReadStream(const char* path, ByteStream* output)
 	fclose(fp);
 
 	return true;
+}
+
+bool FileSystem::ReadCacheStream(const String& path, ByteStream* output)
+{
+	return ReadStream(GetCachePath(path), output);
 }
 
 String FileSystem::GetResourcesRootPath()

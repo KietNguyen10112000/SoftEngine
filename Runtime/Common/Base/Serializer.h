@@ -31,9 +31,10 @@ private:
 	{
 		enum TYPE
 		{
-			HANDLE,
-			SHARED,
-			RAW
+			HANDLE	= 0,
+			MANAGED = 0,
+			SHARED	= 1,
+			RAW		= 2
 		};
 
 		ID idx;
@@ -82,8 +83,15 @@ private:
 	Array<Handle<Serializable>> m_deserializedObjects;
 	std::vector<DeserializedPtr> m_rawOrSharedDeserializedObjects;
 
+	Array<Handle<Serializable>> m_clonedObjects;
+	std::vector<DeserializedPtr> m_rawOrSharedCloneObjects;
+	std::map<UUID, SerializedRecord> m_clonedObjectIds;
+
 	std::map<String, ID> m_classNameIds;
 	std::vector<String> m_classNames;
+
+	std::map<String, ID> m_usedResourceIds;
+	std::vector<Resource<ResourceBase>> m_usedResources;
 
 	const MODE m_mode = MODE::MODE_JSON;
 
@@ -96,6 +104,7 @@ private:
 	inline void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_deserializedObjects);
+		tracer->Trace(m_clonedObjects);
 	}
 
 public:
@@ -115,6 +124,13 @@ private:
 		SharedPtr<Serializable>* output2
 	);
 
+	void TryClone(
+		Serializable* obj,
+		Handle<Serializable>* output0,
+		Serializable** output1,
+		SharedPtr<Serializable>* output2
+	);
+
 	void WriteToFileJson(const String& path);
 	void WriteToFileBinary(const String& path);
 
@@ -125,34 +141,25 @@ public:
 	template <typename T>
 	Handle<T> Clone(const Handle<T>& obj)
 	{
-		/*static_assert(std::is_base_of_v<Serializable, T>);
-
-		auto ret = DynamicCast<T>(obj->_MakeInstance());
-		ret->CloneFrom(this, obj);
-		return ret;*/
-		return nullptr;
+		Handle<Serializable> ret;
+		TryClone(obj, &ret, nullptr, nullptr);
+		return StaticCast<T>(ret);
 	}
 
 	template <typename T>
 	T* Clone(T* obj)
 	{
-		/*static_assert(std::is_base_of_v<Serializable, T>);
-
-		auto ret = dynamic_cast<T>(obj->_MakeInstanceRaw());
-		ret->CloneFrom(this, obj);
-		return ret;*/
-		return nullptr;
+		Serializable* ret = nullptr;
+		TryClone(obj, nullptr, &ret, nullptr);
+		return static_cast<T*>(ret);
 	}
 
 	template <typename T>
 	SharedPtr<T> Clone(SharedPtr<T> obj)
 	{
-		/*static_assert(std::is_base_of_v<Serializable, T>);
-
-		auto ret = std::dynamic_pointer_cast<T>(obj->_MakeInstanceShared());
-		ret->CloneFrom(this, obj.get());
-		return ret;*/
-		return nullptr;
+		SharedPtr<Serializable> ret;
+		TryClone(obj.get(), nullptr, nullptr, &ret);
+		return std::static_pointer_cast<T>(ret);
 	}
 
 	template <typename T>
@@ -179,6 +186,15 @@ public:
 		static_assert(std::is_base_of_v<Serializable, T>);
 
 		TrySerialize(obj, SerializedRecord::RAW);
+		return obj->GetUUID();
+	}
+
+	template <typename T>
+	ID Serialize(const Resource<T>& obj)
+	{
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TrySerialize(obj.get(), SerializedRecord::SHARED);
 		return obj->GetUUID();
 	}
 
@@ -230,6 +246,13 @@ public:
 	inline auto& GetResourceHolder()
 	{
 		return m_resourceHolder;
+	}
+
+	template <typename T> 
+	inline static auto CloneObject(const T& v)
+	{
+		Serializer s = {};
+		return s.Clone(v);
 	}
 
 };

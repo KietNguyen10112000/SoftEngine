@@ -18,10 +18,10 @@ Texture2D::Texture2D(String path) : ResourceBase(path)
 
 	ByteStream stream;
 	auto streamPath = (path + CACHE_EXTENSION);
-	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
+	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadCacheStream(streamPath.c_str(), &stream))
 	{
 		CreateCache(path);
-		FileSystem::Get()->ReadStream(streamPath.c_str(), &stream);
+		FileSystem::Get()->ReadCacheStream(streamPath.c_str(), &stream);
 	}
 
 	LoadCache(&stream);
@@ -152,7 +152,7 @@ void Texture2D::WriteCache(String path, byte* data, uint32_t width, uint32_t hei
 		stbi_image_free(mipsCompressedData[i]);
 	}
 
-	FileSystem::Get()->WriteStream((path).c_str(), &stream);
+	FileSystem::Get()->WriteCacheStream((path).c_str(), &stream);
 
 	rheap::free(buffer);
 }

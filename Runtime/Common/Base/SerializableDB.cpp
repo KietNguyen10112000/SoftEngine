@@ -32,7 +32,7 @@ void SerializableDB::AddRecord(const SerializableRecord& record)
 
 void SerializableDB::RemoveRecord(const char* name)
 {
-	m_records.erase({ 0, name, nullptr });
+	m_records.erase({ 0, name, 0, nullptr });
 }
 
 NAMESPACE_END

@@ -49,7 +49,7 @@ public:
 
 	struct AnimMeshRenderingBuffer : public Serializable
 	{
-		SERIALIZABLE_CLASS(AnimMeshRenderingBuffer);
+		SERIALIZABLE_CLASS(AnimMeshRenderingBuffer, SERIALIZABLE_MEM_SHARED);
 
 		ID id = INVALID_ID;
 		DeferredBuffer<AnimMeshRenderingBufferData> buffer;

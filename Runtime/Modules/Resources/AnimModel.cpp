@@ -178,7 +178,7 @@ void AnimModel::CreateCache(Animation* animation, ByteStream& stream, const Stri
 		}
 	}
 
-	FileSystem::Get()->WriteStream(streamPath.c_str(), &stream);
+	FileSystem::Get()->WriteCacheStream(streamPath.c_str(), &stream);
 }
 
 void AnimModel::ReadCache(Animation* animation, ByteStream& stream)
@@ -436,7 +436,7 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 	auto streamPath = (myPath + "." + motionFileName + "." + motion->m_name.ReplaceAll('|', '-') + AnimModel::CACHE_EXTENSION);
 	if (FileSystem::Get()->IsFileChanged(myPath.c_str())
 		|| FileSystem::Get()->IsFileChanged(motionPath.c_str())
-		|| !FileSystem::Get()->ReadStream(streamPath.c_str(), &stream))
+		|| !FileSystem::Get()->ReadCacheStream(streamPath.c_str(), &stream))
 	{
 		bool needDelete = false;
 		if (vertices == nullptr)
@@ -627,6 +627,12 @@ Handle<GameObject> AnimModel::MakeGameObject()
 
 void AnimModel::AnimMeshRenderingBuffer::CloneFrom(Serializer* serializer, Serializable* another)
 {
+	auto src = (AnimMeshRenderingBuffer*)another;
+
+	AnimMeshRenderingBufferData data;
+	data.bones = src->buffer.Read()->bones;
+	data.meshesAABB = src->buffer.Read()->meshesAABB;
+	buffer.Initialize(data);
 }
 
 void AnimModel::AnimMeshRenderingBuffer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const

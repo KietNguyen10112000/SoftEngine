@@ -43,15 +43,15 @@ private:
 	void LoadCache();
 	void SaveCache();
 
-	inline auto GetCachePath(const char* path)
+	inline auto GetCachePath(const String& path)
 	{
 		return m_cachePath + path;
 	}
 
 	// get full resource path
-	inline auto GetFullPath(const char* path)
+	inline auto GetFullPath(const String& path)
 	{
-		std::string_view str = path;
+		std::string_view str = path.c_str();
 		if (str.find_first_of(m_rootPath.c_str()) == 0)
 		{
 			return String(path);
@@ -68,8 +68,11 @@ public:
 	bool IsFileChanged(const char* path, bool updateLastModifiedTime = true);
 	bool IsDirectoryChanged(const char* path, bool updateLastModifiedTime = true);
 
-	void WriteStream(const char* path, ByteStreamRead* stream);
-	bool ReadStream(const char* path, ByteStream* output);
+	void WriteStream(const String& path, ByteStreamRead* stream);
+	bool ReadStream(const String& path, ByteStream* output);
+
+	void WriteCacheStream(const String& path, ByteStreamRead* stream);
+	bool ReadCacheStream(const String& path, ByteStream* output);
 
 	// full path to Resources/
 	String GetResourcesRootPath();
