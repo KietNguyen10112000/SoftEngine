@@ -13,6 +13,7 @@ public:
 	using SerializableCtor			= Handle<Serializable> (*)();
 	using SerializableCtorRaw		= Serializable* (*)();
 	using SerializableCtorShared	= SharedPtr<Serializable>(*)();
+	using SerializableCtorResource	= Resource<ResourceBase>(*)(const String&);
 
 	struct SerializableRecord
 	{
@@ -22,9 +23,13 @@ public:
 		ID memType;
 
 		// managed memory, so just ctor is enough, no need dtor
-		SerializableCtor		ctor				= nullptr;
-		SerializableCtorShared	ctorShared			= nullptr;
-		SerializableCtorRaw		ctorRaw				= nullptr;
+		union
+		{
+			SerializableCtor			ctor = nullptr;
+			SerializableCtorShared		ctorShared;
+			SerializableCtorRaw			ctorRaw;
+			SerializableCtorResource	ctorResource;
+		};
 
 		inline bool operator<(const SerializableRecord& another)
 		{
@@ -93,6 +98,23 @@ public:
 				return new SerializableType();
 			};
 		}
+
+		AddRecord(record);
+	}
+
+	template <typename ResourceType>
+	void RegisterResource()
+	{
+		static_assert(std::is_base_of_v<ResourceBase, ResourceType>);
+
+		SerializableRecord record;
+		record.name = typeid(ResourceType).name();
+		record.memType = SERIALIZABLE_MEM_RESOURCE;
+
+		record.ctorResource = [](const String& path) -> Resource<ResourceBase>
+		{
+			return resource::Load<ResourceType>(path);
+		};
 
 		AddRecord(record);
 	}

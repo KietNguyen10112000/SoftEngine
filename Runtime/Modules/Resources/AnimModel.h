@@ -245,6 +245,8 @@ private:
 	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
 
 public:
+	std::vector<AnimMeshVertices> LoadAnimMeshVertices() const;
+
 	ID AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
 
 	// LoadAnimation(PlaceHolderAnimation(motion)) same as AddAnimation(motion)

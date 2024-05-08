@@ -428,6 +428,8 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 	auto myPath = GetPath();
 	auto animation = m_animations[animationId];
 
+	std::vector<AnimMeshVertices> tempVertices;
+
 	// load AABB key frames for this animation
 
 	auto motionPath = motion->GetModelFilePath();
@@ -438,45 +440,10 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 		|| FileSystem::Get()->IsFileChanged(motionPath.c_str())
 		|| !FileSystem::Get()->ReadCacheStream(streamPath.c_str(), &stream))
 	{
-		bool needDelete = false;
 		if (vertices == nullptr)
 		{
-			needDelete = true;
-
-			// TODO: reload vertices from model file
-			Assimp::Importer importer;
-			importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, aiComponent_CAMERAS | aiComponent_LIGHTS | aiComponent_ANIMATIONS);
-			const aiScene* scene = importer.ReadFile(myPath.c_str(),
-				aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals
-				| aiProcess_ConvertToLeftHanded | aiProcess_RemoveComponent
-			);
-
-			uint32_t count = 0;
-			for (uint32_t i = 0; i < scene->mNumMeshes; i++)
-			{
-				auto& mesh = scene->mMeshes[i];
-				if (!mesh->HasBones())
-				{
-					continue;
-				}
-
-				count++;
-			}
-
-			vertices = new AnimMeshVertices[count]();
-			count = 0;
-			for (uint32_t i = 0; i < scene->mNumMeshes; i++)
-			{
-				auto& mesh = scene->mMeshes[i];
-				if (!mesh->HasBones())
-				{
-					continue;
-				}
-
-				ResourceUtils::LoadAnimMeshVertices(vertices + count, this, mesh);
-
-				count++;
-			}
+			tempVertices = LoadAnimMeshVertices();
+			vertices = tempVertices.data();
 		}
 
 		struct Param
@@ -530,16 +497,55 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 
 		CreateCache(animation, stream, streamPath);
-
-		if (needDelete)
-		{
-			delete[] vertices;
-		}
 	}
 	else
 	{
 		ReadCache(animation, stream);
 	}
+}
+
+std::vector<AnimModel::AnimMeshVertices> AnimModel::LoadAnimMeshVertices() const
+{
+	std::vector<AnimModel::AnimMeshVertices> vertices;
+
+	auto myPath = GetPath();
+
+	// reload vertices from model file
+	Assimp::Importer importer;
+	importer.SetPropertyInteger(AI_CONFIG_PP_RVC_FLAGS, aiComponent_CAMERAS | aiComponent_LIGHTS | aiComponent_ANIMATIONS);
+	const aiScene* scene = importer.ReadFile(myPath.c_str(),
+		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals
+		| aiProcess_ConvertToLeftHanded | aiProcess_RemoveComponent
+	);
+
+	uint32_t count = 0;
+	for (uint32_t i = 0; i < scene->mNumMeshes; i++)
+	{
+		auto& mesh = scene->mMeshes[i];
+		if (!mesh->HasBones())
+		{
+			continue;
+		}
+
+		count++;
+	}
+
+	vertices.resize(count);
+	count = 0;
+	for (uint32_t i = 0; i < scene->mNumMeshes; i++)
+	{
+		auto& mesh = scene->mMeshes[i];
+		if (!mesh->HasBones())
+		{
+			continue;
+		}
+
+		ResourceUtils::LoadAnimMeshVertices(vertices.data() + count, (AnimModel*)this, mesh);
+
+		count++;
+	}
+
+	return vertices;
 }
 
 ID AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices)

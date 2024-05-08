@@ -42,6 +42,16 @@ private:
 		uint32_t type;
 	};
 
+	struct SerializedResourceRecord : public SerializedRecord
+	{
+		Resource<ResourceBase> resource;
+
+		inline const SerializedRecord& ToBase() const
+		{
+			return *this;
+		}
+	};
+
 	struct DeserializedPtr
 	{
 		SharedPtr<Serializable> shared = nullptr;
@@ -90,14 +100,11 @@ private:
 	std::map<String, ID> m_classNameIds;
 	std::vector<String> m_classNames;
 
-	std::map<String, ID> m_usedResourceIds;
-	std::vector<Resource<ResourceBase>> m_usedResources;
-
 	const MODE m_mode = MODE::MODE_JSON;
 
 	UUID m_rootUUID = {};
 
-	std::vector<Resource<ResourceBase>> m_resourceHolder;
+	std::map<UUID, SerializedResourceRecord> m_usedResources;
 
 private:
 	TRACEABLE_FRIEND();
@@ -117,11 +124,20 @@ private:
 		SerializedRecord::TYPE type
 	);
 
+	void TrySerializeRC(
+		ResourceBase* rc
+	);
+
 	void TryDeserialize(
 		const UUID& uuid, 
 		Handle<Serializable>* output0,
 		Serializable** output1,
 		SharedPtr<Serializable>* output2
+	);
+
+	void TryDeserializeRC(
+		const UUID& uuid,
+		Resource<ResourceBase>* output0
 	);
 
 	void TryClone(
@@ -190,12 +206,10 @@ public:
 	}
 
 	template <typename T>
-	ID Serialize(const Resource<T>& obj)
+	UUID Serialize(const Resource<T>& rc)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
-
-		TrySerialize(obj.get(), SerializedRecord::SHARED);
-		return obj->GetUUID();
+		TrySerializeRC(obj);
+		return rc->GetUUID();
 	}
 
 	template <typename T>
@@ -232,6 +246,14 @@ public:
 		TryDeserialize(uuid, nullptr, nullptr, &output);
 	}
 
+	template <typename T>
+	void Deserialize(const UUID& uuid, Resource<T>& output)
+	{
+		static_assert(std::is_base_of_v<Serializable, T>);
+
+		TryDeserializeRC(uuid, &output);
+	}
+
 public:
 	void WriteToFile(const String& path);
 	void ReadFromFile(const String& path);
@@ -241,11 +263,6 @@ public:
 	inline const auto& GetRootUUID() const
 	{
 		return m_rootUUID;
-	}
-
-	inline auto& GetResourceHolder()
-	{
-		return m_resourceHolder;
 	}
 
 	template <typename T> 

@@ -25,6 +25,9 @@
 #include "Scene/Scene.h"
 
 #include "Resources/AnimModel.h"
+#include "Resources/Texture2D.h"
+#include "Resources/Model3D.h"
+#include "Resources/AnimMotion.h"
 
 NAMESPACE_BEGIN
 
@@ -74,6 +77,14 @@ public:
 			SerializableDB::Get()->Register<RigidBodyStatic>();
 			SerializableDB::Get()->Register<RigidBodyDynamic>();
 			SerializableDB::Get()->Register<CharacterControllerCapsule>();
+		}
+
+
+		{
+			SerializableDB::Get()->RegisterResource<AnimModel>();
+			SerializableDB::Get()->RegisterResource<AnimMotion>();
+			SerializableDB::Get()->RegisterResource<Model3D>();
+			SerializableDB::Get()->RegisterResource<Texture2D>();
 		}
 	}
 };

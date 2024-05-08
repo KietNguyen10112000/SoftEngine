@@ -20,6 +20,7 @@ NAMESPACE_BEGIN
 #define SERIALIZABLE_MEM_MANAGED			0				 // for auto memory managed class instance
 #define SERIALIZABLE_MEM_SHARED				1				 // for shared ptr class instance
 #define SERIALIZABLE_MEM_RAW				2				 // for raw class instance
+#define SERIALIZABLE_MEM_RESOURCE			3				 // for resource
 
 //#define _SERIALIZABLE_CLASS_IMPL_(className, memManagedImpl, memSharedImpl, memRawImpl, memType)	\
 //private: friend class SerializableDB;										\

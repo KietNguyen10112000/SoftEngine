@@ -32,6 +32,7 @@ private:
 	friend class Resource;
 
 	friend class ResourceBaseAccessor;
+	friend class Serializer;
 
 	template <typename _D, typename T>
 	friend Resource<_D> resource::StaticCast(const Resource<T>& rc);
@@ -63,6 +64,11 @@ public:
 	inline auto& GetUUID() const
 	{
 		return m_UUID;
+	}
+
+	inline String GetClassName() const
+	{
+		return m_key.SubString(0, m_key.FindFirstOf('['));
 	}
 
 	inline Resource<ResourceBase> GetSelfResource();

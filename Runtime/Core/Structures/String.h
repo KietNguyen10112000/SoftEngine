@@ -419,10 +419,16 @@ public:
 		return s.replace(s.find(oldVal.c_str()), oldVal.length(), newVal.c_str()).c_str();
 	};
 
-	size_t FindFirstOf(const String& val) const
+	size_t FindFirstOf(const String& val, size_t offset = 0) const
 	{
 		std::string_view s = c_str();
-		return s.find_first_of(val.c_str());
+		return s.find_first_of(val.c_str(), offset);
+	}
+
+	size_t FindFirstOf(const char& val, size_t offset = 0) const
+	{
+		std::string_view s = c_str();
+		return s.find_first_of(val, offset);
 	}
 };
 
