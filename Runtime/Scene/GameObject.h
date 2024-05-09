@@ -370,7 +370,7 @@ public:
 	{
 		if constexpr (std::is_base_of_v<MainComponent, Comp>)
 		{
-			assert(dynamic_cast<Comp>(m_mainComponents[Comp::COMPONENT_ID].Get()) != nullptr);
+			assert(dynamic_cast<Comp*>(m_mainComponents[Comp::COMPONENT_ID].Get()) != nullptr);
 			return StaticCast<Comp>(m_mainComponents[Comp::COMPONENT_ID]);
 		}
 		else

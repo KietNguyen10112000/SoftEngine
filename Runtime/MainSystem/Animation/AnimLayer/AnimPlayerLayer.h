@@ -42,7 +42,7 @@ public:
 	virtual void Run(float dt) override;
 
 private:
-	void SetAnimationImpl(ID animationId, float startTime, float endTime);
+	void SetAnimationImpl(Animation* animation, float startTime, float endTime);
 
 public:
 	void SetAnimation(ID animationId, float startTime, float endTime);

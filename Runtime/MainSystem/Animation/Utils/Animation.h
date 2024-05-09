@@ -60,6 +60,11 @@ public:
 		return m_motion->m_name;
 	}
 
+	inline auto& GetMotion() const
+	{
+		return m_motion;
+	}
+
 };
 
 NAMESPACE_END

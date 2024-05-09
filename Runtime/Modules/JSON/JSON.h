@@ -84,6 +84,7 @@ inline void to_json(json& ret, const Mat4& mat)
 		{
 			row.push_back(mat[y][x]);
 		}
+		ret.push_back(row);
 	}
 }
 
@@ -122,12 +123,21 @@ NAMESPACE_BEGIN
 
 inline void to_json(json& ret, const String& str)
 {
+	if (str.empty())
+	{
+		ret = "";
+		return;
+	}
 	ret = str.c_str();
 }
 
 inline void from_json(const json& ret, String& str)
 {
-	str = ret.dump().c_str();
+	auto s = ret.get<json::string_t>();
+	if (!s.empty())
+	{
+		str = s.c_str();
+	}
 }
 
 inline void to_json(json& ret, const UUID& uuid)
@@ -137,7 +147,7 @@ inline void to_json(json& ret, const UUID& uuid)
 
 inline void from_json(const json& ret, UUID& uuid)
 {
-	uuid = UUID::FromHexString(ret.dump().c_str());
+	uuid = UUID::FromHexString(ret.get<json::string_t>().c_str());
 }
 
 NAMESPACE_END

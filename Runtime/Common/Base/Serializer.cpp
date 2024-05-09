@@ -44,7 +44,7 @@ void Serializer::TrySerialize(Serializable* obj, SerializedRecord::TYPE type)
 		{
 			record.classNameIdx = m_classNames.size();
 			m_classNames.push_back(className);
-			m_classNameIds.insert({ className,record.idx });
+			m_classNameIds.insert({ className,record.classNameIdx });
 		}
 		else
 		{
@@ -95,7 +95,7 @@ void Serializer::TrySerializeRC(ResourceBase* rc)
 		{
 			record.classNameIdx = m_classNames.size();
 			m_classNames.push_back(className);
-			m_classNameIds.insert({ className,record.idx });
+			m_classNameIds.insert({ className,record.classNameIdx });
 		}
 		else
 		{
@@ -103,11 +103,13 @@ void Serializer::TrySerializeRC(ResourceBase* rc)
 		}
 	}
 
+	record.resource = rc->GetSelfResource();
+
 	switch (m_mode)
 	{
 	case Serializer::MODE_BINARY: {
 		record.idx = m_binaries.size();
-		m_binaries.push_back({ uuid,std::move(std::make_unique<ByteStream>()),record });
+		m_binaries.push_back({ uuid,std::move(std::make_unique<ByteStream>()),record.ToBase()});
 		m_usedResources.insert({ uuid,record });
 		m_serializedObjects.insert({ uuid,record.ToBase()});
 		rc->SerializeExtDataToBinary(this, *m_binaries[record.idx].stream);
@@ -115,7 +117,7 @@ void Serializer::TrySerializeRC(ResourceBase* rc)
 	}
 	case Serializer::MODE_JSON: {
 		record.idx = m_jsons.size();
-		m_jsons.push_back({ uuid,std::move(std::make_unique<json>()),record });
+		m_jsons.push_back({ uuid,std::move(std::make_unique<json>()),record.ToBase() });
 		m_usedResources.insert({ uuid,record });
 		m_serializedObjects.insert({ uuid,record.ToBase() });
 		rc->SerializeExtDataToJson(this, *m_jsons[record.idx].j);
@@ -400,7 +402,7 @@ void Serializer::WriteToFileJson(const String& path)
 		auto count = m_jsons.size();
 		for (size_t i = 0; i < count; i++)
 		{
-			auto& v = m_jsons[count];
+			auto& v = m_jsons[i];
 			json& data = *v.j;
 			json j1;
 			j1["UUID"]			= v.uuid;
@@ -418,13 +420,13 @@ void Serializer::WriteToFileJson(const String& path)
 		{
 			json j1;
 			j1["UUID"] = key;
-			j1["Path"] = value.resource->GetPath();
+			j1["Path"] = FileUtils::ShiftPath(value.resource->GetPath());
 			arr.push_back(j1);
 		}
 		j["UsedResources"] = arr;
 	}
 
-	auto str = j.dump();
+	auto str = j.dump(2);
 
 	FileUtils::WriteFile(path.c_str(), str.c_str(), str.length());
 }
@@ -437,6 +439,7 @@ void Serializer::ReadFromFileJson(const String& path)
 {
 	byte* buffer; size_t fileSize;
 	FileUtils::ReadFile(path, buffer, fileSize);
+	buffer[fileSize] = '\0';
 
 	json j = json::parse((const char*)buffer);
 
@@ -446,7 +449,7 @@ void Serializer::ReadFromFileJson(const String& path)
 		auto count = arr.size();
 		for (size_t i = 0; i < count; i++)
 		{
-			m_classNames.push_back(arr[i].dump().c_str());
+			m_classNames.push_back(arr[i].get<std::string>().c_str());
 			m_classNameIds.insert({ m_classNames.back(),i });
 		}
 	}
@@ -478,7 +481,7 @@ void Serializer::ReadFromFileJson(const String& path)
 	{
 		auto& arr = j["UsedResources"];
 		auto count = arr.size();
-		for (size_t i = 0; i < count; i++)
+		for (int64_t i = count - 1; i != -1; i--)
 		{
 			auto& j1 = arr[i];
 			UUID uuid = j1["UUID"];
@@ -488,15 +491,19 @@ void Serializer::ReadFromFileJson(const String& path)
 
 			auto& sRecord = m_serializedObjects[uuid];
 			auto dbRecord = SerializableDB::Get()->GetSerializableRecord(m_classNames[sRecord.classNameIdx].c_str());
+			if (dbRecord.name.empty())
+			{
+				assert(0 && "Register Serializable class to SerializableDB in SerializableList.h");
+				*((int*)nullptr); // must crash here
+			}
 
 			SerializedResourceRecord record;
 			record.idx			= sRecord.idx;
 			record.classNameIdx = sRecord.classNameIdx;
 			record.type			= sRecord.type;
 			record.resource		= dbRecord.ctorResource(path);
-			record.resource->DeserializeExtDataFromJson(this, *m_jsons[sRecord.idx].j);
-
 			m_usedResources.insert({ uuid,record });
+			record.resource->DeserializeExtDataFromJson(this, *m_jsons[sRecord.idx].j);
 		}
 	}
 

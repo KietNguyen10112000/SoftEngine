@@ -117,10 +117,20 @@ void AnimBlendLayer::DeserializeFromBinary(Serializer* serializer, const ByteStr
 
 void AnimBlendLayer::SerializeToJson(Serializer* serializer, json& j) const
 {
+	AnimLayer::SerializeToJson(serializer, j);
+
+	j["Input0"] = serializer->Serialize(m_input[0]); 
+	j["Input1"] = serializer->Serialize(m_input[1]);
 }
 
 void AnimBlendLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	AnimLayer::DeserializeFromJson(serializer, j);
+
+	serializer->Deserialize(j["Input0"], m_input[0]);
+	serializer->Deserialize(j["Input1"], m_input[1]);
+
+	Run(0);
 }
 
 void AnimBlendLayer::CloneFrom(Serializer* serializer, Serializable* another)

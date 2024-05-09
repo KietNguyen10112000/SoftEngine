@@ -35,8 +35,8 @@ struct UUID
 	{
 		std::stringstream stream;
 		stream //<< "0x"
-			<< std::setfill('0') << std::setw(32)
-			<< std::hex << part0 << part1;
+			<< std::setfill('0') << std::setw(16) << std::hex << part0 
+			<< std::setfill('0') << std::setw(16) << std::hex << part1;
 		return stream.str().c_str();
 	}
 

@@ -99,9 +99,9 @@ void AnimPlayerLayer::Run(float dt)
 	}
 }
 
-void AnimPlayerLayer::SetAnimationImpl(ID animationId, float startTime, float endTime)
+void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, float endTime)
 {
-	m_animation = m_model->m_animations[animationId];
+	m_animation = animation;//m_model->m_animations[animationId];
 
 	auto& channels = m_animation->GetChannels();
 	auto& animMeshLocalAABoxKeyFrames = m_animation->GetMeshLocalAABBKeyFrames();
@@ -145,34 +145,19 @@ void AnimPlayerLayer::SetAnimationImpl(ID animationId, float startTime, float en
 
 void AnimPlayerLayer::SetAnimation(ID animationId, float startTime, float endTime)
 {
+	auto animation = m_model->m_animations[animationId];
 	if (!GetGameObject() || !GetGameObject()->IsInAnyScene())
 	{
-		this->SetAnimationImpl(animationId, startTime, endTime);
+		this->SetAnimationImpl(animation, startTime, endTime);
 		return;
 	}
 
 	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
-		AnimationSystem, AsyncTaskRunner, animationId, startTime, endTime,
+		AnimationSystem, AsyncTaskRunner, animation, startTime, endTime,
 		{
-			self->SetAnimationImpl(animationId, startTime, endTime);
+			self->SetAnimationImpl(animation, startTime, endTime);
 		}
 	);
-}
-
-void AnimPlayerLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
-{
-}
-
-void AnimPlayerLayer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
-{
-}
-
-void AnimPlayerLayer::SerializeToJson(Serializer* serializer, json& j) const
-{
-}
-
-void AnimPlayerLayer::DeserializeFromJson(Serializer* serializer, const json& j)
-{
 }
 
 void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
@@ -190,6 +175,106 @@ void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
 	m_startTick					= src->m_startTick;
 	m_t							= src->m_t;
 
+}
+
+
+void AnimPlayerLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void AnimPlayerLayer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void AnimPlayerLayer::SerializeToJson(Serializer* serializer, json& j) const
+{
+	AnimLayer::SerializeToJson(serializer, j);
+
+	j["AnimMotion"] = serializer->Serialize(m_animation->GetMotion());
+
+	/*{
+		auto arr = json::array();
+		for (auto& v : m_startKeyFrameIndex)
+		{
+			json j1;
+			j1["r"] = v.r;
+			j1["s"] = v.s;
+			j1["t"] = v.t;
+			arr.push_back(j1);
+		}
+		j["StartKeyFrameIndex"] = arr;
+	}*/
+	
+	{
+		auto arr = json::array();
+		for (auto& v : m_startAABBKeyFrameIndex)
+		{
+			arr.push_back(v);
+		}
+		j["StartAABBKeyFrameIndex"] = arr;
+	}
+
+	j["TickDuration"]		= m_tickDuration;
+	j["TicksPerSecond"]		= m_ticksPerSecond;
+	j["StartTick"]			= m_startTick;
+	j["Time"]				= m_t;
+}
+
+void AnimPlayerLayer::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	AnimLayer::DeserializeFromJson(serializer, j);
+
+	Resource<AnimMotion> motion;
+	serializer->Deserialize(j["AnimMotion"], motion);
+
+	auto animation = m_model->FindAnimation(motion);
+	if (!animation)
+	{
+		animation = m_model->m_animations[m_model->AddAnimation(motion)];
+	}
+	m_animation = animation;
+
+	/*{
+		auto& arr = j["StartKeyFrameIndex"];
+		auto count = arr.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			auto& j1 = arr[i];
+			KeyFramesIndex index;
+			index.r = j1["r"];
+			index.s = j1["s"];
+			index.t = j1["t"];
+			m_startKeyFrameIndex.push_back(index);
+		}
+	}*/
+
+	{
+		auto& arr = j["StartAABBKeyFrameIndex"];
+		auto count = arr.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			auto& j1 = arr[i];
+			uint32_t index = j1;
+			m_startAABBKeyFrameIndex.push_back(index);
+		}
+	}
+
+	m_tickDuration		= j["TickDuration"];
+	m_ticksPerSecond	= j["TicksPerSecond"];
+	m_startTick			= j["StartTick"];
+	m_t					= j["Time"];
+
+	m_keyFramesIndex.resize(m_startKeyFrameIndex.size());
+	m_aabbKeyFrameIndex.resize(m_startAABBKeyFrameIndex.size());
+
+	auto endTick = m_startTick + m_tickDuration;
+	SetAnimationImpl(
+		m_animation,
+		m_startTick / m_animation->GetTicksPerSecond(),
+		endTick / m_animation->GetTicksPerSecond()
+	);
+
+	Run(0);
 }
 
 Handle<ClassMetadata> AnimPlayerLayer::GetMetadata(size_t sign)

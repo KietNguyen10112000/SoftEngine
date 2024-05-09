@@ -327,15 +327,32 @@ void Runtime::Setup()
 	//object->SetLocalTransform(transform);
 	//scene->AddObject(object);
 
-	transform = {};
-	transform.Scale() = { 0.01f,0.01f,0.01f };
-	auto object = Serializer::CloneObject(resource::Load<AnimModel>("model/Mixamo/FastRun.fbx")->MakeGameObject()); //ResourceUtils::LoadAnimModelArray("model/Mixamo/FastRun.fbx");
-	//auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
-	//auto object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
-	//auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
-	//auto object = ResourceUtils::LoadAnimModelArray("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
-	object->SetLocalTransform(transform);
-	scene->AddObject(object);
+	//transform = {};
+	//transform.Scale() = { 0.01f,0.01f,0.01f };
+	//auto object = Serializer::CloneObject(resource::Load<AnimModel>("model/Mixamo/FastRun.fbx")->MakeGameObject()); //ResourceUtils::LoadAnimModelArray("model/Mixamo/FastRun.fbx");
+	////auto object = ResourceUtils::LoadAnimModel("model/simple/Character Running.fbx", "model/simple/Character Texture 256x256.png");
+	////auto object = ResourceUtils::LoadAnimModelArray("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
+	////auto object = ResourceUtils::LoadModel3DBasic("Default/cube1.obj");
+	////auto object = ResourceUtils::LoadAnimModelArray("model/vampires/dancing_vampire.dae", "model/vampires/Vampire_diffuse.png");
+	//object->SetLocalTransform(transform);
+	//scene->AddObject(object);
+
+	//{
+	//	Serializer serializer = {};
+	//	serializer.Serialize(object);
+	//	serializer.SetRootUUID(object->GetUUID());
+	//	serializer.WriteToFile("Data/FastRun.AnimatorSkeletalArray.json");
+	//}
+
+	{
+		Handle<GameObject> o;
+		Serializer serializer = {};
+		serializer.ReadFromFile("Data/FastRun.AnimatorSkeletalArray.json");
+		serializer.Deserialize(serializer.GetRootUUID(), o);
+
+		o->Name() = "Object2";
+		scene->AddObject(o);
+	}
 
 	/*object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	scene->AddObject(object);

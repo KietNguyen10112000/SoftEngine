@@ -159,7 +159,7 @@ public:
 	{
 		Handle<Serializable> ret;
 		TryClone(obj, &ret, nullptr, nullptr);
-		return StaticCast<T>(ret);
+		return DynamicCast<T>(ret);
 	}
 
 	template <typename T>
@@ -167,7 +167,7 @@ public:
 	{
 		Serializable* ret = nullptr;
 		TryClone(obj, nullptr, &ret, nullptr);
-		return static_cast<T*>(ret);
+		return dynamic_cast<T*>(ret);
 	}
 
 	template <typename T>
@@ -175,7 +175,7 @@ public:
 	{
 		SharedPtr<Serializable> ret;
 		TryClone(obj.get(), nullptr, nullptr, &ret);
-		return std::static_pointer_cast<T>(ret);
+		return std::dynamic_pointer_cast<T>(ret);
 	}
 
 	template <typename T>
@@ -199,16 +199,24 @@ public:
 	template <typename T>
 	UUID Serialize(T* obj)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
+		static_assert(std::is_base_of_v<ResourceBase, T> || std::is_base_of_v<Serializable, T>);
 
-		TrySerialize(obj, SerializedRecord::RAW);
+		if constexpr (std::is_base_of_v<ResourceBase, T>)
+		{
+			TrySerializeRC(obj);
+		}
+		else
+		{
+			TrySerialize(obj, SerializedRecord::RAW);
+		}
+
 		return obj->GetUUID();
 	}
 
 	template <typename T>
 	UUID Serialize(const Resource<T>& rc)
 	{
-		TrySerializeRC(obj);
+		TrySerializeRC(rc);
 		return rc->GetUUID();
 	}
 
@@ -217,9 +225,9 @@ public:
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
 
-		Handle<T> ret = nullptr;
+		Handle<Serializable> ret = nullptr;
 		TryDeserialize(uuid, &ret, nullptr, nullptr);
-		return ret;
+		return DynamicCast<T>(ret);
 	}
 
 	template <typename T>
@@ -227,15 +235,28 @@ public:
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
 
-		TryDeserialize(uuid, &output, nullptr, nullptr);
+		Handle<Serializable> ret;
+		TryDeserialize(uuid, &ret, nullptr, nullptr);
+		output = DynamicCast<T>(ret);
 	}
 
 	template <typename T>
 	void Deserialize(const UUID& uuid, T*& output)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
+		static_assert(std::is_base_of_v<ResourceBase, T> || std::is_base_of_v<Serializable, T>);
 
-		TryDeserialize(uuid, nullptr, &output, nullptr);
+		if constexpr (std::is_base_of_v<ResourceBase, T>)
+		{
+			Resource<ResourceBase> ret;
+			TryDeserializeRC(uuid, &ret);
+			output = resource::StaticCast<T>(ret);
+		}
+		else
+		{
+			Serializable* ret = nullptr;
+			TryDeserialize(uuid, nullptr, &ret, nullptr);
+			output = dynamic_cast<T*>(ret);
+		}
 	}
 
 	template <typename T>
@@ -243,15 +264,19 @@ public:
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
 
-		TryDeserialize(uuid, nullptr, nullptr, &output);
+		SharedPtr<Serializable> ret;
+		TryDeserialize(uuid, nullptr, nullptr, &ret);
+		output = std::dynamic_pointer_cast<T>(ret);
 	}
 
 	template <typename T>
 	void Deserialize(const UUID& uuid, Resource<T>& output)
 	{
-		static_assert(std::is_base_of_v<Serializable, T>);
+		static_assert(std::is_base_of_v<ResourceBase, T>);
 
-		TryDeserializeRC(uuid, &output);
+		Resource<ResourceBase> ret;
+		TryDeserializeRC(uuid, &ret);
+		output = resource::StaticCast<T>(ret);
 	}
 
 public:

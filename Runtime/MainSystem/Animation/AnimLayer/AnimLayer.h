@@ -7,6 +7,8 @@
 
 #include "../Utils/Animation.h"
 
+#include "Resources/AnimModel.h"
+
 NAMESPACE_BEGIN
 
 class AnimLayer : public Serializable
@@ -38,6 +40,27 @@ protected:
 		m_model				= src->m_model;
 		m_globalTransforms	= src->m_globalTransforms;
 		m_meshesAABB		= src->m_meshesAABB;
+	}
+
+	inline void SerializeToJson(Serializer* serializer, json& j) const
+	{
+		j["OwnerComp"]	= serializer->Serialize(m_ownerComp);
+		j["Model"]		= serializer->Serialize(m_model);
+
+		j["GlobalTransformsSize"] = m_globalTransforms.size();
+		j["MeshesAABBSize"] = m_meshesAABB.size();
+	}
+
+	inline void DeserializeFromJson(Serializer* serializer, const json& j)
+	{
+		serializer->Deserialize(j["OwnerComp"], m_ownerComp);
+		serializer->Deserialize(j["Model"], m_model);
+
+		size_t size = j["GlobalTransformsSize"];
+		m_globalTransforms.resize(size);
+
+		size = j["MeshesAABBSize"];
+		m_meshesAABB.resize(size);
 	}
 
 public:

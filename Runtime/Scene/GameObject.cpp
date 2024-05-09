@@ -421,10 +421,78 @@ void GameObject::DeserializeFromBinary(Serializer* serializer, const ByteStream&
 
 void GameObject::SerializeToJson(Serializer* serializer, json& j) const
 {
+	j["Name"] = ((GameObject*)this)->Name();
+	j["LocalTransform"] = ReadLocalTransform();
+	j["GlobalTransformMat"] = ReadGlobalTransformMat();
+
+	{
+		auto arr = json::array();
+		//arr.get_ref<json::array_t&>().resize(MainSystemInfo::COUNT);
+		for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+		{
+			auto& comp = m_mainComponents[i];
+			if (!comp.IsNull())
+			{
+				arr.push_back(serializer->Serialize(comp));
+			}
+			else
+			{
+				arr.push_back(nullptr);
+			}
+		}
+		j["MainComponents"] = arr;
+	}
+
+	{
+		auto arr = json::array();
+		auto& children = ((GameObject*)this)->ReadChildren();
+		for (size_t i = 0; i < children.size(); i++)
+		{
+			arr.push_back(serializer->Serialize(children[i]));
+		}
+		j["Children"] = arr;
+	}
 }
 
 void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	Name() = j["Name"];
+
+	Transform localTransform = j["LocalTransform"];
+	Mat4 globalTransform = j["GlobalTransformMat"];
+	auto localTransMat = localTransform.ToTransformMatrix();
+	for (size_t i = 0; i < NUM_TRANSFORM_BUFFERS; i++)
+	{
+		m_localTransform[i] = localTransform;
+		m_globalTransformMat[i] = globalTransform;
+		m_localTransformMat[i] = localTransMat;
+	}
+
+	{
+		auto& arr = j["MainComponents"];
+		//arr.get_ref<json::array_t&>().resize(MainSystemInfo::COUNT);
+		for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+		{
+			auto& j1 = arr[i];
+			if (!j1.is_null())
+			{
+				serializer->Deserialize(j1, m_mainComponents[i]);
+				m_mainComponents[i]->m_object = this;
+			}
+		}
+	}
+
+	{
+		auto& arr = j["Children"];
+		auto count = arr.size();
+		Handle<GameObject> child;
+		for (size_t i = 0; i < count; i++)
+		{
+			child = nullptr;
+			serializer->Deserialize(arr[i], child);
+			AddChild(child);
+		}
+	}
 }
 
 NAMESPACE_END

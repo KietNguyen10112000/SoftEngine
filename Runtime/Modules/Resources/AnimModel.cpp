@@ -651,10 +651,17 @@ void AnimModel::AnimMeshRenderingBuffer::DeserializeFromBinary(Serializer* seria
 
 void AnimModel::AnimMeshRenderingBuffer::SerializeToJson(Serializer* serializer, json& j) const
 {
+	auto temp = (std::remove_const_t<decltype(buffer)>*)&buffer;
+	j["BoneBufferSize"] = temp->Read()->bones.size();
+	j["MeshesAABBBufferSize"] = temp->Read()->meshesAABB.size();
 }
 
 void AnimModel::AnimMeshRenderingBuffer::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	AnimMeshRenderingBufferData data;
+	data.bones.resize(j["BoneBufferSize"]);
+	data.meshesAABB.resize(j["MeshesAABBBufferSize"]);
+	buffer.Initialize(data);
 }
 
 Handle<ClassMetadata> AnimModel::AnimMeshRenderingBuffer::GetMetadata(size_t sign)
@@ -663,6 +670,61 @@ Handle<ClassMetadata> AnimModel::AnimMeshRenderingBuffer::GetMetadata(size_t sig
 }
 
 void AnimModel::AnimMeshRenderingBuffer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
+}
+
+Animation* AnimModel::FindAnimation(AnimMotion* motion) const
+{
+	for (auto& anim : m_animations)
+	{
+		if (anim->m_motion == motion)
+		{
+			return anim;
+		}
+	}
+	return nullptr;
+}
+
+void AnimModel::SerializeExtDataToJson(Serializer* serializer, json& j) const
+{
+	j = json::array();
+	for (auto& anim : m_animations)
+	{
+		j.push_back(serializer->Serialize(anim->m_motion));
+	}
+}
+
+void AnimModel::DeserializeExtDataFromJson(Serializer* serializer, const json& j)
+{
+	auto count = j.size();
+	Resource<AnimMotion> motion;
+
+	bool loaded = false;
+	std::vector<AnimMeshVertices> vertices;
+
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& j1 = j[i];
+		serializer->Deserialize(UUID(j1), motion);
+
+		if (!FindAnimation(motion))
+		{
+			if (!loaded)
+			{
+				vertices = LoadAnimMeshVertices();
+				loaded = true;
+			}
+
+			AddAnimation(motion, vertices.data());
+		}
+	}
+}
+
+void AnimModel::SerializeExtDataToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void AnimModel::DeserializeExtDataFromBinary(Serializer* serializer, const ByteStream& stream)
 {
 }
 

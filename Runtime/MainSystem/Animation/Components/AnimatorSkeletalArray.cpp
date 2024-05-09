@@ -690,12 +690,62 @@ void AnimatorSkeletalArray::DeserializeFromBinary(Serializer* serializer, const 
 
 void AnimatorSkeletalArray::SerializeToJson(Serializer* serializer, json& j) const
 {
+	j["GameObject"] = serializer->Serialize(((AnimatorSkeletalArray*)this)->GetGameObject());
+	j["Model"] = serializer->Serialize(m_model3D);
+	
+	{
+		auto arr = json::array();
+		for (auto& layer : m_animLayers)
+		{
+			arr.push_back(serializer->Serialize(layer));
+		}
+		j["AnimLayers"] = arr;
+	}
+
+	{
+		auto arr = json::array();
+		for (auto& obj : m_meshRendererObjs)
+		{
+			arr.push_back(serializer->Serialize(obj));
+		}
+		j["MeshRendererObjs"] = arr;
+	}
+
+	{
+		j["AnimMeshRenderingBuffer"] = serializer->Serialize(m_animMeshRenderingBuffer);
+	}
 }
 
 void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const json& j)
 {
-}
+	serializer->Deserialize(j["GameObject"], m_object);
 
+	serializer->Deserialize(j["Model"], m_model3D);
+
+	{
+		auto& arr = j["AnimLayers"];
+		auto count = arr.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			m_animLayers.emplace_back();
+			serializer->Deserialize(arr[i], m_animLayers.back());
+		}
+	}
+
+	{
+		auto& arr = j["MeshRendererObjs"];
+		auto count = arr.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			m_meshRendererObjs.Push(nullptr);
+			serializer->Deserialize(arr[i], m_meshRendererObjs.back());
+		}
+	}
+
+	{
+		serializer->Deserialize(j["AnimMeshRenderingBuffer"], m_animMeshRenderingBuffer);
+	}
+}
 
 void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {

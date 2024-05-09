@@ -82,13 +82,15 @@ UUIDGenerator::UUIDGenerator()
 
 UUID UUIDGenerator::GetUUID()
 {
-    auto now = (Clock::ms::now()) >> 4;
+    auto now = (Clock::ns::now()) / 100;
+    //now = now >> 4;
+    now = (now << 4) >> 4;
 
     UUID ret = {};
 
     ret.part0 = m_MACAddress | (now << 48);
 
-    ret.part1 = (now >> 16) | (int64_t(Random::Rand()) >> 12);
+    ret.part1 = (now >> 48) | (int64_t(Random::Rand()) << 12);
 
 	return ret;
 }

@@ -50,6 +50,13 @@ inline void WriteFile(const char* fileName, const void* buffer, size_t bufferSiz
 {
 	FILE* fp = fopen(fileName, "wb");
 
+	if (!fp)
+	{
+		std::filesystem::path fspath{ fileName };
+		std::filesystem::create_directories(fspath.parent_path());
+		fp = fopen(fileName, "wb+");
+	}
+
 	fwrite(buffer, sizeof(byte), bufferSize, fp);
 
 	fclose(fp);

@@ -244,6 +244,13 @@ private:
 	void ReadCache(Animation* animation, ByteStream& stream);
 	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
 
+protected:
+	void SerializeExtDataToJson(Serializer* serializer, json& j) const override;
+	void DeserializeExtDataFromJson(Serializer* serializer, const json& j) override;
+
+	void SerializeExtDataToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeExtDataFromBinary(Serializer* serializer, const ByteStream& stream) override;
+
 public:
 	std::vector<AnimMeshVertices> LoadAnimMeshVertices() const;
 
@@ -254,6 +261,8 @@ public:
 	void LoadAnimation(ID animationId, const AnimMotion* motion, AnimMeshVertices* vertices = nullptr);
 
 	virtual Handle<GameObject> MakeGameObject() override;
+
+	Animation* FindAnimation(AnimMotion* motion) const;
 
 };
 

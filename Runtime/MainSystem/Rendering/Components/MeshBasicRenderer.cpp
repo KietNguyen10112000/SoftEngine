@@ -102,10 +102,16 @@ void MeshBasicRenderer::DeserializeFromBinary(Serializer* serializer, const Byte
 
 void MeshBasicRenderer::SerializeToJson(Serializer* serializer, json& j) const
 {
+	j["Model"] = serializer->Serialize(m_model3D);
+	j["MeshId"] = m_mesh->m_model3DIdx;
+	j["Texture2D"] = serializer->Serialize(m_texture);
 }
 
 void MeshBasicRenderer::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	serializer->Deserialize(j["Model"], m_model3D);
+	m_mesh = &m_model3D->m_meshes[uint32_t(j["MeshId"])];
+	serializer->Deserialize(j["Texture2D"], m_texture);
 }
 
 void MeshBasicRenderer::OnComponentAdded()
