@@ -302,6 +302,13 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 
 	m_updatedTransformIteration = m_scene->GetIterationCount();
 	WriteLocalTransform() = ReadLocalTransform();
+	for (auto& c : m_mainComponents)
+	{
+		if (c)
+		{
+			c->SynchGlobalLocalTransform((Mat4&)(ReadGlobalTransformMat()), WriteLocalTransform());
+		}
+	}
 	m_scene->OnObjectTransformChanged(this);
 
 	if (m_lastChangeTreeIterationCount != m_scene->GetIterationCount())

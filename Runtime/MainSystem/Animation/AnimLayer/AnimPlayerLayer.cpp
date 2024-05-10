@@ -38,7 +38,7 @@ void AnimPlayerLayer::Run(float dt)
 	{
 		auto& node = nodes[0];
 
-		globalTransforms[0] = GetGameObject()->ReadGlobalTransformMat();
+		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
 
 		auto& channelId = nodeToChannelId[0];
 		if (channelId != INVALID_ID)

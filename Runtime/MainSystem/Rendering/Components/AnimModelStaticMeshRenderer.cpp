@@ -17,7 +17,7 @@ AnimModelStaticMeshRenderer::AnimModelStaticMeshRenderer(String modelPath, Strin
 
 void AnimModelStaticMeshRenderer::OnTransformChanged()
 {
-	m_globalTransform = *m_myGlobalTransform.Read();
+	m_globalTransform = (*m_myGlobalTransform.Read()) * GetGameObject()->ReadGlobalTransformMat();
 }
 
 void AnimModelStaticMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)

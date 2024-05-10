@@ -9,6 +9,8 @@
 
 #include "Graphics/DebugGraphics.h"
 
+#include "Scene/GameObject.h"
+
 //#include "Core/Time/Clock.h"
 //#include "imgui/imgui.h"
 
@@ -427,13 +429,18 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 	void* prevBuffer = nullptr;
 	for (auto& comp : input)
 	{
+		auto& globalTransform = comp->GetGameObject()->ReadGlobalTransformMat();
 		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
 		graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
 
 		auto* shaderBuffer = comp->m_animMeshRenderingBuffer.get();
 		if (prevBuffer != (void*)shaderBuffer)
 		{
-			auto buffer = shaderBuffer->buffer.Read();
+			auto buffer = (AnimModel::AnimMeshRenderingBufferData*)shaderBuffer->buffer.Read();
+			for (auto& v : buffer->bones)
+			{
+				v = v * globalTransform;
+			}
 			m_bonesBuffer->UpdateBuffer(buffer->bones.data(), buffer->bones.size() * sizeof(Mat4));
 			prevBuffer = shaderBuffer;
 		}

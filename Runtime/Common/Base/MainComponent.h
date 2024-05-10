@@ -53,6 +53,7 @@ public:
 	virtual AABox GetGlobalAABB() = 0;
 
 	inline virtual void OnDrawDebug() {};
+	inline virtual void SynchGlobalLocalTransform(Mat4& global, Transform& local) {};
 
 public:
 	inline GameObject* GetGameObject()

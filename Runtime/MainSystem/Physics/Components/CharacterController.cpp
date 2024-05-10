@@ -114,6 +114,16 @@ CharacterController::~CharacterController()
 	PX_RELEASE(m_pxCharacterController);
 }
 
+void CharacterController::SynchGlobalLocalTransform(Mat4& global, Transform& local)
+{
+	/*if (global == m_lastGlobalTransform)
+	{
+		return;
+	}*/
+
+	global.Decompose(local.Scale(), local.Rotation(), local.Translation());
+}
+
 void CharacterController::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
 {
 	auto controller = (CharacterController*)self;
@@ -126,12 +136,29 @@ void CharacterController::TransformContributor(GameObject* object, Transform& lo
 		return;
 	}
 
+	if (object->ReadGlobalTransformMat() != controller->m_lastGlobalTransform)
+	{
+		auto localTrans = global;
+		if (!object->Parent().IsNull())
+		{
+			localTrans = localTrans * object->Parent()->WriteGlobalTransformMat().GetInverse();
+		}
+		localTrans.Decompose(local.Scale(), local.Rotation(), local.Translation());
+		return;
+	}
+
 	auto& pxPosition = pxController->getPosition();
 
 	global.SetIdentity();
 	global.SetPosition(pxPosition.x, pxPosition.y, pxPosition.z);
 
 	controller->m_lastGlobalTransform = global;
+
+	/*if (gameObject->Parent().IsNull())
+	{
+		local = {};
+		local.Position() = global.Position();
+	}*/
 
 	gameObject->m_isNeedRecalculateLocalTransform = true;
 }

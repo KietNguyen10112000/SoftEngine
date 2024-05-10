@@ -8,6 +8,9 @@
     <Filter Include="Source Files\TestScript">
       <UniqueIdentifier>{7dcdedaa-f3b9-4c71-98e3-f04374b48c2b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\EditorTabs">
+      <UniqueIdentifier>{a95f7541-aadb-40ae-92aa-7e72c8645a57}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -27,6 +30,15 @@
     </ClCompile>
     <ClCompile Include="ComponentInspector.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneEditorTab.cpp">
+      <Filter>Source Files\EditorTabs</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimatorEditorTab.cpp">
+      <Filter>Source Files\EditorTabs</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorTab.cpp">
+      <Filter>Source Files\EditorTabs</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -50,6 +62,15 @@
     </ClInclude>
     <ClInclude Include="ComponentInspector.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneEditorTab.h">
+      <Filter>Source Files\EditorTabs</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimatorEditorTab.h">
+      <Filter>Source Files\EditorTabs</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorTab.h">
+      <Filter>Source Files\EditorTabs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

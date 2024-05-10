@@ -28,13 +28,17 @@ void Initialize(Runtime* runtime)
 	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
 		{
-			auto scene				= (Scene*)argv[0];
-			auto editorContext		= mheap::New<EditorContext>();
-			auto editorContextId	= scene->GenericStorage()->Store(editorContext);
+			auto scene = (Scene*)argv[0];
 
-			editorContext->m_scene = scene;
+			auto editorContextId = EditorContext::s_id;
+			if (editorContextId == INVALID_ID)
+			{
+				auto editorContext = mheap::New<EditorContext>(scene);
+				editorContextId = Runtime::Get()->GenericStorage()->Store(editorContext);
+				EditorContext::s_id = editorContextId;
+			}
 
-			scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
+			/*scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
 				[](Scene* scene, int argc, void** argv, ID editorContextId)
 				{
 					auto obj = mheap::New<GameObject>();
@@ -42,12 +46,12 @@ void Initialize(Runtime* runtime)
 					obj->NewComponent<TestScript>();
 					scene->AddObject(obj);
 				}
-			);
+			);*/
 
 			scene->GetRenderingSystem()->EventDispatcher()->AddListener(RenderingSystem::EVENT_RENDER_GUI,
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{
-					auto editorContext = renderingSystem->GetScene()->GenericStorage()->Access<EditorContext>(editorContextId);
+					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 					editorContext->Lock().lock();
 					editorContext->OnRenderGUI();
 					editorContext->Lock().unlock();
@@ -58,7 +62,7 @@ void Initialize(Runtime* runtime)
 			scene->GetRenderingSystem()->EventDispatcher()->AddListener(RenderingSystem::EVENT_END_RENDER_CAMERA,
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{
-					auto editorContext = renderingSystem->GetScene()->GenericStorage()->Access<EditorContext>(editorContextId);
+					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 					editorContext->Lock().lock();
 					editorContext->OnRenderInGameDebugGraphics();
 					editorContext->Lock().unlock();
@@ -70,7 +74,7 @@ void Initialize(Runtime* runtime)
 				[](Scene* scene, int argc, void** argv, ID editorContextId)
 				{
 					auto objs = (std::vector<GameObject*>*)argv[0];
-					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
+					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 					editorContext->Lock().lock();
 					editorContext->OnObjectsAdded(*objs);
 					editorContext->Lock().unlock();

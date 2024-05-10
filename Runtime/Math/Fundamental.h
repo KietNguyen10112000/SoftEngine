@@ -1019,6 +1019,16 @@ public:
         return *this;
     }
 
+    inline bool operator==(const Mat4& mat) const
+    {
+        return GLMMatConst() == mat.GLMMatConst();
+    }
+
+    inline bool operator!=(const Mat4& mat) const
+    {
+        return GLMMatConst() != mat.GLMMatConst();
+    }
+
 public:
     inline Mat4& SetIdentity()
     {
