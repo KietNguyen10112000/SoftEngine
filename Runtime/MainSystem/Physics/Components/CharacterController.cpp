@@ -114,16 +114,6 @@ CharacterController::~CharacterController()
 	PX_RELEASE(m_pxCharacterController);
 }
 
-void CharacterController::SynchGlobalLocalTransform(Mat4& global, Transform& local)
-{
-	/*if (global == m_lastGlobalTransform)
-	{
-		return;
-	}*/
-
-	global.Decompose(local.Scale(), local.Rotation(), local.Translation());
-}
-
 void CharacterController::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
 {
 	auto controller = (CharacterController*)self;
@@ -170,6 +160,21 @@ bool CharacterController::IsHasNextMove()
 		|| disp != Vec3::ZERO 
 		|| m_gravity != Vec3::ZERO 
 		|| m_velocity != Vec3::ZERO;
+}
+
+void CharacterController::Wake()
+{
+	/*if (!m_pxCharacterController)
+	{
+		return;
+	}
+
+	auto actor = m_pxCharacterController->getActor();
+	if (!actor || !(((PxRigidDynamic*)actor)->isSleeping()))
+	{
+		return;
+	}
+	OnPhysicsTransformChanged();*/
 }
 
 void CharacterController::OnPhysicsTransformChanged()

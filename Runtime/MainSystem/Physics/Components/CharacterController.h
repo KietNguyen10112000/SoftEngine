@@ -60,11 +60,11 @@ private:
 	bool IsHasNextMove();
 
 protected:
+	virtual void Wake() override;
 	virtual void OnPhysicsTransformChanged() override;
 
 	virtual void OnUpdate(float dt);
 	virtual void OnPostUpdate(float dt);
-	virtual void SynchGlobalLocalTransform(Mat4& global, Transform& local) override;
 
 public:
 	void OnTransformChanged() override;

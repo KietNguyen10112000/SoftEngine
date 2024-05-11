@@ -130,9 +130,10 @@ void EditorContext::RenderTabBar()
 				Runtime::Get()->SetRunningScene(tab->m_scene);
 			}
 
-			if (!open)
+			if (!open && m_tabs.size() > 1)
 			{
 				// close this tab
+				//m_currentTabId = i;
 			}
 		}
 

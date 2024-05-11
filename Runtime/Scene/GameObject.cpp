@@ -66,6 +66,14 @@ void GameObject::RecalculateTransform(size_t idx)
 
 void GameObject::RecalculateUpToDateTransformBegin(ID parentIdx)
 {
+	for (auto& c : m_mainComponents)
+	{
+		if (c)
+		{
+			c->Wake();
+		}
+	}
+
 	auto readIdx = IdxTransformUpToDate();
 
 	//auto idx = ReadTransformIdx();
@@ -109,6 +117,14 @@ void GameObject::RecalculateUpToDateTransformBegin(ID parentIdx)
 
 void GameObject::RecalculateUpToDateTransform(ID parentIdx)
 {
+	for (auto& c : m_mainComponents)
+	{
+		if (c)
+		{
+			c->Wake();
+		}
+	}
+
 	auto readIdx = IdxTransformUpToDate();
 
 	//auto idx = ReadTransformIdx();
@@ -302,13 +318,13 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 
 	m_updatedTransformIteration = m_scene->GetIterationCount();
 	WriteLocalTransform() = ReadLocalTransform();
-	for (auto& c : m_mainComponents)
+	/*for (auto& c : m_mainComponents)
 	{
 		if (c)
 		{
 			c->SynchGlobalLocalTransform((Mat4&)(ReadGlobalTransformMat()), WriteLocalTransform());
 		}
-	}
+	}*/
 	m_scene->OnObjectTransformChanged(this);
 
 	if (m_lastChangeTreeIterationCount != m_scene->GetIterationCount())

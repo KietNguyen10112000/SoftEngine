@@ -81,6 +81,15 @@ void RigidBodyDynamic::OnTransformChanged()
 	}
 }
 
+void RigidBodyDynamic::Wake()
+{
+	if (!m_pxActor || !(((PxRigidDynamic*)m_pxActor)->isSleeping()))
+	{
+		return;
+	}
+	OnPhysicsTransformChanged();
+}
+
 void RigidBodyDynamic::OnPhysicsTransformChanged()
 {
 	auto obj = GetGameObject();

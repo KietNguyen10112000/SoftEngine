@@ -24,6 +24,7 @@ private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
 protected:
+	virtual void Wake() override;
 	virtual void OnPhysicsTransformChanged() override; 
 
 	// Inherited via RigidBody

@@ -63,6 +63,11 @@ void CharacterControllerCapsule::OnDrawDebug()
 
 		auto& pos = GetGameObject()->ReadGlobalTransformMat().Position();//pxController->getPosition();
 
+		/*if (pos.y > 70)
+		{
+			std::cout << "===========================> " << pos.y << "\n";
+		}*/
+
 		Vec4 color = Vec4(0, 0, 0, 1);
 		if (m_collisionResult)
 		{
