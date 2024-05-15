@@ -81,32 +81,10 @@ private:
 	Array<Handle<GameObject>> m_longLifeObjects;
 	Array<Handle<GameObject>> m_shortLifeObjects;
 
-	Array<Handle<GameObject>> m_trashObjects[NUM_TRASH_ARRAY];
-
-	ConcurrentArrayList<Handle<GameObject>>		m_objectsHolder		[NUM_DEFER_LIST] = {};
-	ConcurrentArrayList<Handle<MainComponent>>	m_componentsHolder	[NUM_DEFER_LIST] = {};
+	Array<Handle<void>> m_trashObjects[NUM_TRASH_ARRAY];
 
 	GenericStorage m_genericStorage;
 	EventDispatcher<Scene, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
-
-	// to keep memory across the frames
-	ConcurrentArrayList<Handle<void>>		m_handleKeepers[MainSystemInfo::COUNT * NUM_DEFER_LIST] = {};
-
-	raw::ConcurrentArrayList<GameObject*> m_addList					[NUM_DEFER_LIST] = {};
-	raw::ConcurrentArrayList<GameObject*> m_removeList				[NUM_DEFER_LIST] = {};
-	raw::ConcurrentArrayList<GameObject*> m_changedTransformList	[NUM_DEFER_LIST] = {};
-
-	raw::ConcurrentArrayList<GameObject*> m_changedTreeStructList					= {};
-
-	// no child, no parent, just an order to call MainComponent::OnTransformChanged
-	raw::ConcurrentArrayList<GameObject*> m_stagedChangeTransformList			[NUM_DEFER_LIST] = {};
-	//std::vector<GameObject*> m_changedTransformRoots;
-
-	raw::ConcurrentArrayList<MainComponent*> m_addComponents	[MainSystemInfo::COUNT][NUM_DEFER_LIST] = {};
-	raw::ConcurrentArrayList<MainComponent*> m_removeComponents	[MainSystemInfo::COUNT][NUM_DEFER_LIST] = {};
-
-	std::vector<GameObject*> m_filteredAddList;
-	std::vector<GameObject*> m_filteredRemoveList;
 
 	ID m_currentDeferBufferIdx = 0;
 	ID m_prevDeferBufferIdx = 0;
@@ -117,6 +95,10 @@ private:
 	byte m_stableValue = 0;
 	byte m_oldStableValue = 0;
 	bool m_destroyed = false;
+
+	bool m_isDestroying = false;
+	spinlock m_lock;
+	bool m_padd[2];
 
 	size_t m_iterationCount = 0;
 	float m_dt = 0;
@@ -152,13 +134,10 @@ private:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
-		//tracer->Trace(m_longLifeObjects);
+		tracer->Trace(m_longLifeObjects);
 		tracer->Trace(m_shortLifeObjects);
 		tracer->Trace(m_trashObjects);
-		tracer->Trace(m_objectsHolder);
-		tracer->Trace(m_componentsHolder);
 		tracer->Trace(m_genericStorage);
-		tracer->Trace(m_handleKeepers);
 		//tracer->Trace(m_mainSystems);
 		//tracer->Trace(m_removeList);
 	}
@@ -169,37 +148,9 @@ private:
 
 	void SetupDeferLists();
 
-	/// 
-	/// add all object's components to main system
-	/// 
-	void ProcessAddObjectListForMainSystem(ID mainSystemId);
-
-	/// 
-	/// remove all object's components from main system
-	/// 
-	void ProcessRemoveObjectListForMainSystem(ID mainSystemId);
-
-	/// 
-	/// when object transform changed, call me
-	/// 
-	void OnObjectTransformChanged(GameObject* obj);
-	void ProcessChangedTransformListForMainSystem(ID mainSystemId);
-
-	void ProcessModificationForMainSystem(ID mainSystemId);
-	void ProcessModificationForAllMainSystems();
-
-	void FilterAddList();
-	void FilterRemoveList();
-
-	void StageAllChangedTransformObjects();
-	void StageAllChangedTreeStruct();
-
 	void SynchMainProcessingSystems();
 	void SynchMainProcessingSystemForMainOutputSystems();
 	void UpdateDeferredBuffers(decltype(m_deferredBuffers1)& buffers);
-
-	void EndReconstructForMainSystem(ID mainSystemId);
-	void EndReconstructForAllMainSystems();
 
 	void BeginIteration();
 	void EndIteration();
@@ -209,99 +160,13 @@ private:
 		return m_trashObjects[m_iterationCount % NUM_TRASH_ARRAY];
 	}
 
-	inline auto& GetCurrentAddList()
-	{
-		return m_addList[GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrentRemoveList()
-	{
-		return m_removeList[GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrentChangedTransformList()
-	{
-		return m_changedTransformList[GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrentStagedChangeTransformList()
-	{
-		return m_stagedChangeTransformList[GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrrentObjectsHolderList()
-	{
-		return m_objectsHolder[GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrrentComponentsHolderList()
-	{
-		return m_componentsHolder[GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrrentComponentsAddList(ID COMPONENT_ID)
-	{
-		return m_addComponents[COMPONENT_ID][GetCurrentDeferBufferIdx()];
-	}
-
-	inline auto& GetCurrrentComponentsRemoveList(ID COMPONENT_ID)
-	{
-		return m_removeComponents[COMPONENT_ID][GetCurrentDeferBufferIdx()];
-	}
-
 	inline auto& GetPrevTrash()
 	{
 		return m_trashObjects[(m_iterationCount + NUM_TRASH_ARRAY - 1) % NUM_TRASH_ARRAY];
 	}
 
-	inline auto& GetPrevAddList()
-	{
-		return m_addList[GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevRemoveList()
-	{
-		return m_removeList[GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevChangedTransformList()
-	{
-		return m_changedTransformList[GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevStagedChangeTransformList()
-	{
-		return m_stagedChangeTransformList[GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevObjectsHolderList()
-	{
-		return m_objectsHolder[GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevComponentsHolderList()
-	{
-		return m_componentsHolder[GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevComponentsAddList(ID COMPONENT_ID)
-	{
-		return m_addComponents[COMPONENT_ID][GetPrevDeferBufferIdx()];
-	}
-
-	inline auto& GetPrevComponentsRemoveList(ID COMPONENT_ID)
-	{
-		return m_removeComponents[COMPONENT_ID][GetPrevDeferBufferIdx()];
-	}
-
 	void AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName);
 	void AddLongLifeComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
-
-	void AddComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
-	void RemoveComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
-
-	void DoAddToParent(GameObject* parent, const Handle<GameObject>& child);
-	void DoRemoveFromParent(GameObject* parent, const Handle<GameObject>& child);
 
 	// Inherited via Serializable
 	void CloneFrom(Serializer* serializer, Serializable* another) override;

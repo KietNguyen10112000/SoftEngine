@@ -5,8 +5,6 @@
 
 #include "Common/Base/Serializable.h"
 
-#include "Scene/MODIFICATION_STATE.h"
-
 NAMESPACE_BEGIN
 
 namespace raw 
@@ -23,9 +21,13 @@ private:
 	friend class GameObject;
 	friend class DoubleBVH;
 	friend class Scene;
+	friend class ModifiedRecorder;
 
 	template <typename _C>
 	friend class raw::AsyncTaskRunnerForMainComponent;
+
+	bool m_recorded = false;
+	bool m_padd[7];
 
 protected:
 	struct DoubleBVHId
@@ -34,10 +36,9 @@ protected:
 		ID ulistId = INVALID_ID;
 	};
 
-	MODIFICATION_STATE::STATE m_modificationState = MODIFICATION_STATE::NONE;
-
 	DoubleBVHId m_doubleBVHId[2] = {};
 	GameObject* m_object = nullptr;
+	GameObject* m_committedObject = nullptr;
 
 	std::atomic<void*> m_forAsyncTaskRunner[2] = {0};
 
@@ -56,9 +57,9 @@ public:
 	inline virtual void Wake() {};
 
 public:
-	inline GameObject* GetGameObject()
+	inline GameObject* GetCommittedGameObject()
 	{
-		return m_object;
+		return m_committedObject;
 	}
 
 };
