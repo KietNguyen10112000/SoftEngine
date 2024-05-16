@@ -7,6 +7,8 @@
 
 #include "Math/Math.h"
 
+#include "Scene/GameObject.h"
+
 NAMESPACE_BEGIN
 
 class API RenderingComponent : public MainComponent
@@ -19,7 +21,7 @@ private:
 protected:
 	const RENDER_TYPE m_RENDER_TYPE;
 
-	Mat4 m_globalTransform;
+	//Mat4 m_globalTransform;
 
 public:
 	RenderingComponent(const RENDER_TYPE type) : m_RENDER_TYPE(type) {};
@@ -34,7 +36,8 @@ public:
 
 	inline auto& GlobalTransform() const
 	{
-		return m_globalTransform;
+		//return m_globalTransform;
+		return m_committedObject->GetCommittedGlobalTransform();
 	}
 
 };

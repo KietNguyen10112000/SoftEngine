@@ -27,7 +27,8 @@ public:
 	std::vector<bool> m_inspectPropertiesIsRawInspectStack;
 	std::vector<size_t> m_inspectInlinePropertiesCountStack;
 
-	size_t m_selectionIdx = -1;
+	//GameObjectEditorComponent
+	ID m_selectionId = INVALID_ID;
 
 	bool m_pinInspectPanel = true;
 	bool m_pinHierarchyPanel = true;

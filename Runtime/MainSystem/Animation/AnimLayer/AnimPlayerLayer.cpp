@@ -146,7 +146,7 @@ void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, fl
 void AnimPlayerLayer::SetAnimation(ID animationId, float startTime, float endTime)
 {
 	auto animation = m_model->m_animations[animationId];
-	if (!GetGameObject() || !GetGameObject()->IsInAnyScene())
+	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
 	{
 		this->SetAnimationImpl(animation, startTime, endTime);
 		return;

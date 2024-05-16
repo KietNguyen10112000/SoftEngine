@@ -57,9 +57,19 @@ public:
 	inline virtual void Wake() {};
 
 public:
-	inline GameObject* GetCommittedGameObject()
+	inline GameObject* GetCommittedObject()
 	{
 		return m_committedObject;
+	}
+
+	inline GameObject* GetGameObject()
+	{
+		return GetCommittedObject();
+	}
+
+	inline GameObject* GetCurrentObject()
+	{
+		return m_object;
 	}
 
 };

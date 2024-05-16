@@ -273,7 +273,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 				{
 					auto& obj = m_meshRendererObjs[i];
 					if (obj->GetScene() == scene)
-						scene->OnObjectTransformChanged(obj);
+						obj->ForceRefreshTransform();
 				}
 			}
 		}
@@ -300,7 +300,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 
 				scene->EndWrite(buffer);
 
-				scene->OnObjectTransformChanged(obj);
+				obj->ForceRefreshTransform();
 			}
 		}
 	}

@@ -73,12 +73,12 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 		{
 			ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth;
 
-			if (m_selectionIdx == obj->UID())
+			if (m_selectionId == obj->GetComponentRaw<GameObjectEditorComponent>()->id)
 			{
 				nodeFlags |= ImGuiTreeNodeFlags_Selected;
 			}
 
-			auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj->UID(),
+			auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj->GetComponentRaw<GameObjectEditorComponent>()->id,
 				nodeFlags, obj->Name().empty() ? "<Unnamed>" : obj->Name().c_str());
 
 			if (obj->Parent().Get() == nullptr && m_searchNameIdx == obj->GetComponentRaw<GameObjectEditorComponent>()->id)
@@ -143,7 +143,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 						dragObj->RemoveFromParent();
 					}
 
-					auto mat = dragObj->ReadGlobalTransformMat() * obj->ReadGlobalTransformMat().GetInverse();
+					auto mat = dragObj->GetCommittedGlobalTransform() * obj->GetCommittedGlobalTransform().GetInverse();
 
 					Transform transform;
 					mat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
@@ -160,7 +160,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 			{
-				m_selectionIdx = obj->UID();
+				m_selectionId = obj->GetComponentRaw<GameObjectEditorComponent>()->id;
 				OnObjectSelected(obj);
 			}
 
@@ -308,7 +308,7 @@ void SceneEditorTab::RenderHierarchyPanel()
 			dragObj->RemoveFromParent();
 		}
 
-		auto mat = dragObj->ReadGlobalTransformMat();
+		auto mat = dragObj->GetCommittedGlobalTransform();
 
 		Transform transform;
 		mat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());

@@ -125,7 +125,7 @@ void MeshBasicRenderer::OnComponentRemoved()
 AABox MeshBasicRenderer::GetGlobalAABB()
 {
 	auto localAABB = m_mesh->GetLocalAABB();
-	localAABB.Transform(m_globalTransform);
+	localAABB.Transform(GlobalTransform());
 	return localAABB;
 }
 

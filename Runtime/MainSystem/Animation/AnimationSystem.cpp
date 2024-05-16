@@ -104,13 +104,20 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 		for (auto& obj : animator->m_animMeshRendererObjs)
 		{
 			if (obj->m_scene)
-				m_scene->OnObjectTransformChanged(obj);
+				obj->ForceRefreshTransform();
 		}
 	}
 	else
 	{
 		m_scene->EndWrite<false>(buffer);
 	}
+}
+
+void AnimationSystem::FlushAsyncTasks()
+{
+	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
+	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
 }
 
 void AnimationSystem::BeginModification()

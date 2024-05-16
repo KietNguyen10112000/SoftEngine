@@ -35,6 +35,16 @@ public:
 		return m_enableTPP;
 	}
 
+	inline virtual Mat4 GetCameraGlobalTransform() const override
+	{
+		if (m_enableTPP)
+		{
+			return (Mat4::Translation(-m_target->GetCommittedGlobalTransform().Position()) * m_view).GetInverse();
+		}
+
+		return GlobalTransform();
+	}
+
 };
 
 NAMESPACE_END

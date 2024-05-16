@@ -93,9 +93,9 @@ public:
 		m_isEnable = enable;
 	}
 
-	inline auto* GetGameObject()
+	inline auto* GetCommittedObject()
 	{
-		return m_ownerComp->GetGameObject();
+		return m_ownerComp->GetCommittedObject();
 	}
 
 	inline auto* GetComponent()

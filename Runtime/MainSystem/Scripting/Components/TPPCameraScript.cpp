@@ -13,13 +13,18 @@
 
 #include "FPPCameraScript.h"
 
+#include "MainSystem/Physics/PhysicsSystem.h"
+
 NAMESPACE_BEGIN
 
 void TPPCameraScript::OnStart()
 {
 	controller = GetGameObject()->GetComponentRaw<CharacterController>();
-	m_prevPosY1 = GetGameObject()->ReadGlobalTransformMat().Position().y;
-	m_prevPosY2 = m_prevPosY1;
+
+	controller->SetGravity(GetGameObject()->GetScene()->GetPhysicsSystem()->GetGravity());
+
+	//m_prevPosY1 = GetGameObject()->ReadGlobalTransformMat().Position().y;
+	//m_prevPosY2 = m_prevPosY1;
 
 	m_rotateX = -std::asin(m_viewPoint.y / m_viewPoint.Length());
 

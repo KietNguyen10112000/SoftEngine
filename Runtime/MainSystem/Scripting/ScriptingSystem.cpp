@@ -24,6 +24,10 @@ ScriptingSystem::~ScriptingSystem()
 	m_schedulers.clear();
 }
 
+void ScriptingSystem::FlushAsyncTasks()
+{
+}
+
 void ScriptingSystem::BeginModification()
 {
 }

@@ -61,7 +61,7 @@ void CharacterControllerCapsule::OnDrawDebug()
 	{
 		auto pxController = (PxCapsuleController*)m_pxCharacterController;
 
-		auto& pos = GetGameObject()->ReadGlobalTransformMat().Position();//pxController->getPosition();
+		auto& pos = GetGameObject()->GetCommittedGlobalTransform().Position();//pxController->getPosition();
 
 		/*if (pos.y > 70)
 		{

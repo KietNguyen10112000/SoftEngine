@@ -117,12 +117,12 @@ protected:
 
 	inline const auto& GetLocalTransform()
 	{
-		return GetGameObject()->ReadLocalTransform();
+		return GetCurrentObject()->GetLocalTransform();
 	}
 
 	inline auto SetLocalTransform(const Transform& transform)
 	{
-		GetGameObject()->SetLocalTransform(transform);
+		GetCurrentObject()->SetLocalTransform(transform, COMPONENT_ID);
 	}
 
 public:

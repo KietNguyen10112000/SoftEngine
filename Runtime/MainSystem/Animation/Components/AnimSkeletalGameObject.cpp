@@ -12,12 +12,12 @@ AnimSkeletalGameObject::AnimSkeletalGameObject() : AnimationComponent(ANIMATION_
 
 void AnimSkeletalGameObject::OnComponentAdded()
 {
-	GetGameObject()->GetScene()->GetAnimationSystem()->AddAnimMeshRenderingBuffer(m_animMeshRenderingBuffer.get(), m_animator.Get());
+	GetCommittedObject()->GetCommittedScene()->GetAnimationSystem()->AddAnimMeshRenderingBuffer(m_animMeshRenderingBuffer.get(), m_animator.Get());
 }
 
 void AnimSkeletalGameObject::OnComponentRemoved()
 {
-	GetGameObject()->GetScene()->GetAnimationSystem()->AddAnimMeshRenderingBuffer(m_animMeshRenderingBuffer.get(), m_animator.Get());
+	GetCommittedObject()->GetCommittedScene()->GetAnimationSystem()->AddAnimMeshRenderingBuffer(m_animMeshRenderingBuffer.get(), m_animator.Get());
 }
 
 void AnimSkeletalGameObject::OnTransformChanged()
@@ -110,8 +110,8 @@ void AnimSkeletalGameObject::CloneFrom(Serializer* serializer, Serializable* ano
 
 void AnimSkeletalGameObject::Update(float dt)
 {
-	auto& globalTransform = GetGameObject()->ReadGlobalTransformMat();
-	auto scene = GetGameObject()->GetScene();
+	auto& globalTransform = GetCommittedObject()->GetCommittedGlobalTransform();
+	auto scene = GetCommittedObject()->GetCommittedScene();
 
 	auto& buffer = m_animMeshRenderingBuffer->buffer;
 	scene->BeginWrite<false>(buffer);
@@ -137,7 +137,7 @@ void AnimSkeletalGameObject::Update(float dt)
 	transform.Rotation() = channel.FindRotation(&m_keyFramesIndex.r, m_keyFramesIndex.r, m_animator->m_t);
 	transform.Position() = channel.FindTranslation(&m_keyFramesIndex.t, m_keyFramesIndex.t, m_animator->m_t);
 
-	GetGameObject()->SetLocalTransform(transform);
+	GetCommittedObject()->SetLocalTransform(transform);
 }
 
 NAMESPACE_END

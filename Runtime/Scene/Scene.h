@@ -124,6 +124,9 @@ private:
 	raw::ConcurrentArrayList<DeferredBufferControlBlock*> m_deferredBuffers1;
 	raw::ConcurrentArrayList<DeferredBufferControlBlock*> m_deferredBuffers2;
 
+	std::vector<GameObject*> m_addedObjectInFrame;
+	std::vector<GameObject*> m_removedObjectInFrame;
+
 public:
 	Scene();
 	//Scene(Runtime* runtime);
@@ -155,6 +158,7 @@ private:
 	void EndIteration();
 
 	void PerformModificationForMainSystem(ID id);
+	void FlushAsyncTasksForMainSystem(ID id);
 
 	inline auto& GetCurrentTrash()
 	{

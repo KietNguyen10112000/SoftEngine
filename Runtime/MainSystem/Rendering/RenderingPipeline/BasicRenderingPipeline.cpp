@@ -2,6 +2,7 @@
 
 #include "MainSystem/Rendering/Components/MeshBasicRenderer.h"
 #include "MainSystem/Rendering/Components/AnimMeshRenderer.h"
+#include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
 #include "MainSystem/Rendering/Components/RENDER_TYPE.h"
 #include "MainSystem/Rendering/RenderingSystem.h"
 
@@ -429,7 +430,7 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 	void* prevBuffer = nullptr;
 	for (auto& comp : input)
 	{
-		auto& globalTransform = comp->GetGameObject()->ReadGlobalTransformMat();
+		auto& globalTransform = comp->GetGameObject()->GetCommittedGlobalTransform();
 		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
 		graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
 
@@ -576,7 +577,16 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 //		debugGraphics->DrawDirection(mat.Position(), mat.Forward());
 //#endif // _DEBUG
 
-		m_objectBuffer->UpdateBuffer(&model->GlobalTransform(), sizeof(Mat4));
+		if (comp->GetRenderType() == RENDER_TYPE_ANIM_MODEL_STATIC_MESH_RENDERER)
+		{
+			auto model2 = (AnimModelStaticMeshRenderer*)comp;
+			auto m = model2->GetGlobalTransform();
+			m_objectBuffer->UpdateBuffer(&m, sizeof(Mat4));
+		}
+		else
+		{
+			m_objectBuffer->UpdateBuffer(&model->GlobalTransform(), sizeof(Mat4));
+		}
 
 		auto params = m_pipeline->PrepareRenderParams();
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_cameraBuffer);
@@ -622,7 +632,7 @@ void BasicRenderingPipeline::SetInput(RenderingComponent** components, size_t co
 	for (size_t i = 0; i < count; i++)
 	{
 		auto comp = components[i];
-		if (comp->GetRenderType() == RENDER_TYPE_MESH_BASIC_RENDERER)
+		if (comp->GetRenderType() == RENDER_TYPE_MESH_BASIC_RENDERER || comp->GetRenderType() == RENDER_TYPE_ANIM_MODEL_STATIC_MESH_RENDERER)
 		{
 			m_basicModel3Ds.push_back(comp);
 			continue;

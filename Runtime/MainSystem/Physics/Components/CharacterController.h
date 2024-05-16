@@ -32,7 +32,7 @@ protected:
 		bool isGroundForMotion = false;
 	};
 
-	Mat4 m_lastGlobalTransform;
+	//Mat4 m_lastGlobalTransform;
 
 	physx::PxController* m_pxCharacterController = nullptr;
 	Vec3 m_gravity = Vec3::ZERO;

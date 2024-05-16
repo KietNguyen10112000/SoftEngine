@@ -27,6 +27,13 @@ public:
 			&& m_rotation		== transform.m_rotation;
 	}
 
+	inline bool operator==(const Transform& transform) const
+	{
+		return m_scale == transform.m_scale
+			&& m_translation == transform.m_translation
+			&& m_rotation == transform.m_rotation;
+	}
+
 public:
 	inline auto& Scale()
 	{

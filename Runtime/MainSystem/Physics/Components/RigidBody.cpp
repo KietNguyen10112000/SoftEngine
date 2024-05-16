@@ -21,7 +21,7 @@ void RigidBody::OnTransformChanged()
 {
 	auto gameObject = GetGameObject();
 
-	auto& globalTransform = gameObject->ReadGlobalTransformMat();
+	auto& globalTransform = gameObject->GetCommittedGlobalTransform();
 
 	//auto pxRigidBody = m_pxActor->is<PxRigidBody>();
 
@@ -31,7 +31,7 @@ void RigidBody::OnTransformChanged()
 
 	//auto pxTransform = pxRigidBody->getGlobalPose();
 
-	if (::memcmp(&m_lastGlobalTransform, &globalTransform, sizeof(Mat4)) != 0)
+	//if (::memcmp(&m_lastGlobalTransform, &globalTransform, sizeof(Mat4)) != 0)
 	{
 		Vec3 scale;
 		Vec3 pos;
@@ -47,7 +47,7 @@ void RigidBody::OnTransformChanged()
 
 		pxRigidBody->setGlobalPose(pxTransform);
 
-		m_lastGlobalTransform = globalTransform;
+		//m_lastGlobalTransform = globalTransform;
 	}
 }
 
@@ -64,7 +64,7 @@ void RigidBody::OnDrawDebug()
 
 	PxRigidActor* pxRigidBody = m_pxActor->is<PxRigidActor>();
 
-	auto& globalMat = GetGameObject()->ReadGlobalTransformMat();
+	auto& globalMat = GetGameObject()->GetCommittedGlobalTransform();
 
 	Transform transform = {};
 	globalMat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());

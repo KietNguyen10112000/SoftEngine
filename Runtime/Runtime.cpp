@@ -160,6 +160,11 @@ void Runtime::InitializeModules()
 	SerializableList::Initialize();
 
 	m_gameObjectCache = mheap::New<class GameObjectCache>();
+
+	for (auto& v : m_modifiedRecorder)
+	{
+		v = mheap::New<ModifiedRecorder>();
+	}
 }
 
 void Runtime::FinalizeModules()
@@ -547,7 +552,7 @@ void Runtime::Setup()
 
 			scene->AddObject(obj);
 
-			cct->SetGravity(scene->GetPhysicsSystem()->GetGravity());
+			//cct->SetGravity(scene->GetPhysicsSystem()->GetGravity());
 		}
 
 		camera->SetTarget(obj);
@@ -600,11 +605,12 @@ void Runtime::SwapModifiedRecorder()
 	size_t i = 0;
 	for (auto& scene : m_scenes)
 	{
-		if (i != m_nextRunningSceneIdx)
+		if (i != m_nextRunningSceneIdx && scene)
 		{
 			for (size_t j = 0; j < MainSystemInfo::COUNT; j++)
 			{
 				scene->PerformModificationForMainSystem(j);
+				scene->FlushAsyncTasksForMainSystem(j);
 			}
 		}
 		i++;
@@ -701,6 +707,7 @@ void Runtime::Iteration()
 
 	g_timer.Update();
 
+	ProcessSwapRunningScene();
 	if (m_runningSceneIdx == INVALID_ID)
 	{
 		return;
@@ -723,7 +730,6 @@ void Runtime::Iteration()
 		while (g_sumDt > fixedDt)
 		{
 			SwapModifiedRecorder();
-
 			ProcessSwapRunningScene();
 
 			mainScene->Iteration(fixedDt);
@@ -734,6 +740,8 @@ void Runtime::Iteration()
 		return;
 	}
 
+	SwapModifiedRecorder();
+	ProcessSwapRunningScene();
 	mainScene->Iteration(g_sumDt);
 	g_sumDt = 0;
 	

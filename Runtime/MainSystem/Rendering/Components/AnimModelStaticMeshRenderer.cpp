@@ -9,16 +9,18 @@ NAMESPACE_BEGIN
 
 AnimModelStaticMeshRenderer::AnimModelStaticMeshRenderer(bool loadDefault) : MeshBasicRenderer(loadDefault)
 {
+	*((RENDER_TYPE*)&m_RENDER_TYPE) = RENDER_TYPE_ANIM_MODEL_STATIC_MESH_RENDERER;
 }
 
 AnimModelStaticMeshRenderer::AnimModelStaticMeshRenderer(String modelPath, String texture2DPath) : MeshBasicRenderer(modelPath, texture2DPath)
 {
+	*((RENDER_TYPE*)&m_RENDER_TYPE) = RENDER_TYPE_ANIM_MODEL_STATIC_MESH_RENDERER;
 }
 
-void AnimModelStaticMeshRenderer::OnTransformChanged()
-{
-	m_globalTransform = (*m_myGlobalTransform.Read()) * GetGameObject()->ReadGlobalTransformMat();
-}
+//void AnimModelStaticMeshRenderer::OnTransformChanged()
+//{
+//	m_globalTransform = (*m_myGlobalTransform.Read()) * GetGameObject()->GetCommittedGlobalTransform();
+//}
 
 void AnimModelStaticMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 {

@@ -22,8 +22,8 @@ void CameraTPP::OnCameraRenderBegin()
 		return;
 	}
 
-	m_globalTransform = Mat4::Translation(-m_target->ReadGlobalTransformMat().Position()) * m_view;
-	m_globalTransform.Inverse();
+	//m_globalTransform = Mat4::Translation(-m_target->ReadGlobalTransformMat().Position()) * m_view;
+	//m_globalTransform.Inverse();
 }
 
 //Mat4 CameraTPP::GetView()

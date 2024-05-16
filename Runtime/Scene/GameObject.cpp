@@ -14,6 +14,7 @@ GameObject* GameObject::AddMainComponentDefer(ID COMPONENT_ID, const Handle<Main
 	component->m_object = this;
 
 	Runtime::Get()->GetModifiedRecorder()->RecordComponent(component, COMPONENT_ID);
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::COMPONENT);
 	return this;
 }
 
@@ -24,6 +25,7 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 	component->m_object = nullptr;
 
 	Runtime::Get()->GetModifiedRecorder()->RecordComponent(component, COMPONENT_ID);
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::COMPONENT);
 	return this;
 }
 
@@ -34,22 +36,125 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 
 void GameObject::RemoveFromParent()
 {
-	
+	if (m_scene == 0 && m_parent == 0)
+	{
+		return;
+	}
+
+	if (m_parent == 0)
+	{
+		m_scene->RemoveObject(this);
+		return;
+	}
+
+	auto& arr = m_parent->m_children;
+	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(arr, this, m_parentIdx);
+
+	m_parentIdx = INVALID_ID;
+	m_parent = nullptr;
+
+	RecalculateTransform(Mat4::Identity());
+
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::HEIRARCHY);
+}
+
+void GameObject::RecalculateTransform(const Mat4& parentTransform)
+{
+	if (m_transformConstraint == TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL)
+	{
+		m_globalTransform = m_localTransform.ToTransformMatrix() * parentTransform;
+	}
+
+	if (m_transformConstraint == TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL)
+	{
+		auto localMat = m_globalTransform * parentTransform.GetInverse();
+		localMat.Decompose(m_localTransform.Scale(), m_localTransform.Rotation(), m_localTransform.Position());
+	}
+
+	if (m_globalTransform != m_committedGlobalTransform)
+	{
+		Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
+	}
+
+	for (auto& c : m_children)
+	{
+		c->RecalculateTransform(m_globalTransform);
+	}
+}
+
+void GameObject::RecordAllComponetsAsModified()
+{
+	auto& recorder = Runtime::Get()->GetModifiedRecorder();
+	PreTraversal1([&](GameObject* o)
+		{
+			for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				auto& comp = o->m_mainComponents[i];
+				if (comp)
+				{
+					recorder->RecordComponent(comp, i);
+				}
+			}
+		}
+	);
 }
 
 void GameObject::AddChild(const Handle<GameObject>& obj)
 {
-	
-	//assert(0);
+	assert(obj->m_parent == nullptr);
+
+	obj->m_parent = this;
+	obj->m_parentIdx = m_children.size();
+	m_children.Push(obj);
+
+	obj->RecalculateTransform(m_globalTransform);
+
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, ModifiedFlag::HEIRARCHY);
 }
 
-void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE constranint)
+void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_ID)
 {
+	if (m_localTransform == transform)
+	{
+		return;
+	}
 
+	m_modifiedFlags |= ModifiedFlag::TRANSFORM;
+	m_componentIdModifyTransform = SRC_COMPONENT_ID;
+
+	m_localTransform = transform;
+
+	m_transformConstraint = TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL;
+	RecalculateTransform(m_parent ? m_parent->m_globalTransform : Mat4::Identity());
 }
 
-void GameObject::SetGlobalTransform(const Transform& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE constranint)
+void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID)
 {
+	if (transform == m_globalTransform)
+	{
+		return;
+	}
+
+	m_componentIdModifyTransform = SRC_COMPONENT_ID;
+
+	m_globalTransform = transform;
+
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
+
+	for (auto& c : m_children)
+	{
+		c->RecalculateTransform(m_globalTransform);
+	}
+
+	m_transformConstraint = TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL;
+}
+
+void GameObject::ForceRefreshTransform(ID SRC_COMPONENT_ID)
+{
+	m_forceRefreshTransform = true;
+	m_componentIdModifyTransform = INVALID_ID;
+
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 }
 
 Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)

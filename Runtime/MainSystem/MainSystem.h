@@ -43,6 +43,8 @@ public:
 	virtual ~MainSystem() {};
 
 protected:
+	virtual void FlushAsyncTasks() = 0;
+
 	virtual void BeginModification() = 0;
 
 	// direct implementation

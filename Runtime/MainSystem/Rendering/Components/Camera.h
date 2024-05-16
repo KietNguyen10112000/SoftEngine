@@ -44,12 +44,17 @@ public:
 
 	inline auto GetView() const
 	{
-		return GlobalTransform().GetInverse();
+		return GetCameraGlobalTransform().GetInverse();
 	}
 	/*inline auto& View()
 	{
 		return m_view;
 	}*/
+
+	inline virtual Mat4 GetCameraGlobalTransform() const
+	{
+		return GlobalTransform();
+	}
 
 };
 

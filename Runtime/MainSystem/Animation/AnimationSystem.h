@@ -83,6 +83,8 @@ private:
 
 public:
 	// Inherited via MainSystem
+	virtual void FlushAsyncTasks() override;
+
 	virtual void BeginModification() override;
 
 	virtual void AddComponent(MainComponent* comp) override;

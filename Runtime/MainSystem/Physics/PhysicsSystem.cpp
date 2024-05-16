@@ -575,6 +575,13 @@ void PhysicsSystem::ProcessCollisionList()
 	}
 }
 
+void PhysicsSystem::FlushAsyncTasks()
+{
+	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
+	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
+}
+
 void PhysicsSystem::BeginModification()
 {
 }

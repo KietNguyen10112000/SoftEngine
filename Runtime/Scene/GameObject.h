@@ -36,8 +36,8 @@ public:
 	{
 		enum TYPE
 		{
-			RESTRICTED,
-			FREE
+			LOCAL_TO_GLOBAL,
+			GLOBAL_TO_LOCAL
 		};
 	};
 
@@ -46,6 +46,16 @@ public:
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 	friend class ModifiedRecorder;
+
+	struct ModifiedFlag
+	{
+		enum Flag
+		{
+			HEIRARCHY		= (1 << 0),
+			COMPONENT		= (1 << 1),
+			TRANSFORM		= (1 << 2)
+		};
+	};
 
 	Handle<MainComponent> m_mainComponents[MainSystemInfo::COUNT] = {};
 	Handle<MainComponent> m_committedComponents[MainSystemInfo::COUNT] = {};
@@ -56,10 +66,18 @@ private:
 	Handle<GameObject>			m_parent = nullptr;
 	Array<Handle<GameObject>>	m_children = {};
 
+	ID m_parentIdx = INVALID_ID;
+
+	TRANSFORM_CONSTRAINT::TYPE m_transformConstraint = TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL;
+
 	Transform m_localTransform = {};
+	Transform m_committedLocalTransform = {};
 
 	Mat4 m_globalTransform = {};
 	Mat4 m_committedGlobalTransform = {};
+
+	uint32_t m_componentIdModifyTransform = INVALID_ID;
+	uint32_t m_committedComponentIdModifyTransform = INVALID_ID;
 
 	//size_t m_localTransformWriteCount = 0;
 	//size_t m_localTransformWriteCount = 0;
@@ -74,8 +92,10 @@ private:
 
 	bool m_isLongLife = true;
 	bool m_recorded = false;
-	bool m_padd;
+	bool m_forceRefreshTransform = false;
 	Spinlock m_lock;
+
+	uint32_t m_modifiedFlags = 0;
 
 private:
 	TRACEABLE_FRIEND();
@@ -198,16 +218,37 @@ private:
 
 	inline void Commit()
 	{
-		for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+		if (m_modifiedFlags & ModifiedFlag::COMPONENT)
 		{
-			m_committedComponents[i] = m_mainComponents[i];
+			for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+			{
+				m_committedComponents[i] = m_mainComponents[i];
+			}
+		}
+		
+		if (m_modifiedFlags & ModifiedFlag::HEIRARCHY)
+		{
+			m_committedScene = m_scene;
+			m_committedSceneId = m_sceneId;
 		}
 
-		m_committedScene = m_scene;
-		m_committedSceneId = m_sceneId;
-		m_committedGlobalTransform = m_globalTransform;
+		if (m_modifiedFlags & ModifiedFlag::TRANSFORM)
+		{
+			m_committedLocalTransform = m_localTransform;
+			m_committedGlobalTransform = m_globalTransform;
+			m_committedComponentIdModifyTransform = m_componentIdModifyTransform;
+			m_componentIdModifyTransform = INVALID_ID;
+		}
+
+		m_modifiedFlags = 0;
+		m_forceRefreshTransform = false;
 	}
-	
+
+	void RecalculateTransform(const Mat4& parentTransform);
+
+	// recursive
+	void RecordAllComponetsAsModified();
+
 public:
 	//~GameObject();
 
@@ -328,6 +369,12 @@ public:
 		}
 	}
 
+	template <typename Comp>
+	Comp* GetComponentRaw() const
+	{
+		return GetCommittedComponentRaw<Comp>();
+	}
+
 	// consistency chec
 	template <typename Comp>
 	inline bool HasComponent()
@@ -416,6 +463,11 @@ public:
 		return m_committedScene;
 	}
 
+	inline auto GetScene()
+	{
+		return GetCommittedScene();
+	}
+
 	inline auto GetCurrentScene()
 	{
 		return m_scene;
@@ -431,13 +483,20 @@ public:
 		return m_localTransform;
 	}
 
+	inline const auto& GetCommittedLocalTransform()
+	{
+		return m_committedLocalTransform;
+	}
+
 	inline auto& GetCommittedGlobalTransform() const
 	{
 		return m_committedGlobalTransform;
 	}
 
-	void SetLocalTransform(const Transform& transform,  ID SRC_COMPONENT_ID = INVALID_ID - 1, TRANSFORM_CONSTRAINT::TYPE constranint = TRANSFORM_CONSTRAINT::RESTRICTED);
-	void SetGlobalTransform(const Transform& transform, ID SRC_COMPONENT_ID = INVALID_ID - 1, TRANSFORM_CONSTRAINT::TYPE constranint = TRANSFORM_CONSTRAINT::FREE);
+	void SetLocalTransform(const Transform& transform,  ID SRC_COMPONENT_ID = INVALID_ID - 1);
+	void SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID = INVALID_ID - 1);
+
+	void ForceRefreshTransform(ID SRC_COMPONENT_ID = INVALID_ID - 1);
 
 };
 

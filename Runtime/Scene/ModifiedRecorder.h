@@ -33,20 +33,21 @@ public:
 		}
 	};
 
-	struct AddingComponent
+	struct WaitingComponent
 	{
 		MainSystem* system;
 		MainComponent* comp;
 	};
 
-	Array<Handle<GameObject>> m_modifiedGameObjects;
+	ConcurrentArrayList<Handle<GameObject>> m_modifiedGameObjects;
 
 	Array<Record> m_modifiedRecords;
 
 	std::vector<MainSystem*> m_addingSystems;
 	std::vector<MainSystem*> m_removingSystems;
 
-	std::vector<AddingComponent> m_addingComps;
+	std::vector<WaitingComponent> m_removingComps;
+	std::vector<WaitingComponent> m_addingComps;
 
 public:
 	inline void Trace(Tracer* tracer)
@@ -66,56 +67,32 @@ public:
 		m_modifiedRecords.Push({ comp,COMPONENT_ID });
 	}
 
-	inline void RecordGameObject(const Handle<GameObject>& obj)
+	inline void RecordGameObject(const Handle<GameObject>& obj, GameObject::ModifiedFlag::Flag cause)
 	{
+		obj->m_modifiedFlags |= cause;
 		if (obj->m_recorded)
 		{
 			return;
 		}
 
 		obj->m_recorded = true;
-		m_modifiedGameObjects.Push(obj);
+		m_modifiedGameObjects.Add(obj);
 	}
 
 	inline void Clear()
 	{
-		m_modifiedGameObjects.clear();
+		m_modifiedGameObjects.Clear();
 		m_modifiedRecords.clear();
 
 		m_addingComps.clear();
-		m_removingSystems.clear();
+		m_addingSystems.clear();
 
-		m_addingComps.clear();
+		m_removingComps.clear();
+		m_removingSystems.clear();
 	}
 
 	inline void Commit()
 	{
-		for (auto& obj : m_modifiedGameObjects)
-		{
-			if (obj->GetCurrentScene() == obj->GetCommittedScene())
-			{
-				auto scene = obj->GetCommittedScene();
-				if (scene)
-				{
-					if (obj->m_committedGlobalTransform != obj->m_globalTransform)
-					{
-						ID compId = 0;
-						for (auto& comp : obj->m_mainComponents)
-						{
-							if (comp)
-							{
-								scene->GetMainSystem(compId)->m_modificationActions.push_back({ comp,MainSystem::ModificationAction::MOVED });
-							}
-							compId++;
-						}
-					}
-				}
-			}
-
-			obj->Commit();
-			obj->m_recorded = false;
-		}
-
 		for (auto& r : m_modifiedRecords)
 		{
 			auto& comp = r.comp;
@@ -123,8 +100,8 @@ public:
 			auto srcObj = comp->m_committedObject;
 			auto destObj = comp->m_object;
 
-			auto srcScene = srcObj->GetCommittedScene();
-			auto destScene = destObj->GetCurrentScene();
+			auto srcScene = srcObj ? srcObj->GetCommittedScene() : nullptr;
+			auto destScene = destObj ? destObj->GetCurrentScene() : nullptr;
 
 			auto* srcActions = srcScene ? &srcScene->GetMainSystem(r.COMPONENT_ID)->m_modificationActions : nullptr;
 			auto* destActions = destScene ? &destScene->GetMainSystem(r.COMPONENT_ID)->m_modificationActions : nullptr;
@@ -190,7 +167,7 @@ public:
 								m_removingSystems.push_back(src);
 								src->m_isRmAtGlobal = true;
 
-								src->BeginModification();
+								//src->BeginModification();
 							}
 
 							if (dest->m_isAddAtGlobal == false)
@@ -199,8 +176,10 @@ public:
 								dest->m_isAddAtGlobal = true;
 							}
 
-							src->RemoveComponent(comp);
+							//src->RemoveComponent(comp);
+							//comp->OnComponentRemoved();
 							//destScene->GetMainSystem(r.COMPONENT_ID)->AddComponent(comp);
+							m_removingComps.push_back({ src,comp });
 							m_addingComps.push_back({ dest,comp });
 						}
 					}
@@ -208,27 +187,76 @@ public:
 			}
 		}
 
-		for (auto& sys : m_removingSystems)
+		// commit changes
+		for (auto& obj : m_modifiedGameObjects)
 		{
-			sys->EndModification();
-			sys->m_isRmAtGlobal = false;
+			if (obj->GetCurrentScene() == obj->GetCommittedScene())
+			{
+				auto scene = obj->GetCommittedScene();
+				if (scene)
+				{
+					if (obj->m_forceRefreshTransform || obj->m_committedGlobalTransform != obj->m_globalTransform)
+					{
+						for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+						{
+							auto& comp = obj->m_mainComponents[i];
+							if (comp && (obj->m_forceRefreshTransform || i != obj->m_componentIdModifyTransform))
+							{
+								auto sys = scene->GetMainSystem(i);
+								if (sys)
+								{
+									sys->m_modificationActions.push_back({ comp,MainSystem::ModificationAction::MOVED });
+								}
+							}
+						}
+					}
+				}
+			}
+
+			obj->Commit();
+			obj->m_recorded = false;
 		}
 
-		for (auto& sys : m_addingSystems)
+		// remove all from src
 		{
-			sys->BeginModification();
-		}
+			for (auto& sys : m_removingSystems)
+			{
+				sys->BeginModification();
+			}
 
-		for (auto& a : m_addingComps)
-		{
-			a.system->AddComponent(a.comp);
-		}
+			for (auto& a : m_removingComps)
+			{
+				a.system->RemoveComponent(a.comp);
+				a.comp->OnComponentRemoved();
+			}
 
-		for (auto& sys : m_addingSystems)
-		{
-			sys->EndModification();
-			sys->m_isAddAtGlobal = false;
+			for (auto& sys : m_removingSystems)
+			{
+				sys->EndModification();
+				sys->m_isRmAtGlobal = false;
+			}
 		}
+		
+		// add all to dest
+		{
+			for (auto& sys : m_addingSystems)
+			{
+				sys->BeginModification();
+			}
+
+			for (auto& a : m_addingComps)
+			{
+				a.system->AddComponent(a.comp);
+				a.comp->OnComponentAdded();
+			}
+
+			for (auto& sys : m_addingSystems)
+			{
+				sys->EndModification();
+				sys->m_isAddAtGlobal = false;
+			}
+		}
+		
 	}
 };
 

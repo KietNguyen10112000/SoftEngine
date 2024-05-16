@@ -5,7 +5,7 @@
 
 #define MAIN_SYSTEM_TASK_EXT_BASE(mainComponent, MainSystemClassName, RunnerName, VTypes, ParamVTypesDecl, VTypesAssignment,TASK_SYSTEM_UNPACK_PARAM_REF_NUM, funcBody)	\
 {																						\
-	auto system = GetGameObject()->GetScene()->Get##MainSystemClassName();				\
+	auto system = GetCommittedObject()->GetCommittedScene()->Get##MainSystemClassName();				\
 	auto taskRunner = system->RunnerName();												\
 	using SelfType = std::remove_reference<decltype(*this)>::type;						\
 	VTypes																				\

@@ -11,6 +11,8 @@
 
 #include "DeferredBuffer.h"
 
+#include "ModifiedRecorder.h"
+
 
 NAMESPACE_BEGIN
 
@@ -147,7 +149,6 @@ void Scene::EndIteration()
 void Scene::PerformModificationForMainSystem(ID id)
 {
 	auto& sys = m_mainSystems[id];
-
 	if (!sys)
 	{
 		return;
@@ -162,23 +163,40 @@ void Scene::PerformModificationForMainSystem(ID id)
 		if (a.type == a.ADD)
 		{
 			sys->AddComponent(a.comp);
+			a.comp->OnComponentAdded();
+			a.comp->OnTransformChanged();
 			continue;
 		}
 
 		if (a.type == a.REMOVE)
 		{
 			sys->RemoveComponent(a.comp);
+			a.comp->OnComponentRemoved();
 			continue;
 		}
 
 		if (a.type == a.MOVED)
 		{
 			sys->OnObjectTransformChanged(a.comp);
+			a.comp->OnTransformChanged();
 			continue;
 		}
 	}
 
+	actions.clear();
+
 	sys->EndModification();
+}
+
+void Scene::FlushAsyncTasksForMainSystem(ID id)
+{
+	auto& sys = m_mainSystems[id];
+	if (!sys)
+	{
+		return;
+	}
+
+	sys->FlushAsyncTasks();
 }
 
 void Scene::SynchMainProcessingSystems()
@@ -235,46 +253,71 @@ void Scene::UpdateDeferredBuffers(decltype(m_deferredBuffers1)& buffers)
 
 void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
 {
-	obj->m_lock.lock();
-
 	obj->m_sceneId = m_longLifeObjects.size();
 	obj->m_isLongLife = true;
 
-	/*mheap::internal::SetStableValue(Runtime::NONE_STABLE_VALUE);
 	m_longLifeObjects.Push(obj);
-	mheap::internal::SetStableValue(m_stableValue);*/
-
-	/*obj->PreTraversal1UpToDate(
-		[&](GameObject* cur)
-		{
-			for (uint32_t i = 0; i < MainSystemInfo::COUNT; i++)
-			{
-				auto& comp = cur->m_mainComponents[i];
-				if (comp.Get())
-				{
-					AddLongLifeComponent(i, comp);
-				}
-			}
-		}
-	);*/
-
-	obj->m_lock.unlock();
-}
-
-void Scene::AddLongLifeComponent(ID COMPONENT_ID, const Handle<MainComponent>& component)
-{
-	auto system = m_mainSystems[COMPONENT_ID];
-	system->AddComponent(component.Get());
-	component->OnComponentAdded();
-	component->OnTransformChanged();
 }
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 {
+	obj->RecordAllComponetsAsModified();
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, GameObject::ModifiedFlag::HEIRARCHY);
+
+	//obj->m_scene = this;
+
+	m_addedObjectInFrame.push_back(obj);
+	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_ADDED, &m_addedObjectInFrame);
+	m_addedObjectInFrame.clear();
+
+	obj->PreTraversal1([this](GameObject* o) 
+		{
+			o->m_scene = this;
+			Runtime::Get()->GetModifiedRecorder()->RecordGameObject(o, GameObject::ModifiedFlag::HEIRARCHY);
+		}
+	);
+
+	if (m_isSettingUpLongLifeObjects)
+	{
+		AddLongLifeObject(obj, indexedName);
+		return;
+	}
+
+	obj->m_sceneId = m_shortLifeObjects.size();
+	obj->m_isLongLife = false;
+
+	m_shortLifeObjects.Push(obj);
 }
 
 void Scene::RemoveObject(const Handle<GameObject>& obj)
 {
+	obj->RecordAllComponetsAsModified();
+	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, GameObject::ModifiedFlag::HEIRARCHY);
+
+	m_removedObjectInFrame.push_back(obj);
+	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_REMOVED, &m_removedObjectInFrame);
+	m_removedObjectInFrame.clear();
+
+	obj->PreTraversal1([this](GameObject* o)
+		{
+			o->m_scene = nullptr;
+			Runtime::Get()->GetModifiedRecorder()->RecordGameObject(o, GameObject::ModifiedFlag::HEIRARCHY);
+		}
+	);
+
+	if (obj->m_isLongLife)
+	{
+		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_longLifeObjects, obj, m_sceneId);
+	}
+	else
+	{
+		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_shortLifeObjects, obj, m_sceneId);
+	}
+
+	obj->m_scene = nullptr;
+	obj->m_sceneId = INVALID_ID;
+
+	GetCurrentTrash().Push(obj);
 }
 
 Handle<GameObject> Scene::FindObjectByIndexedName(String name)
@@ -336,6 +379,8 @@ void Scene::EndSetupLongLifeObject()
 
 void Scene::Iteration(float dt)
 {
+	GetCurrentTrash().clear();
+
 	m_dt = dt;
 	BeginIteration();
 

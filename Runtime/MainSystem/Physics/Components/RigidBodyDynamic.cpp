@@ -39,7 +39,7 @@ void RigidBodyDynamic::OnTransformChanged()
 {
 	auto gameObject = GetGameObject();
 
-	auto& globalTransform = gameObject->ReadGlobalTransformMat();
+	auto& globalTransform = gameObject->GetCommittedGlobalTransform();
 
 	//auto pxRigidBody = m_pxActor->is<PxRigidBody>();
 
@@ -49,7 +49,7 @@ void RigidBodyDynamic::OnTransformChanged()
 
 	//auto pxTransform = pxRigidBody->getGlobalPose();
 
-	if (::memcmp(&m_lastGlobalTransform, &globalTransform, sizeof(Mat4)) != 0)
+	//if (::memcmp(&m_lastGlobalTransform, &globalTransform, sizeof(Mat4)) != 0)
 	{
 		Vec3 scale;
 		Vec3 pos;
@@ -77,7 +77,7 @@ void RigidBodyDynamic::OnTransformChanged()
 			pxRigidBody->setGlobalPose(pxTransform);
 		}
 
-		m_lastGlobalTransform = globalTransform;
+		//m_lastGlobalTransform = globalTransform;
 	}
 }
 
@@ -93,33 +93,40 @@ void RigidBodyDynamic::Wake()
 void RigidBodyDynamic::OnPhysicsTransformChanged()
 {
 	auto obj = GetGameObject();
-	obj->ContributeTransform(this, RigidBodyDynamic::TransformContributor);
-	obj->GetScene()->OnObjectTransformChanged(obj);
-}
+	//obj->ContributeTransform(this, RigidBodyDynamic::TransformContributor);
+	//obj->GetScene()->OnObjectTransformChanged(obj);
 
-void RigidBodyDynamic::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
-{
-	auto rigidBody = (RigidBodyDynamic*)self;
-	auto gameObject = rigidBody->GetGameObject();
-	auto scene = gameObject->GetScene();
-	auto pxRigidBody = (PxRigidActor*)rigidBody->m_pxActor;
-
-	auto& lastGlobalTransform = rigidBody->m_lastGlobalTransform;
-	if (gameObject->m_lastWriteLocalTransformIterationCount == scene->GetIterationCount())
-	{
-		return;
-	}
-
+	auto pxRigidBody = (PxRigidActor*)m_pxActor;
 	auto pxTransform = pxRigidBody->getGlobalPose();
 
 	PxMat44 shapePose(pxTransform);
 	Mat4& myMat = reinterpret_cast<Mat4&>(shapePose);
 
-	global = Mat4::Scaling(local.Scale()) * myMat;
-	lastGlobalTransform = global;
-	rigidBody->GetGameObject()->m_isNeedRecalculateLocalTransform = true;
+	obj->SetGlobalTransform(Mat4::Scaling(obj->GetCommittedLocalTransform().GetScale()) * myMat, COMPONENT_ID);
 }
 
+//void RigidBodyDynamic::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
+//{
+//	auto rigidBody = (RigidBodyDynamic*)self;
+//	auto gameObject = rigidBody->GetGameObject();
+//	auto scene = gameObject->GetScene();
+//	auto pxRigidBody = (PxRigidActor*)rigidBody->m_pxActor;
+//
+//	auto& lastGlobalTransform = rigidBody->m_lastGlobalTransform;
+//	if (gameObject->m_lastWriteLocalTransformIterationCount == scene->GetIterationCount())
+//	{
+//		return;
+//	}
+//
+//	auto pxTransform = pxRigidBody->getGlobalPose();
+//
+//	PxMat44 shapePose(pxTransform);
+//	Mat4& myMat = reinterpret_cast<Mat4&>(shapePose);
+//
+//	global = Mat4::Scaling(local.Scale()) * myMat;
+//	lastGlobalTransform = global;
+//	rigidBody->GetGameObject()->m_isNeedRecalculateLocalTransform = true;
+//}
 
 void RigidBodyDynamic::OnComponentAdded()
 {

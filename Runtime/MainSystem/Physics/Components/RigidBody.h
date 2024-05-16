@@ -46,7 +46,7 @@ private:
 	ContactReportFilterCallback m_contactFilterCallback = nullptr;
 
 protected:
-	Mat4 m_lastGlobalTransform;
+	//Mat4 m_lastGlobalTransform;
 
 	std::vector<SharedPtr<PhysicsShape>> m_shapes;
 

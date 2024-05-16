@@ -122,7 +122,7 @@ void RenderingSystem::CollectInputForEachCamera()
 			TASK_SYSTEM_UNPACK_PARAM_3(CollectInputForCameraParams, p, renderingSystem, camera, querySession);
 
 			auto frustum = Frustum(camera->Projection());
-			frustum.Transform(camera->GlobalTransform());
+			frustum.Transform(camera->GetCameraGlobalTransform());
 			auto queryStructure = &renderingSystem->m_bvh;
 
 			querySession->ClearPrevQueryResult();
@@ -143,7 +143,7 @@ void RenderingSystem::CollectInputForEachCamera()
 
 void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
 {
-	m_cameraData.transform = camera->GlobalTransform();
+	m_cameraData.transform = camera->GetCameraGlobalTransform();
 	m_cameraData.proj = camera->Projection();
 	m_cameraData.view = camera->GetView();
 	m_cameraData.vp = m_cameraData.view * m_cameraData.proj;
@@ -224,6 +224,13 @@ Begin:
 		}
 		i++;
 	}
+}
+
+void RenderingSystem::FlushAsyncTasks()
+{
+	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
+	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
+	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
 }
 
 void RenderingSystem::BeginModification()
