@@ -16,6 +16,25 @@ class MainSystem
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
+	friend class ModifiedRecorder;
+	struct ModificationAction
+	{
+		enum TYPE
+		{
+			ADD,
+			REMOVE,
+			MOVED
+		};
+
+		MainComponent* comp;
+		TYPE type;
+	};
+
+	std::vector<ModificationAction> m_modificationActions;
+	bool m_isAddAtGlobal = false;
+	bool m_isRmAtGlobal = false;
+	bool m_padd[6];
+
 protected:
 	Scene* m_scene = nullptr;
 	

@@ -96,9 +96,8 @@ private:
 	byte m_oldStableValue = 0;
 	bool m_destroyed = false;
 
-	bool m_isDestroying = false;
 	spinlock m_lock;
-	bool m_padd[2];
+	bool m_padd[3];
 
 	size_t m_iterationCount = 0;
 	float m_dt = 0;
@@ -112,9 +111,9 @@ private:
 
 	Task				m_mainSystemModificationTasks			[MainSystemInfo::COUNT] = {};
 
-	std::atomic<size_t>		m_numMainSystemEndReconstruct = 0;
+	/*std::atomic<size_t>		m_numMainSystemEndReconstruct = 0;
 	TaskWaitingHandle		m_endReconstructWaitingHandle = { 0,0 };
-	Task					m_endReconstructTask = {};
+	Task					m_endReconstructTask = {};*/
 
 	TaskWaitingHandle		m_objectsModificationTaskWaitingHandle = { 0,0 };
 
@@ -154,6 +153,8 @@ private:
 
 	void BeginIteration();
 	void EndIteration();
+
+	void PerformModificationForMainSystem(ID id);
 
 	inline auto& GetCurrentTrash()
 	{
@@ -212,6 +213,11 @@ public:
 	}
 
 public:
+	inline MainSystem* GetMainSystem(ID id)
+	{
+		return m_mainSystems[id];
+	}
+
 	inline RenderingSystem* GetRenderingSystem()
 	{
 		return (RenderingSystem*)m_mainSystems[MainSystemInfo::RENDERING_ID];
@@ -258,8 +264,6 @@ public:
 	}
 
 public:
-	
-
 	void BeginRunning();
 	void EndRunning();
 

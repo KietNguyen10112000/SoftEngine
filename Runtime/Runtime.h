@@ -16,6 +16,7 @@ NAMESPACE_BEGIN
 class Input;
 class Plugin;
 class Scene;
+class ModifiedRecorder;
 
 class GameObjectCache;
 
@@ -50,6 +51,7 @@ public:
 
 private:
 	friend class Scene;
+	friend class GameObject;
 
 	Handle<Scene> m_scenes[MAX_RUNNING_SCENES];
 
@@ -57,6 +59,9 @@ private:
 	EventDispatcher<Runtime, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
 
 	Handle<GameObjectCache> m_gameObjectCache;
+
+	Handle<ModifiedRecorder> m_modifiedRecorder[2];
+	ID m_curModifiedRecorderId = 0;
 
 	std::bitset<2 * MAX_RUNNING_SCENES> m_runningSceneStableValue;
 
@@ -100,6 +105,7 @@ private:
 		tracer->Trace(m_scenes);
 		tracer->Trace(m_genericStorage);
 		tracer->Trace(m_gameObjectCache);
+		tracer->Trace(m_modifiedRecorder);
 	}
 
 	void InitGraphics();
@@ -121,6 +127,14 @@ private:
 	{
 		return m_noneStableValueLock;
 	}
+
+	inline auto& GetModifiedRecorder()
+	{
+		return m_modifiedRecorder[m_curModifiedRecorderId];
+	}
+
+	void SwapModifiedRecorder();
+	void ProcessSwapRunningScene();
 
 public:
 	void Setup();

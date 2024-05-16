@@ -17,9 +17,6 @@ class Scene;
 class API GameObject final : public Serializable
 {
 public:
-	// one for read, one for write, then swap between them
-	constexpr static size_t NUM_TRANSFORM_BUFFERS = 3;
-
 	using ComponentDtor = void(*)(void*);
 	struct ComponentSlot
 	{
@@ -48,6 +45,7 @@ public:
 
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
+	friend class ModifiedRecorder;
 
 	Handle<MainComponent> m_mainComponents[MainSystemInfo::COUNT] = {};
 	Handle<MainComponent> m_committedComponents[MainSystemInfo::COUNT] = {};
@@ -59,8 +57,8 @@ private:
 	Array<Handle<GameObject>>	m_children = {};
 
 	Transform m_localTransform = {};
-	Mat4 m_globalTransform = {};
 
+	Mat4 m_globalTransform = {};
 	Mat4 m_committedGlobalTransform = {};
 
 	//size_t m_localTransformWriteCount = 0;
@@ -69,11 +67,15 @@ private:
 	Scene* m_scene = nullptr;
 	ID m_sceneId = INVALID_ID;
 
+	Scene* m_committedScene = nullptr;
+	ID m_committedSceneId = INVALID_ID;
+
 	String m_name;
 
 	bool m_isLongLife = true;
+	bool m_recorded = false;
+	bool m_padd;
 	Spinlock m_lock;
-	bool m_padd2[2];
 
 private:
 	TRACEABLE_FRIEND();
@@ -99,7 +101,7 @@ private:
 	template <typename Comp>
 	GameObject* AddMainComponentDirect(const Handle<Comp>& component)
 	{
-		m_modificationLock.lock();
+		m_lock.lock();
 
 		auto& slot = m_mainComponents[Comp::COMPONENT_ID];
 
@@ -109,7 +111,7 @@ private:
 		component->m_object = this;
 		//component->OnComponentAdded();
 
-		m_modificationLock.unlock();
+		m_lock.unlock();
 
 		return this;
 	}
@@ -119,7 +121,7 @@ private:
 	template <typename Comp>
 	GameObject* RemoveMainComponentDirect(Comp* component)
 	{
-		m_modificationLock.lock();
+		m_lock.lock();
 
 		auto& slot = m_mainComponents[Comp::COMPONENT_ID];
 
@@ -128,7 +130,7 @@ private:
 		slot = nullptr;
 		component->m_object = nullptr;
 
-		m_modificationLock.unlock();
+		m_lock.unlock();
 
 		return this;
 	}
@@ -148,14 +150,14 @@ private:
 	template <typename Comp>
 	GameObject* AddNormalComponent(const Handle<Comp>& component)
 	{
-		m_modificationLock.lock();
+		m_lock.lock();
 
 		ComponentDtor dtor = GetDtor<Comp>();
 		auto it = FindComponentFromDtor(dtor);
 
 		if (it != m_components.end())
 		{
-			m_modificationLock.unlock();
+			m_lock.unlock();
 			return nullptr;
 		}
 
@@ -164,7 +166,7 @@ private:
 		slot.ptr = component;
 		m_components.Push(slot);
 
-		m_modificationLock.unlock();
+		m_lock.unlock();
 
 		return this;
 	}
@@ -172,14 +174,14 @@ private:
 	template <typename Comp>
 	GameObject* RemoveNormalComponent(Comp* component)
 	{
-		m_modificationLock.lock();
+		m_lock.lock();
 
 		ComponentDtor dtor = GetDtor<Comp>();
 		auto it = FindComponentFromDtor(dtor);
 
 		if ((void*)component != it->ptr.Get())
 		{
-			m_modificationLock.unlock();
+			m_lock.unlock();
 			return nullptr;
 		}
 
@@ -189,9 +191,21 @@ private:
 			MANAGED_ARRAY_ROLL_TO_FILL_BLANK_BY_ID(m_components, idx);
 		}
 
-		m_modificationLock.unlock();
+		m_lock.unlock();
 
 		return this;
+	}
+
+	inline void Commit()
+	{
+		for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+		{
+			m_committedComponents[i] = m_mainComponents[i];
+		}
+
+		m_committedScene = m_scene;
+		m_committedSceneId = m_sceneId;
+		m_committedGlobalTransform = m_globalTransform;
 	}
 	
 public:
@@ -208,12 +222,10 @@ public:
 				return nullptr;
 			}
 
-			if (IsInAnyScene())
 			{
-				return AddMainComponentDefer(Comp::COMPONENT_ID, component);
+				AddMainComponentDefer(Comp::COMPONENT_ID, component);
 			}
 
-			((HasMainComponentState*)m_hasMainComponent.UpToDateRead())->hasComponents[Comp::COMPONENT_ID] = true;
 			return AddMainComponentDirect(component);
 		}
 		else
@@ -245,13 +257,11 @@ public:
 				return nullptr;
 			}
 
-			if (IsInAnyScene())
 			{
 				MainComponent* _comp = component == nullptr ? m_mainComponents[Comp::COMPONENT_ID].Get() : component;
-				return RemoveMainComponentDefer(Comp::COMPONENT_ID, _comp);
+				RemoveMainComponentDefer(Comp::COMPONENT_ID, _comp);
 			}
 
-			((HasMainComponentState*)m_hasMainComponent.UpToDateRead())->hasComponents[Comp::COMPONENT_ID] = false;
 			return RemoveMainComponentDirect(component);
 		}
 		else
@@ -318,17 +328,17 @@ public:
 		}
 	}
 
-	// consistency check
+	// consistency chec
 	template <typename Comp>
 	inline bool HasComponent()
 	{
-		return GetComponentRaw<Comp>() != nullptr;
+		return GetCommittedComponentRaw<Comp>() != nullptr;
 	}
 
 	// consistency check
 	inline bool HasComponent(ID COMPONENT_ID)
 	{
-		return m_mainComponents[COMPONENT_ID].Get() != nullptr;
+		return m_committedComponents[COMPONENT_ID].Get() != nullptr;
 	}
 
 public:
@@ -401,14 +411,19 @@ public:
 		return m_name;
 	}
 
-	inline auto GetScene()
+	inline auto GetCommittedScene()
+	{
+		return m_committedScene;
+	}
+
+	inline auto GetCurrentScene()
 	{
 		return m_scene;
 	}
 
 	inline bool IsInAnyScene()
 	{
-		return m_scene != nullptr;
+		return GetCommittedScene() != nullptr;
 	}
 
 	inline const auto& GetLocalTransform()

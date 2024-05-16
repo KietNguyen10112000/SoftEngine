@@ -69,6 +69,7 @@
 #include "Common/Base/Serializer.h"
 
 #include "Scene/GameObjectCache.h"
+#include "Scene/ModifiedRecorder.h"
 
 NAMESPACE_BEGIN
 
@@ -558,7 +559,7 @@ void Runtime::Run()
 {
 	while (m_isRunning)
 	{
-		if (m_runningSceneIdx != m_nextRunningSceneIdx)
+		/*if (m_runningSceneIdx != m_nextRunningSceneIdx)
 		{
 			if (m_runningSceneIdx != INVALID_ID)
 			{
@@ -576,7 +577,7 @@ void Runtime::Run()
 		if (m_destroyingScenesCount != 0)
 		{
 			ProcessDestroyScenes();
-		}
+		}*/
 
 		Iteration();
 		//Thread::Sleep(1);
@@ -587,6 +588,49 @@ void Runtime::Run()
 	while (m_gcIsRunning.load(std::memory_order_relaxed))
 	{
 		Thread::Sleep(100);
+	}
+}
+
+void Runtime::SwapModifiedRecorder()
+{
+	GetModifiedRecorder()->Commit();
+	m_curModifiedRecorderId = (m_curModifiedRecorderId + 1) % (sizeof(m_modifiedRecorder) / sizeof(*m_modifiedRecorder));
+	GetModifiedRecorder()->Clear();
+
+	size_t i = 0;
+	for (auto& scene : m_scenes)
+	{
+		if (i != m_nextRunningSceneIdx)
+		{
+			for (size_t j = 0; j < MainSystemInfo::COUNT; j++)
+			{
+				scene->PerformModificationForMainSystem(j);
+			}
+		}
+		i++;
+	}
+}
+
+void Runtime::ProcessSwapRunningScene()
+{
+	if (m_runningSceneIdx != m_nextRunningSceneIdx)
+	{
+		if (m_runningSceneIdx != INVALID_ID)
+		{
+			m_scenes[m_runningSceneIdx]->EndRunning();
+		}
+
+		m_runningSceneIdx = m_nextRunningSceneIdx;
+
+		if (m_runningSceneIdx != INVALID_ID)
+		{
+			m_scenes[m_runningSceneIdx]->BeginRunning();
+		}
+	}
+
+	if (m_destroyingScenesCount != 0)
+	{
+		ProcessDestroyScenes();
 	}
 }
 
@@ -678,7 +722,12 @@ void Runtime::Iteration()
 	{
 		while (g_sumDt > fixedDt)
 		{
+			SwapModifiedRecorder();
+
+			ProcessSwapRunningScene();
+
 			mainScene->Iteration(fixedDt);
+
 			g_sumDt -= fixedDt;
 		}
 

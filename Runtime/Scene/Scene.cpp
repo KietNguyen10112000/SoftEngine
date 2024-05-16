@@ -74,20 +74,13 @@ void Scene::SetupMainSystemIterationTasks()
 				return;
 			}
 
-			scene->ProcessModificationForMainSystem(mainSystemId);
+			scene->PerformModificationForMainSystem(mainSystemId);
 
 			//scene->EndReconstructForMainSystem(mainSystemId);
 
 			system->Iteration(scene->m_dt);
 		};
 	}
-
-	m_endReconstructTask.Params() = this;
-	m_endReconstructTask.Entry() = [](void* p)
-	{
-		auto scene = (Scene*)p;
-		scene->EndReconstructForAllMainSystems();
-	};
 
 	if (StartupConfig::Get().isEnableGUIEditing)
 	{
@@ -149,6 +142,43 @@ void Scene::EndIteration()
 	//TaskSystem::WaitForHandle(&m_objectsModificationTaskWaitingHandle);
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_END_ITERATION);
+}
+
+void Scene::PerformModificationForMainSystem(ID id)
+{
+	auto& sys = m_mainSystems[id];
+
+	if (!sys)
+	{
+		return;
+	}
+
+	auto& actions = sys->m_modificationActions;
+
+	sys->BeginModification();
+
+	for (auto& a : actions)
+	{
+		if (a.type == a.ADD)
+		{
+			sys->AddComponent(a.comp);
+			continue;
+		}
+
+		if (a.type == a.REMOVE)
+		{
+			sys->RemoveComponent(a.comp);
+			continue;
+		}
+
+		if (a.type == a.MOVED)
+		{
+			sys->OnObjectTransformChanged(a.comp);
+			continue;
+		}
+	}
+
+	sys->EndModification();
 }
 
 void Scene::SynchMainProcessingSystems()

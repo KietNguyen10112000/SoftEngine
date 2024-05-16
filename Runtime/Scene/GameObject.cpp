@@ -2,6 +2,9 @@
 
 #include "Scene.h"
 
+#include "Runtime/Runtime.h"
+#include "Scene/ModifiedRecorder.h"
+
 NAMESPACE_BEGIN
 
 GameObject* GameObject::AddMainComponentDefer(ID COMPONENT_ID, const Handle<MainComponent>& component)
@@ -10,7 +13,7 @@ GameObject* GameObject::AddMainComponentDefer(ID COMPONENT_ID, const Handle<Main
 	//assert(0);
 	component->m_object = this;
 
-	m_scene->AddComponent(COMPONENT_ID, component);
+	Runtime::Get()->GetModifiedRecorder()->RecordComponent(component, COMPONENT_ID);
 	return this;
 }
 
@@ -18,8 +21,9 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 {
 	// [TODO]: will implement
 	//assert(0);
+	component->m_object = nullptr;
 
-	m_scene->RemoveComponent(COMPONENT_ID, component);
+	Runtime::Get()->GetModifiedRecorder()->RecordComponent(component, COMPONENT_ID);
 	return this;
 }
 
@@ -37,6 +41,15 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 {
 	
 	//assert(0);
+}
+
+void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE constranint)
+{
+
+}
+
+void GameObject::SetGlobalTransform(const Transform& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE constranint)
+{
 }
 
 Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
@@ -107,11 +120,6 @@ void GameObject::CloneFrom(Serializer* serializer, Serializable* another)
 	{
 		auto child = serializer->Clone(children[i]);
 		AddChild(child);
-	}
-
-	for (size_t i = 0; i < NUM_TRANSFORM_BUFFERS; i++)
-	{
-		
 	}
 
 	Name() = src->Name();
