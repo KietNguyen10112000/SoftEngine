@@ -270,6 +270,8 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 	EventDispatcher()->Dispatch(EVENT::EVENT_OBJECTS_ADDED, &m_addedObjectInFrame);
 	m_addedObjectInFrame.clear();
 
+	obj->ForceRefreshTransform(INVALID_ID - 1, true);
+
 	obj->PreTraversal1([this](GameObject* o) 
 		{
 			o->m_scene = this;

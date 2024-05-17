@@ -26,6 +26,7 @@ public:
 
 	std::vector<SerializableDB::SerializableRecord*> m_components[MainSystemInfo::COUNT];
 
+	ID m_runningThreadId = INVALID_ID;
 	spinlock m_lock;
 
 private:

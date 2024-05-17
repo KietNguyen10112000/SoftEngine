@@ -53,7 +53,9 @@ void Initialize(Runtime* runtime)
 				{
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 					editorContext->Lock().lock();
+					editorContext->m_runningThreadId = Thread::GetID();
 					editorContext->OnRenderGUI();
+					editorContext->m_runningThreadId = INVALID_ID;
 					editorContext->Lock().unlock();
 				},
 				editorContextId
@@ -64,7 +66,9 @@ void Initialize(Runtime* runtime)
 				{
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 					editorContext->Lock().lock();
+					editorContext->m_runningThreadId = Thread::GetID();
 					editorContext->OnRenderInGameDebugGraphics();
+					editorContext->m_runningThreadId = INVALID_ID;
 					editorContext->Lock().unlock();
 				},
 				editorContextId
@@ -75,9 +79,14 @@ void Initialize(Runtime* runtime)
 				{
 					auto objs = (std::vector<GameObject*>*)argv[0];
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
-					editorContext->Lock().lock();
+
+					if (editorContext->m_runningThreadId == INVALID_ID)
+						editorContext->Lock().lock();
+
 					editorContext->OnObjectsAdded(*objs);
-					editorContext->Lock().unlock();
+
+					if (editorContext->m_runningThreadId == INVALID_ID)
+						editorContext->Lock().unlock();
 				},
 				editorContextId
 			);
@@ -87,9 +96,14 @@ void Initialize(Runtime* runtime)
 				{
 					auto objs = (std::vector<GameObject*>*)argv[0];
 					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
-					editorContext->Lock().lock();
+
+					if (editorContext->m_runningThreadId == INVALID_ID)
+						editorContext->Lock().lock();
+
 					editorContext->OnObjectsRemoved(*objs);
-					editorContext->Lock().unlock();
+
+					if (editorContext->m_runningThreadId == INVALID_ID)
+						editorContext->Lock().unlock();
 				},
 				editorContextId
 			);

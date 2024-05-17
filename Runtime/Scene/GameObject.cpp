@@ -54,6 +54,24 @@ void GameObject::RemoveFromParent()
 	m_parent = nullptr;
 
 	RecalculateTransform(Mat4::Identity());
+	
+	{
+		auto scene = m_scene;
+		auto& recorder = Runtime::Get()->GetModifiedRecorder();
+		PreTraversal1([&](GameObject* o)
+			{
+				o->m_scene = nullptr;
+				for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+				{
+					auto& comp = o->m_mainComponents[i];
+					if (comp)
+					{
+						recorder->RecordComponent(comp, i);
+					}
+				}
+			}
+		);
+	}
 
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::HEIRARCHY);
 }
@@ -109,6 +127,24 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 
 	obj->RecalculateTransform(m_globalTransform);
 
+	{
+		auto scene = m_scene;
+		auto& recorder = Runtime::Get()->GetModifiedRecorder();
+		obj->PreTraversal1([&](GameObject* o)
+			{
+				o->m_scene = scene;
+				for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+				{
+					auto& comp = o->m_mainComponents[i];
+					if (comp)
+					{
+						recorder->RecordComponent(comp, i);
+					}
+				}
+			}
+		);
+	}
+
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, ModifiedFlag::HEIRARCHY);
 }
 
@@ -149,12 +185,20 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID)
 	m_transformConstraint = TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL;
 }
 
-void GameObject::ForceRefreshTransform(ID SRC_COMPONENT_ID)
+void GameObject::ForceRefreshTransform(ID SRC_COMPONENT_ID, bool recursive)
 {
 	m_forceRefreshTransform = true;
 	m_componentIdModifyTransform = INVALID_ID;
 
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
+
+	if (recursive)
+	{
+		for (auto& c : m_children)
+		{
+			c->ForceRefreshTransform(SRC_COMPONENT_ID, recursive);
+		}
+	}
 }
 
 Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)

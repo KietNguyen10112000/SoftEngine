@@ -496,7 +496,7 @@ public:
 	void SetLocalTransform(const Transform& transform,  ID SRC_COMPONENT_ID = INVALID_ID - 1);
 	void SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID = INVALID_ID - 1);
 
-	void ForceRefreshTransform(ID SRC_COMPONENT_ID = INVALID_ID - 1);
+	void ForceRefreshTransform(ID SRC_COMPONENT_ID = INVALID_ID - 1, bool recursive = false);
 
 };
 
