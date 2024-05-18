@@ -5,7 +5,7 @@ using namespace soft;
 
 class DataInspector
 {
-private:
+public:
 	constexpr static size_t MAX_TYPE = 256;
 
 	using InspectFunc = void (*)(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);

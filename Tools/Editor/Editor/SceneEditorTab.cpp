@@ -73,7 +73,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 		{
 			ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth;
 
-			if (m_selectionId == obj->GetComponentRaw<GameObjectEditorComponent>()->id)
+			if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
 			{
 				nodeFlags |= ImGuiTreeNodeFlags_Selected;
 			}
@@ -160,7 +160,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 			{
-				m_selectionId = obj->GetComponentRaw<GameObjectEditorComponent>()->id;
+				m_selectionId = (ID)obj->GetComponentRaw<GameObjectEditorComponent>();
 				OnObjectSelected(obj);
 			}
 
@@ -240,8 +240,7 @@ void SceneEditorTab::RenderHierarchyPanel()
 
 	ImGui::BeginChild("Child");
 
-	auto numObjects = m_objects.size();
-	for (size_t i = 0; i < numObjects; i++)
+	for (size_t i = 0; i < m_objects.size(); i++)
 	{
 		auto _obj = m_objects[i];
 		RenderHierarchyPanelOf(_obj);
@@ -733,4 +732,19 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 			}
 		}
 	);
+}
+
+void SceneEditorTab::OnShow()
+{
+}
+
+void SceneEditorTab::OnHide()
+{
+}
+
+void SceneEditorTab::OnOpen()
+{
+}
+void SceneEditorTab::OnClose()
+{
 }

@@ -77,6 +77,11 @@ public:
 	void OnRenderGUI() override;
 
 	void OnRenderInGameDebugGraphics() override;
+	
+	void OnShow() override;
+	void OnHide() override;
+	void OnOpen() override;
+	void OnClose() override;
 
 public:
 	inline auto& Lock()

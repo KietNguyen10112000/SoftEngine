@@ -268,6 +268,24 @@ public:
 		Reserve(size);
 	}
 
+	inline void erase(ID idx)
+	{
+		assert(idx >= 0 && idx < size());
+
+		if (size() <= 1)
+		{
+			clear();
+			return;
+		}
+
+		auto lastIdx = size() - 1;
+		for (size_t i = idx; i < lastIdx; i++)
+		{
+			m_buffer[i] = m_buffer[i + 1];
+		}
+		Pop();
+	}
+
 public:
 	inline T& operator[](size_t i) const
 	{

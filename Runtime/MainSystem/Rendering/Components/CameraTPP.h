@@ -4,7 +4,7 @@
 
 NAMESPACE_BEGIN
 
-class CameraTPP : public Camera
+class API CameraTPP : public Camera
 {
 protected:
 	Handle<GameObject> m_target;

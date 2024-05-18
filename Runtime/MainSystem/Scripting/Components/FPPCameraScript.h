@@ -3,7 +3,7 @@
 
 NAMESPACE_BEGIN
 
-class FPPCameraScript : public Script
+class API FPPCameraScript : public Script
 {
 private:
 	using Base = Script;

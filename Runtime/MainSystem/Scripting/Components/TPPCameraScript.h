@@ -7,7 +7,7 @@ class CharacterController;
 class CameraTPP;
 class FPPCameraScript;
 
-class TPPCameraScript : public Script
+class API TPPCameraScript : public Script
 {
 private:
 	using Base = Script;

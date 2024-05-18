@@ -47,8 +47,10 @@ void GameObject::RemoveFromParent()
 		return;
 	}
 
+	m_parent->m_lock.lock();
 	auto& arr = m_parent->m_children;
 	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(arr, this, m_parentIdx);
+	m_parent->m_lock.unlock();
 
 	m_parentIdx = INVALID_ID;
 	m_parent = nullptr;
@@ -94,10 +96,12 @@ void GameObject::RecalculateTransform(const Mat4& parentTransform)
 		Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 	}
 
+	m_lock.lock();
 	for (auto& c : m_children)
 	{
 		c->RecalculateTransform(m_globalTransform);
 	}
+	m_lock.unlock();
 }
 
 void GameObject::RecordAllComponetsAsModified()
@@ -122,8 +126,11 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 	assert(obj->m_parent == nullptr);
 
 	obj->m_parent = this;
+
+	m_lock.lock();
 	obj->m_parentIdx = m_children.size();
 	m_children.Push(obj);
+	m_lock.unlock();
 
 	obj->RecalculateTransform(m_globalTransform);
 
@@ -177,10 +184,12 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID)
 
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 
+	m_lock.lock();
 	for (auto& c : m_children)
 	{
 		c->RecalculateTransform(m_globalTransform);
 	}
+	m_lock.unlock();
 
 	m_transformConstraint = TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL;
 }
@@ -194,10 +203,12 @@ void GameObject::ForceRefreshTransform(ID SRC_COMPONENT_ID, bool recursive)
 
 	if (recursive)
 	{
+		m_lock.lock();
 		for (auto& c : m_children)
 		{
 			c->ForceRefreshTransform(SRC_COMPONENT_ID, recursive);
 		}
+		m_lock.unlock();
 	}
 }
 

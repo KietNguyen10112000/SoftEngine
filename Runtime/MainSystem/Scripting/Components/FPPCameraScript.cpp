@@ -19,6 +19,12 @@ void FPPCameraScript::OnStart()
 
 void FPPCameraScript::OnUpdate(float dt)
 {
+	if (Input()->IsKeyUp(KEYBOARD::ESC))
+	{
+		std::cout << "ESC pressed\n";
+		Input()->SetCursorLock(!Input()->GetCursorLock());
+	}
+
 	if (!m_enableFPP)
 	{
 		return;

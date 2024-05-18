@@ -14,6 +14,7 @@ struct GameObjectEditorComponent
 };
 
 class EditorTab;
+class EditorTabFactory;
 
 class EditorContext
 {
@@ -28,6 +29,9 @@ public:
 
 	ID m_runningThreadId = INVALID_ID;
 	spinlock m_lock;
+	bool m_padd[3];
+
+	EditorTabFactory* m_tabFactory = nullptr;
 
 private:
 	TRACEABLE_FRIEND();
@@ -44,6 +48,7 @@ private:
 	void ReloadSerializableList();
 
 	void RenderTabBar();
+	void RenderTabCreationPopUp();
 
 public:
 	void OnObjectsAdded(std::vector<GameObject*>& objects);

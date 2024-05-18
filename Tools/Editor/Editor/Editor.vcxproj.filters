@@ -11,6 +11,9 @@
     <Filter Include="Source Files\EditorTabs">
       <UniqueIdentifier>{a95f7541-aadb-40ae-92aa-7e72c8645a57}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\EditorTabs\Factories">
+      <UniqueIdentifier>{c3c937fb-628d-46f3-8aa8-17b71c7e5a80}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -39,6 +42,12 @@
     </ClCompile>
     <ClCompile Include="EditorTab.cpp">
       <Filter>Source Files\EditorTabs</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorTabFactory.cpp">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimatorEditorTabFactory.cpp">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -71,6 +80,12 @@
     </ClInclude>
     <ClInclude Include="EditorTab.h">
       <Filter>Source Files\EditorTabs</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorTabFactory.h">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimatorEditorTabFactory.h">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

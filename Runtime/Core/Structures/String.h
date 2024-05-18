@@ -133,7 +133,7 @@ public:
 public:
 	inline const char_type* c_str() const
 	{
-		return m_header ? (char*)(m_header + 1) : 0;
+		return m_header ? (char*)(m_header + 1) : "";
 	};
 
 	inline size_t length() const

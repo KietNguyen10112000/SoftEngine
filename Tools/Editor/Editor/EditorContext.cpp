@@ -19,6 +19,7 @@
 
 #include "SceneEditorTab.h"
 #include "AnimatorEditorTab.h"
+#include "EditorTabFactory.h"
 
 ID EditorContext::s_id = INVALID_ID;
 
@@ -28,10 +29,12 @@ EditorContext::EditorContext(Scene* initScene)
 
 	auto defaultTab = mheap::New<SceneEditorTab>();
 	defaultTab->m_scene = initScene;
+	defaultTab->m_isShowing = true;
 
 	m_tabs.Push(defaultTab);
 
 	m_currentTabId = 0;
+	m_tabs[m_currentTabId]->Show();
 }
 
 void EditorContext::RenderMenuBar()
@@ -107,10 +110,13 @@ void EditorContext::RenderTabBar()
 		}
 	};
 
+	bool openCreatePopUp = false;
+
 	if (ImGui::BeginTabBar("MyTabBar"))
 	{
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Tab, { 0.5,0.5,0.5,1 });
 
+		auto curTabId = m_currentTabId;
 		for (size_t i = 0; i < m_tabs.size(); i++)
 		{
 			auto selected = i == m_currentTabId;
@@ -134,14 +140,47 @@ void EditorContext::RenderTabBar()
 			{
 				// close this tab
 				//m_currentTabId = i;
+
+				tab->Close();
+
+				auto scene = tab->m_scene;
+				m_tabs.erase(i);
+				i--;
+				if (m_currentTabId != 0)
+				{
+					m_currentTabId = m_currentTabId - 1;
+					curTabId = m_currentTabId;
+
+					m_tabs[m_currentTabId]->Show();
+				}
+
+				{
+					size_t c = 0;
+					for (auto& t : m_tabs)
+					{
+						t->m_id = c;
+						c++;
+					}
+				}
+
+				Runtime::Get()->SetRunningScene(m_tabs[m_currentTabId]->m_scene);
+				Runtime::Get()->DestroyScene(scene);
 			}
+		}
+
+		if (curTabId != m_currentTabId)
+		{
+			m_tabs[curTabId]->Hide();
+			m_tabs[m_currentTabId]->Show();
 		}
 
 		ImGui::PopStyleColor();
 
 		if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip))
 		{
-			auto scene = Runtime::Get()->CreateScene();
+			ImGui::OpenPopup("Chose");
+
+			/*auto scene = Runtime::Get()->CreateScene();
 			auto tab = mheap::New<AnimatorEditorTab>();
 			tab->m_scene = scene;
 			tab->m_name = "Scene2";
@@ -158,7 +197,26 @@ void EditorContext::RenderTabBar()
 				tabId
 			);
 
-			Runtime::Get()->SetRunningScene(scene);
+			Runtime::Get()->SetRunningScene(scene);*/
+		}
+
+		if (ImGui::BeginPopup("Chose"))
+		{
+			EditorTabFactoryManager::Get()->ForEach(
+				[&](const String& factoryName, EditorTabFactory* factory)
+				{
+					if (ImGui::Selectable(factory->m_tabKindName.c_str()))
+					{
+						m_tabFactory = factory;
+						ImGui::CloseCurrentPopup();
+
+						openCreatePopUp = true;
+						m_tabFactory->Begin();
+					}
+				}
+			);
+
+			ImGui::EndPopup();
 		}
 			
 		ImGui::EndTabBar();
@@ -168,6 +226,87 @@ void EditorContext::RenderTabBar()
 
 	ImGui::PopStyleVar();
 	ImGui::PopStyleVar();
+
+	if (openCreatePopUp)
+	{
+		ImGui::OpenPopup("Create New Editor Tab");
+	}
+}
+
+void EditorContext::RenderTabCreationPopUp()
+{
+	if (!m_tabFactory)
+	{
+		return;
+	}
+
+	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+	auto viewPortSize = ImGui::GetMainViewport()->Size;
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(viewPortSize.x / 2, viewPortSize.y / 2));
+	if (!ImGui::BeginPopupModal("Create New Editor Tab", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+	{
+		return;
+	}
+
+	auto tabFactory = m_tabFactory;
+
+	ImGui::Text(tabFactory->m_tabKindName.c_str(), "");
+
+	ImGui::Separator();
+
+	m_tabFactory->ShowCreationInputGUI();
+
+	ImGui::Separator();
+
+	ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() / 2 - 100, ImGui::GetWindowHeight() - 40));
+
+	if (ImGui::Button("OK", ImVec2(100, 0)))
+	{
+		auto tab = m_tabFactory->CreateInstance();
+
+		if (!tab)
+		{
+			std::cerr << "TabCreation ERROR. \n";
+		}
+		else
+		{
+			tab->m_id = m_tabs.size();
+			m_tabs.Push(tab);
+
+			auto scene = tab->m_scene;
+
+			auto tabId = scene->GenericStorage()->Store(tab);
+			scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
+				[](Scene* scene, int argc, void** argv, ID id)
+				{
+					auto tab = scene->GenericStorage()->Get<AnimatorEditorTab>(id);
+					EditorContext::GetInstance()->m_currentTabId = tab->m_id;
+					tab->Show();
+				},
+				tabId
+			);
+
+			Runtime::Get()->SetRunningScene(scene);
+		}
+
+		m_tabFactory = nullptr;
+		ImGui::CloseCurrentPopup();
+	}
+
+	ImGui::SameLine(0, 20);
+	if (ImGui::Button("Cancel", ImVec2(100, 0)))
+	{
+		m_tabFactory = nullptr;
+		ImGui::CloseCurrentPopup();
+	}
+
+	if (!m_tabFactory)
+	{
+		tabFactory->End();
+	}
+
+	ImGui::EndPopup();
 }
 
 void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects)
@@ -187,6 +326,8 @@ void EditorContext::OnRenderGUI()
 	RenderMenuBar();
 	RenderTabBar();
 	ImGui::ShowDemoWindow(0);
+
+	RenderTabCreationPopUp();
 }
 
 void EditorContext::OnRenderInGameDebugGraphics()

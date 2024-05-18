@@ -62,12 +62,6 @@ void TPPCameraScript::OnUpdate(float dt)
 		m_testBody->AddForceAtLocalPos({ 0,0,-10000 }, { 2.5f,0,0 });
 	}
 
-	if (Input()->IsKeyUp(KEYBOARD::ESC))
-	{
-		std::cout << "ESC pressed\n";
-		Input()->SetCursorLock(!Input()->GetCursorLock());
-	}
-
 	if (Input()->IsKeyUp('V'))
 	{
 		std::cout << "1 pressed\n";

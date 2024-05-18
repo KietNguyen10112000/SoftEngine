@@ -405,29 +405,35 @@ public:
 	void PreTraversal(Func func)
 	{
 		if (func(this)) return;
+		m_lock.lock();
 		for (auto& child : m_children)
 		{
 			child->PreTraversal(func);
 		}
+		m_lock.unlock();
 	}
 
 	template <typename Func>
 	void PreTraversal1(Func func)
 	{
 		func(this);
+		m_lock.lock();
 		for (auto& child : m_children)
 		{
 			child->PreTraversal1(func);
 		}
+		m_lock.unlock();
 	}
 
 	template <typename Func>
 	void PostTraversal(Func func)
 	{
+		m_lock.lock();
 		for (auto& child : m_children)
 		{
 			child->PostTraversal(func);
 		}
+		m_lock.unlock();
 		func(this);
 	}
 

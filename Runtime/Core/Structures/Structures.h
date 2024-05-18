@@ -8,6 +8,7 @@
 // managed structures
 #include "Managed/Array.h"
 #include "Managed/UnorderedList.h"
+#include "Managed/Map.h"
 
 
 // stl

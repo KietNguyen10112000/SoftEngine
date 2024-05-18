@@ -868,6 +868,11 @@ void Runtime::DestroyScene(Scene* scene)
 		return;
 	}
 
+	if (scene->m_runtimeID == m_runningSceneIdx)
+	{
+		assert(m_nextRunningSceneIdx != m_runningSceneIdx && "Need to set another running scene before destroy the current scene!!!");
+	}
+
 	m_createSceneLock.lock();
 
 	scene->m_destroyed = true;
@@ -875,7 +880,7 @@ void Runtime::DestroyScene(Scene* scene)
 
 	m_createSceneLock.unlock();
 
-	if (scene->m_runtimeID == m_runningSceneIdx)
+	if (scene->m_runtimeID == m_runningSceneIdx && m_nextRunningSceneIdx == m_runningSceneIdx)
 	{
 		m_nextRunningSceneIdx = INVALID_ID;
 	}

@@ -58,7 +58,7 @@ public:
 
 };
 
-class Camera : public BaseCamera
+class API Camera : public BaseCamera
 {
 private:
 	friend class RenderingSystem;

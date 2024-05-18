@@ -15,10 +15,41 @@ namespace soft
 
 class EditorTab
 {
+private:
+	friend class EditorContext;
+
+	bool m_isShowing = false;
+	bool m_isFirstShow = true;
+	bool m_padd[2];
+
 public:
 	ID m_id = 0;
 	String m_name = "Unnamed";
 	Scene* m_scene = nullptr;
+
+private:
+	inline void Show()
+	{
+		m_isShowing = true;
+		if (m_isFirstShow)
+		{
+			OnOpen();
+			m_isFirstShow = false;
+		}
+
+		OnShow();
+	}
+
+	inline void Hide()
+	{
+		m_isShowing = false;
+		OnHide();
+	}
+
+	inline void Close()
+	{
+		OnClose();
+	}
 
 public:
 	virtual void OnObjectsAdded(std::vector<GameObject*>& objects) = 0;
@@ -26,9 +57,20 @@ public:
 	virtual void OnRenderGUI() = 0;
 	virtual void OnRenderInGameDebugGraphics() = 0;
 
+	virtual void OnShow() = 0;
+	virtual void OnHide() = 0;
+
+	virtual void OnOpen() = 0;
+	virtual void OnClose() = 0;
+
 	inline auto GetScene()
 	{
 		return m_scene;
+	}
+
+	inline bool IsShowing() const
+	{
+		return m_isShowing;
 	}
 
 };

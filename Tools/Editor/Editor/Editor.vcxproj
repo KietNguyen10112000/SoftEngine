@@ -142,9 +142,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AnimatorEditorTab.cpp" />
+    <ClCompile Include="AnimatorEditorTabFactory.cpp" />
     <ClCompile Include="ComponentInspector.cpp" />
     <ClCompile Include="EditorContext.cpp" />
     <ClCompile Include="EditorTab.cpp" />
+    <ClCompile Include="EditorTabFactory.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="DataInspector.cpp" />
     <ClCompile Include="RotateScript.cpp" />
@@ -153,10 +155,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AnimatorEditorTab.h" />
+    <ClInclude Include="AnimatorEditorTabFactory.h" />
     <ClInclude Include="ComponentInspector.h" />
     <ClInclude Include="EditorContext.h" />
     <ClInclude Include="DataInspector.h" />
     <ClInclude Include="EditorTab.h" />
+    <ClInclude Include="EditorTabFactory.h" />
     <ClInclude Include="ImGuiExtern.h" />
     <ClInclude Include="RotateScript.h" />
     <ClInclude Include="SceneEditorTab.h" />

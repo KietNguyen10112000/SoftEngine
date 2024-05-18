@@ -11,6 +11,7 @@
 #include "EditorContext.h"
 #include "DataInspector.h"
 #include "ComponentInspector.h"
+#include "EditorTabFactory.h"
 
 #include "ScriptList.h"
 
@@ -24,6 +25,7 @@ void Initialize(Runtime* runtime)
 {
 	DataInspector::Initialize();
 	ComponentInspector::SingletonInitialize();
+	EditorTabFactoryManager::SingletonInitialize();
 
 	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
@@ -52,11 +54,11 @@ void Initialize(Runtime* runtime)
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
-					editorContext->Lock().lock();
+					editorContext->Lock().lock_no_check_own_thread();
 					editorContext->m_runningThreadId = Thread::GetID();
 					editorContext->OnRenderGUI();
 					editorContext->m_runningThreadId = INVALID_ID;
-					editorContext->Lock().unlock();
+					editorContext->Lock().unlock_no_check_own_thread();
 				},
 				editorContextId
 			);
@@ -65,11 +67,11 @@ void Initialize(Runtime* runtime)
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
-					editorContext->Lock().lock();
+					editorContext->Lock().lock_no_check_own_thread();
 					editorContext->m_runningThreadId = Thread::GetID();
 					editorContext->OnRenderInGameDebugGraphics();
 					editorContext->m_runningThreadId = INVALID_ID;
-					editorContext->Lock().unlock();
+					editorContext->Lock().unlock_no_check_own_thread();
 				},
 				editorContextId
 			);
@@ -81,12 +83,12 @@ void Initialize(Runtime* runtime)
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 
 					if (editorContext->m_runningThreadId == INVALID_ID)
-						editorContext->Lock().lock();
+						editorContext->Lock().lock_no_check_own_thread();
 
 					editorContext->OnObjectsAdded(*objs);
 
 					if (editorContext->m_runningThreadId == INVALID_ID)
-						editorContext->Lock().unlock();
+						editorContext->Lock().unlock_no_check_own_thread();
 				},
 				editorContextId
 			);
@@ -98,12 +100,12 @@ void Initialize(Runtime* runtime)
 					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
 
 					if (editorContext->m_runningThreadId == INVALID_ID)
-						editorContext->Lock().lock();
+						editorContext->Lock().lock_no_check_own_thread();
 
 					editorContext->OnObjectsRemoved(*objs);
 
 					if (editorContext->m_runningThreadId == INVALID_ID)
-						editorContext->Lock().unlock();
+						editorContext->Lock().unlock_no_check_own_thread();
 				},
 				editorContextId
 			);
@@ -115,4 +117,5 @@ void Initialize(Runtime* runtime)
 void Finalize(Runtime* runtime)
 {
 	ComponentInspector::SingletonFinalize();
+	EditorTabFactoryManager::SingletonFinalize();
 }
