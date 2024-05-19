@@ -22,3 +22,6 @@
 [submodule "Libraries/nlohmann"]
 	path = Libraries/nlohmann
 	url = git@github.com:nlohmann/json.git
+[submodule "Tools/Editor/Libraries/imgui-node-editor"]
+	path = Tools/Editor/Libraries/imgui-node-editor
+	url = git@github.com:thedmd/imgui-node-editor.git

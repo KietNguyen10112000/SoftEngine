@@ -363,6 +363,9 @@ void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 			AddChild(child);
 		}
 	}
+
+	m_modifiedFlags = ModifiedFlag::COMPONENT | ModifiedFlag::TRANSFORM | ModifiedFlag::HEIRARCHY;
+	Commit();
 }
 
 NAMESPACE_END

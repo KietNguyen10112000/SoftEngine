@@ -44,7 +44,9 @@ void Camera::OnComponentAdded()
 {
 	auto rdrSys = GetGameObject()->GetScene()->GetRenderingSystem();
 	rdrSys->AddCamera(this, CAMERA_PRIORITY_LOWEST);
-	rdrSys->DisplayCamera(this, rdrSys->GetDefaultViewport());
+
+	if (!IsDisplaying())
+		rdrSys->DisplayCamera(this, rdrSys->GetDefaultViewport());
 
 	/*static int count = 0;
 

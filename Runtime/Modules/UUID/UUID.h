@@ -62,7 +62,7 @@ struct UUID
 };
 
 // generate uuid v1
-API class UUIDGenerator : public Singleton<UUIDGenerator>
+class API UUIDGenerator : public Singleton<UUIDGenerator>
 {
 private:
 	int64_t m_MACAddress;

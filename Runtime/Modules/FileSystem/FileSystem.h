@@ -32,6 +32,7 @@ private:
 	String m_cachePath;
 	String m_rootPath;
 	String m_rootFullPath;
+	String m_executablePath;
 
 	std::map<String, FileOrDirectory> m_indexedFiles;
 
@@ -85,6 +86,11 @@ public:
 	String GetResourcesRelativePath(String path)
 	{
 		return path;
+	}
+
+	inline const String& GetExecutablePath() const
+	{
+		return m_executablePath;
 	}
 };
 

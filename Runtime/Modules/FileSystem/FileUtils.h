@@ -129,6 +129,11 @@ inline String ShiftPath(const String& path)
 	return String(path.c_str() + idx);
 }
 
+inline String GetExtension(const String& path)
+{
+	return path.SubString(path.FindLastOf(".") + 1);
+}
+
 }
 
 NAMESPACE_FILE_SYSTEM_END

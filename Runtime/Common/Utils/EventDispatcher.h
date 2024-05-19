@@ -50,14 +50,14 @@ private:
 			return;
 		}
 
-		m_dispatcherLocks[evtCode].lock_no_check_own_thread();
+		m_dispatcherLocks[evtCode].lock();
 		m_dispatchers[evtCode].ForEach(
 			[=](Listener& listener)
 			{
 				listener.callback(m_target, argc, argv, listener.userVar);
 			}
 		);
-		m_dispatcherLocks[evtCode].unlock_no_check_own_thread();
+		m_dispatcherLocks[evtCode].unlock();
 	}
 
 	template <typename ...Args>
@@ -77,9 +77,9 @@ public:
 	{
 		m_lock.lock();
 		auto& dispatcher = m_dispatchers[evtCode];
-		m_dispatcherLocks[evtCode].lock_no_check_own_thread();
+		m_dispatcherLocks[evtCode].lock();
 		auto id = dispatcher.Add({ cb, userVar });
-		m_dispatcherLocks[evtCode].unlock_no_check_own_thread();
+		m_dispatcherLocks[evtCode].unlock();
 		auto ret = m_listeners.Add({ evtCode, id });
 		m_lock.unlock();
 		return ret;
@@ -90,9 +90,9 @@ public:
 	{
 		m_lock.lock();
 		auto& listenerId = m_listeners.Get(id);
-		m_dispatcherLocks[listenerId.evtCode].lock_no_check_own_thread();
+		m_dispatcherLocks[listenerId.evtCode].lock();
 		m_dispatchers[listenerId.evtCode].Remove(listenerId.refId);
-		m_dispatcherLocks[listenerId.evtCode].unlock_no_check_own_thread();
+		m_dispatcherLocks[listenerId.evtCode].unlock();
 		m_listeners.Remove(id);
 		m_lock.unlock();
 	}

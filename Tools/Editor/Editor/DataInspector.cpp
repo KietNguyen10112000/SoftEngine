@@ -294,7 +294,7 @@ void DataInspector::InspectString(ClassMetadata* metadata, Accessor& accessor, c
 	ImGui::LabelText("##label", path.c_str());
 }
 
-void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, bool allowOutsideResources)
 {
 	auto path = variant.AsString();
 	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
@@ -302,7 +302,7 @@ void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accesso
 	auto labelName = path + "##" + propertyName;
 
 	bool clicked = ImGui::Button(labelName.c_str(), ImVec2(ImGui::GetWindowWidth() * 0.8f, 0));
-	
+
 	ImGui::PopStyleVar();
 
 	ImGui::SameLine();
@@ -339,6 +339,22 @@ void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accesso
 
 			std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
 
+			auto input = Variant(VARIANT_TYPE::STRING_PATH);
+			if (allowOutsideResources)
+			{
+				auto rcpath = FileSystem::Get()->GetExecutablePath();
+				if (fullPath.find(rcpath.c_str()) != 0)
+				{
+					input.As<String>() = fullPath.c_str();
+					accessor.Set(input);
+					return;
+				}
+
+				auto rpath = fullPath.substr(rcpath.length());
+				input.As<String>() = rpath.c_str();
+				accessor.Set(input);
+			}
+
 			auto rcpath = FileSystem::Get()->GetResourcesRootPath();
 
 			if (fullPath.find(rcpath.c_str()) != 0)
@@ -348,12 +364,16 @@ void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accesso
 			}
 
 			auto rpath = fullPath.substr(rcpath.length());
-			auto input = Variant(VARIANT_TYPE::STRING_PATH);
 			input.As<String>() = rpath.c_str();
 			accessor.Set(input);
 		}
 #endif // WIN32
 	}
+}
+
+void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+{
+	InspectStringPathEx(metadata, accessor, variant, propertyName, false);
 }
 
 void DataInspector::Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName)

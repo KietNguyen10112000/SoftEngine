@@ -14,6 +14,18 @@
     <Filter Include="Source Files\EditorTabs\Factories">
       <UniqueIdentifier>{c3c937fb-628d-46f3-8aa8-17b71c7e5a80}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Windows">
+      <UniqueIdentifier>{32bb9141-ab7e-4c5b-990f-9f817ba38ac8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\EditorTabs\AnimatorEditor">
+      <UniqueIdentifier>{ce82027e-3f57-4f2d-9fb6-9c63cdbaba83}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries">
+      <UniqueIdentifier>{ced0563e-348e-4afe-89fe-80ae28c62999}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\imgui-node-editor">
+      <UniqueIdentifier>{dfb24978-334b-4c72-99c6-26613401903d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -37,9 +49,6 @@
     <ClCompile Include="SceneEditorTab.cpp">
       <Filter>Source Files\EditorTabs</Filter>
     </ClCompile>
-    <ClCompile Include="AnimatorEditorTab.cpp">
-      <Filter>Source Files\EditorTabs</Filter>
-    </ClCompile>
     <ClCompile Include="EditorTab.cpp">
       <Filter>Source Files\EditorTabs</Filter>
     </ClCompile>
@@ -48,6 +57,24 @@
     </ClCompile>
     <ClCompile Include="AnimatorEditorTabFactory.cpp">
       <Filter>Source Files\EditorTabs\Factories</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimatorEditorTab.cpp">
+      <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Libraries\imgui-node-editor\crude_json.cpp">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Libraries\imgui-node-editor\imgui_canvas.cpp">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Libraries\imgui-node-editor\imgui_node_editor.cpp">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Libraries\imgui-node-editor\imgui_node_editor_api.cpp">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClCompile>
+    <ClCompile Include="AnimatorEditorSaveData.cpp">
+      <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -75,9 +102,6 @@
     <ClInclude Include="SceneEditorTab.h">
       <Filter>Source Files\EditorTabs</Filter>
     </ClInclude>
-    <ClInclude Include="AnimatorEditorTab.h">
-      <Filter>Source Files\EditorTabs</Filter>
-    </ClInclude>
     <ClInclude Include="EditorTab.h">
       <Filter>Source Files\EditorTabs</Filter>
     </ClInclude>
@@ -87,8 +111,52 @@
     <ClInclude Include="AnimatorEditorTabFactory.h">
       <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClInclude>
+    <ClInclude Include="AnimatorEditorTab.h">
+      <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libraries\imgui-node-editor\crude_json.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_bezier_math.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_canvas.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_extra_math.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_node_editor.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_node_editor_internal.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimatorEditorSaveData.h">
+      <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Libraries\imgui-node-editor\.git">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </None>
+    <None Include="..\Libraries\imgui-node-editor\.gitignore">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </None>
+    <None Include="..\Libraries\imgui-node-editor\imgui_bezier_math.inl">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </None>
+    <None Include="..\Libraries\imgui-node-editor\imgui_extra_math.inl">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </None>
+    <None Include="..\Libraries\imgui-node-editor\imgui_node_editor_internal.inl">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </None>
+    <None Include="..\Libraries\imgui-node-editor\LICENSE">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </None>
   </ItemGroup>
 </Project>

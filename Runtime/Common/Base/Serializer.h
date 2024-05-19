@@ -102,7 +102,7 @@ private:
 
 	const MODE m_mode = MODE::MODE_JSON;
 
-	UUID m_rootUUID = {};
+	std::vector<UUID> m_rootUUIDs;
 
 	std::map<UUID, SerializedResourceRecord> m_usedResources;
 
@@ -283,11 +283,11 @@ public:
 	void WriteToFile(const String& path);
 	void ReadFromFile(const String& path);
 
-	void SetRootUUID(const UUID& uuid);
+	void SetRootUUID(const UUID& uuid, ID id = 0);
 
-	inline const auto& GetRootUUID() const
+	inline const auto& GetRootUUID(ID id = 0) const
 	{
-		return m_rootUUID;
+		return m_rootUUIDs[id];
 	}
 
 	template <typename T> 

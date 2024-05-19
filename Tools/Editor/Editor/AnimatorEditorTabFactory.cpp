@@ -7,6 +7,10 @@
 
 #include "FileSystem/FileSystem.h"
 
+#include "AnimatorEditorSaveData.h"
+
+#include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
+
 AnimatorEditorTabFactory::AnimatorEditorTabFactory()
 {
 	m_tabKindName = "AnimatorEditorTab";
@@ -28,7 +32,7 @@ void AnimatorEditorTabFactory::ShowCreationInputGUI()
 		Accessor temp = Accessor::ForString("Path", m_modelPath, nullptr);
 		Variant var = Variant(VARIANT_TYPE::STRING_PATH);
 		var.AsString() = m_modelPath;
-		DataInspector::InspectStringPath(nullptr, temp, var, "Model path");
+		DataInspector::InspectStringPathEx(nullptr, temp, var, "Model path", true);
 	}
 
 	ImGui::InputText("File name", m_nameBuf, IM_ARRAYSIZE(m_nameBuf));
@@ -36,6 +40,13 @@ void AnimatorEditorTabFactory::ShowCreationInputGUI()
 
 Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 {
+	auto ifdx = m_modelPath.FindLastOf(".");
+	auto ext = FileUtils::GetExtension(m_modelPath);
+	if (ext == "json")
+	{
+		goto LoadJson;
+	}
+
 	if (m_modelPath.empty())
 	{
 		goto Failed;
@@ -50,6 +61,43 @@ Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 
 Failed:
 	return nullptr;
+
+LoadJson:
+	{
+		Handle<AnimatorEditorSaveData> data;
+		Serializer serializer = {};
+		serializer.ReadFromFile(m_modelPath);
+		serializer.Deserialize(serializer.GetRootUUID(), data);
+
+		if (!data)
+		{
+			std::cerr << "[AnimatorEditorTabFactory] - ERROR: Invalid file!\n";
+			return nullptr;
+		}
+
+		auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, nullptr);
+		tab->m_name = data->m_name;
+
+		Handle<GameObject> obj;
+		serializer.Deserialize(data->m_objectUUID, obj);
+
+		if (!obj)
+		{
+			std::cerr << "[AnimatorEditorTabFactory] - ERROR: Invalid file!\n";
+			return nullptr;
+		}
+
+		tab->m_object = obj;
+		tab->m_objMetadata = obj->GetMetadata(0);
+		tab->m_animator = obj->GetComponent<AnimatorSkeletalArray>();
+
+		auto scene = Runtime::Get()->CreateScene();
+		tab->m_scene = scene;
+
+		scene->AddObject(obj);
+
+		return tab;
+	}
 
 Succeed:
 	m_name = m_nameBuf;

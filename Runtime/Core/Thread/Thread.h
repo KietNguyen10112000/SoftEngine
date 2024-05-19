@@ -37,7 +37,7 @@ private:
 public:
 	static void SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool);
 
-	static void SwitchToPrimaryFiberOfThisThread();
+	//static void SwitchToPrimaryFiberOfThisThread();
 
 	static void Sleep(size_t ms);
 

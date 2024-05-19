@@ -44,6 +44,8 @@ public:
 		return s_id;
 	}
 
+	API static ID GetCurrentFiberID();
+
 };
 
 NAMESPACE_END

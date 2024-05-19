@@ -394,7 +394,7 @@ void Serializer::WriteToFileJson(const String& path)
 		meta["UsedClassNames"] = arr;
 	}
 
-	meta["RootUUID"] = m_rootUUID;
+	meta["RootUUIDs"] = m_rootUUIDs;
 	j["Meta"] = meta;
 	
 	{
@@ -453,7 +453,7 @@ void Serializer::ReadFromFileJson(const String& path)
 			m_classNameIds.insert({ m_classNames.back(),i });
 		}
 	}
-	m_rootUUID = meta["RootUUID"];
+	m_rootUUIDs = meta["RootUUIDs"];
 
 	{
 		auto& arr = j["Objects"];
@@ -550,9 +550,13 @@ void Serializer::ReadFromFile(const String& path)
 	}
 }
 
-void Serializer::SetRootUUID(const UUID& uuid)
+void Serializer::SetRootUUID(const UUID& uuid, ID id)
 {
-	m_rootUUID = uuid;
+	if (id >= m_rootUUIDs.size())
+	{
+		m_rootUUIDs.resize(id + 1);
+	}
+	m_rootUUIDs[id] = uuid;
 }
 
 NAMESPACE_END

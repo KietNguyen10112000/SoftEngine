@@ -20,7 +20,9 @@ public:
 	static void InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
 	static void InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static void InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, bool allowOutsideResources);
 	static void InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+
 
 public:
 	static void Initialize();

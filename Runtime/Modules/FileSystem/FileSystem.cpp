@@ -36,6 +36,9 @@ FileSystem::FileSystem()
 {
 	std::string str = StartupConfig::Get().executablePath;
 	std::replace(str.begin(), str.end(), '\\', '/');
+
+	m_executablePath = FileUtils::PopPath(str.c_str());
+
 	auto path = fs::path(str);
 	
 	m_cachePath = String(path.parent_path().u8string().c_str()) + "/.cache/";

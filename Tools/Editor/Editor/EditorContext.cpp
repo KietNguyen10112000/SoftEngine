@@ -21,7 +21,7 @@
 #include "AnimatorEditorTab.h"
 #include "EditorTabFactory.h"
 
-ID EditorContext::s_id = INVALID_ID;
+EditorContext* EditorContext::s_instance = nullptr;
 
 EditorContext::EditorContext(Scene* initScene)
 {
@@ -46,6 +46,13 @@ void EditorContext::RenderMenuBar()
 		if (ImGui::MenuItem("Reload"))
 		{
 			ReloadSerializableList();
+		}
+
+		ImGui::Separator();
+		if (ImGui::MenuItem("Save"))
+		{
+			String path("");
+			EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
 		}
 
 		ImGui::EndMenu();
@@ -309,6 +316,55 @@ void EditorContext::RenderTabCreationPopUp()
 	ImGui::EndPopup();
 }
 
+void EditorContext::RenderOxyz(OxyzRenderConfig& config)
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics) return;
+
+	if (config.AxisXLength != 0.0f)
+	{
+		debugGraphics->DrawDirection(Vec3(-config.AxisXLength / 2.0f, 0, 0), Vec3(config.AxisXLength, 0, 0), { 1,0,0,1 }, { 1,0,0,1 });
+	}
+
+	if (config.AxisYLength != 0.0f)
+	{
+		debugGraphics->DrawDirection(Vec3(0, -config.AxisYLength / 2.0f, 0), Vec3(0, config.AxisYLength, 0), { 0,1,0,1 }, { 0,1,0,1 });
+	}
+
+	if (config.AxisZLength != 0.0f)
+	{
+		debugGraphics->DrawDirection(Vec3(0, 0, -config.AxisZLength / 2.0f), Vec3(0, 0, config.AxisZLength), { 0,0,1,1 }, { 0,0,1,1 });
+	}
+
+	if (config.RenderOxzGrid)
+	{
+		auto minZ = std::min(config.OxzRangeStart.y, config.OxzRangeEnd.y);
+		auto maxZ = std::max(config.OxzRangeStart.y, config.OxzRangeEnd.y);
+		auto lenZ = (maxZ - minZ) / 2.0f;
+
+		auto minX = std::min(config.OxzRangeStart.x, config.OxzRangeEnd.x);
+		auto maxX = std::max(config.OxzRangeStart.x, config.OxzRangeEnd.x);
+		auto lenX = (maxX - minX) / 2.0f;
+
+		Vec4 color = { 1.0f,1.0f,1.0f,0.4f };
+
+		for (float z = minZ; z <= maxZ; z += config.OxzRangeStep)
+		{
+			debugGraphics->DrawLineSegment({ -lenX,0,z }, { lenX,0,z }, color, config.OxzGridThickness);
+		}
+
+		for (int x = minX; x <= maxX; x += config.OxzRangeStep)
+		{
+			debugGraphics->DrawLineSegment({ x,0,-lenZ }, { x,0,lenZ }, color, config.OxzGridThickness);
+		}
+	}
+
+	if (config.RenderOxzPlane)
+	{
+		debugGraphics->DrawAABox(AABox({ 0,0,0 }, { 1000,0.5,1000 }), { 0.5,0.5,0.5,0.3 }, true);
+	}
+}
+
 void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects)
 {
 	GetCurrentTab()->OnObjectsAdded(objects);
@@ -325,7 +381,9 @@ void EditorContext::OnRenderGUI()
 
 	RenderMenuBar();
 	RenderTabBar();
-	ImGui::ShowDemoWindow(0);
+
+	//ImGui::SetNextWindowFocus();
+	//ImGui::ShowDemoWindow(0);
 
 	RenderTabCreationPopUp();
 }
@@ -333,4 +391,13 @@ void EditorContext::OnRenderGUI()
 void EditorContext::OnRenderInGameDebugGraphics()
 {
 	GetCurrentTab()->OnRenderInGameDebugGraphics();
+}
+
+void EditorContext::OnFinalize()
+{
+	for (auto& tab : m_tabs)
+	{
+		tab->OnClose();
+	}
+	m_tabs.clear();
 }

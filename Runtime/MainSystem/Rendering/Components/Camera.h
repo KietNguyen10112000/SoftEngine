@@ -56,6 +56,11 @@ public:
 		return GlobalTransform();
 	}
 
+	inline bool IsDisplaying() const
+	{
+		return m_isDisplaying != false;
+	}
+
 };
 
 class API Camera : public BaseCamera

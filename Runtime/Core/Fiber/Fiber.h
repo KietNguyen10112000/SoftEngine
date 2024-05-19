@@ -14,7 +14,7 @@ protected:
 	friend class FiberPool;
 
 	size_t m_id = 0;
-	Spinlock m_lock;
+	SpinlockThreadBound m_lock;
 	FiberNativeHandle* m_nativeHandle = 0;
 
 	// which fiber called to switch to me

@@ -153,7 +153,11 @@ public:
 
 	inline String SubString(size_t idx, size_t count = -1) const
 	{
-		assert(idx < length());
+		if (idx >= length())
+		{
+			return "";
+		}
+
 		return String(c_str() + idx, count);
 	}
 
@@ -244,6 +248,23 @@ public:
 		assert(!empty() && !r.empty());
 		if (hash() != r.hash()) return false;
 		return strcmp(c_str(), r.c_str()) == 0;
+	};
+
+	inline bool operator==(const char_type* r) const
+	{
+		return strcmp(c_str(), r) == 0;
+	};
+
+	inline bool operator!=(const String& r) const
+	{
+		assert(!empty() && !r.empty());
+		if (hash() != r.hash()) return true;
+		return strcmp(c_str(), r.c_str()) != 0;
+	};
+
+	inline bool operator!=(const char_type* r) const
+	{
+		return strcmp(c_str(), r) != 0;
 	};
 
 	inline char operator[](size_t index) const
@@ -429,6 +450,18 @@ public:
 	{
 		std::string_view s = c_str();
 		return s.find_first_of(val, offset);
+	}
+
+	size_t FindLastOf(const String& val, size_t rOffset = std::string_view::npos) const
+	{
+		std::string_view s = c_str();
+		return s.find_last_of(val.c_str(), rOffset);
+	}
+
+	size_t FindLastOf(const char& val, size_t rOffset = std::string_view::npos) const
+	{
+		std::string_view s = c_str();
+		return s.find_last_of(val, rOffset);
 	}
 };
 

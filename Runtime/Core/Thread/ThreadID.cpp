@@ -7,6 +7,7 @@
 #include "Core/Thread/Spinlock.h"
 
 #include "ThreadLimit.h"
+#include "Thread.h"
 
 #if defined WIN32 || defined WIN64
 #include <Windows.h>
@@ -133,6 +134,11 @@ size_t ThreadID::GetThisThreadModuleCount()
 	g_threadIdSpinlock.unlock();
 
 	return it->second.moduleCounter;
+}
+
+ID ThreadID::GetCurrentFiberID()
+{
+	return Thread::GetCurrentFiberID();
 }
 
 NAMESPACE_END

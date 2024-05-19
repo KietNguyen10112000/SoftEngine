@@ -115,24 +115,24 @@ void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
 	Thread::BeginFiber();
 }
 
-void Thread::SwitchToPrimaryFiberOfThisThread()
-{
-	auto currentFiber = GetCurrentFiber();
-	auto thisThreadPrimaryFiber = FiberPool::Get(ThreadID::Get());
-
-	if (currentFiber == thisThreadPrimaryFiber) return;
-
-	//thisThreadPrimaryFiber->m_lock.lock();
-
-	auto fiberId = thisThreadPrimaryFiber->m_id;
-	s_threadLocalStorage[ThreadID::Get()].currentFiberID = fiberId;
-	ManagedLocalScope::s_managedLocalScopeThreads[ThreadID::Get()] = &ManagedLocalScope::s_managedLocalScopeFibers[fiberId];
-
-	if (currentFiber->IsPrimary() == false) FiberPool::Return(currentFiber);
-	//currentFiber->m_lock.unlock();
-
-	platform::SwitchToFiber(thisThreadPrimaryFiber->m_nativeHandle);
-}
+//void Thread::SwitchToPrimaryFiberOfThisThread()
+//{
+//	auto currentFiber = GetCurrentFiber();
+//	auto thisThreadPrimaryFiber = FiberPool::Get(ThreadID::Get());
+//
+//	if (currentFiber == thisThreadPrimaryFiber) return;
+//
+//	//thisThreadPrimaryFiber->m_lock.lock();
+//
+//	auto fiberId = thisThreadPrimaryFiber->m_id;
+//	s_threadLocalStorage[ThreadID::Get()].currentFiberID = fiberId;
+//	ManagedLocalScope::s_managedLocalScopeThreads[ThreadID::Get()] = &ManagedLocalScope::s_managedLocalScopeFibers[fiberId];
+//
+//	if (currentFiber->IsPrimary() == false) FiberPool::Return(currentFiber);
+//	//currentFiber->m_lock.unlock();
+//
+//	platform::SwitchToFiber(thisThreadPrimaryFiber->m_nativeHandle);
+//}
 
 void Thread::Sleep(size_t ms)
 {

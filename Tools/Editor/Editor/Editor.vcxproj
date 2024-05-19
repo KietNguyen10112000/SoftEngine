@@ -111,7 +111,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SOFT_ENGINE_HOME)/Libraries/imgui;$(SolutionDir);$(SolutionDir)/Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -129,7 +129,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SOFT_ENGINE_HOME)/Libraries/imgui;$(SolutionDir);$(SolutionDir)/Libraries;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -141,6 +141,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Libraries\imgui-node-editor\crude_json.cpp" />
+    <ClCompile Include="..\Libraries\imgui-node-editor\imgui_canvas.cpp" />
+    <ClCompile Include="..\Libraries\imgui-node-editor\imgui_node_editor.cpp" />
+    <ClCompile Include="..\Libraries\imgui-node-editor\imgui_node_editor_api.cpp" />
+    <ClCompile Include="AnimatorEditorSaveData.cpp" />
     <ClCompile Include="AnimatorEditorTab.cpp" />
     <ClCompile Include="AnimatorEditorTabFactory.cpp" />
     <ClCompile Include="ComponentInspector.cpp" />
@@ -154,6 +159,13 @@
     <ClCompile Include="TestScript.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\Libraries\imgui-node-editor\crude_json.h" />
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_bezier_math.h" />
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_canvas.h" />
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_extra_math.h" />
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_node_editor.h" />
+    <ClInclude Include="..\Libraries\imgui-node-editor\imgui_node_editor_internal.h" />
+    <ClInclude Include="AnimatorEditorSaveData.h" />
     <ClInclude Include="AnimatorEditorTab.h" />
     <ClInclude Include="AnimatorEditorTabFactory.h" />
     <ClInclude Include="ComponentInspector.h" />
@@ -169,6 +181,14 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Libraries\imgui-node-editor\.git" />
+    <None Include="..\Libraries\imgui-node-editor\.gitignore" />
+    <None Include="..\Libraries\imgui-node-editor\imgui_bezier_math.inl" />
+    <None Include="..\Libraries\imgui-node-editor\imgui_extra_math.inl" />
+    <None Include="..\Libraries\imgui-node-editor\imgui_node_editor_internal.inl" />
+    <None Include="..\Libraries\imgui-node-editor\LICENSE" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
