@@ -34,6 +34,12 @@ namespace mheap
 		API void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
 
 		API void Reset();
+
+		inline byte GetStableValueOfMemoryBlock(void* head)
+		{
+			auto handle = (ManagedHandle*)head - 1;
+			return handle->stableValue;
+		}
 	}
 
 	// without calling ctor

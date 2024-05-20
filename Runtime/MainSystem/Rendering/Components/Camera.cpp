@@ -10,7 +10,7 @@
 
 NAMESPACE_BEGIN
 
-Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
+void BaseCamera::Init(int renderWidth, int renderHeight)
 {
 	// create render target for this camera
 	GRAPHICS_RENDER_TARGET_DESC desc = {};
@@ -33,6 +33,11 @@ Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
 
 	// create rendering pipeline
 	m_pipeline = new BasicRenderingPipeline();
+}
+
+Camera::Camera() : BaseCamera(RENDER_TYPE::RENDER_TYPE_CAMERA)
+{
+	Init(-1, -1);
 }
 
 //Camera::~Camera()
@@ -114,12 +119,46 @@ void Camera::CloneFrom(Serializer* serializer, Serializable* another)
 
 void Camera::SerializeToJson(Serializer* serializer, json& j) const
 {
+	auto& projectionMat = m_proj;
+
+	if (projectionMat[3][3])
+	{
+		// ortho
+		j["IsPerspective"] = false;
+
+		j["Width"] = 2.0f / projectionMat[0][0];
+		j["Height"] = 2.0f / projectionMat[1][1];
+		float near = -projectionMat[3][2] / projectionMat[2][2];
+		j["Near"] = near;
+		j["Far"] = (1.0f / projectionMat[2][2]) + near;
+	}
+	else
+	{
+		// perspective
+		j["IsPerspective"] = true;
+
+		j["FovY"] = 2.0f * std::atan(1 / projectionMat[1][1]);
+		j["Aspect"] = projectionMat[1][1] / projectionMat[0][0];
+		float near = -projectionMat[3][2] / projectionMat[2][2];
+		j["Near"] = near;
+		j["Far"] = near / (1.0f - 1.0f / projectionMat[2][2]);
+	}
 }
 
 void Camera::DeserializeFromJson(Serializer* serializer, const json& j)
 {
-}
+	//Init(-1, -1);
 
+	bool isPerspective = j["IsPerspective"];
+	if (!isPerspective)
+	{
+		Projection().SetOrthographicLH(j["Width"], j["Height"], j["Near"], j["Far"]);
+	}
+	else
+	{
+		Projection().SetPerspectiveFovLH(j["FovY"], j["Aspect"], j["Near"], j["Far"]);
+	}
+}
 
 void Camera::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
 {

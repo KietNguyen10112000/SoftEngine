@@ -21,6 +21,8 @@
 #include "AnimatorEditorTab.h"
 #include "EditorTabFactory.h"
 
+#include "Resources/Resource.h"
+
 EditorContext* EditorContext::s_instance = nullptr;
 
 EditorContext::EditorContext(Scene* initScene)
@@ -55,6 +57,15 @@ void EditorContext::RenderMenuBar()
 			EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
 		}
 
+		ImGui::EndMenu();
+	}
+
+	if (ImGui::BeginMenu("Runtime"))
+	{
+		if (ImGui::MenuItem("Run GC"))
+		{
+			gc::Run(-1);
+		}
 		ImGui::EndMenu();
 	}
 
@@ -365,13 +376,23 @@ void EditorContext::RenderOxyz(OxyzRenderConfig& config)
 	}
 }
 
-void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects)
+void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects, Scene* scene)
 {
+	if (scene != GetCurrentTab()->m_scene)
+	{
+		return;
+	}
+
 	GetCurrentTab()->OnObjectsAdded(objects);
 }
 
-void EditorContext::OnObjectsRemoved(std::vector<GameObject*>& objects)
+void EditorContext::OnObjectsRemoved(std::vector<GameObject*>& objects, Scene* scene)
 {
+	if (scene != GetCurrentTab()->m_scene)
+	{
+		return;
+	}
+
 	GetCurrentTab()->OnObjectsRemoved(objects);
 }
 
@@ -386,6 +407,18 @@ void EditorContext::OnRenderGUI()
 	//ImGui::ShowDemoWindow(0);
 
 	RenderTabCreationPopUp();
+
+	/*ImGui::Begin("Debug");
+	if (ImGui::Button("Run GC"))
+	{
+		gc::Run(-1);
+	}
+	ImGui::End();*/
+
+	{
+		std::map<String, ResourceBase*>& map = *resource::internal::GetInternalRCMap();
+		int x = 3;
+	}
 }
 
 void EditorContext::OnRenderInGameDebugGraphics()

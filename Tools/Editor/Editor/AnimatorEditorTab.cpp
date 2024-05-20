@@ -96,9 +96,11 @@ void AnimatorEditorTab::OnShow()
 			AnimatorEditorSaveData data;
 			data.m_name = tab->m_name;
 			data.m_objectUUID = tab->m_object->GetUUID();
+			data.m_sceneUUID = tab->m_scene->GetUUID();
+			data.m_cameraUUID = tab->m_cam->GetUUID();
 
 			Serializer serializer = {};
-			serializer.Serialize(tab->m_object);
+			serializer.Serialize(tab->m_scene);
 			serializer.Serialize(&data);
 			serializer.SetRootUUID(data.GetUUID());
 
@@ -138,24 +140,30 @@ void AnimatorEditorTab::OnOpen()
 
 	Transform transform = {};
 
+	if (!m_cam)
 	{
 		auto cameraObj = mheap::New<GameObject>();
 		cameraObj->Name() = "#camera";
 		auto fppCamScript = cameraObj->NewComponent<FPPCameraScript>();
-		auto camera = cameraObj->NewComponent<CameraTPP>();
+		auto camera = cameraObj->NewComponent<Camera>();
 		camera->Projection().SetPerspectiveFovLH(
 			PI / 3.0f,
 			Graphics::Get()->GetWindowWidth() / 2.0f / (float)Graphics::Get()->GetWindowHeight(),
 			0.5f,
 			1000.0f
 		);
-		camera->SetTPPEnabled(false);
 		fppCamScript->SetFPPScriptEnable(true);
 		m_scene->AddObject(cameraObj);
 
-		m_scene->GetRenderingSystem()->HideCamera(camera);
-		m_scene->GetRenderingSystem()->DisplayCamera(camera, GRAPHICS_VIEWPORT({ {0,0},{Graphics::Get()->GetWindowWidth() / 2,Graphics::Get()->GetWindowHeight()} }));
+		m_cam = cameraObj;
 	}
+
+	auto cam = m_cam->GetComponent<Camera>();
+	m_cam->GetComponent<FPPCameraScript>()->SetFPPScriptEnable(true);
+	m_scene->GetRenderingSystem()->HideCamera(cam);
+	m_scene->GetRenderingSystem()->DisplayCamera(cam,
+		GRAPHICS_VIEWPORT({ {0,0},{Graphics::Get()->GetWindowWidth() / 2,Graphics::Get()->GetWindowHeight()} })
+	);
 
 	if (m_object)
 	{
@@ -185,6 +193,17 @@ void AnimatorEditorTab::RenderBluePrintPanel()
     // Start drawing nodes.
     ed::BeginNode(uniqueId++);
         ImGui::Text("Node A");
+        ed::BeginPin(uniqueId++, ed::PinKind::Input);
+            ImGui::Text("-> In");
+        ed::EndPin();
+        ImGui::SameLine();
+        ed::BeginPin(uniqueId++, ed::PinKind::Output);
+            ImGui::Text("Out ->");
+        ed::EndPin();
+    ed::EndNode();
+
+	ed::BeginNode(uniqueId++);
+        ImGui::Text("Node B");
         ed::BeginPin(uniqueId++, ed::PinKind::Input);
             ImGui::Text("-> In");
         ed::EndPin();

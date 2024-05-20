@@ -479,10 +479,52 @@ void Scene::DeserializeFromBinary(Serializer* serializer, const ByteStream& stre
 
 void Scene::SerializeToJson(Serializer* serializer, json& j) const
 {
+	{
+		auto arr = json::array();
+		for (auto& o : m_longLifeObjects)
+		{
+			arr.push_back(serializer->Serialize(o));
+		}
+		j["LongLifeObjects"] = arr;
+	}
+
+	{
+		auto arr = json::array();
+		for (auto& o : m_shortLifeObjects)
+		{
+			arr.push_back(serializer->Serialize(o));
+		}
+		j["ShortLifeObjects"] = arr;
+	}
 }
 
 void Scene::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	auto self = Runtime::Get()->CreateScene(this);
+	{
+		if (BeginSetupLongLifeObject())
+		{
+			Handle<GameObject> obj;
+			auto& arr = j["LongLifeObjects"];
+			for (auto& j1 : arr)
+			{
+				serializer->Deserialize(j1, obj);
+				AddObject(obj);
+			}
+
+			EndSetupLongLifeObject();
+		}
+	}
+
+	{
+		Handle<GameObject> obj;
+		auto& arr = j["ShortLifeObjects"];
+		for (auto& j1 : arr)
+		{
+			serializer->Deserialize(j1, obj);
+			AddObject(obj);
+		}
+	}
 }
 
 Handle<ClassMetadata> Scene::GetMetadata(size_t sign)

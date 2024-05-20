@@ -316,6 +316,8 @@ public:
 
 	void Clear()
 	{
+		m_buffer.clear();
+		m_buffer.Resize(m_size);
 		m_size = 0;
 	}
 

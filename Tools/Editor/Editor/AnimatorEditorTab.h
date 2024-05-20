@@ -32,6 +32,7 @@ public:
 	inline void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_object);
+		tracer->Trace(m_cam);
 		tracer->Trace(m_objMetadata);
 		tracer->Trace(m_animator);
 	}

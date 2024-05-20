@@ -52,6 +52,15 @@ void Serializer::TrySerialize(Serializable* obj, SerializedRecord::TYPE type)
 		}
 	}
 
+	if (record.type == SerializedRecord::HANDLE)
+	{
+		record.stableValue = mheap::internal::GetStableValueOfMemoryBlock(dynamic_cast<void*>(obj));
+	}
+	else
+	{
+		record.stableValue = 0;
+	}
+
 	switch (m_mode)
 	{
 	case Serializer::MODE_BINARY: {
@@ -200,9 +209,21 @@ Begin:
 	Serializable* obj = nullptr;
 	if (memType == SerializedRecord::HANDLE)
 	{
+		byte old = 0;
+		if (record.stableValue != 0)
+		{
+			old = mheap::internal::GetStableValue();
+			mheap::internal::SetStableValue(record.stableValue);
+		}
+
 		auto h = dbRecord.ctor();
 		m_deserializedObjects[record.idx] = h;
 		obj = h;
+
+		if (record.stableValue != 0)
+		{
+			mheap::internal::SetStableValue(old);
+		}
 	}
 
 	if (memType == SerializedRecord::RAW)
@@ -322,7 +343,7 @@ void Serializer::TryClone(Serializable* obj, Handle<Serializable>* output0, Seri
 		//	}
 		//}
 
-		m_clonedObjectIds.insert({ uuid,{ idx,(uint32_t)0,(uint32_t)memType } });
+		m_clonedObjectIds.insert({ uuid,{ idx,(uint32_t)0,(uint16_t)memType,(uint16_t)0 } });
 
 		newObj->CloneFrom(this, obj);
 	}
@@ -407,6 +428,12 @@ void Serializer::WriteToFileJson(const String& path)
 			json j1;
 			j1["UUID"]			= v.uuid;
 			j1["MemType"]		= v.record.type;
+
+			if (v.record.type == SerializedRecord::HANDLE)
+			{
+				j1["MemStableValue"] = v.record.stableValue;
+			}
+
 			j1["ClassName"]		= m_classNames[v.record.classNameIdx];
 			j1["Data"]			= data;
 			arr.push_back(j1);
@@ -468,6 +495,15 @@ void Serializer::ReadFromFileJson(const String& path)
 			record.classNameIdx = uint32_t(m_classNameIds[j1["ClassName"]]);
 			record.type			= j1["MemType"];
 
+			if (record.type == SerializedRecord::HANDLE)
+			{
+				record.stableValue = j1["MemStableValue"];
+			}
+			else
+			{
+				record.stableValue = 0;
+			}
+
 			UUID uuid = j1["UUID"];
 			m_serializedObjects.insert({ uuid,record });
 
@@ -503,7 +539,11 @@ void Serializer::ReadFromFileJson(const String& path)
 			record.type			= sRecord.type;
 			record.resource		= dbRecord.ctorResource(path);
 			m_usedResources.insert({ uuid,record });
-			record.resource->DeserializeExtDataFromJson(this, *m_jsons[sRecord.idx].j);
+		}
+
+		for (auto& [key, value] : m_usedResources)
+		{
+			value.resource->DeserializeExtDataFromJson(this, *m_jsons[value.idx].j);
 		}
 	}
 
@@ -512,6 +552,21 @@ void Serializer::ReadFromFileJson(const String& path)
 
 void Serializer::ReadFromFileBinary(const String& path)
 {
+}
+
+void Serializer::SetStableValuesMap(byte* map)
+{
+	if (map)
+	{
+		std::memcpy(m_stableValuesMap, map, sizeof(m_stableValuesMap));
+	}
+	else
+	{
+		for (size_t i = 0; i < sizeof(m_stableValuesMap); i++)
+		{
+			m_stableValuesMap[i] = (byte)i;
+		}
+	}
 }
 
 void Serializer::WriteToFile(const String& path)

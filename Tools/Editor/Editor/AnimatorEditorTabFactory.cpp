@@ -87,14 +87,23 @@ LoadJson:
 			return nullptr;
 		}
 
+		Handle<GameObject> cam;
+		serializer.Deserialize(data->m_cameraUUID, cam);
+
+		if (!cam)
+		{
+			std::cerr << "[AnimatorEditorTabFactory] - ERROR: Invalid file!\n";
+			return nullptr;
+		}
+
 		tab->m_object = obj;
 		tab->m_objMetadata = obj->GetMetadata(0);
 		tab->m_animator = obj->GetComponent<AnimatorSkeletalArray>();
+		tab->m_cam = cam;
 
-		auto scene = Runtime::Get()->CreateScene();
+		Handle<Scene> scene;
+		serializer.Deserialize(data->m_sceneUUID, scene);
 		tab->m_scene = scene;
-
-		scene->AddObject(obj);
 
 		return tab;
 	}

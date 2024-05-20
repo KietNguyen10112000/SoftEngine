@@ -147,7 +147,7 @@ public:
 
 	void SynchronizeAllSubSystems();
 
-	Handle<Scene> CreateScene();
+	Handle<Scene> CreateScene(Scene* holder = nullptr);
 	void DestroyScene(Scene* scene);
 
 	void SetRunningScene(Scene* scene);

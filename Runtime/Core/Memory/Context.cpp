@@ -324,6 +324,11 @@ void gc::Context::RemarkPhase()
 
 void gc::Context::CallDestructor(ManagedHandle* handle)
 {
+	/*DEBUG_CODE(
+		if (handle->traceTable)
+			CONSOLE_LOG() << "free memory of \"" << handle->traceTable->className << "\"\n";
+	)*/
+
 	auto dtor = handle->traceTable->dtor;
 	if (dtor)
 	{

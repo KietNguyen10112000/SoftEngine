@@ -844,11 +844,11 @@ void Runtime::DestroySceneImpl(Scene* scene)
 	m_createSceneLock.unlock();
 }
 
-Handle<Scene> Runtime::CreateScene()
+Handle<Scene> Runtime::CreateScene(Scene* _scene)
 {
 	m_createSceneLock.lock();
 
-	auto scene = mheap::New<Scene>();
+	Handle<Scene> scene = _scene == nullptr ? mheap::New<Scene>() : _scene;
 	auto id = GetNextStableValue();
 	scene->m_runtimeID = id;
 	scene->m_stableValue = id;

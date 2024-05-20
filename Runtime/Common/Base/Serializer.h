@@ -39,7 +39,8 @@ private:
 
 		ID idx;
 		uint32_t classNameIdx;
-		uint32_t type;
+		uint16_t type;
+		uint16_t stableValue = 0;
 	};
 
 	struct SerializedResourceRecord : public SerializedRecord
@@ -106,6 +107,8 @@ private:
 
 	std::map<UUID, SerializedResourceRecord> m_usedResources;
 
+	byte m_stableValuesMap[256] = {};
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -152,6 +155,8 @@ private:
 
 	void ReadFromFileJson(const String& path);
 	void ReadFromFileBinary(const String& path);
+
+	void SetStableValuesMap(byte* map);
 
 public:
 	template <typename T>

@@ -103,6 +103,8 @@ namespace resource
 
 		void Initialize();
 		void Finalize();
+
+		API std::map<String, ResourceBaseClass*>* GetInternalRCMap();
 	}
 
 	template <typename _T, typename... Args>

@@ -81,8 +81,8 @@ private:
 	void RenderTabCreationPopUp();
 
 public:
-	void OnObjectsAdded(std::vector<GameObject*>& objects);
-	void OnObjectsRemoved(std::vector<GameObject*>& objects);
+	void OnObjectsAdded(std::vector<GameObject*>& objects, Scene* scene);
+	void OnObjectsRemoved(std::vector<GameObject*>& objects, Scene* scene);
 	void OnRenderGUI();
 
 	void OnRenderInGameDebugGraphics();

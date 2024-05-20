@@ -9,6 +9,8 @@ public:
 	SERIALIZABLE_CLASS(AnimatorEditorSaveData);
 
 	UUID m_objectUUID;
+	UUID m_sceneUUID;
+	UUID m_cameraUUID;
 	String m_name;
 
 public:

@@ -82,7 +82,7 @@ void Initialize(Runtime* runtime)
 					auto editorContext = Runtime::Get()->GenericStorage()->Access<EditorContext>(editorContextId);
 
 					editorContext->Lock().lock();
-					editorContext->OnObjectsAdded(*objs);
+					editorContext->OnObjectsAdded(*objs, scene);
 					editorContext->Lock().unlock();
 				},
 				editorContextId
@@ -95,7 +95,7 @@ void Initialize(Runtime* runtime)
 					auto editorContext = scene->GenericStorage()->Access<EditorContext>(editorContextId);
 
 					editorContext->Lock().lock();
-					editorContext->OnObjectsRemoved(*objs);
+					editorContext->OnObjectsRemoved(*objs, scene);
 					editorContext->Lock().unlock();
 				},
 				editorContextId

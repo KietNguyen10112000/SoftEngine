@@ -15,12 +15,16 @@ void AnimatorEditorSaveData::DeserializeFromBinary(Serializer* serializer, const
 void AnimatorEditorSaveData::SerializeToJson(Serializer* serializer, json& j) const
 {
 	j["ObjectUUID"] = m_objectUUID;
+	j["SceneUUID"] = m_sceneUUID;
+	j["CameraUUID"] = m_cameraUUID;
 	j["EditorName"] = m_name;
 }
 
 void AnimatorEditorSaveData::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	m_objectUUID = j["ObjectUUID"];
+	m_sceneUUID = j["SceneUUID"];
+	m_cameraUUID = j["CameraUUID"];
 	m_name = j["EditorName"];
 }
 

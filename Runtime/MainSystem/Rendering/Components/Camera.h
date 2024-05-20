@@ -14,11 +14,11 @@ private:
 	ID m_activeID = INVALID_ID;
 	uint32_t m_isDisplaying = false;
 	uint32_t m_priority = 0;
-
-	Mat4 m_proj;
 	//Mat4 m_view;
 
 protected:
+	Mat4 m_proj;
+
 	SharedPtr<GraphicsRenderTarget> m_renderTarget = nullptr;
 	SharedPtr<GraphicsDepthStencilBuffer> m_depthBuffer = nullptr;
 	RenderingPipeline* m_pipeline = nullptr;
@@ -34,6 +34,10 @@ public:
 		}
 	}
 
+protected:
+	void Init(int renderWidth, int renderHeight);
+
+public:
 	inline virtual void OnCameraRenderBegin() {};
 	inline virtual void OnCameraRenderEnd() {};
 

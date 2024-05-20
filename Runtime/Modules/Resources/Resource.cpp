@@ -97,6 +97,12 @@ inline void FreeGcMap(T& gcMap)
 	ResourceManager::SingletonFinalize();
 }
 
+std::map<String, ResourceBaseClass*>* GetInternalRCMap()
+{
+	auto& map = GetRcMap();
+	return &GetRcMap();
+}
+
 ResourceBaseClass* TryLoad(String path, const char* resourceClassName)
 {
 	ResourceBaseClass* ret = nullptr;
