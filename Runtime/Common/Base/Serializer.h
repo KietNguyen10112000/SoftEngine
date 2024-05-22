@@ -40,7 +40,7 @@ private:
 		ID idx;
 		uint32_t classNameIdx;
 		uint16_t type;
-		uint16_t stableValue = 0;
+		uint16_t heapId = 0;
 	};
 
 	struct SerializedResourceRecord : public SerializedRecord

@@ -92,12 +92,9 @@ private:
 	MainSystem*				 m_mainSystems[MainSystemInfo::COUNT] = {};
 
 	bool m_isSettingUpLongLifeObjects = false;
-	byte m_stableValue = 0;
-	byte m_oldStableValue = 0;
 	bool m_destroyed = false;
-
 	spinlock m_lock;
-	bool m_padd[3];
+	bool m_padd[5];
 
 	size_t m_iterationCount = 0;
 	float m_dt = 0;

@@ -242,10 +242,10 @@ private:
     size_t ChooseAndLockLargeObjectPage(ThreadContext* ctx, size_t nBytes);
 
 public:
-    ManagedHandle* Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock, byte stableValue);
+    ManagedHandle* Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock, byte heapId);
     void Deallocate(ManagedHandle* handle);
 
-    void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
+    //void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
 
 public:
     inline void EndGC()

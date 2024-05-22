@@ -180,6 +180,8 @@ void ContextManual::DoGC(byte MARK_VALUE, System* system, byte* RESET_MARK_VALUE
 			system->m_trackedCrossBoundaries.push_back(ptr);
 		}
 
+		system->ClearTrackedBoundaries(MARK_VALUE);
+
 		if (system->m_trackedCrossBoundaries.size() > 0)
 		{
 			for (auto& v : system->m_trackedCrossBoundaries)
@@ -212,7 +214,7 @@ void ContextManual::DoGC(byte MARK_VALUE, System* system, byte* RESET_MARK_VALUE
 					pool->m_lock.lock();
 					pool->ForEachAllocatedBlocks([this, pool, MARK_VALUE, RESET_VALUE](ManagedHandle* handle)
 						{
-							assert(handle->marked != MARK_COLOR::WHITE);
+							//assert(handle->marked != MARK_COLOR::WHITE);
 
 							if (handle->marked == MARK_COLOR::GRAY)
 							{

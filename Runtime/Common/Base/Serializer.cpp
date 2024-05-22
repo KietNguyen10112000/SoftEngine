@@ -3,6 +3,10 @@
 #include "SerializableDB.h"
 #include "FileSystem/FileUtils.h"
 
+NAMESPACE_MEMORY_BEGIN
+extern thread_local size_t g_heapId;
+NAMESPACE_MEMORY_END
+
 NAMESPACE_BEGIN
 
 Serializer::Serializer(MODE mode) :  m_mode(mode)
@@ -52,14 +56,7 @@ void Serializer::TrySerialize(Serializable* obj, SerializedRecord::TYPE type)
 		}
 	}
 
-	if (record.type == SerializedRecord::HANDLE)
-	{
-		record.stableValue = mheap::internal::GetStableValueOfMemoryBlock(dynamic_cast<void*>(obj));
-	}
-	else
-	{
-		record.stableValue = 0;
-	}
+	record.heapId = mheap::internal::GetHeapIdOfMemoryBlock(dynamic_cast<void*>(obj));
 
 	switch (m_mode)
 	{
@@ -209,20 +206,20 @@ Begin:
 	Serializable* obj = nullptr;
 	if (memType == SerializedRecord::HANDLE)
 	{
-		byte old = 0;
-		if (record.stableValue != 0)
+		byte old = g_heapId;//mheap::internal::GetCurrentHeapId();
+		if (record.heapId != old)
 		{
-			old = mheap::internal::GetStableValue();
-			mheap::internal::SetStableValue(record.stableValue);
+			//mheap::internal::SetHeapId(mheap::internal::HEAP_ID::ID(record.heapId));
+			g_heapId = record.heapId;
 		}
 
 		auto h = dbRecord.ctor();
 		m_deserializedObjects[record.idx] = h;
 		obj = h;
 
-		if (record.stableValue != 0)
+		if (record.heapId != old)
 		{
-			mheap::internal::SetStableValue(old);
+			g_heapId = old;
 		}
 	}
 
@@ -431,7 +428,7 @@ void Serializer::WriteToFileJson(const String& path)
 
 			if (v.record.type == SerializedRecord::HANDLE)
 			{
-				j1["MemStableValue"] = v.record.stableValue;
+				j1["MemHeapId"] = v.record.heapId;
 			}
 
 			j1["ClassName"]		= m_classNames[v.record.classNameIdx];
@@ -497,11 +494,7 @@ void Serializer::ReadFromFileJson(const String& path)
 
 			if (record.type == SerializedRecord::HANDLE)
 			{
-				record.stableValue = j1["MemStableValue"];
-			}
-			else
-			{
-				record.stableValue = 0;
+				record.heapId = j1["MemHeapId"];
 			}
 
 			UUID uuid = j1["UUID"];

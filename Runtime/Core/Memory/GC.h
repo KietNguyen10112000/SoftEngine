@@ -26,7 +26,7 @@ API void Finalize();
 
 API void SetGCEvent(GCEvent* evt);
 
-API void ClearTrackedBoundariesOfStableValue(byte value);
+//API void ClearTrackedBoundariesOfStableValue(byte value);
 
 API void BlockGC(bool block);
 

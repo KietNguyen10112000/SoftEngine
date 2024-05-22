@@ -9,7 +9,7 @@ ManagedHeap* g_rawHeap = 0;
 ManagedHeap* g_stableHeap = 0;
 ManagedHeap* g_gcHeap = 0;
 
-thread_local size_t g_stableValue = 0;
+thread_local size_t g_heapId = 0;
 
 constexpr size_t NEW_DELETE_OPERATOR_SIGN_BEGIN = 88888887;
 constexpr size_t NEW_DELETE_OPERATOR_SIGN_END = 0x00000011;
@@ -60,51 +60,57 @@ void MemoryFinalize()
 //=========================================================================================
 ManagedHandle* mheap::internal::Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock)
 {
-    if (g_stableValue == 0) return g_gcHeap->Allocate(nBytes, table, managedLocalBlock, g_stableValue);
+    if (g_heapId == 0) return g_gcHeap->Allocate(nBytes, table, managedLocalBlock, g_heapId);
 
-    auto handle = g_stableHeap->Allocate(nBytes, table, managedLocalBlock, g_stableValue);
+    auto handle = g_stableHeap->Allocate(nBytes, table, managedLocalBlock, g_heapId);
     return handle;
 }
 
-void mheap::internal::Deallocate(ManagedHandle* handle)
-{
-    assert(handle->stableValue != 0);
-    g_stableHeap->Deallocate(handle);
-}
+//void mheap::internal::Deallocate(ManagedHandle* handle)
+//{
+//    assert(handle->stableValue != 0);
+//    g_stableHeap->Deallocate(handle);
+//}
 
-ManagedHeap* mheap::internal::Get()
+//ManagedHeap* mheap::internal::Get()
+//{
+//    return g_gcHeap;
+//}
+
+ManagedHeap* mheap::internal::GetHeap(HEAP_ID::ID id)
 {
+    if (id == MANAGED_HANDLE_STABLE_HEAP_ID)
+    {
+        return g_stableHeap;
+    }
+
     return g_gcHeap;
 }
 
-ManagedHeap* mheap::internal::GetStableHeap()
+mheap::internal::HEAP_ID::ID mheap::internal::GetCurrentHeapId()
 {
-    return g_stableHeap;
+    return (HEAP_ID::ID)g_heapId;
 }
 
-byte mheap::internal::GetStableValue()
+void mheap::internal::SetHeapId(HEAP_ID::ID id)
 {
-    return (byte)g_stableValue;
+    assert(id == MANAGED_HANDLE_GC_HEAP_ID || id == MANAGED_HANDLE_STABLE_HEAP_ID);
+    g_heapId = (size_t)id;
 }
 
-void mheap::internal::SetStableValue(byte value)
-{
-    g_stableValue = (size_t)value;
-}
+//void mheap::internal::ChangeStableValue(byte newValue, ManagedHandle* returnedByAllocate)
+//{
+//    returnedByAllocate->stableValue = newValue;
+//}
 
-void mheap::internal::ChangeStableValue(byte newValue, ManagedHandle* returnedByAllocate)
-{
-    returnedByAllocate->stableValue = newValue;
-}
-
-void mheap::internal::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
-{
-    gc::BlockGC(true);
-    g_stableHeap->FreeStableObjects(stableValue, userPtr, callback);
-    TRACK_STABLE_VALUE(stableValue);
-    gc::ClearTrackedBoundariesOfStableValue(stableValue);
-    gc::BlockGC(false);
-}
+//void mheap::internal::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
+//{
+//    gc::BlockGC(true);
+//    g_stableHeap->FreeStableObjects(stableValue, userPtr, callback);
+//    TRACK_STABLE_VALUE(stableValue);
+//    gc::ClearTrackedBoundariesOfStableValue(stableValue);
+//    gc::BlockGC(false);
+//}
 
 void mheap::internal::Reset()
 {

@@ -97,10 +97,7 @@ Handle<Runtime> Runtime::Initialize()
 	MetadataParser::Initialize();
 	resource::internal::Initialize();
 
-	auto old = mheap::internal::GetStableValue();
-	mheap::internal::SetStableValue(Runtime::STABLE_VALUE);
 	auto ret = mheap::New<Runtime>();
-	mheap::internal::SetStableValue(old);
 
 	Runtime::s_instance.reset(ret.Get());
 
@@ -113,7 +110,6 @@ void Runtime::Finalize()
 {
 	Runtime::s_instance->FinalizeModules();
 	Runtime::s_instance.release();
-	mheap::internal::FreeStableObjects(Runtime::STABLE_VALUE, 0, 0);
 	for (size_t i = 0; i < 5; i++)
 	{
 		gc::Run(-1);
@@ -619,6 +615,8 @@ void Runtime::SwapModifiedRecorder()
 
 void Runtime::ProcessSwapRunningScene()
 {
+	m_createSceneLock.lock();
+
 	if (m_runningSceneIdx != m_nextRunningSceneIdx)
 	{
 		if (m_runningSceneIdx != INVALID_ID)
@@ -627,6 +625,7 @@ void Runtime::ProcessSwapRunningScene()
 		}
 
 		m_runningSceneIdx = m_nextRunningSceneIdx;
+		m_currentScene = m_scenes[m_runningSceneIdx];
 
 		if (m_runningSceneIdx != INVALID_ID)
 		{
@@ -634,10 +633,12 @@ void Runtime::ProcessSwapRunningScene()
 		}
 	}
 
-	if (m_destroyingScenesCount != 0)
+	if (!m_destroyingScenes.empty())
 	{
 		ProcessDestroyScenes();
 	}
+
+	m_createSceneLock.unlock();
 }
 
 void Runtime::Iteration()
@@ -653,8 +654,8 @@ void Runtime::Iteration()
 		{
 			Runtime* engine = (Runtime*)e;
 			auto rheap = rheap::internal::Get();
-			auto sheap = mheap::internal::GetStableHeap();
-			auto heap = mheap::internal::Get();
+			auto sheap = mheap::internal::GetHeap(mheap::internal::HEAP_ID::STABLE_HEAP);
+			auto heap = mheap::internal::GetHeap(mheap::internal::HEAP_ID::GC_HEAP);
 			if (heap->IsNeedGC())
 			{
 				std::cout << "GC started...\n";
@@ -713,7 +714,7 @@ void Runtime::Iteration()
 		return;
 	}
 
-	auto& mainScene = GetCurrentRunningScene();
+	auto mainScene = GetCurrentRunningScene();
 
 	g_sumDt += g_timer.dt;
 
@@ -795,7 +796,7 @@ void Runtime::SynchronizeAllSubSystems()
 
 void Runtime::ProcessDestroyScenes()
 {
-	for (size_t i = 0; i < m_destroyingScenesCount; i++)
+	for (size_t i = 0; i < m_destroyingScenes.size(); i++)
 	{
 		Task task;
 		task.Entry() = [](void* p)
@@ -809,22 +810,7 @@ void Runtime::ProcessDestroyScenes()
 		//DestroySceneImpl(m_scenes[m_destroyingScenes[i]].Get());
 	}
 
-	m_destroyingScenesCount = 0;
-}
-
-byte Runtime::GetNextStableValue()
-{
-	for (size_t i = 1; i < MAX_RUNNING_SCENES + 1; i++)
-	{
-		if (!m_runningSceneStableValue.test(i))
-		{
-			m_runningSceneStableValue.set(i, true);
-			return (byte)i;
-		}
-	}
-
-	assert(0 && "Too much running scene");
-	return 256;
+	m_destroyingScenes.clear();
 }
 
 void Runtime::DestroySceneImpl(Scene* scene)
@@ -832,32 +818,26 @@ void Runtime::DestroySceneImpl(Scene* scene)
 	ID id = scene->m_runtimeID;
 
 	scene->CleanUp();
-	scene->m_runtimeID = INVALID_ID;
-	scene->m_stableValue = 0;
-
-	m_createSceneLock.lock();
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_SCENE_DESTROYED, scene);
-	m_runningSceneStableValue.set(id, false);
-	m_scenes[id] = nullptr;
 
+	m_createSceneLock.lock();
+	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_scenes, scene, m_runtimeID);
 	m_createSceneLock.unlock();
+
+	//scene->m_runtimeID = INVALID_ID;
 }
 
 Handle<Scene> Runtime::CreateScene(Scene* _scene)
 {
-	m_createSceneLock.lock();
-
 	Handle<Scene> scene = _scene == nullptr ? mheap::New<Scene>() : _scene;
-	auto id = GetNextStableValue();
-	scene->m_runtimeID = id;
-	scene->m_stableValue = id;
 
-	m_scenes[id] = scene;
+	m_createSceneLock.lock();
+	scene->m_runtimeID = m_scenes.size();
+	m_scenes.Push(scene);
+	m_createSceneLock.unlock();
 
 	EventDispatcher()->Dispatch(EVENT::EVENT_SCENE_CREATED, scene.Get());
-
-	m_createSceneLock.unlock();
 	return scene;
 }
 
@@ -873,11 +853,10 @@ void Runtime::DestroyScene(Scene* scene)
 		assert(m_nextRunningSceneIdx != m_runningSceneIdx && "Need to set another running scene before destroy the current scene!!!");
 	}
 
-	m_createSceneLock.lock();
-
 	scene->m_destroyed = true;
-	m_destroyingScenes[m_destroyingScenesCount++] = scene->m_runtimeID;
 
+	m_createSceneLock.lock();
+	m_destroyingScenes.push_back(scene->m_runtimeID);
 	m_createSceneLock.unlock();
 
 	if (scene->m_runtimeID == m_runningSceneIdx && m_nextRunningSceneIdx == m_runningSceneIdx)

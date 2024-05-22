@@ -675,13 +675,13 @@ public:
 	}
 
 	// stableValue must be tracked stable value
-	inline void ClearTrackedBoundariesOfStableValue(byte stableValue)
+	inline void ClearTrackedBoundaries(byte customMarkValue)
 	{
 		//m_globalLock.lock();
 		for (size_t i = 0; i < m_trackedCrossBoundaries.size(); i++)
 		{
 			ManagedHandle* handle = (ManagedHandle*)m_trackedCrossBoundaries[i] - 1;
-			if (handle->stableValue == stableValue)
+			if (handle->marked != customMarkValue)
 			{
 				m_trackedCrossBoundaries[i] = m_trackedCrossBoundaries.back();
 				m_trackedCrossBoundaries.pop_back();

@@ -32,11 +32,7 @@ public:
 class API Runtime : public Singleton<Runtime>
 {
 public:
-	constexpr static byte NONE_STABLE_VALUE = 127;
-	constexpr static byte STABLE_VALUE	= 0;
 	constexpr static byte NUM_ARGS		= 128;
-
-	constexpr static byte MAX_RUNNING_SCENES = 32;
 
 	enum EVENT
 	{
@@ -53,7 +49,7 @@ private:
 	friend class Scene;
 	friend class GameObject;
 
-	Handle<Scene> m_scenes[MAX_RUNNING_SCENES];
+	Array<Handle<Scene>> m_scenes;
 
 	GenericStorage m_genericStorage;
 	EventDispatcher<Runtime, EVENT::COUNT, EVENT, ID> m_eventDispatcher;
@@ -63,7 +59,7 @@ private:
 	Handle<ModifiedRecorder> m_modifiedRecorder[2];
 	ID m_curModifiedRecorderId = 0;
 
-	std::bitset<2 * MAX_RUNNING_SCENES> m_runningSceneStableValue;
+	//std::bitset<2 * MAX_RUNNING_SCENES> m_runningSceneStableValue;
 
 	Input* m_input = nullptr;
 	void* m_window = nullptr;
@@ -82,11 +78,11 @@ private:
 	spinlock m_createSceneLock;
 	ID m_runningSceneIdx = INVALID_ID;
 	ID m_nextRunningSceneIdx = INVALID_ID;
+	Scene* m_currentScene = nullptr;
 
-	ID m_destroyingScenes[MAX_RUNNING_SCENES] = {};
-	size_t m_destroyingScenesCount = 0;
+	std::vector<ID> m_destroyingScenes = {};
 
-	spinlock m_noneStableValueLock;
+	//spinlock m_lock;
 
 public:
 	static Handle<Runtime> Initialize();
@@ -119,14 +115,12 @@ private:
 
 	void ProcessDestroyScenes();
 
-	byte GetNextStableValue();
-
 	void DestroySceneImpl(Scene* scene);
 
-	inline auto& NoneStableValueLock()
+	/*inline auto& NoneStableValueLock()
 	{
 		return m_noneStableValueLock;
-	}
+	}*/
 
 	inline auto& GetModifiedRecorder()
 	{
@@ -183,11 +177,9 @@ public:
 		return &m_eventDispatcher;
 	}
 
-	inline const Handle<Scene>& GetCurrentRunningScene() const
+	inline Scene* GetCurrentRunningScene()
 	{
-		if (m_runningSceneIdx == INVALID_ID) return nullptr;
-
-		return m_scenes[m_runningSceneIdx];
+		return m_currentScene;
 	}
 
 	void* GetNativeHWND();

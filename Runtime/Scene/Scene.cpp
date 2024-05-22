@@ -333,8 +333,7 @@ bool Scene::BeginSetupLongLifeObject()
 
 	m_isSettingUpLongLifeObjects = true;
 
-	m_oldStableValue = mheap::internal::GetStableValue();
-	mheap::internal::SetStableValue(m_stableValue);
+	mheap::internal::SetHeapId(mheap::internal::HEAP_ID::STABLE_HEAP);
 
 	for (auto& system : m_mainSystems)
 	{
@@ -351,19 +350,10 @@ bool Scene::BeginSetupLongLifeObject()
 
 void Scene::EndSetupLongLifeObject()
 {
-	mheap::internal::SetStableValue(m_oldStableValue);
+	mheap::internal::SetHeapId(mheap::internal::HEAP_ID::GC_HEAP);
 
 	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
 	gc::PerformFullSystemGC(255, resetValues);
-
-	/*if (m_longLifeObjects.size() != 0)
-	{
-		mheap::internal::ChangeStableValue(m_stableValue, ((ManagedHandle*)m_longLifeObjects.data()) - 1);
-		mheap::internal::FreeStableObjects(Runtime::NONE_STABLE_VALUE, 0, 0);
-	}*/
-	
-
-	//Runtime::Get()->NoneStableValueLock().unlock();
 
 	for (auto& system : m_mainSystems)
 	{
@@ -456,7 +446,8 @@ void Scene::CleanUp()
 		list.clear();
 	}
 
-	mheap::internal::FreeStableObjects(m_stableValue, 0, 0);
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
 	for (size_t i = 0; i < 5; i++)
 	{
 		gc::Run(-1);

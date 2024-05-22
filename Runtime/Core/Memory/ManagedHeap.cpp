@@ -571,7 +571,7 @@ end:
 }
 
 
-ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock, byte stableValue)
+ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock, byte heapId)
 {
 	ManagedHandle* ret = 0;
 	auto realSize = nBytes + EXTERNAL_SIZE;
@@ -660,8 +660,8 @@ ManagedHandle* ManagedHeap::Allocate(size_t nBytes, TraceTable* table, byte** ma
 		*managedLocalBlock = ret->GetUsableMemAddress();
 	}
 
-	ret->stableValue = stableValue;
-	if (stableValue != 0)
+	ret->heapId = heapId;
+	if (heapId != 0)
 	{
 		ret->marked = MARK_COLOR::WHITE;
 	}
@@ -695,69 +695,69 @@ void ManagedHeap::Deallocate(ManagedHandle* handle)
 	page->m_lock.unlock();
 }
 
-void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
-{
-	auto trackedStableValue = MAKE_TRACK_STABLE_VALUE(stableValue);
-
-	auto heap = this;
-	auto pools = &m_tinyObjectPools[0];
-	for (size_t i = 0; i < TOTAL_POOLS; i++)
-	{
-		auto& pool = pools[i];
-		pool->m_lock.lock();
-		pool->ForEachAllocatedBlocks([&](ManagedHandle* handle)
-			{
-				if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
-				{
-					if (callback) callback(userPtr, heap, handle);
-
-					if (handle->traceTable)
-					{
-						auto dtor = handle->traceTable->dtor;
-						if (dtor)
-						{
-							dtor(handle->GetUsableMemAddress());
-						}
-					}
-
-					pool->Deallocate(handle->GetUsableMemAddress());
-				}
-			}
-		);
-		pool->m_lock.unlock();
-	}
-
-
-	auto pages = &m_pages[0][0];
-	for (size_t i = 0; i < LARGE_OBJECT_PAGES_COUNT; i++)
-	{
-		auto& page = pages[i];
-		if (page)
-		{
-			page->m_lock.lock();
-			page->ForEachAllocatedBlocks([&](ManagedHandle* handle)
-				{
-					if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
-					{
-						if (callback) callback(userPtr, heap, handle);
-
-						if (handle->traceTable)
-						{
-							auto dtor = handle->traceTable->dtor;
-							if (dtor)
-							{
-								dtor(handle->GetUsableMemAddress());
-							}
-						}
-
-						page->Deallocate(handle->GetUsableMemAddress());
-					}
-				}
-			);
-			page->m_lock.unlock();
-		}
-	}
-}
+//void ManagedHeap::FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*))
+//{
+//	auto trackedStableValue = MAKE_TRACK_STABLE_VALUE(stableValue);
+//
+//	auto heap = this;
+//	auto pools = &m_tinyObjectPools[0];
+//	for (size_t i = 0; i < TOTAL_POOLS; i++)
+//	{
+//		auto& pool = pools[i];
+//		pool->m_lock.lock();
+//		pool->ForEachAllocatedBlocks([&](ManagedHandle* handle)
+//			{
+//				if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
+//				{
+//					if (callback) callback(userPtr, heap, handle);
+//
+//					if (handle->traceTable)
+//					{
+//						auto dtor = handle->traceTable->dtor;
+//						if (dtor)
+//						{
+//							dtor(handle->GetUsableMemAddress());
+//						}
+//					}
+//
+//					pool->Deallocate(handle->GetUsableMemAddress());
+//				}
+//			}
+//		);
+//		pool->m_lock.unlock();
+//	}
+//
+//
+//	auto pages = &m_pages[0][0];
+//	for (size_t i = 0; i < LARGE_OBJECT_PAGES_COUNT; i++)
+//	{
+//		auto& page = pages[i];
+//		if (page)
+//		{
+//			page->m_lock.lock();
+//			page->ForEachAllocatedBlocks([&](ManagedHandle* handle)
+//				{
+//					if (handle->stableValue == stableValue || handle->stableValue == trackedStableValue)
+//					{
+//						if (callback) callback(userPtr, heap, handle);
+//
+//						if (handle->traceTable)
+//						{
+//							auto dtor = handle->traceTable->dtor;
+//							if (dtor)
+//							{
+//								dtor(handle->GetUsableMemAddress());
+//							}
+//						}
+//
+//						page->Deallocate(handle->GetUsableMemAddress());
+//					}
+//				}
+//			);
+//			page->m_lock.unlock();
+//		}
+//	}
+//}
 
 //bool ManagedHeap::IsNeedGC()
 //{

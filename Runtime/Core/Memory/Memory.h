@@ -18,27 +18,36 @@ namespace mheap
 {
 	namespace internal
 	{
+		struct HEAP_ID
+		{
+			enum ID
+			{
+				GC_HEAP = MANAGED_HANDLE_GC_HEAP_ID,
+				STABLE_HEAP = MANAGED_HANDLE_STABLE_HEAP_ID
+			};
+		};
+
 		API ManagedHandle* Allocate(size_t nBytes, TraceTable* table, byte** managedLocalBlock);
 
 		// only stable object can be deallocate
-		API void Deallocate(ManagedHandle* handle);
+		//API void Deallocate(ManagedHandle* handle);
 
-		API ManagedHeap* Get();
-		API ManagedHeap* GetStableHeap();
+		//API ManagedHeap* Get();
+		API ManagedHeap* GetHeap(HEAP_ID::ID id = HEAP_ID::GC_HEAP);
 
-		API byte GetStableValue();
-		API void SetStableValue(byte value);
+		API HEAP_ID::ID GetCurrentHeapId();
+		API void SetHeapId(HEAP_ID::ID id);
 
-		API void ChangeStableValue(byte newValue, ManagedHandle* returnedByAllocate);
+		//API void ChangeStableValue(byte newValue, ManagedHandle* returnedByAllocate);
 
-		API void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
+		//API void FreeStableObjects(byte stableValue, void* userPtr, void(*callback)(void*, ManagedHeap*, ManagedHandle*));
 
 		API void Reset();
 
-		inline byte GetStableValueOfMemoryBlock(void* head)
+		inline byte GetHeapIdOfMemoryBlock(void* head)
 		{
 			auto handle = (ManagedHandle*)head - 1;
-			return handle->stableValue;
+			return handle->heapId;
 		}
 	}
 
@@ -76,7 +85,7 @@ namespace mheap
 		CallConstructor(objs, n, std::forward<Args>(args)...);
 
 		auto handle = (ManagedHandle*)ret.m_block - 1;
-		if (handle->stableValue != 0)
+		if (handle->heapId != MANAGED_HANDLE_GC_HEAP_ID)
 		{
 			MemoryUtils::ForEachManagedPointer(handle, [](byte* ptr, size_t offset)
 				{

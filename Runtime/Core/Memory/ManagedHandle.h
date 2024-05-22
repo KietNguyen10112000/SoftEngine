@@ -20,6 +20,9 @@ NAMESPACE_MEMORY_BEGIN
 #define TRACK_STABLE_VALUE(v)			v = v + TRACKED_STABLE_VALUE_START;
 #define MAKE_TRACK_STABLE_VALUE(v)		v + TRACKED_STABLE_VALUE_START;
 
+#define MANAGED_HANDLE_GC_HEAP_ID 0
+#define MANAGED_HANDLE_STABLE_HEAP_ID 1
+
 struct TraceTable;
 
 using Dtor = void(*)(void*);
@@ -55,11 +58,8 @@ struct ManagedHandle
 	// gc
 	byte marked = 0;
 
-	// to make object stable
-	// if stableValue == 0 => gc object
-	// else => stable object
-	// all stable objects have same stableValue will be cleaned up at the same time
-	byte stableValue;
+	// heap id
+	byte heapId;
 
 	inline byte* GetUsableMemAddress()
 	{
@@ -115,17 +115,17 @@ struct ManagedHandle
 
 	inline bool IsStableObject() const
 	{
-		return stableValue != 0;
+		return heapId == MANAGED_HANDLE_STABLE_HEAP_ID;
 	}
 
 	inline bool IsNonTrackedStableObject() const
 	{
-		return IS_NONTRACKED_STABLE_VALUE(stableValue);
+		return IS_NONTRACKED_STABLE_VALUE(heapId);
 	}
 
 	inline void MakeStableObjectTracked()
 	{
-		TRACK_STABLE_VALUE(stableValue);
+		TRACK_STABLE_VALUE(heapId);
 	}
 };
 
