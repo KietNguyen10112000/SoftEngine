@@ -1,6 +1,8 @@
 #pragma once
 #include "EditorTab.h"
 
+#include "Resources/Texture2D.h"
+
 namespace soft
 {
 	class GameObject;
@@ -28,6 +30,8 @@ public:
 	ax::NodeEditor::EditorContext* m_nodeEditorCtx = nullptr;
 
 	ID m_onSaveListenerId = INVALID_ID;
+
+	Resource<Texture2D> m_nodeHeaderTexture;
 
 	inline void Trace(Tracer* tracer)
 	{

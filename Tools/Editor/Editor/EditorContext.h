@@ -91,6 +91,9 @@ public:
 
 	void RenderOxyz(OxyzRenderConfig& config);
 
+	void RunTab(const Handle<EditorTab>& tab);
+	void CloseTab(const Handle<EditorTab>& tab);
+
 public:
 	inline auto& Lock()
 	{

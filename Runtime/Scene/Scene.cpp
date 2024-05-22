@@ -446,13 +446,6 @@ void Scene::CleanUp()
 		list.clear();
 	}
 
-	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
-	gc::PerformFullSystemGC(255, resetValues);
-	for (size_t i = 0; i < 5; i++)
-	{
-		gc::Run(-1);
-	}
-
 	std::cout << "Scene::CleanUp()\n";
 }
 

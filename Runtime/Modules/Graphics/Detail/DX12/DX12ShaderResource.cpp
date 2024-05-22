@@ -1,5 +1,7 @@
 #include "DX12ShaderResource.h"
 
+#include "DX12Graphics.h"
+
 NAMESPACE_DX12_BEGIN
 
 DX12ShaderResource::~DX12ShaderResource()
@@ -27,6 +29,12 @@ void DX12ShaderResource::UpdateTexture2D(const void* buffer, size_t bufferSize, 
 void DX12ShaderResource::GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output)
 {
 	*output = m_desc;
+}
+
+void* DX12ShaderResource::GetNativeHandle()
+{
+	auto graphics = DX12Graphics::GetDX12();
+	return (void*)(graphics->m_imguiDescriptorAllocator.Allocate(m_srvGroupStart).ptr);
 }
 
 NAMESPACE_DX12_END

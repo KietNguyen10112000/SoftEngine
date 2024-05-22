@@ -76,11 +76,10 @@ private:
 	IterationHandler* m_iterationHandler = nullptr;
 
 	spinlock m_createSceneLock;
-	ID m_runningSceneIdx = INVALID_ID;
-	ID m_nextRunningSceneIdx = INVALID_ID;
-	Scene* m_currentScene = nullptr;
+	Scene* m_runningScene = nullptr;
+	Scene* m_nextRunningScene = nullptr;
 
-	std::vector<ID> m_destroyingScenes = {};
+	std::vector<Scene*> m_destroyingScenes = {};
 
 	//spinlock m_lock;
 
@@ -179,7 +178,7 @@ public:
 
 	inline Scene* GetCurrentRunningScene()
 	{
-		return m_currentScene;
+		return m_runningScene;
 	}
 
 	void* GetNativeHWND();

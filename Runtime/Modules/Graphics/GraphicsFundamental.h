@@ -274,6 +274,8 @@ public:
 
 	virtual void GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output) = 0;
 
+	virtual void* GetNativeHandle() = 0;
+
 };
 
 class GraphicsConstantBuffer

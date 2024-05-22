@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN
 
-class Texture2D : public ResourceBase
+class API Texture2D : public ResourceBase
 {
 public:
 	static const char* CACHE_EXTENSION;
@@ -14,6 +14,9 @@ public:
 	static const char* DEFAULT_FILE;
 
 	SharedPtr<GraphicsShaderResource> m_shaderResource;
+
+	uint32_t m_width = 0;
+	uint32_t m_height = 0;
 
 public:
 	Texture2D(String path);
@@ -27,6 +30,17 @@ public:
 	static void ReadCache(ByteStream* stream, byte** output, size_t* outputSize, uint32_t* pWidths, uint32_t* pHeights, uint32_t* pChannels, uint32_t* pMipLevel);
 	static GRAPHICS_DATA_FORMAT::FORMAT ConvertChannelsToGraphicsFormat(uint32_t channels);
 
+	void* GetNativeHandle();
+
+	inline const uint32_t& Width() const
+	{
+		return m_width;
+	}
+
+	inline const uint32_t& Height() const
+	{
+		return m_height;
+	}
 
 	inline auto& GetGraphicsShaderResource()
 	{

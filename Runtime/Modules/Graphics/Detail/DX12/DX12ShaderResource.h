@@ -28,6 +28,8 @@ public:
 	virtual void UpdateTexture2D(const void* buffer, size_t bufferSize, const TEXTURE2D_REGION& region, bool endChain) override;
 
 	virtual void GetDesc(GRAPHICS_SHADER_RESOURCE_DESC* output) override;
+
+	virtual void* GetNativeHandle() override;
 };
 
 NAMESPACE_DX12_END

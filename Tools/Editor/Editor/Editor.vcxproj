@@ -154,6 +154,7 @@
     <ClCompile Include="EditorTabFactory.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="DataInspector.cpp" />
+    <ClCompile Include="NodeEditorUtils\builders.cpp" />
     <ClCompile Include="RotateScript.cpp" />
     <ClCompile Include="SceneEditorTab.cpp" />
     <ClCompile Include="TestScript.cpp" />
@@ -174,6 +175,7 @@
     <ClInclude Include="EditorTab.h" />
     <ClInclude Include="EditorTabFactory.h" />
     <ClInclude Include="ImGuiExtern.h" />
+    <ClInclude Include="NodeEditorUtils\builders.h" />
     <ClInclude Include="RotateScript.h" />
     <ClInclude Include="SceneEditorTab.h" />
     <ClInclude Include="ScriptList.h" />

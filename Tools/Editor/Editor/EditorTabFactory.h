@@ -40,7 +40,7 @@ public:
 	inline T* GetFactory()
 	{
 		static_assert(std::is_base_of_v<EditorTabFactory, T>);
-		return m_map[typeid(T).name()];
+		return (T*)m_map[typeid(T).name()];
 	}
 
 	template <typename Fn>

@@ -12,6 +12,7 @@
 #include "DataInspector.h"
 #include "ComponentInspector.h"
 #include "EditorTabFactory.h"
+#include "AnimatorEditorTabFactory.h"
 
 #include "ScriptList.h"
 
@@ -32,16 +33,25 @@ void Initialize(Runtime* runtime)
 		{
 			auto scene = (Scene*)argv[0];
 
-			ID editorContextId = INVALID_ID;
 			if (EditorContext::s_instance == nullptr)
 			{
 				auto editorContext = mheap::New<EditorContext>(scene);
-				editorContextId = Runtime::Get()->GenericStorage()->Store(editorContext);
+				auto editorContextId = Runtime::Get()->GenericStorage()->Store(editorContext);
 				EditorContext::s_instance = editorContext;
 				EditorContext::s_instance->m_runTimeId = editorContextId;
+
+				{
+					auto factory = EditorTabFactoryManager::Get()->GetFactory<AnimatorEditorTabFactory>();
+
+					factory->m_modelPath = "Editor/AnimatorEditor/Test.json";
+					auto tab = factory->CreateInstance();
+					EditorContext::s_instance->RunTab(tab);
+
+					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
+				}
 			}
 
-			editorContextId = EditorContext::s_instance->m_runTimeId;
+			ID editorContextId = EditorContext::s_instance->m_runTimeId;
 
 			/*scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
 				[](Scene* scene, int argc, void** argv, ID editorContextId)

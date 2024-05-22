@@ -40,6 +40,9 @@ void Texture2D::LoadCache(ByteStream* stream)
 	desc.texture2D.width = widths[0];
 	desc.texture2D.height = heights[0];
 	desc.texture2D.mipLevels = mipLevel;
+
+	m_width = desc.texture2D.width;
+	m_height = desc.texture2D.height;
 	
 	Graphics::Get()->CreateShaderResources(1, &desc, &m_shaderResource);
 
@@ -232,6 +235,11 @@ GRAPHICS_DATA_FORMAT::FORMAT Texture2D::ConvertChannelsToGraphicsFormat(uint32_t
 		assert(0);
 		break;
 	}
+}
+
+void* Texture2D::GetNativeHandle()
+{
+	return m_shaderResource->GetNativeHandle();
 }
 
 NAMESPACE_END

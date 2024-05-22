@@ -76,6 +76,9 @@
     <ClCompile Include="AnimatorEditorSaveData.cpp">
       <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
     </ClCompile>
+    <ClCompile Include="NodeEditorUtils\builders.cpp">
+      <Filter>Libraries\imgui-node-editor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -134,6 +137,9 @@
     </ClInclude>
     <ClInclude Include="AnimatorEditorSaveData.h">
       <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeEditorUtils\builders.h">
+      <Filter>Libraries\imgui-node-editor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

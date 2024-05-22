@@ -10,6 +10,7 @@
 #include "DX12DescriptorAllocator.h"
 #include "DX12RingBufferCommandList.h"
 #include "DX12ResourceUploader.h"
+#include "DX12ImGuiUtils.h"
 
 #include "D3D12MemAlloc.h"
 
@@ -107,6 +108,8 @@ public:
 
 	// for imgui
 	ComPtr<ID3D12DescriptorHeap>			m_ImGuiSrvDescHeap;
+
+	DX12ImguiImageDescriptorAllocator m_imguiDescriptorAllocator;
 
 public:
 	DX12Graphics(void* hwnd);
@@ -284,6 +287,13 @@ public:
 		auto ret = m_gpuVisibleHeapGPUHandleStart;
 		ret.ptr += m_renderRoomIdx * TOTAL_DESCRIPTORS_PER_RENDER_ROOM * GetCbvSrvUavCPUDescriptorHandleStride();
 		return ret;
+	}
+
+	inline void WaitForNextRenderRoom()
+	{
+		m_renderRoomIdx = (m_renderRoomIdx + 1) % NUM_RENDER_ROOM;
+		WaitForDX12FenceValue(m_renderRoomFenceValues[m_renderRoomIdx]);
+		m_renderRoomFenceValues[m_renderRoomIdx] = GetCurrentDX12FenceValue();
 	}
 };
 

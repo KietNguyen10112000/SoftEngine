@@ -29,14 +29,18 @@ EditorContext::EditorContext(Scene* initScene)
 {
 	ReloadSerializableList();
 
-	auto defaultTab = mheap::New<SceneEditorTab>();
-	defaultTab->m_scene = initScene;
-	defaultTab->m_isShowing = true;
+	if (initScene)
+	{
+		auto defaultTab = mheap::New<SceneEditorTab>();
+		defaultTab->m_id = 0;
+		defaultTab->m_scene = initScene;
+		defaultTab->m_isShowing = true;
 
-	m_tabs.Push(defaultTab);
+		m_tabs.Push(defaultTab);
 
-	m_currentTabId = 0;
-	m_tabs[m_currentTabId]->Show();
+		m_currentTabId = 0;
+		m_tabs[m_currentTabId]->Show();
+	}
 }
 
 void EditorContext::RenderMenuBar()
@@ -289,7 +293,7 @@ void EditorContext::RenderTabCreationPopUp()
 		}
 		else
 		{
-			tab->m_id = m_tabs.size();
+			/*tab->m_id = m_tabs.size();
 			m_tabs.Push(tab);
 
 			auto scene = tab->m_scene;
@@ -305,7 +309,9 @@ void EditorContext::RenderTabCreationPopUp()
 				tabId
 			);
 
-			Runtime::Get()->SetRunningScene(scene);
+			Runtime::Get()->SetRunningScene(scene);*/
+
+			RunTab(tab);
 		}
 
 		m_tabFactory = nullptr;
@@ -433,4 +439,63 @@ void EditorContext::OnFinalize()
 		tab->OnClose();
 	}
 	m_tabs.clear();
+}
+
+void EditorContext::RunTab(const Handle<EditorTab>& tab)
+{
+	auto scene = tab->m_scene;
+	if (tab->m_id == INVALID_ID)
+	{
+		tab->m_id = m_tabs.size();
+		m_tabs.Push(tab);
+
+		auto tabId = scene->GenericStorage()->Store(tab);
+		scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
+			[](Scene* scene, int argc, void** argv, ID id)
+			{
+				auto tab = scene->GenericStorage()->Get<AnimatorEditorTab>(id);
+				EditorContext::GetInstance()->m_currentTabId = tab->m_id;
+				tab->Show();
+			},
+			tabId
+		);
+	}
+	else
+	{
+		m_currentTabId = tab->m_id;
+	}
+
+	Runtime::Get()->SetRunningScene(scene);
+}
+
+void EditorContext::CloseTab(const Handle<EditorTab>& tab)
+{
+	if (m_tabs.size() <= 1)
+	{
+		return;
+	}
+
+	auto i = tab->m_id;
+
+	tab->Close();
+
+	auto scene = tab->m_scene;
+	m_tabs.erase(i);
+	if (m_currentTabId != 0)
+	{
+		m_currentTabId = m_currentTabId - 1;
+		m_tabs[m_currentTabId]->Show();
+	}
+
+	{
+		size_t c = 0;
+		for (auto& t : m_tabs)
+		{
+			t->m_id = c;
+			c++;
+		}
+	}
+
+	Runtime::Get()->SetRunningScene(m_tabs[m_currentTabId]->m_scene);
+	Runtime::Get()->DestroyScene(scene);
 }

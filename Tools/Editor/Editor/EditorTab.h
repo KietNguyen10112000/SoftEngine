@@ -23,7 +23,7 @@ private:
 	bool m_padd[2];
 
 public:
-	ID m_id = 0;
+	ID m_id = INVALID_ID;
 	String m_name = "Unnamed";
 	Scene* m_scene = nullptr;
 

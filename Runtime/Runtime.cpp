@@ -110,6 +110,9 @@ void Runtime::Finalize()
 {
 	Runtime::s_instance->FinalizeModules();
 	Runtime::s_instance.release();
+
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
 	for (size_t i = 0; i < 5; i++)
 	{
 		gc::Run(-1);
@@ -268,6 +271,11 @@ void Runtime::Setup()
 		scene->EndSetupLongLifeObject();
 	}
 
+	if (m_nextRunningScene != nullptr)
+	{
+		return;
+	}
+		
 	SetRunningScene(scene.Get());
 
 	Transform transform = {};
@@ -601,7 +609,7 @@ void Runtime::SwapModifiedRecorder()
 	size_t i = 0;
 	for (auto& scene : m_scenes)
 	{
-		if (i != m_nextRunningSceneIdx && scene)
+		if (i != m_nextRunningScene->m_runtimeID && scene)
 		{
 			for (size_t j = 0; j < MainSystemInfo::COUNT; j++)
 			{
@@ -617,19 +625,18 @@ void Runtime::ProcessSwapRunningScene()
 {
 	m_createSceneLock.lock();
 
-	if (m_runningSceneIdx != m_nextRunningSceneIdx)
+	if (m_runningScene != m_nextRunningScene)
 	{
-		if (m_runningSceneIdx != INVALID_ID)
+		if (m_runningScene != nullptr)
 		{
-			m_scenes[m_runningSceneIdx]->EndRunning();
+			m_runningScene->EndRunning();
 		}
 
-		m_runningSceneIdx = m_nextRunningSceneIdx;
-		m_currentScene = m_scenes[m_runningSceneIdx];
+		m_runningScene = m_nextRunningScene;
 
-		if (m_runningSceneIdx != INVALID_ID)
+		if (m_runningScene != nullptr)
 		{
-			m_scenes[m_runningSceneIdx]->BeginRunning();
+			m_runningScene->BeginRunning();
 		}
 	}
 
@@ -709,7 +716,7 @@ void Runtime::Iteration()
 	g_timer.Update();
 
 	ProcessSwapRunningScene();
-	if (m_runningSceneIdx == INVALID_ID)
+	if (m_runningScene == nullptr)
 	{
 		return;
 	}
@@ -804,7 +811,7 @@ void Runtime::ProcessDestroyScenes()
 			auto scene = (Scene*)p;
 			Runtime::Get()->DestroySceneImpl(scene);
 		};
-		task.Params() = m_scenes[m_destroyingScenes[i]].Get();
+		task.Params() = m_destroyingScenes[i];
 
 		TaskSystem::Submit(task, Task::CRITICAL);
 		//DestroySceneImpl(m_scenes[m_destroyingScenes[i]].Get());
@@ -815,6 +822,8 @@ void Runtime::ProcessDestroyScenes()
 
 void Runtime::DestroySceneImpl(Scene* scene)
 {
+	Thread::Sleep(30);
+
 	ID id = scene->m_runtimeID;
 
 	scene->CleanUp();
@@ -824,6 +833,13 @@ void Runtime::DestroySceneImpl(Scene* scene)
 	m_createSceneLock.lock();
 	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(m_scenes, scene, m_runtimeID);
 	m_createSceneLock.unlock();
+
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
+	for (size_t i = 0; i < 5; i++)
+	{
+		gc::Run(-1);
+	}
 
 	//scene->m_runtimeID = INVALID_ID;
 }
@@ -848,26 +864,26 @@ void Runtime::DestroyScene(Scene* scene)
 		return;
 	}
 
-	if (scene->m_runtimeID == m_runningSceneIdx)
+	if (scene == m_runningScene)
 	{
-		assert(m_nextRunningSceneIdx != m_runningSceneIdx && "Need to set another running scene before destroy the current scene!!!");
+		assert(m_nextRunningScene != m_runningScene && "Need to set another running scene before destroy the current scene!!!");
 	}
 
 	scene->m_destroyed = true;
 
 	m_createSceneLock.lock();
-	m_destroyingScenes.push_back(scene->m_runtimeID);
+	m_destroyingScenes.push_back(scene);
 	m_createSceneLock.unlock();
 
-	if (scene->m_runtimeID == m_runningSceneIdx && m_nextRunningSceneIdx == m_runningSceneIdx)
+	if (scene == m_runningScene && m_nextRunningScene == m_runningScene)
 	{
-		m_nextRunningSceneIdx = INVALID_ID;
+		m_nextRunningScene = nullptr;
 	}
 }
 
 void Runtime::SetRunningScene(Scene* scene)
 {
-	m_nextRunningSceneIdx = scene->m_runtimeID;
+	m_nextRunningScene = scene;
 }
 
 void* Runtime::GetNativeHWND()

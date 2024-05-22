@@ -16,12 +16,15 @@
 #include "imgui/imgui.h"
 
 #include "imgui-node-editor/imgui_node_editor.h"
+#include "NodeEditorUtils/builders.h"
 
 namespace ed = ax::NodeEditor;
 
 AnimatorEditorTab::AnimatorEditorTab(const String& modelPath, Scene* scene)
 {
 	m_modelPath = modelPath;
+
+	m_nodeHeaderTexture = resource::Load<Texture2D>("Default/blue.png");
 }
 
 void AnimatorEditorTab::OnObjectsAdded(std::vector<GameObject*>& objects)
@@ -47,7 +50,9 @@ void AnimatorEditorTab::OnRenderGUI()
 
 		if (ImGui::Begin("Editor", 0, wflags))
 		{
-			RenderBluePrintPanel();
+			ImGui::Image(m_nodeHeaderTexture->GetNativeHandle(), { 100,100 });
+
+			//RenderBluePrintPanel();
 			ImGui::End();
 		}
 	}
@@ -186,32 +191,62 @@ void AnimatorEditorTab::OnClose()
 
 void AnimatorEditorTab::RenderBluePrintPanel()
 {
+	namespace util = ax::NodeEditor::Utilities;
+
 	ed::SetCurrentEditor(m_nodeEditorCtx);
 	ed::Begin("Node Editor", ImVec2(0.0, 0.0f));
 
 	int uniqueId = 1;
-    // Start drawing nodes.
-    ed::BeginNode(uniqueId++);
-        ImGui::Text("Node A");
-        ed::BeginPin(uniqueId++, ed::PinKind::Input);
-            ImGui::Text("-> In");
-        ed::EndPin();
-        ImGui::SameLine();
-        ed::BeginPin(uniqueId++, ed::PinKind::Output);
-            ImGui::Text("Out ->");
-        ed::EndPin();
-    ed::EndNode();
 
-	ed::BeginNode(uniqueId++);
-        ImGui::Text("Node B");
-        ed::BeginPin(uniqueId++, ed::PinKind::Input);
-            ImGui::Text("-> In");
-        ed::EndPin();
-        ImGui::SameLine();
-        ed::BeginPin(uniqueId++, ed::PinKind::Output);
-            ImGui::Text("Out ->");
-        ed::EndPin();
-    ed::EndNode();
+	{
+		util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
+		builder.Begin(++uniqueId);
+		{
+			//ed::SetNodePosition(uniqueId, { 0,0 });
+
+			builder.Header();
+			ImGui::TextUnformatted("Node A");
+			ImGui::Dummy(ImVec2(0, 28));
+			builder.EndHeader();
+		}
+		builder.End();
+	}
+	
+	{
+		util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
+		builder.Begin(++uniqueId);
+		{
+			//ed::SetNodePosition(uniqueId, { 100,0 });
+
+			builder.Header();
+			ImGui::TextUnformatted("Node B");
+			ImGui::Dummy(ImVec2(0, 28));
+			builder.EndHeader();
+		}
+		builder.End();
+	}
+ //   // Start drawing nodes.
+ //   ed::BeginNode(uniqueId++);
+ //       ImGui::Text("Node A");
+ //       ed::BeginPin(uniqueId++, ed::PinKind::Input);
+ //           ImGui::Text("-> In");
+ //       ed::EndPin();
+ //       ImGui::SameLine();
+ //       ed::BeginPin(uniqueId++, ed::PinKind::Output);
+ //           ImGui::Text("Out ->");
+ //       ed::EndPin();
+ //   ed::EndNode();
+
+	//ed::BeginNode(uniqueId++);
+ //       ImGui::Text("Node B");
+ //       ed::BeginPin(uniqueId++, ed::PinKind::Input);
+ //           ImGui::Text("-> In");
+ //       ed::EndPin();
+ //       ImGui::SameLine();
+ //       ed::BeginPin(uniqueId++, ed::PinKind::Output);
+ //           ImGui::Text("Out ->");
+ //       ed::EndPin();
+ //   ed::EndNode();
 
 	ed::End();
 	ed::SetCurrentEditor(nullptr);

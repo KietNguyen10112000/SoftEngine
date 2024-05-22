@@ -5,6 +5,8 @@
 #include "Core/Structures/STD/STDContainers.h"
 #include "Core/Structures/Raw/UnorderedList.h"
 
+#include "Core/Thread/ReentrantLock.h"
+
 NAMESPACE_BEGIN
 
 template <typename T, size_t NUM_EVENT, typename _EventCodeEnumType, typename _UserValueType>
@@ -29,7 +31,7 @@ private:
 	};
 
 	raw::UnorderedList<Listener> m_dispatchers[NUM_EVENT] = {};
-	spinlock m_dispatcherLocks[NUM_EVENT] = {};
+	ReentrantLock m_dispatcherLocks[NUM_EVENT] = {};
 	raw::UnorderedList<ListenerID> m_listeners;
 	spinlock m_lock;
 	bool m_padd[3];
