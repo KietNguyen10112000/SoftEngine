@@ -16,7 +16,7 @@ namespace ResourceUtils
 	extern void LoadAllMeshsForModel3DBasic(Model3DBasic* model3D, const aiScene* scene, bool ignoreBones);
 }
 
-Model3D::Model3D(String path) : Model3DBasic(path)
+int Model3D::Load(const String& path)
 {
 	auto fs = FileSystem::Get();
 
@@ -30,6 +30,11 @@ Model3D::Model3D(String path) : Model3DBasic(path)
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	if (scene == nullptr)
+	{
+		return -1;
+	}
 
 	constexpr static void (*ProcessNode)(Model3D*, const aiScene*, aiNode*, ID) =
 		[](Model3D* model, const aiScene* scene, aiNode* node, ID parentId) {
@@ -135,6 +140,8 @@ Model3D::Model3D(String path) : Model3DBasic(path)
 	}
 
 	ProcessNode(this, scene, scene->mRootNode, INVALID_ID);
+
+	return 0;
 }
 
 Handle<GameObject> Model3D::MakeGameObject()

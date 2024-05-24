@@ -16,7 +16,7 @@ namespace ResourceUtils
 	void ExtractAnimMotionData(void*, AnimMotion*);
 }
 
-class AnimMotion : public ResourceBase
+class API AnimMotion : public ResourceBase
 {
 private:
 	friend class Animation;
@@ -35,10 +35,12 @@ private:
 public:
 	// *.AnimMotion
 	// usage resource::Load<AnimMotion>(<model file path> + "|" + <animation index>)
-	AnimMotion(String path, bool placeHolder = false);
+	//AnimMotion(String path, bool placeHolder = false);
+protected:
+	virtual int Load(const String& path) override;
 
 private:
-	void LoadFromFile(const String& path);
+	int LoadFromFile(const String& path);
 
 public:
 	// the path where motion loaded from (eg: FBX, CDE, ...)

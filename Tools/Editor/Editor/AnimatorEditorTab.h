@@ -8,6 +8,7 @@ namespace soft
 	class GameObject;
 	class AnimatorSkeletalArray;
 	class Scene;
+	class AnimatorLayer;
 }
 
 namespace ax
@@ -21,6 +22,43 @@ namespace ax
 class AnimatorEditorTab : public EditorTab
 {
 public:
+	struct LAYER_TYPE
+	{
+		enum TYPE
+		{
+			ANIMATON_PLAYER,
+			BLENDING
+		};
+	};
+
+	struct Node
+	{
+		struct Input
+		{
+			ID pinId;
+			ID linkId;
+			Node* node;
+		};
+
+		ID nodeId = INVALID_ID;
+		ID pinId = INVALID_ID;
+
+		AnimatorLayer* layer = nullptr;
+
+		std::vector<Input> inputs;
+		ID outputPinId = INVALID_ID;
+	};
+
+	struct Link
+	{
+		ID linkId;
+
+		Node* src;
+
+		ID destIdx;
+		Node* dest;
+	};
+
 	String m_modelPath;
 	Handle<GameObject> m_object;
 	Handle<GameObject> m_cam;
@@ -32,6 +70,12 @@ public:
 	ID m_onSaveListenerId = INVALID_ID;
 
 	Resource<Texture2D> m_nodeHeaderTexture;
+
+	ID m_nextId = 0;
+	std::vector<Link> m_links;
+	std::map<ID, Node*> m_pinIdToNode;
+
+	std::vector<UniquePtr<Node>> m_nodes;
 
 	inline void Trace(Tracer* tracer)
 	{
@@ -52,6 +96,33 @@ public:
 	void OnHide() override;
 	void OnOpen() override;
 	void OnClose() override;
+
+	void WriteNodeDataToJson(Serializer* serializer, json& j) const;
+	void ReadNodeDataFromJson(Serializer* serializer, const json& j);
+
+	LAYER_TYPE::TYPE GetNodeType(Node* node, void** concretePtr);
+
+	void RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr);
+	void RenderNode_BLENDING(Node* node, void* concretePtr);
+	void RenderNode(Node* node);
+
+	inline Node* GetNode(ID pinId)
+	{
+		return m_pinIdToNode[pinId];
+	}
+
+	inline void CreateLink(Node* src, Node* dest, ID destInputId)
+	{
+		assert(dest->inputs[destInputId].linkId == INVALID_ID);
+		
+		auto& input = dest->inputs[destInputId];
+		input.pinId = m_nextId++;
+		input.linkId = m_nextId++;
+		input.node = src;
+
+		m_links.push_back({ input.linkId,src,destInputId,dest });
+	}
+
 
 private:
 	void RenderBluePrintPanel();

@@ -107,28 +107,37 @@ void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMo
 	{
 		auto aiAnim = scene->mAnimations[i];
 		
-		auto animMotion = resource::Load<AnimMotion>(String::Format("{}|{}", filePath, i), true);
+		auto animMotion = resource::internal::LoadEx<false, AnimMotion>(String::Format("{}|{}", filePath, i));
 
-		ExtractAnimMotionData(aiAnim, animMotion);
+		if (animMotion->m_channels.size() == 0)
+			ExtractAnimMotionData(aiAnim, animMotion);
 
 		output.push_back(animMotion);
 	}
 }
 
-//std::vector<Resource<AnimMotion>> LoadAnimMotion(String path)
-//{
-//	auto fs = FileSystem::Get();
-//
-//	std::vector<Resource<AnimMotion>> motions;
-//
-//	Assimp::Importer importer;
-//	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
-//		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
-//
-//	LoadAnimMotion(path, (void*)scene, motions);
-//
-//	return motions;
-//}
+int LoadAnimMotion(String path, std::vector<Resource<AnimMotion>>& output)
+{
+	auto fs = FileSystem::Get();
+
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	if (scene == nullptr)
+	{
+		return -1;
+	}
+
+	if (scene->mNumAnimations == 0)
+	{
+		return -2;
+	}
+
+	LoadAnimMotion(path, (void*)scene, output);
+
+	return 0;
+}
 
 }
 

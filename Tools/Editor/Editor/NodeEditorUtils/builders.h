@@ -28,7 +28,7 @@ struct BlueprintNodeBuilder
     void Begin(NodeId id);
     void End();
 
-    void Header(const ImVec4& color = ImVec4(1, 1, 1, 1));
+    void Header(const ImVec4& color = ImColor(128, 195, 255));
     void EndHeader();
 
     void Input(PinId id);

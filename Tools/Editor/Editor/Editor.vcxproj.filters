@@ -26,6 +26,12 @@
     <Filter Include="Libraries\imgui-node-editor">
       <UniqueIdentifier>{dfb24978-334b-4c72-99c6-26613401903d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Libraries\imgui-node-editor\rc">
+      <UniqueIdentifier>{3e412064-2ba4-40fb-aae2-bd005c46f469}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\imgui-node-editor\utils">
+      <UniqueIdentifier>{c5fbc21e-97ee-4e26-903e-f5bf47878a6e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -77,7 +83,16 @@
       <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
     </ClCompile>
     <ClCompile Include="NodeEditorUtils\builders.cpp">
-      <Filter>Libraries\imgui-node-editor</Filter>
+      <Filter>Libraries\imgui-node-editor\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="NodeEditorUtils\drawing.cpp">
+      <Filter>Libraries\imgui-node-editor\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="NodeEditorUtils\widgets.cpp">
+      <Filter>Libraries\imgui-node-editor\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="FileChooser.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -139,7 +154,16 @@
       <Filter>Source Files\EditorTabs\AnimatorEditor</Filter>
     </ClInclude>
     <ClInclude Include="NodeEditorUtils\builders.h">
-      <Filter>Libraries\imgui-node-editor</Filter>
+      <Filter>Libraries\imgui-node-editor\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeEditorUtils\drawing.h">
+      <Filter>Libraries\imgui-node-editor\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeEditorUtils\widgets.h">
+      <Filter>Libraries\imgui-node-editor\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="FileChooser.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -164,5 +188,10 @@
     <None Include="..\Libraries\imgui-node-editor\LICENSE">
       <Filter>Libraries\imgui-node-editor</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\Resources\BlueprintBackground.png">
+      <Filter>Libraries\imgui-node-editor\rc</Filter>
+    </CopyFileToFolders>
   </ItemGroup>
 </Project>

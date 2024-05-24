@@ -619,7 +619,7 @@ void DX12Graphics::InitImGui(void* hwnd)
 {
     D3D12_DESCRIPTOR_HEAP_DESC desc = {};
     desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    desc.NumDescriptors = 100;
+    desc.NumDescriptors = DX12ImguiImageDescriptorAllocator::MAX_PER_FRAMES * 2;;
     desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     ThrowIfFailed(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_ImGuiSrvDescHeap)));
 
@@ -1377,6 +1377,8 @@ void DX12Graphics::BeginFrame()
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
+
+    m_imguiDescriptorAllocator.NewFrame();
 
     //g_testTime = Clock::ms::now();
 }

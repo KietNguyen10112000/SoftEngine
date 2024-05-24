@@ -50,8 +50,6 @@ public:
 
 	std::vector<Mesh> m_meshes;
 
-	Model3DBasic(String path);
-
 	virtual Handle<GameObject> MakeGameObject() = 0;
 
 };

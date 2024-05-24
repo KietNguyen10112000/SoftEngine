@@ -1,5 +1,11 @@
 #include "AnimatorEditorSaveData.h"
 
+#include "AnimatorEditorTab.h"
+
+AnimatorEditorSaveData::AnimatorEditorSaveData(AnimatorEditorTab* tab) : m_tab(tab)
+{
+}
+
 void AnimatorEditorSaveData::CloneFrom(Serializer* serializer, Serializable* another)
 {
 }
@@ -18,6 +24,8 @@ void AnimatorEditorSaveData::SerializeToJson(Serializer* serializer, json& j) co
 	j["SceneUUID"] = m_sceneUUID;
 	j["CameraUUID"] = m_cameraUUID;
 	j["EditorName"] = m_name;
+
+	m_tab->WriteNodeDataToJson(serializer, j);
 }
 
 void AnimatorEditorSaveData::DeserializeFromJson(Serializer* serializer, const json& j)
@@ -26,6 +34,8 @@ void AnimatorEditorSaveData::DeserializeFromJson(Serializer* serializer, const j
 	m_sceneUUID = j["SceneUUID"];
 	m_cameraUUID = j["CameraUUID"];
 	m_name = j["EditorName"];
+
+	m_tab->ReadNodeDataFromJson(serializer, j);
 }
 
 Handle<ClassMetadata> AnimatorEditorSaveData::GetMetadata(size_t sign)

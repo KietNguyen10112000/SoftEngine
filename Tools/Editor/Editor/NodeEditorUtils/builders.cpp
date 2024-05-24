@@ -49,6 +49,11 @@ void util::BlueprintNodeBuilder::End()
 
     ed::EndNode();
 
+    HeaderMin = ImGui::GetItemRectMin();
+
+    auto nodeMax = ImGui::GetItemRectMax();
+    HeaderMax.x = nodeMax.x;
+
     if (ImGui::IsItemVisible())
     {
         auto alpha = static_cast<int>(255 * ImGui::GetStyle().Alpha);
@@ -65,8 +70,8 @@ void util::BlueprintNodeBuilder::End()
                 (HeaderMax.y - HeaderMin.y) / (float)(4.0f * HeaderTextureHeight));
 
             drawList->AddImageRounded(HeaderTextureId,
-                HeaderMin - ImVec2(8 - halfBorderWidth, 4 - halfBorderWidth),
-                HeaderMax + ImVec2(8 - halfBorderWidth, 0),
+                HeaderMin - ImVec2(0 - halfBorderWidth, 0 - halfBorderWidth),
+                HeaderMax + ImVec2(0 - halfBorderWidth, 0),
                 ImVec2(0.0f, 0.0f), uv,
 #if IMGUI_VERSION_NUM > 18101
                 headerColor, GetStyle().NodeRounding, ImDrawFlags_RoundCornersTop);
@@ -77,8 +82,8 @@ void util::BlueprintNodeBuilder::End()
             if (ContentMin.y > HeaderMax.y)
             {
                 drawList->AddLine(
-                    ImVec2(HeaderMin.x - (8 - halfBorderWidth), HeaderMax.y - 0.5f),
-                    ImVec2(HeaderMax.x + (8 - halfBorderWidth), HeaderMax.y - 0.5f),
+                    ImVec2(HeaderMin.x - (0 - halfBorderWidth), HeaderMax.y - 0.5f),
+                    ImVec2(HeaderMax.x + (0 - halfBorderWidth), HeaderMax.y - 0.5f),
                     ImColor(255, 255, 255, 96 * alpha / (3 * 255)), 1.0f);
             }
         }

@@ -18,8 +18,8 @@ public:
 	uint32_t m_width = 0;
 	uint32_t m_height = 0;
 
-public:
-	Texture2D(String path);
+protected:
+	virtual int Load(const String& path) override;
 
 private:
 	void LoadCache(ByteStream* stream);

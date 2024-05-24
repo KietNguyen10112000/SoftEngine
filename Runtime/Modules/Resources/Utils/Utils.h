@@ -19,7 +19,7 @@ namespace ResourceUtils
 
 //API Handle<GameObject> LoadAnimModelArray(String path, String defaultDiffusePath = "", bool placeHolder = false);
 
-//API std::vector<Resource<AnimMotion>> LoadAnimMotion(String path);
+API int LoadAnimMotion(String path, std::vector<Resource<AnimMotion>>& output);
 
 }
 

@@ -12,23 +12,33 @@ namespace ResourceUtils
 	extern void ExtractAnimMotionData(void* _aiNode, AnimMotion* animMotion);
 }
 
-AnimMotion::AnimMotion(String path, bool placeHolder) : ResourceBase(path)
-{
-	if (placeHolder)
-	{
-		return;
-	}
+//AnimMotion::AnimMotion(String path, bool placeHolder) : ResourceBase(path)
+//{
+//	if (placeHolder)
+//	{
+//		return;
+//	}
+//
+//	LoadFromFile(path);
+//}
 
-	LoadFromFile(path);
+int AnimMotion::Load(const String& path)
+{
+	return LoadFromFile(path);
 }
 
-void AnimMotion::LoadFromFile(const String& path)
+int AnimMotion::LoadFromFile(const String& path)
 {
 	auto modelFilePath = GetModelFilePath();
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(modelFilePath.c_str(),
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	if (scene == nullptr)
+	{
+		return -1;
+	}
 
 	{
 		auto rcPath = GetPath();
@@ -40,6 +50,8 @@ void AnimMotion::LoadFromFile(const String& path)
 
 		ResourceUtils::ExtractAnimMotionData(scene->mAnimations[i], this);
 	}
+
+	return 0;
 }
 
 String AnimMotion::GetModelFilePath() const

@@ -12,7 +12,7 @@ NAMESPACE_BEGIN
 const char* Texture2D::CACHE_EXTENSION	= ".texture2d";
 const char* Texture2D::DEFAULT_FILE		= "Default/default.png";
 
-Texture2D::Texture2D(String path) : ResourceBase(path)
+int Texture2D::Load(const String& path)
 {
 	assert(FileSystem::Get()->IsFileExist(path.c_str()));
 
@@ -25,6 +25,8 @@ Texture2D::Texture2D(String path) : ResourceBase(path)
 	}
 
 	LoadCache(&stream);
+
+	return 0;
 }
 
 void Texture2D::LoadCache(ByteStream* stream)

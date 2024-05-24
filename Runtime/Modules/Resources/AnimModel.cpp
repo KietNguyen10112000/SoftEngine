@@ -64,7 +64,7 @@ namespace ResourceUtils
 
 const char* AnimModel::CACHE_EXTENSION = ".AnimModel";
 
-AnimModel::AnimModel(String path) : Model3DBasic(path)
+int AnimModel::Load(const String& path)
 {
 	auto fs = FileSystem::Get();
 
@@ -76,6 +76,11 @@ AnimModel::AnimModel(String path) : Model3DBasic(path)
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
+
+	if (scene == 0)
+	{
+		return -1;
+	}
 
 	ResourceUtils::LoadMaterialsForAnimModel(basePath, diffuseTextures, scene);
 
@@ -147,6 +152,7 @@ AnimModel::AnimModel(String path) : Model3DBasic(path)
 		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 	}
 	
+	return 0;
 }
 
 AnimModel::~AnimModel()

@@ -410,7 +410,7 @@ void EditorContext::OnRenderGUI()
 	RenderTabBar();
 
 	//ImGui::SetNextWindowFocus();
-	//ImGui::ShowDemoWindow(0);
+	ImGui::ShowDemoWindow(0);
 
 	RenderTabCreationPopUp();
 

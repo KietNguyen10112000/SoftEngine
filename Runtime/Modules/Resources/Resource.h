@@ -21,6 +21,12 @@ class Resource;
 
 namespace resource
 {
+	namespace internal
+	{
+		template <bool, typename _T, typename... Args>
+		Resource<_T> LoadEx(String path, Args&&... args);
+	}
+
 	template <typename _D, typename T>
 	inline Resource<_D> StaticCast(const Resource<T>& rc);
 }
@@ -37,16 +43,21 @@ private:
 	template <typename _D, typename T>
 	friend Resource<_D> resource::StaticCast(const Resource<T>& rc);
 
+	template <bool, typename _T, typename... Args>
+	friend Resource<_T> resource::internal::LoadEx(String path, Args&&... args);
+
 	std::atomic<size_t> m_refCount = { 0 };
 	String m_path;
 	String m_key;
-	const UUID m_UUID;
+	UUID m_UUID;
 
 public:
-	inline ResourceBase(String path);
 	virtual ~ResourceBase() {};
 
 protected:
+	// return error code
+	virtual int Load(const String& path) = 0;
+
 	/// 
 	/// for data serialization
 	/// 
@@ -105,6 +116,9 @@ namespace resource
 		void Finalize();
 
 		API std::map<String, ResourceBaseClass*>* GetInternalRCMap();
+
+		template <bool, typename _T, typename... Args>
+		Resource<_T> LoadEx(String path, Args&&... args);
 	}
 
 	template <typename _T, typename... Args>
@@ -120,15 +134,18 @@ namespace resource
 	API void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream);
 }
 
-inline ResourceBase::ResourceBase(String path) : m_path(path), m_UUID(resource::internal::GetResourceUUID(path))
-{
-}
+//inline ResourceBase::ResourceBase(const String& path) : m_path(path), m_UUID(resource::internal::GetResourceUUID(path))
+//{
+//}
 
 template <typename T>
 class Resource
 {
 private:
 	static_assert(std::is_base_of_v<ResourceBase, T>);
+
+	template <bool, typename _T, typename... Args>
+	friend Resource<_T> resource::internal::LoadEx(String path, Args&&... args);
 
 	template <typename _T, typename... Args>
 	friend Resource<_T> resource::Load(String path, Args&&... args);
@@ -221,19 +238,41 @@ Resource<ResourceBase> ResourceBase::GetSelfResource()
 namespace resource
 {
 
+namespace internal
+{
+	template <bool DIRECT_LOAD, typename _T, typename... Args>
+	inline Resource<_T> LoadEx(String path, Args&&... args)
+	{
+		path = StartupConfig::Get().resourcesPath + path;
+		_T* rc = dynamic_cast<_T*>(internal::TryLoad(path, typeid(_T).name()));
+
+		if (!rc)
+		{
+			rc = rheap::New<_T>();
+			rc->m_path = path;
+			rc->m_UUID = resource::internal::GetResourceUUID(path);
+
+			if constexpr (DIRECT_LOAD)
+			{
+				auto errCode = ((ResourceBase*)rc)->Load(path);
+				if (errCode != 0)
+				{
+					rheap::Delete(rc);
+					return {};
+				}
+			}
+
+			internal::Assign(rc, typeid(_T).name());
+		}
+
+		return Resource<_T>(rc);
+	}
+}
+
 template <typename _T, typename... Args>
 inline Resource<_T> Load(String path, Args&&... args)
 {
-	path = StartupConfig::Get().resourcesPath + path;
-	_T* rc = dynamic_cast<_T*>(internal::TryLoad(path, typeid(_T).name()));
-
-	if (!rc)
-	{
-		rc = rheap::New<_T>(path, std::forward<Args>(args)...);
-		internal::Assign(rc, typeid(_T).name());
-	}
-	
-	return Resource<_T>(rc);
+	return internal::LoadEx<true, _T>(path, std::forward<Args>(args)...);
 }
 
 template<typename _D, typename T>

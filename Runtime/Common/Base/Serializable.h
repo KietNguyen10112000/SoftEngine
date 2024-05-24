@@ -43,9 +43,12 @@ NAMESPACE_BEGIN
 //	return  # className; 													\
 //};
 
+class SerializableDB;
+class ClassMetadata;
+
 #define _SERIALIZABLE_CLASS_IMPL_(className, memManagedImpl, memSharedImpl, memRawImpl, memType)	\
-private: friend class SerializableDB;										\
-private: friend class ClassMetadata;										\
+private: friend class soft::SerializableDB;										\
+private: friend class soft::ClassMetadata;										\
 template<typename T, typename ...Args>										\
 friend void mheap::CallConstructor(T* begin, size_t n, Args&&... args);		\
 inline constexpr static const char* ___GetClassName() {return # className;};		\

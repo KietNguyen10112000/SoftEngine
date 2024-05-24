@@ -230,7 +230,6 @@ public:
 
 	friend class AnimMotion;
 
-	AnimModel(String path);
 	~AnimModel();
 
 	/*inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
@@ -245,6 +244,8 @@ private:
 	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
 
 protected:
+	virtual int Load(const String& path) override;
+
 	void SerializeExtDataToJson(Serializer* serializer, json& j) const override;
 	void DeserializeExtDataFromJson(Serializer* serializer, const json& j) override;
 

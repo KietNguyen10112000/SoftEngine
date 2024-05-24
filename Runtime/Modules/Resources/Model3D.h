@@ -23,8 +23,10 @@ public:
 
 	std::vector<Node> m_nodes;
 
-	Model3D(String path);
+protected:
+	virtual int Load(const String& path) override;
 
+public:
 	virtual Handle<GameObject> MakeGameObject() override;
 };
 
