@@ -9,7 +9,7 @@ class AnimBlendLayer : public AnimLayer
 protected:
 	SERIALIZABLE_CLASS(AnimBlendLayer, SERIALIZABLE_MEM_RAW);
 
-private:
+public:
 	AnimLayer* m_input[2] = {};
 	uint32_t m_currentLayerId = 0;
 

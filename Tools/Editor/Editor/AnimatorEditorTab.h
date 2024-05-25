@@ -8,7 +8,7 @@ namespace soft
 	class GameObject;
 	class AnimatorSkeletalArray;
 	class Scene;
-	class AnimatorLayer;
+	class AnimLayer;
 }
 
 namespace ax
@@ -26,6 +26,7 @@ public:
 	{
 		enum TYPE
 		{
+			NONE,
 			ANIMATON_PLAYER,
 			BLENDING
 		};
@@ -40,10 +41,11 @@ public:
 			Node* node;
 		};
 
+		ID nodeIdx = INVALID_ID;
 		ID nodeId = INVALID_ID;
-		ID pinId = INVALID_ID;
 
-		AnimatorLayer* layer = nullptr;
+		LAYER_TYPE::TYPE layerType = LAYER_TYPE::NONE;
+		AnimLayer* layer = nullptr;
 
 		std::vector<Input> inputs;
 		ID outputPinId = INVALID_ID;
@@ -57,6 +59,11 @@ public:
 
 		ID destIdx;
 		Node* dest;
+	};
+
+	struct NodesBuilder
+	{
+		std::map<AnimLayer*, Node*> animLayerToNode;
 	};
 
 	String m_modelPath;
@@ -100,8 +107,17 @@ public:
 	void WriteNodeDataToJson(Serializer* serializer, json& j) const;
 	void ReadNodeDataFromJson(Serializer* serializer, const json& j);
 
-	LAYER_TYPE::TYPE GetNodeType(Node* node, void** concretePtr);
+	void BuildNodesFromAnimator();
 
+	LAYER_TYPE::TYPE GetNodeType(Node* node, void** concretePtr);
+	LAYER_TYPE::TYPE GetLayerType(AnimLayer* layer);
+
+	UniquePtr<Node> CreateNode(AnimLayer* layer);
+
+	std::vector<AnimLayer*> GetInputLayers(AnimLayer* layer);
+	void BuildNode(Node* node, NodesBuilder& builder);
+
+	void RenderNodeHeader(void*, Node* node, const char* title);
 	void RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr);
 	void RenderNode_BLENDING(Node* node, void* concretePtr);
 	void RenderNode(Node* node);
