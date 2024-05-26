@@ -554,11 +554,11 @@ std::vector<AnimModel::AnimMeshVertices> AnimModel::LoadAnimMeshVertices() const
 	return vertices;
 }
 
-ID AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices)
+Animation* AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices)
 {
 	auto animationId = PlaceHolderAnimation(motion);
 	LoadAnimation(animationId, motion, vertices);
-	return animationId;
+	return m_animations[animationId];
 }
 
 Handle<GameObject> AnimModel::MakeGameObject()

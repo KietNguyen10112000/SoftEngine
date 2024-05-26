@@ -105,6 +105,8 @@ LoadJson:
 		serializer.Deserialize(data->m_sceneUUID, scene);
 		tab->m_scene = scene;
 
+		tab->ReadNodeDataFromJson(&serializer, data->m_savedJson);
+
 		return tab;
 	}
 

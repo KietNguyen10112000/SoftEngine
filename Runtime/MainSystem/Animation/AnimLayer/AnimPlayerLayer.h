@@ -4,7 +4,7 @@
 
 NAMESPACE_BEGIN
 
-class AnimPlayerLayer : public AnimLayer
+class API AnimPlayerLayer : public AnimLayer
 {
 protected:
 	SERIALIZABLE_CLASS(AnimPlayerLayer, SERIALIZABLE_MEM_RAW);
@@ -45,7 +45,7 @@ private:
 	void SetAnimationImpl(Animation* animation, float startTime, float endTime);
 
 public:
-	void SetAnimation(ID animationId, float startTime, float endTime);
+	void SetAnimation(Animation* animation, float startTime, float endTime);
 
 };
 

@@ -32,6 +32,19 @@ public:
 		};
 	};
 
+	struct Node;
+
+	struct NodeExternData
+	{
+	public:
+		AnimatorEditorTab* tab = nullptr;
+		Node* node = nullptr;
+
+		inline virtual ~NodeExternData() {};
+		virtual void OnNodesUpdated() = 0;
+
+	};
+
 	struct Node
 	{
 		struct Input
@@ -49,6 +62,17 @@ public:
 
 		std::vector<Input> inputs;
 		ID outputPinId = INVALID_ID;
+
+		NodeExternData* externData = nullptr;
+
+		inline ~Node()
+		{
+			if (externData)
+			{
+				delete externData;
+				externData = nullptr;
+			}
+		}
 	};
 
 	struct Link
@@ -64,6 +88,12 @@ public:
 	struct NodesBuilder
 	{
 		std::map<AnimLayer*, Node*> animLayerToNode;
+	};
+
+	struct AnimationEditingState
+	{
+		bool isEditingName = false;
+		String name;
 	};
 
 	String m_modelPath;
@@ -83,6 +113,13 @@ public:
 	std::map<ID, Node*> m_pinIdToNode;
 
 	std::vector<UniquePtr<Node>> m_nodes;
+	std::vector<Vec2> m_savedPositions;
+
+	char m_inputName[256] = {};
+
+	std::vector<AnimationEditingState> m_animationsEditingState;
+
+	byte m_isFirstRender = 0;
 
 	inline void Trace(Tracer* tracer)
 	{
@@ -122,6 +159,11 @@ public:
 	void RenderNode_BLENDING(Node* node, void* concretePtr);
 	void RenderNode(Node* node);
 
+	inline ID GetNextId()
+	{
+		return ++m_nextId;
+	}
+
 	inline Node* GetNode(ID pinId)
 	{
 		return m_pinIdToNode[pinId];
@@ -132,8 +174,8 @@ public:
 		assert(dest->inputs[destInputId].linkId == INVALID_ID);
 		
 		auto& input = dest->inputs[destInputId];
-		input.pinId = m_nextId++;
-		input.linkId = m_nextId++;
+		input.pinId = GetNextId();
+		input.linkId = GetNextId();
 		input.node = src;
 
 		m_links.push_back({ input.linkId,src,destInputId,dest });

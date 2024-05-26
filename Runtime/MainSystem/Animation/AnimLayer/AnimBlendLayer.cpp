@@ -83,7 +83,7 @@ void AnimBlendLayer::SetInput(AnimLayer* l1, AnimLayer* l2)
 	m_input[1] = l2;
 }
 
-void AnimBlendLayer::FadeTo(ID animationId, float startTime, float endTime, float fadeTime)
+void AnimBlendLayer::FadeTo(Animation* animation, float startTime, float endTime, float fadeTime)
 {
 	auto curLayer = m_input[m_currentLayerId];
 	//auto prevLayer = m_input[(m_currentLayerId + 1) % 2];
@@ -93,7 +93,7 @@ void AnimBlendLayer::FadeTo(ID animationId, float startTime, float endTime, floa
 
 	if (l0)
 	{
-		l0->SetAnimation(animationId, startTime, endTime);
+		l0->SetAnimation(animation, startTime, endTime);
 	}
 
 	MAIN_SYSTEM_TASK_EXT_1(GetComponent(),

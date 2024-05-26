@@ -33,21 +33,26 @@ private:
 		m_isShowing = true;
 		if (m_isFirstShow)
 		{
+			std::cout << "Open\n";
 			OnOpen();
 			m_isFirstShow = false;
 		}
 
+		std::cout << "Show\n";
 		OnShow();
 	}
 
 	inline void Hide()
 	{
+		std::cout << "Hide\n";
 		m_isShowing = false;
 		OnHide();
 	}
 
 	inline void Close()
 	{
+		std::cout << "Hide\n";
+		std::cout << "Close\n";
 		OnHide();
 		OnClose();
 	}

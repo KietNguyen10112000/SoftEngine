@@ -24,6 +24,8 @@ public:
 
 	AnimatorEditorTab* m_tab = nullptr;
 
+	json m_savedJson;
+
 	inline AnimatorEditorSaveData() {};
 	AnimatorEditorSaveData(AnimatorEditorTab* tab);
 

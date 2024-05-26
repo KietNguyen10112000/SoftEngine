@@ -13,6 +13,8 @@
 //------------------------------------------------------------------------------
 #include "imgui-node-editor/imgui_node_editor.h"
 
+#include <vector>
+
 
 //------------------------------------------------------------------------------
 namespace ax {
@@ -23,6 +25,27 @@ namespace Utilities {
 //------------------------------------------------------------------------------
 struct BlueprintNodeBuilder
 {
+    enum BG_DRAW_TYPE
+    {
+        SEPARATOR
+    };
+
+    struct BgDrawCall
+    {
+        BG_DRAW_TYPE type;
+        uint8_t payload[32];
+        uint16_t payloadCount = 0;
+
+        template <typename T>
+        T& NextVar()
+        {
+            assert(payloadCount < sizeof(payload));
+            auto ret = (T*)&payload[payloadCount];
+            payloadCount += sizeof(T);
+            return *ret;
+        }
+    };
+
     BlueprintNodeBuilder(ImTextureID texture = nullptr, int textureWidth = 0, int textureHeight = 0);
 
     void Begin(NodeId id);
@@ -39,8 +62,11 @@ struct BlueprintNodeBuilder
     void Output(PinId id);
     void EndOutput();
 
+    void Separator();
 
 private:
+    void SeparatorImpl(ImDrawList* drawList, BgDrawCall* call);
+
     enum class Stage
     {
         Invalid,
@@ -71,11 +97,17 @@ private:
     ImVec2      ContentMin;
     ImVec2      ContentMax;
     bool        HasHeader;
+
+    std::vector<BgDrawCall> bgDrawCalls;
 };
 
 
 
 //------------------------------------------------------------------------------
 } // namespace Utilities
+
+bool BeginNodeCombo(const char* label, const char* preview_value, ImGuiComboFlags flags);
+void EndNodeCombo();
+
 } // namespace Editor
 } // namespace ax

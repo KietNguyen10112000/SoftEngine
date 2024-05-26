@@ -1,0 +1,519 @@
+{
+  "Meta": {
+    "RootUUIDs": [
+      "cc565c15ca9671de00000ff26c47a000"
+    ],
+    "UsedClassNames": [
+      "Scene",
+      "GameObject",
+      "Camera",
+      "FPPCameraScript",
+      "AnimatorSkeletalArray",
+      "class soft::AnimModel",
+      "class soft::AnimMotion",
+      "class soft::AnimMotion",
+      "class soft::AnimMotion",
+      "AnimPlayerLayer",
+      "AnimBlendLayer",
+      "AnimMeshRenderer",
+      "class soft::Texture2D",
+      "AnimMeshRenderingBuffer",
+      "AnimatorEditorSaveData"
+    ]
+  },
+  "Objects": [
+    {
+      "ClassName": "Scene",
+      "Data": {
+        "LongLifeObjects": [],
+        "ShortLifeObjects": [
+          "0f6b5c15ca9671de00000fcaecb40000",
+          "bb1c5c15ca9671de0000054962f68000"
+        ]
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "1f425c15ca9671de000002f9927e9000"
+    },
+    {
+      "ClassName": "GameObject",
+      "Data": {
+        "Children": [],
+        "GlobalTransformMat": [
+          [
+            -0.6874394416809082,
+            -1.862645149230957e-09,
+            0.7262417078018188,
+            0.0
+          ],
+          [
+            -0.04753508418798447,
+            0.9978556036949158,
+            -0.04499534144997597,
+            0.0
+          ],
+          [
+            -0.7246843576431274,
+            -0.06545352935791016,
+            -0.6859652996063232,
+            0.0
+          ],
+          [
+            3.683746814727783,
+            1.4889345169067383,
+            3.3470265865325928,
+            1.0
+          ]
+        ],
+        "LocalTransform": {
+          "position": [
+            3.683746814727783,
+            1.4889345169067383,
+            3.3470265865325928
+          ],
+          "rotation": [
+            -0.012944585643708706,
+            0.9180496335029602,
+            -0.030077043920755386,
+            -0.39511099457740784
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "MainComponents": [
+          "11db5c15ca9671de0000042ca15a2000",
+          null,
+          "19435c15ca9671de000002b5e5415000",
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "Name": "#camera"
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "0f6b5c15ca9671de00000fcaecb40000"
+    },
+    {
+      "ClassName": "Camera",
+      "Data": {
+        "Aspect": 0.9259260296821594,
+        "Far": 1000.072509765625,
+        "FovY": 1.0471975803375244,
+        "IsPerspective": true,
+        "Near": 0.5
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "11db5c15ca9671de0000042ca15a2000"
+    },
+    {
+      "ClassName": "FPPCameraScript",
+      "Data": null,
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "19435c15ca9671de000002b5e5415000"
+    },
+    {
+      "ClassName": "GameObject",
+      "Data": {
+        "Children": [
+          "fc2c5c15ca9671de000001fe058e7000",
+          "04735c15ca9671de000002263f659000"
+        ],
+        "GlobalTransformMat": [
+          [
+            -0.0062817358411848545,
+            0.0,
+            0.007780731655657291,
+            0.0
+          ],
+          [
+            0.0,
+            0.009999999776482582,
+            0.0,
+            0.0
+          ],
+          [
+            -0.007780731655657291,
+            0.0,
+            -0.0062817358411848545,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "LocalTransform": {
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            -0.902267575263977,
+            0.0,
+            0.4311765134334564
+          ],
+          "scale": [
+            0.009999999776482582,
+            0.009999999776482582,
+            0.009999999776482582
+          ]
+        },
+        "MainComponents": [
+          null,
+          null,
+          null,
+          "bea45c15ca9671de00000d3d06ed1000",
+          null,
+          null,
+          null,
+          null
+        ],
+        "Name": ""
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "bb1c5c15ca9671de0000054962f68000"
+    },
+    {
+      "ClassName": "AnimatorSkeletalArray",
+      "Data": {
+        "AnimLayers": [
+          "c1f45c15ca9671de0000026d30e2b000",
+          "d9a15c15ca9671de000008f8f6ed9000",
+          "f29f5c15ca9671de00000e3b6aa71000"
+        ],
+        "AnimMeshRenderingBuffer": "012a5c15ca9671de0000099e6755b000",
+        "GameObject": "bb1c5c15ca9671de0000054962f68000",
+        "MeshRendererObjs": [
+          "fc2c5c15ca9671de000001fe058e7000",
+          "04735c15ca9671de000002263f659000"
+        ],
+        "Model": "ac235c15ca9671de00000000001af7df"
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "bea45c15ca9671de00000d3d06ed1000"
+    },
+    {
+      "ClassName": "class soft::AnimModel",
+      "Data": [
+        "ac445c15ca9671de00000000001cff6f",
+        "a6e15c15ca9671de000003eba915f000",
+        "46f35c15ca9671de0000077c1f559000"
+      ],
+      "MemType": 3,
+      "UUID": "ac235c15ca9671de00000000001af7df"
+    },
+    {
+      "ClassName": "class soft::AnimMotion",
+      "Data": null,
+      "MemType": 3,
+      "UUID": "ac445c15ca9671de00000000001cff6f"
+    },
+    {
+      "ClassName": "class soft::AnimMotion",
+      "Data": null,
+      "MemType": 3,
+      "UUID": "a6e15c15ca9671de000003eba915f000"
+    },
+    {
+      "ClassName": "class soft::AnimMotion",
+      "Data": null,
+      "MemType": 3,
+      "UUID": "46f35c15ca9671de0000077c1f559000"
+    },
+    {
+      "ClassName": "AnimPlayerLayer",
+      "Data": {
+        "AnimMotion": "a6e15c15ca9671de000003eba915f000",
+        "GlobalTransformsSize": 82,
+        "MeshesAABBSize": 2,
+        "Model": "ac235c15ca9671de00000000001af7df",
+        "OwnerComp": "bea45c15ca9671de00000d3d06ed1000",
+        "StartAABBKeyFrameIndex": [
+          0,
+          0
+        ],
+        "StartTick": 0.0,
+        "TickDuration": 71.0,
+        "TicksPerSecond": 30.0,
+        "Time": 43.449546813964844
+      },
+      "MemType": 2,
+      "UUID": "c1f45c15ca9671de0000026d30e2b000"
+    },
+    {
+      "ClassName": "AnimPlayerLayer",
+      "Data": {
+        "AnimMotion": "ac445c15ca9671de00000000001cff6f",
+        "GlobalTransformsSize": 82,
+        "MeshesAABBSize": 2,
+        "Model": "ac235c15ca9671de00000000001af7df",
+        "OwnerComp": "bea45c15ca9671de00000d3d06ed1000",
+        "StartAABBKeyFrameIndex": [
+          0,
+          0
+        ],
+        "StartTick": 0.0,
+        "TickDuration": 16.0,
+        "TicksPerSecond": 30.0,
+        "Time": 5.459999084472656
+      },
+      "MemType": 2,
+      "UUID": "d9a15c15ca9671de000008f8f6ed9000"
+    },
+    {
+      "ClassName": "AnimBlendLayer",
+      "Data": {
+        "GlobalTransformsSize": 82,
+        "Input0": "c1f45c15ca9671de0000026d30e2b000",
+        "Input1": "d9a15c15ca9671de000008f8f6ed9000",
+        "MeshesAABBSize": 2,
+        "Model": "ac235c15ca9671de00000000001af7df",
+        "OwnerComp": "bea45c15ca9671de00000d3d06ed1000"
+      },
+      "MemType": 2,
+      "UUID": "f29f5c15ca9671de00000e3b6aa71000"
+    },
+    {
+      "ClassName": "GameObject",
+      "Data": {
+        "Children": [],
+        "GlobalTransformMat": [
+          [
+            -0.0062817358411848545,
+            0.0,
+            0.007780731655657291,
+            0.0
+          ],
+          [
+            0.0,
+            0.009999999776482582,
+            0.0,
+            0.0
+          ],
+          [
+            -0.007780731655657291,
+            0.0,
+            -0.0062817358411848545,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "LocalTransform": {
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "MainComponents": [
+          "fe475c15ca9671de0000056c1021e000",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "Name": ""
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "fc2c5c15ca9671de000001fe058e7000"
+    },
+    {
+      "ClassName": "AnimMeshRenderer",
+      "Data": {
+        "AnimMeshRenderingBuffer": "012a5c15ca9671de0000099e6755b000",
+        "MeshId": 0,
+        "Model": "ac235c15ca9671de00000000001af7df",
+        "Texture2D": "ac445c15ca9671de00000000001efd6a"
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "fe475c15ca9671de0000056c1021e000"
+    },
+    {
+      "ClassName": "class soft::Texture2D",
+      "Data": null,
+      "MemType": 3,
+      "UUID": "ac445c15ca9671de00000000001efd6a"
+    },
+    {
+      "ClassName": "AnimMeshRenderingBuffer",
+      "Data": {
+        "BoneBufferSize": 65,
+        "MeshesAABBBufferSize": 2
+      },
+      "MemType": 1,
+      "UUID": "012a5c15ca9671de0000099e6755b000"
+    },
+    {
+      "ClassName": "GameObject",
+      "Data": {
+        "Children": [],
+        "GlobalTransformMat": [
+          [
+            -0.0062817358411848545,
+            0.0,
+            0.007780731655657291,
+            0.0
+          ],
+          [
+            0.0,
+            0.009999999776482582,
+            0.0,
+            0.0
+          ],
+          [
+            -0.007780731655657291,
+            0.0,
+            -0.0062817358411848545,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ]
+        ],
+        "LocalTransform": {
+          "position": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rotation": [
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "scale": [
+            1.0,
+            1.0,
+            1.0
+          ]
+        },
+        "MainComponents": [
+          "06a65c15ca9671de00000973a29a9000",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "Name": ""
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "04735c15ca9671de000002263f659000"
+    },
+    {
+      "ClassName": "AnimMeshRenderer",
+      "Data": {
+        "AnimMeshRenderingBuffer": "012a5c15ca9671de0000099e6755b000",
+        "MeshId": 1,
+        "Model": "ac235c15ca9671de00000000001af7df",
+        "Texture2D": "ac445c15ca9671de00000000001efd6a"
+      },
+      "MemHeapId": 0,
+      "MemType": 0,
+      "UUID": "06a65c15ca9671de00000973a29a9000"
+    },
+    {
+      "ClassName": "AnimatorEditorSaveData",
+      "Data": {
+        "CameraUUID": "0f6b5c15ca9671de00000fcaecb40000",
+        "EditorData": {
+          "AnimationsEditingState": [
+            {
+              "Name": "FastRun"
+            },
+            {
+              "Name": "NumbaDancing"
+            },
+            {
+              "Name": "Flair"
+            }
+          ],
+          "NodesPosition": [
+            [
+              164.0,
+              59.0
+            ],
+            [
+              164.0,
+              235.0
+            ],
+            [
+              595.0,
+              59.0
+            ]
+          ]
+        },
+        "EditorName": "Test",
+        "ObjectUUID": "bb1c5c15ca9671de0000054962f68000",
+        "SceneUUID": "1f425c15ca9671de000002f9927e9000"
+      },
+      "MemHeapId": 204,
+      "MemType": 0,
+      "UUID": "cc565c15ca9671de00000ff26c47a000"
+    }
+  ],
+  "UsedResources": [
+    {
+      "Path": "model/Mixamo/RumbaDancing.fbx|0",
+      "UUID": "a6e15c15ca9671de000003eba915f000"
+    },
+    {
+      "Path": "model/Mixamo/FastRun.fbx",
+      "UUID": "ac235c15ca9671de00000000001af7df"
+    },
+    {
+      "Path": "model/Mixamo/FastRun.fbx|0",
+      "UUID": "ac445c15ca9671de00000000001cff6f"
+    },
+    {
+      "Path": "Default/default.png",
+      "UUID": "ac445c15ca9671de00000000001efd6a"
+    },
+    {
+      "Path": "model/Mixamo/Flair.fbx|0",
+      "UUID": "46f35c15ca9671de0000077c1f559000"
+    }
+  ]
+}

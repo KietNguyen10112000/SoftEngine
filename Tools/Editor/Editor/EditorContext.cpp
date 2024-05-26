@@ -454,16 +454,21 @@ void EditorContext::RunTab(const Handle<EditorTab>& tab)
 			[](Scene* scene, int argc, void** argv, ID id)
 			{
 				auto tab = scene->GenericStorage()->Get<AnimatorEditorTab>(id);
-				EditorContext::GetInstance()->m_currentTabId = tab->m_id;
-				tab->Show();
+
+				if (EditorContext::GetInstance()->m_currentTabId != tab->m_id)
+				{
+					EditorContext::GetInstance()->GetCurrentTab()->Hide();
+					EditorContext::GetInstance()->m_currentTabId = tab->m_id;
+					tab->Show();
+				}
 			},
 			tabId
 		);
 	}
-	else
+	/*else
 	{
 		m_currentTabId = tab->m_id;
-	}
+	}*/
 
 	Runtime::Get()->SetRunningScene(scene);
 }
@@ -484,8 +489,9 @@ void EditorContext::CloseTab(const Handle<EditorTab>& tab)
 	if (m_currentTabId != 0)
 	{
 		m_currentTabId = m_currentTabId - 1;
-		m_tabs[m_currentTabId]->Show();
 	}
+
+	m_tabs[m_currentTabId]->Show();
 
 	{
 		size_t c = 0;

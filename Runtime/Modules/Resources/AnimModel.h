@@ -255,7 +255,7 @@ protected:
 public:
 	std::vector<AnimMeshVertices> LoadAnimMeshVertices() const;
 
-	ID AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
+	Animation* AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
 
 	// LoadAnimation(PlaceHolderAnimation(motion)) same as AddAnimation(motion)
 	ID PlaceHolderAnimation(const Resource<AnimMotion>& motion);

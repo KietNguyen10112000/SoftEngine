@@ -4,7 +4,7 @@
 
 NAMESPACE_BEGIN
 
-class AnimBlendLayer : public AnimLayer
+class API AnimBlendLayer : public AnimLayer
 {
 protected:
 	SERIALIZABLE_CLASS(AnimBlendLayer, SERIALIZABLE_MEM_RAW);
@@ -38,7 +38,7 @@ public:
 	virtual AnimLayer* GetOutput() override;
 
 	void SetInput(AnimLayer* l1, AnimLayer* l2);
-	void FadeTo(ID animationId, float startTime, float endTime, float fadeTime);
+	void FadeTo(Animation* animation, float startTime, float endTime, float fadeTime);
 
 };
 

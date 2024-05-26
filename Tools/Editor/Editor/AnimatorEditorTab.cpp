@@ -28,11 +28,58 @@
 
 namespace ed = ax::NodeEditor;
 
+struct AnimatorEditorTabExternNodeData
+{
+	struct AnimPlayerLayerExternData : public AnimatorEditorTab::NodeExternData
+	{
+		ID currentAnimId = INVALID_ID;
+
+		virtual void OnNodesUpdated() override
+		{
+			auto layer = (AnimPlayerLayer*)node->layer;
+
+			currentAnimId = INVALID_ID;
+			for (auto& anim : tab->m_animator->m_model3D->m_animations)
+			{
+				if (anim == layer->m_animation)
+				{
+					currentAnimId = &anim - tab->m_animator->m_model3D->m_animations.data();
+					break;
+				}
+			}
+
+			assert(currentAnimId != INVALID_ID);
+		}
+	};
+
+	struct AnimBlendLayerExternData : public AnimatorEditorTab::NodeExternData
+	{
+		Animation* animation = nullptr;
+		ID currentAnimId = 0;
+
+		float start = -1;
+		float end = -1; 
+		float fadeTime = 0;
+
+		virtual void OnNodesUpdated() override
+		{
+			currentAnimId = 0;
+			animation = tab->m_animator->m_model3D->m_animations[currentAnimId];
+		}
+	};
+};
+
 AnimatorEditorTab::AnimatorEditorTab(const String& modelPath, Scene* scene)
 {
 	m_modelPath = modelPath;
 
 	m_nodeHeaderTexture = resource::Load<Texture2D>("Editor/BlueprintBackground.png");
+
+	auto savePath = (EditorContext::GetInstance()->GetSavePath() + "AnimatorEditor/" + m_name + ".config.json");
+	ed::Config config;
+	config.SettingsFile = savePath.c_str();
+	config.UserPointer = this;
+	m_nodeEditorCtx = ed::CreateEditor(&config);
 }
 
 void AnimatorEditorTab::OnObjectsAdded(std::vector<GameObject*>& objects)
@@ -82,7 +129,10 @@ void AnimatorEditorTab::OnRenderGUI()
 				{
 					if (m_animator->m_model3D->FindAnimation(m) == nullptr)
 					{
-						m_animator->m_model3D->AddAnimation(m);
+						auto animation = m_animator->m_model3D->AddAnimation(m);
+
+						auto& state = m_animationsEditingState.emplace_back();
+						state.name = animation->Name();
 					}
 				}
 			}
@@ -112,7 +162,7 @@ void AnimatorEditorTab::OnRenderGUI()
 		wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
 		//ImGui::SetNextWindowSize(ImVec2(ImGui::GetWindowSize().x, viewPortSize.y / 4.0f));
 		ImGui::BeginChild("AnimMotions", {0,0}, true, wflags);
-		if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_::ImGuiTableFlags_BordersInnerV))
+		/*if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_::ImGuiTableFlags_BordersInnerV))
 		{
 			for (auto& a : m_animator->m_model3D->m_animations)
 			{
@@ -123,7 +173,68 @@ void AnimatorEditorTab::OnRenderGUI()
 				ImGui::TextUnformatted((a->GetMotion()->GetModelFilePath()).c_str());
 			}
 			ImGui::EndTable();
+		}*/
+
+		ImGui::TextUnformatted("Animations: ");
+		if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH))
+		{
+			//ImGui::TableSetupColumn(nullptr);
+			//ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed, 1000);
+			//ImGui::TableHeadersRow();
+
+			auto& animations = m_animator->m_model3D->m_animations;
+			if (m_animationsEditingState.size() == 0)
+			{
+				m_animationsEditingState.resize(animations.size());
+				for (size_t i = 0; i < animations.size(); i++)
+				{
+					auto& state = m_animationsEditingState[i];
+					state.name = animations[i]->Name();
+				}
+			}
+
+			size_t i = 0;
+			for (auto& animation : animations)
+			{
+				auto& state = m_animationsEditingState[i];
+
+				ImGui::TableNextColumn();
+				ImGui::Text("[%d] ", i);
+
+				ImGui::TableNextColumn();
+				if (state.isEditingName)
+				{
+					ImGui::SetNextItemWidth(500);
+					if (ImGui::InputText("##Name", m_inputName, IM_ARRAYSIZE(m_inputName), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						state.isEditingName = false;
+						if (m_inputName[0])
+						{
+							state.name = m_inputName;
+						}
+					}
+				}
+				else
+				{
+					ImGui::Selectable(state.name.c_str());
+					if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+					{
+						for (auto& s : m_animationsEditingState)
+						{
+							s.isEditingName = false;
+						}
+
+						state.isEditingName = true;
+						m_inputName[0] = 0;
+					}
+				}
+
+				i++;
+			}
+
+			ImGui::EndTable();
 		}
+
 		ImGui::EndChild();
 		
 		ImGui::End();
@@ -144,7 +255,7 @@ void AnimatorEditorTab::OnShow()
 		[](EditorContext* ctx, int argc, void** argv, ID id)
 		{
 			auto path = *(String*)argv[0];
-			auto tab = (AnimatorEditorTab*)ctx->GetTab(id);
+			auto tab = (AnimatorEditorTab*)id;
 
 			AnimatorEditorSaveData data(tab);
 			data.m_name = tab->m_name;
@@ -170,7 +281,7 @@ void AnimatorEditorTab::OnShow()
 
 			serializer.WriteToFile(path);
 		}, 
-		m_id
+		ID(this)
 	);
 }
 
@@ -178,6 +289,7 @@ void AnimatorEditorTab::OnHide()
 {
 	if (m_onSaveListenerId != INVALID_ID)
 	{
+		//auto d = EditorContext::Get()->EventDispatcher();
 		EditorContext::Get()->EventDispatcher()->RemoveListener(m_onSaveListenerId);
 		m_onSaveListenerId = INVALID_ID;
 	}
@@ -185,12 +297,6 @@ void AnimatorEditorTab::OnHide()
 
 void AnimatorEditorTab::OnOpen()
 {
-	auto savePath = (EditorContext::GetInstance()->GetSavePath() + "AnimatorEditor/" + m_name + ".config.json");
-	ed::Config config;
-    config.SettingsFile = savePath.c_str();
-    config.UserPointer = this;
-	m_nodeEditorCtx = ed::CreateEditor(&config);
-
 	Transform transform = {};
 
 	if (!m_cam)
@@ -248,10 +354,73 @@ void AnimatorEditorTab::OnClose()
 
 void AnimatorEditorTab::WriteNodeDataToJson(Serializer* serializer, json& j) const
 {
+	ed::SetCurrentEditor(m_nodeEditorCtx);
+
+	json nodesData;
+
+	{
+		json positions = json::array();
+		for (size_t i = 0; i < m_nodes.size(); i++)
+		{
+			auto pos = ed::GetNodePosition(m_nodes[i]->nodeId);
+			positions.push_back(Vec2(pos.x, pos.y));
+		}
+
+		nodesData["NodesPosition"] = positions;
+	}
+
+	{
+		json states = json::array();
+		for (size_t i = 0; i < m_animationsEditingState.size(); i++)
+		{
+			auto& state = m_animationsEditingState[i];
+
+			json j1;
+			j1["Name"] = state.name;
+
+			states.push_back(j1);
+		}
+
+		nodesData["AnimationsEditingState"] = states;
+	}
+
+	j["EditorData"] = nodesData;
 }
 
 void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json& j)
 {
+	if (!j.contains("EditorData"))
+	{
+		return;
+	}
+
+	auto& nodesData = j["EditorData"];
+
+	if (nodesData.contains("NodesPosition"))
+	{
+		m_savedPositions.clear();
+
+		auto& positions = nodesData["NodesPosition"];
+		for (size_t i = 0; i < positions.size(); i++)
+		{
+			m_savedPositions.push_back(positions[i]);
+		}
+	}
+
+	if (nodesData.contains("AnimationsEditingState"))
+	{
+		m_animationsEditingState.clear();
+
+		auto& states = nodesData["AnimationsEditingState"];
+		for (size_t i = 0; i < states.size(); i++)
+		{
+			auto& jstate = states[i];
+			AnimationEditingState state = {};
+			state.name = jstate["Name"];
+
+			m_animationsEditingState.push_back(state);
+		}
+	}
 }
 
 void AnimatorEditorTab::BuildNodesFromAnimator()
@@ -270,9 +439,19 @@ void AnimatorEditorTab::BuildNodesFromAnimator()
 		animLayerToNode.insert({ layer,node });
 	}
 
+	ed::SetCurrentEditor(m_nodeEditorCtx);
+
 	for (auto& node : m_nodes)
 	{
 		BuildNode(node.get(), builder);
+	}
+
+	for (auto& node : m_nodes)
+	{
+		if (node->externData)
+		{
+			node->externData->OnNodesUpdated();
+		}
 	}
 }
 
@@ -323,8 +502,27 @@ UniquePtr<AnimatorEditorTab::Node> AnimatorEditorTab::CreateNode(AnimLayer* laye
 
 	node->layer = layer;
 	node->layerType = layerType;
-	node->nodeId = m_nextId++;
-	node->outputPinId = m_nextId++;
+	node->nodeId = GetNextId();
+	node->outputPinId = GetNextId();
+
+	switch (layerType)
+	{
+	case AnimatorEditorTab::LAYER_TYPE::ANIMATON_PLAYER:
+		node->externData = new AnimatorEditorTabExternNodeData::AnimPlayerLayerExternData();
+		break;
+	case AnimatorEditorTab::LAYER_TYPE::BLENDING:
+		node->externData = new AnimatorEditorTabExternNodeData::AnimBlendLayerExternData();
+		break;
+	default:
+		assert(0);
+		break;
+	}
+
+	if (node->externData)
+	{
+		node->externData->node = node.get();
+		node->externData->tab = this;
+	}
 
 	return std::move(node);
 }
@@ -365,7 +563,7 @@ void AnimatorEditorTab::BuildNode(Node* node, NodesBuilder& builder)
 	for (auto& input : node->inputs)
 	{
 		input.linkId = INVALID_ID;
-		input.pinId = m_nextId++;
+		input.pinId = GetNextId();
 		input.node = nullptr;
 	}
 
@@ -380,6 +578,16 @@ void AnimatorEditorTab::BuildNode(Node* node, NodesBuilder& builder)
 		
 		CreateLink(input.node, node, i);
 	}
+
+	if (m_savedPositions.size() > node->nodeIdx)
+	{
+		auto& pos = m_savedPositions[node->nodeIdx];
+		ed::SetNodePosition(node->nodeId, { pos.x, pos.y });
+	}
+	else
+	{
+		ed::SetNodePosition(node->nodeId, { node->nodeIdx * 300.0f, (node->nodeIdx % 2) * 200.0f });
+	}
 }
 
 void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title)
@@ -388,7 +596,12 @@ void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title)
 
 	util::BlueprintNodeBuilder& builder = *(util::BlueprintNodeBuilder*)p;
 
-	builder.Header();
+	ImColor headerColor = ImColor(128,195,255);
+	if (!node->layer->IsEnable())
+	{
+		headerColor = ImColor(255,255,255);
+	}
+	builder.Header(headerColor);
 	ImGui::TextUnformatted(title);
 	ImGui::Dummy(ImVec2(0, 5));
 	builder.EndHeader();
@@ -399,6 +612,8 @@ void AnimatorEditorTab::RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr
 	namespace util = ax::NodeEditor::Utilities;
 
 	auto layer = (AnimPlayerLayer*)concretePtr;
+	auto externData = (AnimatorEditorTabExternNodeData::AnimPlayerLayerExternData*)node->externData;
+	auto& animations = m_animator->m_model3D->m_animations;
 
 	util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
 	builder.Begin(node->nodeId);
@@ -407,13 +622,31 @@ void AnimatorEditorTab::RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr
 
 		RenderNodeHeader(&builder, node, "AnimPlayerLayer");
 
-		ImGui::Dummy({ 100, 0 }); ImGui::SameLine();
+		ImGui::Dummy({ 218, 0 }); ImGui::SameLine();
 		{
 			assert(node->inputs.size() == 0);
 			builder.Output(node->outputPinId);
 			ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
 			builder.EndOutput();
 		}
+
+		//auto curAnimation = layer->m_animation;
+		ImGui::SetNextItemWidth(250);
+		if (ed::BeginNodeCombo("##ChooseAnimation", m_animationsEditingState[externData->currentAnimId].name.c_str(), 0))
+		{
+			for (size_t i = 0; i < animations.size(); i++)
+			{
+				auto& animation = animations[i];
+				auto& state = m_animationsEditingState[i];
+				if (ImGui::Selectable(state.name.c_str()))
+				{
+					externData->currentAnimId = i;
+					layer->SetAnimation(animation, -1, -1);
+				}
+			}
+			ed::EndNodeCombo();
+		}
+
 	}
 	builder.End();
 }
@@ -422,7 +655,11 @@ void AnimatorEditorTab::RenderNode_BLENDING(Node* node, void* concretePtr)
 {
 	namespace util = ax::NodeEditor::Utilities;
 
+	auto drawList = ed::GetNodeBackgroundDrawList(node->nodeId);
+
 	auto layer = (AnimBlendLayer*)concretePtr;
+	auto externData = (AnimatorEditorTabExternNodeData::AnimBlendLayerExternData*)node->externData;
+	auto& animations = m_animator->m_model3D->m_animations;
 
 	util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
 	builder.Begin(node->nodeId);
@@ -461,6 +698,49 @@ void AnimatorEditorTab::RenderNode_BLENDING(Node* node, void* concretePtr)
 			builder.Output(node->outputPinId);
 			ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
 			builder.EndOutput();
+		}
+
+		{
+			builder.Separator();
+
+			ImGui::SetNextItemWidth(100);
+			if (ImGui::ArrowButton("Fade", ImGuiDir_::ImGuiDir_Right))
+			{
+				layer->FadeTo(externData->animation, externData->start, externData->end, externData->fadeTime);
+			}
+			ImGui::SameLine(); //ImGui::Dummy({ 20, 0 }); ImGui::SameLine();
+			ImGui::TextUnformatted("Fade Animation");
+
+			ImGui::SetNextItemWidth(250);
+			if (ed::BeginNodeCombo("##ChooseAnimation", m_animationsEditingState[externData->currentAnimId].name.c_str(), 0))
+			{
+				for (size_t i = 0; i < animations.size(); i++)
+				{
+					auto& animation = animations[i];
+					auto& state = m_animationsEditingState[i];
+					if (ImGui::Selectable(state.name.c_str()))
+					{
+						externData->currentAnimId = i;
+						externData->animation = animation;
+					}
+				}
+				ed::EndNodeCombo();
+			}
+
+			auto anim = externData->animation;
+			ImGui::SetNextItemWidth(100);
+			ImGui::DragFloat("Start", &externData->start, 0.001f, -1.0f, INFINITY);
+			//ImGui::SameLine();
+
+			ImGui::SetNextItemWidth(100);
+			ImGui::DragFloat("End", &externData->end, 0.001f, -1.0f, INFINITY);
+			//ImGui::SameLine(); 
+
+			ImGui::SetNextItemWidth(100);
+			ImGui::DragFloat("Fade Time", &externData->fadeTime, 0.001f, 0.001f, INFINITY);
+			//ImGui::SameLine();
+
+			
 		}
 	}
 	builder.End();
@@ -620,5 +900,11 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 	}
 
 	ed::End();
+
+	if (m_isFirstRender < 5)
+	{
+		ed::NavigateToContent();
+		m_isFirstRender++;
+	}
 	ed::SetCurrentEditor(nullptr);
 }

@@ -25,6 +25,19 @@ using json = ::nlohmann::json;
 namespace math
 {
 
+inline void to_json(json& j, const Vec2& vec)
+{
+	j = json::array();
+	j.push_back(vec.x);
+	j.push_back(vec.y);
+}
+
+inline void from_json(const json& j, Vec2& vec)
+{
+	vec.x = j[0];
+	vec.y = j[1];
+}
+
 inline void to_json(json& j, const Vec3& vec)
 {
 	j = json::array();

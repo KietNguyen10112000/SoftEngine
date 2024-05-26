@@ -141,11 +141,21 @@ void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, fl
 	m_startTick = startTick;
 	m_tickDuration = endTick - startTick;
 	m_ticksPerSecond = m_animation->GetTicksPerSecond();
+
+	std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
+		m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+
+	std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
+		m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+
+	m_t = 0;
 }
 
-void AnimPlayerLayer::SetAnimation(ID animationId, float startTime, float endTime)
+void AnimPlayerLayer::SetAnimation(Animation* animation, float startTime, float endTime)
 {
-	auto animation = m_model->m_animations[animationId];
+	assert(m_model->FindAnimation(animation->GetMotion()) == animation);
+
+	//auto animation = m_model->m_animations[animationId];
 	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
 	{
 		this->SetAnimationImpl(animation, startTime, endTime);
@@ -230,7 +240,7 @@ void AnimPlayerLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 	auto animation = m_model->FindAnimation(motion);
 	if (!animation)
 	{
-		animation = m_model->m_animations[m_model->AddAnimation(motion)];
+		animation = m_model->AddAnimation(motion);
 	}
 	m_animation = animation;
 

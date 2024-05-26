@@ -35,7 +35,8 @@ void AnimatorEditorSaveData::DeserializeFromJson(Serializer* serializer, const j
 	m_cameraUUID = j["CameraUUID"];
 	m_name = j["EditorName"];
 
-	m_tab->ReadNodeDataFromJson(serializer, j);
+	m_savedJson = std::move(j);
+	//m_tab->ReadNodeDataFromJson(serializer, j);
 }
 
 Handle<ClassMetadata> AnimatorEditorSaveData::GetMetadata(size_t sign)
