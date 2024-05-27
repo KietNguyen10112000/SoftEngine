@@ -154,7 +154,7 @@ public:
 	std::vector<AnimLayer*> GetInputLayers(AnimLayer* layer);
 	void BuildNode(Node* node, NodesBuilder& builder);
 
-	void RenderNodeHeader(void*, Node* node, const char* title);
+	void RenderNodeHeader(void*, Node* node, const char* title, float nodeWidth);
 	void RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr);
 	void RenderNode_BLENDING(Node* node, void* concretePtr);
 	void RenderNode(Node* node);

@@ -22,6 +22,8 @@ protected:
 	float m_startTick = 0;
 	float m_t = 0;
 
+	bool m_needResetKeyFrameIndex = false;
+
 protected:
 	// Inherited via AnimLayer
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
@@ -43,9 +45,18 @@ public:
 
 private:
 	void SetAnimationImpl(Animation* animation, float startTime, float endTime);
+	void SetTimeImpl(float tick, float startTick, float tickDuration, float tickPerSecond);
 
 public:
+	// time in sec
 	void SetAnimation(Animation* animation, float startTime, float endTime);
+
+	// t in sec
+	void SetCurrentTime(float t);
+	void SetStartTime(float t);
+	void SetEndTime(float t);
+	void SetDuration(float duration);
+	void SetTime(float currentTime, float startTime, float endTime, float duration);
 
 };
 

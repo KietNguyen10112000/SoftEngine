@@ -204,6 +204,17 @@
       <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)/../Resources/Editor/</DestinationFolders>
     </CopyFileToFolders>
   </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\Resources\Fonts\Font Awesome 6 Brands-Regular-400.otf" />
+    <Font Include="..\Resources\Fonts\Font Awesome 6 Free-Regular-400.otf" />
+    <CopyFileToFolders Include="..\Resources\Fonts\Font Awesome 6 Free-Solid-900.otf">
+      <FileType>Document</FileType>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)/../Editor/Fonts/</DestinationFolders>
+      <DestinationFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">FontAwesome6_900%(Extension)</DestinationFileName>
+      <DestinationFolders Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)/../Editor/Fonts/</DestinationFolders>
+      <DestinationFileName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">FontAwesome6_900%(Extension)</DestinationFileName>
+    </CopyFileToFolders>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -32,6 +32,12 @@
     <Filter Include="Libraries\imgui-node-editor\utils">
       <UniqueIdentifier>{c5fbc21e-97ee-4e26-903e-f5bf47878a6e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{b68a9d58-9425-4afe-bb23-7051f23795ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Fonts">
+      <UniqueIdentifier>{df5d63c7-689f-49fe-a312-96f0ce25fdee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -193,5 +199,16 @@
     <CopyFileToFolders Include="..\Resources\BlueprintBackground.png">
       <Filter>Libraries\imgui-node-editor\rc</Filter>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\Resources\Fonts\Font Awesome 6 Free-Solid-900.otf">
+      <Filter>Resources\Fonts</Filter>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\Resources\Fonts\Font Awesome 6 Brands-Regular-400.otf">
+      <Filter>Resources\Fonts</Filter>
+    </Font>
+    <Font Include="..\Resources\Fonts\Font Awesome 6 Free-Regular-400.otf">
+      <Filter>Resources\Fonts</Filter>
+    </Font>
   </ItemGroup>
 </Project>

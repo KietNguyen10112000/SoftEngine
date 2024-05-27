@@ -26,6 +26,8 @@
 
 #include "FileChooser.h"
 
+#include "IconFontCppHeaders/IconsFontAwesome6.h"
+
 namespace ed = ax::NodeEditor;
 
 struct AnimatorEditorTabExternNodeData
@@ -590,7 +592,7 @@ void AnimatorEditorTab::BuildNode(Node* node, NodesBuilder& builder)
 	}
 }
 
-void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title)
+void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title, float nodeWidth)
 {
 	namespace util = ax::NodeEditor::Utilities;
 
@@ -602,8 +604,24 @@ void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title)
 		headerColor = ImColor(255,255,255);
 	}
 	builder.Header(headerColor);
+
+	ImGui::Dummy(ImVec2(0, 3));
+
 	ImGui::TextUnformatted(title);
-	ImGui::Dummy(ImVec2(0, 5));
+
+	ImGui::SameLine(0, nodeWidth - ImGui::GetItemRectSize().x - 25.0f);
+
+	auto icon = node->layer->IsEnable() ? ICON_FA_PAUSE : ICON_FA_PLAY;
+	auto btnColor = node->layer->IsEnable() ? ImColor(128, 128, 128) : ImColor(128,195,255);
+
+	ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, ImVec4(btnColor));
+	if (ImGui::Button(icon))
+	{
+		node->layer->SetEnable(!node->layer->IsEnable());
+	}
+	ImGui::PopStyleColor();
+
+	ImGui::Dummy(ImVec2(0, 3));
 	builder.EndHeader();
 }
 
@@ -615,12 +633,17 @@ void AnimatorEditorTab::RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr
 	auto externData = (AnimatorEditorTabExternNodeData::AnimPlayerLayerExternData*)node->externData;
 	auto& animations = m_animator->m_model3D->m_animations;
 
+	if (externData->currentAnimId == INVALID_ID)
+	{
+		externData->OnNodesUpdated();
+	}
+
 	util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
 	builder.Begin(node->nodeId);
 	{
 		//ed::SetNodePosition(uniqueId, { 0,0 });
 
-		RenderNodeHeader(&builder, node, "AnimPlayerLayer");
+		RenderNodeHeader(&builder, node, "AnimPlayerLayer", 250);
 
 		ImGui::Dummy({ 218, 0 }); ImGui::SameLine();
 		{
@@ -631,6 +654,8 @@ void AnimatorEditorTab::RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr
 		}
 
 		//auto curAnimation = layer->m_animation;
+		builder.Separator();
+
 		ImGui::SetNextItemWidth(250);
 		if (ed::BeginNodeCombo("##ChooseAnimation", m_animationsEditingState[externData->currentAnimId].name.c_str(), 0))
 		{
@@ -645,6 +670,16 @@ void AnimatorEditorTab::RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr
 				}
 			}
 			ed::EndNodeCombo();
+		}
+
+		builder.Separator();
+		float start = layer->m_startTick / layer->m_ticksPerSecond;
+		float end = (layer->m_startTick + layer->m_tickDuration) / layer->m_ticksPerSecond;
+		float t = layer->m_t / layer->m_ticksPerSecond;
+		ImGui::SetNextItemWidth(250);
+		if (ImGui::SliderFloat("##Track", &t, start, end))
+		{
+			layer->SetTime(t);
 		}
 
 	}
@@ -666,7 +701,7 @@ void AnimatorEditorTab::RenderNode_BLENDING(Node* node, void* concretePtr)
 	{
 		//ed::SetNodePosition(uniqueId, { 0,0 });
 
-		RenderNodeHeader(&builder, node, "AnimBlendLayer");
+		RenderNodeHeader(&builder, node, "AnimBlendLayer", 250);
 
 		{
 			assert(node->inputs.size() == 2);
@@ -692,7 +727,7 @@ void AnimatorEditorTab::RenderNode_BLENDING(Node* node, void* concretePtr)
 			ImGui::EndGroup();
 		}
 
-		ImGui::SameLine(); ImGui::Dummy({ 20, 0 }); ImGui::SameLine();
+		ImGui::SameLine(); ImGui::Dummy({ 120, 0 }); ImGui::SameLine();
 
 		{
 			builder.Output(node->outputPinId);
@@ -707,6 +742,18 @@ void AnimatorEditorTab::RenderNode_BLENDING(Node* node, void* concretePtr)
 			if (ImGui::ArrowButton("Fade", ImGuiDir_::ImGuiDir_Right))
 			{
 				layer->FadeTo(externData->animation, externData->start, externData->end, externData->fadeTime);
+
+				auto UpdateInput = [](Node* input)
+				{
+					auto playerLayerExternData = dynamic_cast<AnimatorEditorTabExternNodeData::AnimPlayerLayerExternData*>(input->externData);
+					if (playerLayerExternData)
+					{
+						playerLayerExternData->currentAnimId = INVALID_ID;
+					}
+				};
+
+				UpdateInput(node->inputs[0].node);
+				UpdateInput(node->inputs[1].node);
 			}
 			ImGui::SameLine(); //ImGui::Dummy({ 20, 0 }); ImGui::SameLine();
 			ImGui::TextUnformatted("Fade Animation");

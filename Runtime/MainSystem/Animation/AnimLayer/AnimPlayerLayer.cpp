@@ -142,11 +142,16 @@ void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, fl
 	m_tickDuration = endTick - startTick;
 	m_ticksPerSecond = m_animation->GetTicksPerSecond();
 
-	std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
-		m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+	if (m_needResetKeyFrameIndex)
+	{
+		std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
+			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
 
-	std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
-		m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+		std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
+			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+
+		m_needResetKeyFrameIndex = false;
+	}
 
 	m_t = 0;
 }
@@ -154,6 +159,8 @@ void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, fl
 void AnimPlayerLayer::SetAnimation(Animation* animation, float startTime, float endTime)
 {
 	assert(m_model->FindAnimation(animation->GetMotion()) == animation);
+
+	m_needResetKeyFrameIndex = true;
 
 	//auto animation = m_model->m_animations[animationId];
 	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
@@ -166,6 +173,218 @@ void AnimPlayerLayer::SetAnimation(Animation* animation, float startTime, float 
 		AnimationSystem, AsyncTaskRunner, animation, startTime, endTime,
 		{
 			self->SetAnimationImpl(animation, startTime, endTime);
+		}
+	);
+}
+
+void AnimPlayerLayer::SetTimeImpl(float tick, float startTick, float tickDuration, float tickPerSecond)
+{
+	if (tick >= 0)
+	{
+		m_t = tick;
+	}
+
+	if (startTick >= 0)
+	{
+		m_startTick = startTick;
+
+		auto& channels = m_animation->GetChannels();
+		auto& animMeshLocalAABoxKeyFrames = m_animation->GetMeshLocalAABBKeyFrames();
+
+		auto& startIndex = m_startKeyFrameIndex;
+		auto& startAABBIndex = m_startAABBKeyFrameIndex;
+
+		auto num = (uint32_t)channels.size();
+		startIndex.resize(num);
+		m_keyFramesIndex.resize(num);
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& channel = channels[i];
+			auto& index = startIndex[i];
+
+			channel.BinaryFindScale(startTick, &index.s);
+			channel.BinaryFindRotation(startTick, &index.r);
+			channel.BinaryFindTranslation(startTick, &index.t);
+		}
+
+		num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
+		startAABBIndex.resize(num);
+		m_aabbKeyFrameIndex.resize(num);
+
+		for (uint32_t i = 0; i < num; i++)
+		{
+			auto& channel = animMeshLocalAABoxKeyFrames[i];
+			auto& index = startAABBIndex[i];
+
+			channel.BinaryFind(startTick, &index);
+		}
+	}
+
+	if (tickDuration >= 0)
+	{
+		m_tickDuration = tickDuration;
+	}
+
+	if (tickPerSecond >= 0)
+	{
+		m_ticksPerSecond = tickPerSecond;
+	}
+
+	if (m_needResetKeyFrameIndex)
+	{
+		std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
+			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
+		std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
+			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
+
+		m_needResetKeyFrameIndex = false;
+	}
+
+	if (!IsEnable())
+	{
+		Run(0);
+	}
+}
+
+void AnimPlayerLayer::SetCurrentTime(float t)
+{
+	m_needResetKeyFrameIndex = true;
+
+	auto tick = t * m_ticksPerSecond;
+	tick = std::clamp(tick, m_startTick, m_startTick + m_tickDuration);
+	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
+	{
+		SetTimeImpl(tick, -1, -1, -1);
+		return;
+	}
+
+	MAIN_SYSTEM_TASK_EXT_1(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, tick,
+		{
+			self->SetTimeImpl(tick, -1, -1, -1);
+		}
+	);
+}
+
+void AnimPlayerLayer::SetStartTime(float t)
+{
+	m_needResetKeyFrameIndex = true;
+
+	auto startTick = t < 0 ? 0 : t * m_animation->GetTicksPerSecond();
+	startTick = std::clamp(startTick, 0.0f, m_animation->GetTickDuration());
+
+	float tick = -1;
+	if (startTick >= m_t)
+	{
+		tick = startTick;
+	}
+
+	float tickDuration = -1;
+	if (startTick >= m_startTick + m_tickDuration)
+	{
+		tickDuration = 0;
+	}
+
+	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
+	{
+		SetTimeImpl(tick, startTick, tickDuration, -1);
+		return;
+	}
+
+	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, tick, startTick, tickDuration,
+		{
+			self->SetTimeImpl(tick, startTick, tickDuration, -1);
+		}
+	);
+}
+
+void AnimPlayerLayer::SetEndTime(float t)
+{
+	m_needResetKeyFrameIndex = true;
+
+	auto endTick = t < 0 ? m_animation->GetTickDuration() : t * m_animation->GetTicksPerSecond();
+	endTick = std::clamp(endTick, 0.0f, m_animation->GetTickDuration());
+
+	float tickDuration = endTick - m_startTick;
+	if (tickDuration < 0)
+	{
+		tickDuration = 0;
+	}
+
+	float tick = -1;
+	if (endTick <= m_t)
+	{
+		tick = endTick;
+	}
+
+	float startTick = -1;
+	if (endTick <= m_startTick)
+	{
+		startTick = endTick;
+	}
+
+	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
+	{
+		SetTimeImpl(tick, startTick, tickDuration, -1);
+		return;
+	}
+
+	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, tick, startTick, tickDuration,
+		{
+			self->SetTimeImpl(tick, startTick, tickDuration, -1);
+		}
+	);
+}
+
+void AnimPlayerLayer::SetDuration(float duration)
+{
+	m_needResetKeyFrameIndex = true;
+
+	duration = std::max(0.0f, duration);
+	float tickPerSecond = m_tickDuration / duration;
+
+	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
+	{
+		SetTimeImpl(-1, -1, -1, tickPerSecond);
+		return;
+	}
+
+	MAIN_SYSTEM_TASK_EXT_1(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, tickPerSecond,
+		{
+			self->SetTimeImpl(-1, -1, -1, tickPerSecond);
+		}
+	);
+}
+
+void AnimPlayerLayer::SetTime(float tick, float startTime, float endTime, float duration)
+{
+	m_needResetKeyFrameIndex = true;
+
+	auto startTick = startTime < 0 ? 0 : startTime * m_animation->GetTicksPerSecond();
+	startTick = std::clamp(startTick, 0.0f, m_animation->GetTickDuration());
+
+	auto endTick = endTime < 0 ? m_animation->GetTickDuration() : endTime * m_animation->GetTicksPerSecond();
+	endTick = std::clamp(endTick, startTick, m_animation->GetTickDuration());
+	auto tickDuration = endTick - startTick;
+
+	duration = std::max(0.0f, duration);
+	float tickPerSecond = m_tickDuration / duration;
+
+	tick = std::clamp(tick, startTick, endTick);
+
+	if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())
+	{
+		SetTimeImpl(tick, startTick, tickDuration, tickPerSecond);
+		return;
+	}
+
+	MAIN_SYSTEM_TASK_EXT_4(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, tick, startTick, tickDuration, tickPerSecond,
+		{
+			self->SetTimeImpl(tick, startTick, tickDuration, tickPerSecond);
 		}
 	);
 }

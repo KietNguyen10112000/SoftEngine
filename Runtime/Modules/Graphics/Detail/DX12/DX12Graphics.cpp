@@ -642,6 +642,7 @@ void DX12Graphics::InitImGui(void* hwnd)
     //config.SizePixels = 13.0f * 1.0f;
     //config.EllipsisChar = (ImWchar)0x0085;
     //config.GlyphOffset.y = 1.0f * ((float)(int)(((config.SizePixels / 13.0f)) + 0.5f));
+    config.GlyphOffset.y = -1.0f;
     config.GlyphRanges = io.Fonts->GetGlyphRangesVietnamese();
     //config.GlyphExtraSpacing.x = 1.0f;
 

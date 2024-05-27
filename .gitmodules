@@ -25,3 +25,6 @@
 [submodule "Tools/Editor/Libraries/imgui-node-editor"]
 	path = Tools/Editor/Libraries/imgui-node-editor
 	url = git@github.com:thedmd/imgui-node-editor.git
+[submodule "Tools/Editor/Libraries/IconFontCppHeaders"]
+	path = Tools/Editor/Libraries/IconFontCppHeaders
+	url = git@github.com:juliettef/IconFontCppHeaders.git

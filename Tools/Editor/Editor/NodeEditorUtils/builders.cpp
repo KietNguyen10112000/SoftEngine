@@ -211,7 +211,7 @@ void ax::NodeEditor::Utilities::BlueprintNodeBuilder::SeparatorImpl(ImDrawList* 
 
     drawList->AddLine(
         ImVec2(nodeMin.x + 3, pos.y),
-        ImVec2(nodeMin.x + (nodeMax.x - nodeMin.x) -3, pos.y),
+        ImVec2(nodeMin.x + (nodeMax.x - nodeMin.x) -5, pos.y),
         ImColor(255, 255, 255, 96 * alpha / (3 * 255)), 1.0f);
 }
 
