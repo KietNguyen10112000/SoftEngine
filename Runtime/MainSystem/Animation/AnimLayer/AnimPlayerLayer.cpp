@@ -273,14 +273,14 @@ void AnimPlayerLayer::SetStartTime(float t)
 	auto startTick = t < 0 ? 0 : t * m_animation->GetTicksPerSecond();
 	startTick = std::clamp(startTick, 0.0f, m_animation->GetTickDuration());
 
-	float tick = -1;
-	if (startTick >= m_t)
+	float tick = (m_t + m_startTick) - startTick;
+	if (tick < 0)
 	{
-		tick = startTick;
+		tick = 0;
 	}
 
-	float tickDuration = -1;
-	if (startTick >= m_startTick + m_tickDuration)
+	float tickDuration = (m_tickDuration + m_startTick - startTick);
+	if (tickDuration < 0)
 	{
 		tickDuration = 0;
 	}

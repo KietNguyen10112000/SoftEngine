@@ -69,6 +69,8 @@ public:
 	virtual void OnOpen() = 0;
 	virtual void OnClose() = 0;
 
+	inline virtual bool IsCloseable() { return true; };
+
 	inline auto GetScene()
 	{
 		return m_scene;

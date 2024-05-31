@@ -127,13 +127,26 @@ protected:
 			goto begin;
 		}
 
-		for (auto& queue : s_queues)
+		if (threadId == 0)
 		{
+			// primary main thread will only be consumed task from CRITICAL queue in order to prevent long-running time of low priority tasks
+			auto& queue = s_queues[Task::CRITICAL];
 			if (queue.size_approx() != 0 && queue.try_dequeue(output))
 			{
 				return true;
 			}
 		}
+		else
+		{
+			for (auto& queue : s_queues)
+			{
+				if (queue.size_approx() != 0 && queue.try_dequeue(output))
+				{
+					return true;
+				}
+			}
+		}
+
 		return false;
 	}
 

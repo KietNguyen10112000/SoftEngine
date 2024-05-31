@@ -193,6 +193,11 @@ struct KeyFrames
 			return Vec3(1, 1, 1);
 		}
 
+		if (num == 1)
+		{
+			return keyFrames.front().value;
+		}
+
 		uint32_t count = num;
 		uint32_t idx = 0;
 
@@ -257,6 +262,11 @@ struct KeyFrames
 			return Quaternion();
 		}
 
+		if (num == 1)
+		{
+			return keyFrames.front().value;
+		}
+
 		uint32_t count = num;
 		uint32_t idx = 0;
 
@@ -313,6 +323,11 @@ struct KeyFrames
 		if (num == 0)
 		{
 			return Vec3(0,0,0);
+		}
+
+		if (num == 1)
+		{
+			return keyFrames.front().value;
 		}
 
 		uint32_t count = num;

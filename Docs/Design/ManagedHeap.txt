@@ -3,8 +3,8 @@
 Object size:
 + Tiny-objects:       (<= 512 bytes)
 + Small-objects:      (< 512 bytes) -> (<= 32 KB)
-+ Medium-objects:     (< 32 KB)     -> (<= 256 KB)
-+ Large-objects:      (< 256 KB)
++ Medium-objects:     (< 32 KB)     -> (<= 64 KB)
++ Large-objects:      (< 64 KB)
 
 ManagedHeap:
 + Allows up to 128 threads access at same time 

@@ -158,7 +158,7 @@ void EditorContext::RenderTabBar()
 				Runtime::Get()->SetRunningScene(tab->m_scene);
 			}
 
-			if (!open && m_tabs.size() > 1)
+			if (!open && m_tabs.size() > 1 && tab->IsCloseable())
 			{
 				// close this tab
 				//m_currentTabId = i;
@@ -436,7 +436,7 @@ void EditorContext::OnFinalize()
 {
 	for (auto& tab : m_tabs)
 	{
-		tab->OnClose();
+		tab->Close();
 	}
 	m_tabs.clear();
 }

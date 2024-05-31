@@ -1,7 +1,7 @@
 {
   "Meta": {
     "RootUUIDs": [
-      "cc565c15ca9671de00000ff26c47a000"
+      "4eff5c15ca9671de00000c60e27f7000"
     ],
     "UsedClassNames": [
       "Scene",
@@ -27,13 +27,13 @@
       "Data": {
         "LongLifeObjects": [],
         "ShortLifeObjects": [
-          "0f6b5c15ca9671de00000fcaecb40000",
-          "bb1c5c15ca9671de0000054962f68000"
+          "1c315c15ca9671de00000bd967e36000",
+          "90105c15ca9671de00000af6c6c6f000"
         ]
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "1f425c15ca9671de000002f9927e9000"
+      "UUID": "a6445c15ca9671de00000c32b1548000"
     },
     {
       "ClassName": "GameObject",
@@ -84,9 +84,9 @@
           ]
         },
         "MainComponents": [
-          "11db5c15ca9671de0000042ca15a2000",
+          "202e5c15ca9671de0000005dda161000",
           null,
-          "19435c15ca9671de000002b5e5415000",
+          "9fc95c15ca9671de0000009a2935c000",
           null,
           null,
           null,
@@ -97,7 +97,7 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "0f6b5c15ca9671de00000fcaecb40000"
+      "UUID": "1c315c15ca9671de00000bd967e36000"
     },
     {
       "ClassName": "Camera",
@@ -110,21 +110,21 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "11db5c15ca9671de0000042ca15a2000"
+      "UUID": "202e5c15ca9671de0000005dda161000"
     },
     {
       "ClassName": "FPPCameraScript",
       "Data": null,
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "19435c15ca9671de000002b5e5415000"
+      "UUID": "9fc95c15ca9671de0000009a2935c000"
     },
     {
       "ClassName": "GameObject",
       "Data": {
         "Children": [
-          "fc2c5c15ca9671de000001fe058e7000",
-          "04735c15ca9671de000002263f659000"
+          "f3fc5c15ca9671de00000e7032143000",
+          "076a5c15ca9671de0000072d22644000"
         ],
         "GlobalTransformMat": [
           [
@@ -174,7 +174,7 @@
           null,
           null,
           null,
-          "bea45c15ca9671de00000d3d06ed1000",
+          "96405c15ca9671de000005d75851a000",
           null,
           null,
           null,
@@ -184,27 +184,27 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "bb1c5c15ca9671de0000054962f68000"
+      "UUID": "90105c15ca9671de00000af6c6c6f000"
     },
     {
       "ClassName": "AnimatorSkeletalArray",
       "Data": {
         "AnimLayers": [
-          "c1f45c15ca9671de0000026d30e2b000",
-          "d9a15c15ca9671de000008f8f6ed9000",
-          "f29f5c15ca9671de00000e3b6aa71000"
+          "9be15c15ca9671de000006e47e465000",
+          "bb075c15ca9671de000008b99aa41000",
+          "e1d15c15ca9671de000002fde4648000"
         ],
-        "AnimMeshRenderingBuffer": "012a5c15ca9671de0000099e6755b000",
-        "GameObject": "bb1c5c15ca9671de0000054962f68000",
+        "AnimMeshRenderingBuffer": "fda75c15ca9671de0000052894f92000",
+        "GameObject": "90105c15ca9671de00000af6c6c6f000",
         "MeshRendererObjs": [
-          "fc2c5c15ca9671de000001fe058e7000",
-          "04735c15ca9671de000002263f659000"
+          "f3fc5c15ca9671de00000e7032143000",
+          "076a5c15ca9671de0000072d22644000"
         ],
         "Model": "ac235c15ca9671de00000000001af7df"
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "bea45c15ca9671de00000d3d06ed1000"
+      "UUID": "96405c15ca9671de000005d75851a000"
     },
     {
       "ClassName": "class soft::AnimModel",
@@ -237,22 +237,22 @@
     {
       "ClassName": "AnimPlayerLayer",
       "Data": {
-        "AnimMotion": "a6e15c15ca9671de000003eba915f000",
+        "AnimMotion": "46f35c15ca9671de0000077c1f559000",
         "GlobalTransformsSize": 82,
         "MeshesAABBSize": 2,
         "Model": "ac235c15ca9671de00000000001af7df",
-        "OwnerComp": "bea45c15ca9671de00000d3d06ed1000",
+        "OwnerComp": "96405c15ca9671de000005d75851a000",
         "StartAABBKeyFrameIndex": [
           0,
           0
         ],
         "StartTick": 0.0,
-        "TickDuration": 71.0,
+        "TickDuration": 30.0,
         "TicksPerSecond": 30.0,
-        "Time": 43.449546813964844
+        "Time": 8.039827346801758
       },
       "MemType": 2,
-      "UUID": "c1f45c15ca9671de0000026d30e2b000"
+      "UUID": "9be15c15ca9671de000006e47e465000"
     },
     {
       "ClassName": "AnimPlayerLayer",
@@ -261,7 +261,7 @@
         "GlobalTransformsSize": 82,
         "MeshesAABBSize": 2,
         "Model": "ac235c15ca9671de00000000001af7df",
-        "OwnerComp": "bea45c15ca9671de00000d3d06ed1000",
+        "OwnerComp": "96405c15ca9671de000005d75851a000",
         "StartAABBKeyFrameIndex": [
           0,
           0
@@ -269,23 +269,23 @@
         "StartTick": 0.0,
         "TickDuration": 16.0,
         "TicksPerSecond": 30.0,
-        "Time": 5.459999084472656
+        "Time": 2.389998435974121
       },
       "MemType": 2,
-      "UUID": "d9a15c15ca9671de000008f8f6ed9000"
+      "UUID": "bb075c15ca9671de000008b99aa41000"
     },
     {
       "ClassName": "AnimBlendLayer",
       "Data": {
         "GlobalTransformsSize": 82,
-        "Input0": "c1f45c15ca9671de0000026d30e2b000",
-        "Input1": "d9a15c15ca9671de000008f8f6ed9000",
+        "Input0": "9be15c15ca9671de000006e47e465000",
+        "Input1": "bb075c15ca9671de000008b99aa41000",
         "MeshesAABBSize": 2,
         "Model": "ac235c15ca9671de00000000001af7df",
-        "OwnerComp": "bea45c15ca9671de00000d3d06ed1000"
+        "OwnerComp": "96405c15ca9671de000005d75851a000"
       },
       "MemType": 2,
-      "UUID": "f29f5c15ca9671de00000e3b6aa71000"
+      "UUID": "e1d15c15ca9671de000002fde4648000"
     },
     {
       "ClassName": "GameObject",
@@ -336,7 +336,7 @@
           ]
         },
         "MainComponents": [
-          "fe475c15ca9671de0000056c1021e000",
+          "f7cb5c15ca9671de00000621258e5000",
           null,
           null,
           null,
@@ -349,19 +349,19 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "fc2c5c15ca9671de000001fe058e7000"
+      "UUID": "f3fc5c15ca9671de00000e7032143000"
     },
     {
       "ClassName": "AnimMeshRenderer",
       "Data": {
-        "AnimMeshRenderingBuffer": "012a5c15ca9671de0000099e6755b000",
+        "AnimMeshRenderingBuffer": "fda75c15ca9671de0000052894f92000",
         "MeshId": 0,
         "Model": "ac235c15ca9671de00000000001af7df",
         "Texture2D": "ac445c15ca9671de00000000001efd6a"
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "fe475c15ca9671de0000056c1021e000"
+      "UUID": "f7cb5c15ca9671de00000621258e5000"
     },
     {
       "ClassName": "class soft::Texture2D",
@@ -376,7 +376,7 @@
         "MeshesAABBBufferSize": 2
       },
       "MemType": 1,
-      "UUID": "012a5c15ca9671de0000099e6755b000"
+      "UUID": "fda75c15ca9671de0000052894f92000"
     },
     {
       "ClassName": "GameObject",
@@ -427,7 +427,7 @@
           ]
         },
         "MainComponents": [
-          "06a65c15ca9671de00000973a29a9000",
+          "0b655c15ca9671de00000b85b7d50000",
           null,
           null,
           null,
@@ -440,24 +440,24 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "04735c15ca9671de000002263f659000"
+      "UUID": "076a5c15ca9671de0000072d22644000"
     },
     {
       "ClassName": "AnimMeshRenderer",
       "Data": {
-        "AnimMeshRenderingBuffer": "012a5c15ca9671de0000099e6755b000",
+        "AnimMeshRenderingBuffer": "fda75c15ca9671de0000052894f92000",
         "MeshId": 1,
         "Model": "ac235c15ca9671de00000000001af7df",
         "Texture2D": "ac445c15ca9671de00000000001efd6a"
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "06a65c15ca9671de00000973a29a9000"
+      "UUID": "0b655c15ca9671de00000b85b7d50000"
     },
     {
       "ClassName": "AnimatorEditorSaveData",
       "Data": {
-        "CameraUUID": "0f6b5c15ca9671de00000fcaecb40000",
+        "CameraUUID": "1c315c15ca9671de00000bd967e36000",
         "EditorData": {
           "AnimationsEditingState": [
             {
@@ -470,28 +470,59 @@
               "Name": "Flair"
             }
           ],
-          "NodesPosition": [
-            [
-              164.0,
-              59.0
-            ],
-            [
-              164.0,
-              235.0
-            ],
-            [
-              595.0,
-              59.0
-            ]
+          "Links": [
+            {
+              "DestNodeId": 7,
+              "DestNodeIdx": 0,
+              "SrcNodeId": 1
+            },
+            {
+              "DestNodeId": 7,
+              "DestNodeIdx": 1,
+              "SrcNodeId": 3
+            }
+          ],
+          "NextId": 10,
+          "Nodes": [
+            {
+              "LayerIdx": 0,
+              "LayerType": 1,
+              "NodeId": 1,
+              "OutputPinId": 2,
+              "Position": [
+                10.0,
+                0.0
+              ]
+            },
+            {
+              "LayerIdx": 1,
+              "LayerType": 1,
+              "NodeId": 3,
+              "OutputPinId": 4,
+              "Position": [
+                10.0,
+                368.0
+              ]
+            },
+            {
+              "LayerIdx": 2,
+              "LayerType": 2,
+              "NodeId": 7,
+              "OutputPinId": 8,
+              "Position": [
+                600.0,
+                0.0
+              ]
+            }
           ]
         },
         "EditorName": "Test",
-        "ObjectUUID": "bb1c5c15ca9671de0000054962f68000",
-        "SceneUUID": "1f425c15ca9671de000002f9927e9000"
+        "ObjectUUID": "90105c15ca9671de00000af6c6c6f000",
+        "SceneUUID": "a6445c15ca9671de00000c32b1548000"
       },
       "MemHeapId": 204,
       "MemType": 0,
-      "UUID": "cc565c15ca9671de00000ff26c47a000"
+      "UUID": "4eff5c15ca9671de00000c60e27f7000"
     }
   ],
   "UsedResources": [

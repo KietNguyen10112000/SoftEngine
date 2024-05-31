@@ -7,7 +7,7 @@
 
 NAMESPACE_BEGIN
 
-class AnimatorSkeletalArray : public Animator
+class API AnimatorSkeletalArray : public Animator
 {
 public:
 	friend class AnimLayer;

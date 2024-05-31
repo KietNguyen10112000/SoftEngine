@@ -3,6 +3,8 @@
 
 #include "Resources/Texture2D.h"
 
+#include "NodeEditorUtils/builders.h"
+
 namespace soft
 {
 	class GameObject;
@@ -32,45 +34,67 @@ public:
 		};
 	};
 
-	struct Node;
-
-	struct NodeExternData
-	{
-	public:
-		AnimatorEditorTab* tab = nullptr;
-		Node* node = nullptr;
-
-		inline virtual ~NodeExternData() {};
-		virtual void OnNodesUpdated() = 0;
-
-	};
+	struct Link;
 
 	struct Node
 	{
 		struct Input
 		{
-			ID pinId;
-			ID linkId;
-			Node* node;
+			ID pinId = INVALID_ID;
+			Link* link = nullptr;
 		};
-
-		ID nodeIdx = INVALID_ID;
-		ID nodeId = INVALID_ID;
 
 		LAYER_TYPE::TYPE layerType = LAYER_TYPE::NONE;
 		AnimLayer* layer = nullptr;
+		ID layerIdx = INVALID_ID;
 
+		AnimatorEditorTab* tab = nullptr;
+		ID nodeId = INVALID_ID;
+		ID nodeIdx = INVALID_ID;
 		std::vector<Input> inputs;
+		std::vector<Input> committedInputs;
+
 		ID outputPinId = INVALID_ID;
+		std::vector<Link*> outputLinks;
 
-		NodeExternData* externData = nullptr;
 
-		inline ~Node()
+		inline Node(AnimatorEditorTab* tab, size_t numInput) : tab(tab)
 		{
-			if (externData)
+			inputs.resize(numInput);
+			for (auto& input : inputs)
 			{
-				delete externData;
-				externData = nullptr;
+				input.pinId = tab->GetNextId();
+			}
+			
+			Commit();
+		}
+
+		virtual void OnBuiltDone() = 0;
+		virtual std::vector<AnimLayer*> GetInputLayers() = 0;
+
+		virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) = 0;
+
+		// called when user create a link
+		virtual int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) = 0;
+
+		// called when user hit build btn
+		virtual int ValidateBeforeBuilt(String& errDesc) = 0;
+
+		virtual void WriteToJson(json& json) const = 0;
+		virtual void ReadFromJson(const json& json) = 0;
+
+		inline void Commit()
+		{
+			committedInputs = inputs;
+		}
+
+		inline virtual ~Node()
+		{
+			if (layerIdx == INVALID_ID && layer)
+			{
+				delete layer;
+				layer = nullptr;
+				layerType = LAYER_TYPE::NONE;
 			}
 		}
 	};
@@ -79,6 +103,7 @@ public:
 	{
 		ID linkId;
 
+		ID srcIdx;
 		Node* src;
 
 		ID destIdx;
@@ -109,17 +134,23 @@ public:
 	Resource<Texture2D> m_nodeHeaderTexture;
 
 	ID m_nextId = 0;
-	std::vector<Link> m_links;
+	std::vector<UniquePtr<Link>> m_links;
 	std::map<ID, Node*> m_pinIdToNode;
 
 	std::vector<UniquePtr<Node>> m_nodes;
-	std::vector<Vec2> m_savedPositions;
+	//std::vector<Vec2> m_savedPositions;
 
 	char m_inputName[256] = {};
 
 	std::vector<AnimationEditingState> m_animationsEditingState;
 
 	byte m_isFirstRender = 0;
+
+	bool m_isRequestClosing = false;
+	bool m_isBuilding = false;
+	size_t m_buildingNow = 0;
+	size_t m_buildingTotal = 1000;
+	TaskWaitingHandle m_builtWaitingHandle = { 0,0 };
 
 	inline void Trace(Tracer* tracer)
 	{
@@ -141,22 +172,23 @@ public:
 	void OnOpen() override;
 	void OnClose() override;
 
+	bool IsCloseable() override;
+
 	void WriteNodeDataToJson(Serializer* serializer, json& j) const;
 	void ReadNodeDataFromJson(Serializer* serializer, const json& j);
 
 	void BuildNodesFromAnimator();
+	void OnBuildNodesDone();
 
 	LAYER_TYPE::TYPE GetNodeType(Node* node, void** concretePtr);
 	LAYER_TYPE::TYPE GetLayerType(AnimLayer* layer);
 
+	AnimLayer* CreateLayer(LAYER_TYPE::TYPE type);
 	UniquePtr<Node> CreateNode(AnimLayer* layer);
 
-	std::vector<AnimLayer*> GetInputLayers(AnimLayer* layer);
 	void BuildNode(Node* node, NodesBuilder& builder);
 
 	void RenderNodeHeader(void*, Node* node, const char* title, float nodeWidth);
-	void RenderNode_ANIMATON_PLAYER(Node* node, void* concretePtr);
-	void RenderNode_BLENDING(Node* node, void* concretePtr);
 	void RenderNode(Node* node);
 
 	inline ID GetNextId()
@@ -169,21 +201,14 @@ public:
 		return m_pinIdToNode[pinId];
 	}
 
-	inline void CreateLink(Node* src, Node* dest, ID destInputId)
-	{
-		assert(dest->inputs[destInputId].linkId == INVALID_ID);
-		
-		auto& input = dest->inputs[destInputId];
-		input.pinId = GetNextId();
-		input.linkId = GetNextId();
-		input.node = src;
-
-		m_links.push_back({ input.linkId,src,destInputId,dest });
-	}
-
+	void CreateLink(Node* src, Node* dest, ID destInputId);
+	void DeleteLink(ID linkId);
 
 private:
 	void RenderBluePrintPanel();
+	void WaitForDoneBuilding();
+	void BuildGraph();
+	void BuildGraphImpl();
 
 };
 

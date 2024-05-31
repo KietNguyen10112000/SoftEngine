@@ -155,8 +155,25 @@ void PluginLoader::Unload(Runtime* engine, Plugin* input, bool freeLib)
 	plugin = back;
 	g_pluginData.loadedPlugins.pop_back();
 
+	auto currentThreadId = Thread::GetID();
+
 	auto handle = input->m_nativeHandle;
 	input->Finalize(engine);
+
+	if (Thread::GetID() != currentThreadId)
+	{
+		TaskSystem::SubmitForThread(
+			{
+				[](void* arg)
+				{
+					Thread::SwitchToFiber(FiberPool::Get(Thread::GetID()), true);
+				},
+				(void*)0
+			},
+			currentThreadId
+		);
+		Thread::SwitchToFiber(FiberPool::Take(), true);
+	}
 
 	for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
 	{

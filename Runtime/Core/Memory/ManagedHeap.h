@@ -55,7 +55,7 @@ public:
 
 
     constexpr static size_t MEDIUM_OBJECT_PAGE_SIZE = 8 * KB;
-    constexpr static size_t MEDIUM_OBJECT_MAX_SIZE = 256 * KB;
+    constexpr static size_t MEDIUM_OBJECT_MAX_SIZE = 64 * KB;
     constexpr static size_t MEDIUM_OBJECT_MAX_PAGES = MEDIUM_OBJECT_MAX_SIZE / MEDIUM_OBJECT_PAGE_SIZE;
     constexpr static size_t MEDIUM_OBJECT_POOLS_COUNT = 4;
 
