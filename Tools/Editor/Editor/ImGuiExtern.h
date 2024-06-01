@@ -6,8 +6,10 @@
 namespace ImGui
 {
 
-inline void ToggleButton(const char* str_id, bool* v)
+inline bool ToggleButton(const char* str_id, bool* v)
 {
+    auto preV = *v;
+
 	ImVec4* colors = ImGui::GetStyle().Colors;
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -27,6 +29,8 @@ inline void ToggleButton(const char* str_id, bool* v)
 	else
 		draw_list->AddRectFilled(p, ImVec2(p.x + width, p.y + height), ImGui::GetColorU32(*v ? colors[ImGuiCol_Button] : ImVec4(0.85f, 0.85f, 0.85f, 1.0f)), height * 0.50f);
 	draw_list->AddCircleFilled(ImVec2(p.x + radius + (*v ? 1 : 0) * (width - radius * 2.0f), p.y + radius), radius - 1.5f, IM_COL32(255, 255, 255, 255));
+
+    return preV != *v;
 }
 
 inline bool BufferingBar(const char* label, float value, const ImVec2& size_arg, const ImU32& bg_col, const ImU32& fg_col) {

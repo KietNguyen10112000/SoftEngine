@@ -98,7 +98,7 @@ void AnimBlendLayer::FadeTo(Animation* animation, float startTime, float endTime
 		l0->SetAnimation(animation, startTime, endTime);
 	}
 
-	MAIN_SYSTEM_TASK_EXT_1(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_1(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, fadeTime,
 		{
 			self->m_blendTime = fadeTime;

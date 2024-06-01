@@ -188,6 +188,7 @@
     <ClInclude Include="TestScript.h" />
   </ItemGroup>
   <ItemGroup>
+    <Natvis Include="..\..\..\Libraries\glm\util\glm.natvis" />
     <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis" />
   </ItemGroup>
   <ItemGroup>

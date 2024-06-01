@@ -14,7 +14,7 @@
 
 NAMESPACE_BEGIN
 
-AnimatorSkeletalArray::AnimatorSkeletalArray() : Animator(ANIMATION_TYPE_SKELETAL_ARRAY)
+AnimatorSkeletalArray::AnimatorSkeletalArray() : AnimationComponent(ANIMATION_TYPE_SKELETAL_ARRAY)
 {
 
 }
@@ -52,95 +52,6 @@ void AnimatorSkeletalArray::OnTransformChanged()
 AABox AnimatorSkeletalArray::GetGlobalAABB()
 {
 	return AABox();
-}
-
-ID AnimatorSkeletalArray::FindAnimation(const String& name)
-{
-	return ID();
-}
-
-void AnimatorSkeletalArray::GetAnimationsName(std::vector<String>& output) const
-{
-}
-
-void AnimatorSkeletalArray::SetDuration(float sec)
-{
-	/*auto& animationId = m_currentAnimTrack->animationId;
-	auto& tickDuration = m_currentAnimTrack->tickDuration;
-	auto& ticksPerSecond = m_currentAnimTrack->ticksPerSecond;
-
-	struct Param
-	{
-		AnimatorSkeletalArray* animator;
-		float sec;
-	};
-
-	if (sec <= 0)
-	{
-		return;
-	}
-
-	float newTicksPerSecond = tickDuration / sec;
-
-	if (!GetGameObject()->IsInAnyScene())
-	{
-		ticksPerSecond = newTicksPerSecond;
-		return;
-	}
-
-	MAIN_SYSTEM_TASK_1(
-		AnimationSystem, AsyncTaskRunner, newTicksPerSecond, 
-		{
-			self->m_currentAnimTrack->ticksPerSecond = newTicksPerSecond;
-		}
-	);*/
-}
-
-void AnimatorSkeletalArray::SetDuration(float sec, ID animationId)
-{
-}
-
-float AnimatorSkeletalArray::GetDuration() const
-{
-	return 0.0f;
-}
-
-ID AnimatorSkeletalArray::GetCurrentAnimationId() const
-{
-	return ID();
-}
-
-void AnimatorSkeletalArray::Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime)
-{
-	
-}
-
-void AnimatorSkeletalArray::SetPause(bool pause)
-{
-	//m_paused = pause;
-}
-
-void AnimatorSkeletalArray::SetTime(float t)
-{
-	/*if (!GetGameObject()->IsInAnyScene())
-	{
-		SetTimeImpl(t);
-		return;
-	}
-
-	MAIN_SYSTEM_TASK_1(
-		AnimationSystem, AsyncTaskRunner, t, 
-		{
-			self->SetTimeImpl(t);
-
-			if (self->m_paused)
-			{
-				self->m_paused = false;
-				self->Update(system->GetScene(), 0.0f);
-				self->m_paused = true;
-			}
-		}
-	);*/
 }
 
 Handle<ClassMetadata> AnimatorSkeletalArray::GetMetadata(size_t sign)
@@ -199,6 +110,11 @@ Handle<ClassMetadata> AnimatorSkeletalArray::GetMetadata(size_t sign)
 
 void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 {
+	if (!m_isRunning)
+	{
+		return;
+	}
+
 	AnimLayer* last = nullptr;
 	for (auto& layer : m_animLayers)
 	{
@@ -217,92 +133,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 	{
 		//last = last->GetOutput();
 
-		auto& globalTransforms = last->m_globalTransforms;
-		auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();
-		auto& buffer = animMeshRenderingBuffer->buffer;
-
-		{
-			auto& offsets = m_model3D->m_boneOffsetMatrixs;
-			auto& boneBuffer = m_animMeshRenderingBuffer->buffer;
-			scene->BeginWrite<false>(boneBuffer);
-			auto& bones = boneBuffer.Write()->bones;
-			auto& nodes = m_model3D->m_nodes;
-
-			size_t i = 0;
-			for (auto& node : nodes)
-			{
-				if (node.boneId != INVALID_ID)
-				{
-					bones[node.boneId] = offsets[node.boneId] * globalTransforms[i];
-				}
-				i++;
-			}
-
-			scene->EndWrite(boneBuffer);
-		}
-		
-		//auto& index = m_aabbKeyFrameIndex;
-
-		bool update = false;
-
-		scene->BeginWrite<false>(buffer);
-
-		auto read = buffer.Read();
-		auto write = buffer.Write();
-
-		auto num = write->meshesAABB.size();
-		for (uint32_t i = 0; i < num; i++)
-		{
-			write->meshesAABB[i] = last->m_meshesAABB[i];
-			if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
-			{
-				update = true;
-			}
-		}
-
-		auto& boundNodeIds = m_model3D->m_boundNodeIds;
-
-		if (update)
-		{
-			scene->EndWrite<true>(buffer);
-
-			num = m_meshRendererObjs.size();
-			for (size_t i = 0; i < num; i++)
-			{
-				if (boundNodeIds[i] == INVALID_ID)
-				{
-					auto& obj = m_meshRendererObjs[i];
-					if (obj->GetScene() == scene)
-						obj->ForceRefreshTransform();
-				}
-			}
-		}
-		else
-		{
-			scene->EndWrite<false>(buffer);
-		}
-
-		num = m_meshRendererObjs.size();
-		for (size_t i = 0; i < num; i++)
-		{
-			if (boundNodeIds[i] != INVALID_ID)
-			{
-				auto& obj = m_meshRendererObjs[i];
-
-				auto& boundNodeTransform = globalTransforms[boundNodeIds[i]];
-
-				auto& buffer = obj->GetComponentRaw<AnimModelStaticMeshRenderer>()->m_myGlobalTransform;
-
-				scene->BeginWrite<false>(buffer);
-
-				auto buf = buffer.Write();
-				*buf = boundNodeTransform;
-
-				scene->EndWrite(buffer);
-
-				obj->ForceRefreshTransform();
-			}
-		}
+		UpdateDataToRenderer(scene, last);
 	}
 
 }
@@ -662,6 +493,103 @@ void AnimatorSkeletalArray::OnDrawDebug()
 	//}
 }
 
+void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, AnimLayer* last)
+{
+	auto scene = _scene ? _scene : GetCommittedObject()->GetCommittedScene();
+
+	auto& globalTransforms = last->m_globalTransforms;
+	auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();
+	auto& buffer = animMeshRenderingBuffer->buffer;
+
+	{
+		auto& offsets = m_model3D->m_boneOffsetMatrixs;
+		auto& boneBuffer = m_animMeshRenderingBuffer->buffer;
+		scene->BeginWrite<false>(boneBuffer);
+		auto& bones = boneBuffer.Write()->bones;
+		auto& nodes = m_model3D->m_nodes;
+
+		size_t i = 0;
+		for (auto& node : nodes)
+		{
+			if (node.boneId != INVALID_ID)
+			{
+				bones[node.boneId] = offsets[node.boneId] * globalTransforms[i];
+			}
+			i++;
+		}
+
+		scene->EndWrite(boneBuffer);
+	}
+
+	//auto& index = m_aabbKeyFrameIndex;
+
+	bool update = false;
+
+	scene->BeginWrite<false>(buffer);
+
+	auto read = buffer.Read();
+	auto write = buffer.Write();
+
+	auto num = write->meshesAABB.size();
+	for (uint32_t i = 0; i < num; i++)
+	{
+		write->meshesAABB[i] = last->m_meshesAABB[i];
+		if (std::memcmp(&write->meshesAABB[i], &read->meshesAABB[i], sizeof(AABox)))
+		{
+			update = true;
+		}
+	}
+
+	auto& boundNodeIds = m_model3D->m_boundNodeIds;
+
+	if (update)
+	{
+		scene->EndWrite<true>(buffer);
+
+		num = m_meshRendererObjs.size();
+		for (size_t i = 0; i < num; i++)
+		{
+			if (boundNodeIds[i] == INVALID_ID)
+			{
+				auto& obj = m_meshRendererObjs[i];
+				if (obj->GetScene() == scene)
+					obj->ForceRefreshTransform();
+			}
+		}
+	}
+	else
+	{
+		scene->EndWrite<false>(buffer);
+	}
+
+	num = m_meshRendererObjs.size();
+	for (size_t i = 0; i < num; i++)
+	{
+		if (boundNodeIds[i] != INVALID_ID)
+		{
+			auto& obj = m_meshRendererObjs[i];
+
+			auto& boundNodeTransform = globalTransforms[boundNodeIds[i]];
+
+			auto& buffer = obj->GetComponentRaw<AnimModelStaticMeshRenderer>()->m_myGlobalTransform;
+
+			scene->BeginWrite<false>(buffer);
+
+			auto buf = buffer.Write();
+			*buf = boundNodeTransform;
+
+			scene->EndWrite(buffer);
+
+			obj->ForceRefreshTransform();
+		}
+	}
+}
+
+void AnimatorSkeletalArray::SetRunning(bool running)
+{
+	m_isRunning = running;
+}
+
 void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	auto src = (AnimatorSkeletalArray*)another;
@@ -749,7 +677,7 @@ void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const js
 
 void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
-	if (var.Is(1))
+	/*if (var.Is(1))
 	{
 		Play(-1, newValue.As<ID>(), 0, -1, -1, 0);
 	}
@@ -757,7 +685,7 @@ void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const V
 	if (var.Is(3))
 	{
 		SetDuration(newValue.As<float>());
-	}
+	}*/
 }
 
 NAMESPACE_END

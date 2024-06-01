@@ -414,15 +414,17 @@ void BasicAnimModelRenderingPass::Run(RenderingPipeline* pipeline)
 
 	//graphics->ClearDepthStencil(depthBuffer, 0, 0);
 	
-	Render(basicPipeline->m_animMesh4, m_animModel4Pipeline);
-	Render(basicPipeline->m_animMesh8, m_animModel8Pipeline);
-	Render(basicPipeline->m_animMesh16, m_animModel16Pipeline);
+	Render(basicPipeline->GetRenderingSystem(), basicPipeline->m_animMesh4, m_animModel4Pipeline);
+	Render(basicPipeline->GetRenderingSystem(), basicPipeline->m_animMesh8, m_animModel8Pipeline);
+	Render(basicPipeline->GetRenderingSystem(), basicPipeline->m_animMesh16, m_animModel16Pipeline);
 
 	graphics->UnsetRenderTargets(1, &output, depthBuffer);
 }
 
-void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, SharedPtr<GraphicsPipeline>& pipeline)
+void BasicAnimModelRenderingPass::Render(RenderingSystem* sys, std::vector<AnimMeshRenderer*>& input, SharedPtr<GraphicsPipeline>& pipeline)
 {
+	auto curIteration = sys->GetScene()->GetIterationCount();
+
 	auto graphics = Graphics::Get();
 
 	graphics->SetGraphicsPipeline(pipeline.get());
@@ -438,10 +440,16 @@ void BasicAnimModelRenderingPass::Render(std::vector<AnimMeshRenderer*>& input, 
 		if (prevBuffer != (void*)shaderBuffer)
 		{
 			auto buffer = (AnimModel::AnimMeshRenderingBufferData*)shaderBuffer->buffer.Read();
-			for (auto& v : buffer->bones)
+			auto lastIteration = shaderBuffer->buffer.GetLastUpdateIteration();
+
+			if (curIteration == lastIteration + 1)
 			{
-				v = v * globalTransform;
+				for (auto& v : buffer->bones)
+				{
+					v = v * globalTransform;
+				}
 			}
+			
 			m_bonesBuffer->UpdateBuffer(buffer->bones.data(), buffer->bones.size() * sizeof(Mat4));
 			prevBuffer = shaderBuffer;
 		}

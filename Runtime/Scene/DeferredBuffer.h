@@ -129,6 +129,11 @@ public:
 	{
 		return m_writeIdx;
 	}
+
+	inline ID GetLastUpdateIteration() const
+	{
+		return m_prevUpdateIteration;
+	}
 };
 
 NAMESPACE_END

@@ -9,6 +9,7 @@
 #include "Scene/Scene.h"
 
 #include "Resources/AnimModel.h"
+#include "Resources/Utils/Utils.h"
 
 #include "DataInspector.h"
 #include "AnimatorEditorSaveData.h"
@@ -21,14 +22,18 @@
 
 #include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
+#include "MainSystem/Animation/AnimationSystem.h"
+#include "MainSystem/MainSystemTaskPacking.h"
 
-#include "Resources/Utils/Utils.h"
+#include "Graphics/DebugGraphics.h"
 
 #include "FileChooser.h"
 
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 
 #include "ImGuiExtern.h"
+
+#include <queue>
 
 namespace ed = ax::NodeEditor;
 
@@ -61,6 +66,11 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 	virtual std::vector<AnimLayer*> GetInputLayers() override
 	{
 		return {};
+	}
+
+	virtual void ProcessSetInputLayers() override
+	{
+
 	}
 
 	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
@@ -195,6 +205,13 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 		};
 	}
 
+	virtual void ProcessSetInputLayers() override
+	{
+		auto layer = (AnimBlendLayer*)this->layer;
+		layer->m_input[0] = GetInputLayer(0);
+		layer->m_input[1] = GetInputLayer(1);
+	}
+
 	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
 	{
 		namespace util = ax::NodeEditor::Utilities;
@@ -323,6 +340,61 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 	}
 };
 
+struct AnimatorEditorTPoseLayer : public AnimLayer
+{
+public:
+	SERIALIZABLE_CLASS(AnimatorEditorTPoseLayer, SERIALIZABLE_MEM_RAW);
+
+	bool m_once = true;
+
+	// Inherited via AnimLayer
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
+	{
+	}
+
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override
+	{
+	}
+
+	Handle<ClassMetadata> GetMetadata(size_t sign) override
+	{
+		return Handle<ClassMetadata>();
+	}
+
+	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override
+	{
+	}
+
+	void Run(float dt) override
+	{
+		if (!m_once)
+		{
+			return;
+		}
+
+		m_once = false;
+
+		auto& model = m_model;
+		auto& nodes = model->m_nodes;
+
+		auto& offsetMatrix = model->m_boneOffsetMatrixs;
+		for (size_t i = 0; i < m_globalTransforms.size(); i++)
+		{
+			auto& node = nodes[i];
+			if (node.boneId != INVALID_ID)
+			{
+				m_globalTransforms[i] = offsetMatrix[node.boneId].GetInverse();
+			}
+		}
+
+		for (auto& aabb : m_meshesAABB) 
+		{
+			aabb = AABox({ 0,0,0 }, { 1000,1000,1000 });
+		}
+	}
+
+};
+
 AnimatorEditorTab::AnimatorEditorTab(const String& modelPath, Scene* scene)
 {
 	m_modelPath = modelPath;
@@ -348,6 +420,43 @@ void AnimatorEditorTab::OnRenderGUI()
 {
 	//ImGui::ShowDemoWindow();
 
+	if (m_tposeMode != 0)
+	{
+		m_tposeLayer->Run(0);
+		m_animator->UpdateDataToRenderer(m_scene, m_tposeLayer);
+		m_tposeMode--;
+	}
+
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (debugGraphics)
+	{
+		auto& model = m_animator->m_model3D;
+		auto& offsetMatrix = model->m_boneOffsetMatrixs;
+		std::vector<Vec3> bonePos;
+		bonePos.reserve(offsetMatrix.size());
+
+		auto& rootTrans = m_object->GetCommittedGlobalTransform();
+
+		for (auto& bone : model->m_boneOffsetMatrixs)
+		{
+			bonePos.push_back((bone.GetInverse() * rootTrans).Position());
+		}
+
+		size_t i = 0;
+		auto& nodes = model->m_nodes;
+		for (auto& node : nodes)
+		{
+			if (node.boneId != INVALID_ID && node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
+			{
+				auto cur = (Vec4(bonePos[node.boneId], 1.0f)).xyz() + Vec3(0, 0, 3);
+				auto parent = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f)).xyz() + Vec3(0, 0, 3);
+
+				debugGraphics->DrawLineSegment(parent, cur);
+			}
+			i++;
+		}
+	}
+
 	const float HEADER_HEIGHT = 65;
 
 	ImGuiWindowFlags wflags = ImGuiWindowFlags_None;
@@ -363,7 +472,23 @@ void AnimatorEditorTab::OnRenderGUI()
 		{
 			//ImGui::Image(m_nodeHeaderTexture->GetNativeHandle(), { 100,100 });
 
-			if (ImGui::Button(ICON_FA_HAMMER))
+			bool enableTPose = m_isEnableTPoseMode;
+			if (ImGui::ToggleButton("TPoseToggle", &enableTPose))
+			{
+				if (m_isEnableTPoseMode)
+				{
+					SetTPoseMode(false);
+				}
+				else
+				{
+					SetTPoseMode(true);
+				}
+			}
+			ImGui::SameLine();
+			ImGui::TextUnformatted("TPose Mode");
+
+			ImGui::SameLine(0, 20);
+			if (ImGui::Button(ICON_FA_HAMMER "  Build"))
 			{
 				BuildGraph();
 				m_isBuilding = true;
@@ -374,9 +499,11 @@ void AnimatorEditorTab::OnRenderGUI()
 				ImGui::SameLine();
 				//ImGui::Spinner("Building", 12, 2, ImColor(255,255,255));
 
+				ImGui::PushStyleColor(ImGuiCol_PlotHistogram, { 0,1,0,1 });
 				char buf[32];
 				sprintf(buf, "%d/%d", int(m_buildingNow), int(m_buildingTotal));
 				ImGui::ProgressBar(float(m_buildingNow) / float(m_buildingTotal), ImVec2(0.f, 0.f), buf);
+				ImGui::PopStyleColor();
 
 				if (m_buildingNow == m_buildingTotal)
 				{
@@ -384,138 +511,175 @@ void AnimatorEditorTab::OnRenderGUI()
 					WaitForDoneBuilding();
 				}
 			}
+			else if (m_lastBuildCode != 0)
+			{
+				ImGui::SameLine();
+				ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, m_lastBuildCode == 1 ? ImVec4(0, 1, 0, 1) : ImVec4(1, 0, 0, 1));
+				ImGui::TextUnformatted(m_lastBuildCode == 1 ? "Build successed!" : "Build failed!");
+				ImGui::PopStyleColor();
+			}
 
-			ImGui::BeginDisabled(m_isBuilding);
+			bool disableEditor = m_isBuilding || m_isEnableTPoseMode;
+			ImGui::BeginDisabled(disableEditor);
 			RenderBluePrintPanel();
 			ImGui::EndDisabled();
 			ImGui::End();
 		}
 	}
 	
+	ed::SetCurrentEditor(m_nodeEditorCtx);
+	std::vector<ed::NodeId> selectedNodes;
+	selectedNodes.resize(ed::GetSelectedObjectCount());
+	auto numSelectedNodes = ed::GetSelectedNodes(selectedNodes.data(), selectedNodes.size());
+	selectedNodes.resize(numSelectedNodes);
+	Node* selectedNode = nullptr;
+	if (selectedNodes.size() == 1)
+	{
+		auto& nodeId = selectedNodes[0];
+		auto it = std::find_if(m_nodes.begin(), m_nodes.end(),
+			[&](const UniquePtr<Node>& node)
+			{
+				return node->nodeId == ID(nodeId);
+			}
+		);
+		selectedNode = (*it).get();
+	}
+
 	{
 		wflags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 		ImGui::SetNextWindowPos({ 0,HEADER_HEIGHT }, ImGuiCond_Appearing);
-		ImGui::SetNextWindowSize(ImVec2(viewPortSize.x / 4.0f, viewPortSize.y / 2.0f));
+		ImGui::SetNextWindowSize(ImVec2(viewPortSize.x / 4.0f, viewPortSize.y - HEADER_HEIGHT));
 		ImGui::Begin("Inspector ##AnimatorEditorTab", 0, wflags);
 
-		if (ImGui::Button("Import Motion"))
+		if (!selectedNode || !selectedNode->RenderCustomInspector())
 		{
-			auto path = FileChooser::OpenFileChooser("", false);
-
-			std::vector<Resource<AnimMotion>> motions;
-			if (ResourceUtils::LoadAnimMotion(path, motions) == 0)
+			if (ImGui::Button("Import Motion"))
 			{
-				for (auto& m : motions)
+				auto path = FileChooser::OpenFileChooser("", false);
+
+				std::vector<Resource<AnimMotion>> motions;
+				if (ResourceUtils::LoadAnimMotion(path, motions) == 0)
 				{
-					if (m_animator->m_model3D->FindAnimation(m) == nullptr)
+					for (auto& m : motions)
 					{
-						auto animation = m_animator->m_model3D->AddAnimation(m);
-
-						auto& state = m_animationsEditingState.emplace_back();
-						state.name = animation->Name();
-					}
-				}
-			}
-			else
-			{
-				std::cerr << "Import Motion ERROR!\n";
-			}
-			
-		}
-		ImGui::Separator();
-
-		m_objMetadata->ForEachProperties(
-			[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
-			{
-				auto var = accessor.Get();
-				if (var.Type() == VARIANT_TYPE::TRANSFORM3D)
-				{
-					DataInspector::Inspect(metadata, accessor, propertyName);
-					return false;
-				}
-
-				return true;
-			}, nullptr
-		);
-
-		ImGui::Separator();
-		wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
-		//ImGui::SetNextWindowSize(ImVec2(ImGui::GetWindowSize().x, viewPortSize.y / 4.0f));
-		ImGui::BeginChild("AnimMotions", {0,0}, true, wflags);
-		/*if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_::ImGuiTableFlags_BordersInnerV))
-		{
-			for (auto& a : m_animator->m_model3D->m_animations)
-			{
-				ImGui::TableNextColumn();
-				ImGui::TextUnformatted(a->Name().c_str());
-
-				ImGui::TableNextColumn();
-				ImGui::TextUnformatted((a->GetMotion()->GetModelFilePath()).c_str());
-			}
-			ImGui::EndTable();
-		}*/
-
-		ImGui::TextUnformatted("Animations: ");
-		if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH))
-		{
-			//ImGui::TableSetupColumn(nullptr);
-			//ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed, 1000);
-			//ImGui::TableHeadersRow();
-
-			auto& animations = m_animator->m_model3D->m_animations;
-			if (m_animationsEditingState.size() == 0)
-			{
-				m_animationsEditingState.resize(animations.size());
-				for (size_t i = 0; i < animations.size(); i++)
-				{
-					auto& state = m_animationsEditingState[i];
-					state.name = animations[i]->Name();
-				}
-			}
-
-			size_t i = 0;
-			for (auto& animation : animations)
-			{
-				auto& state = m_animationsEditingState[i];
-
-				ImGui::TableNextColumn();
-				ImGui::Text("[%d] ", i);
-
-				ImGui::TableNextColumn();
-				if (state.isEditingName)
-				{
-					ImGui::SetNextItemWidth(500);
-					if (ImGui::InputText("##Name", m_inputName, IM_ARRAYSIZE(m_inputName), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-					{
-						state.isEditingName = false;
-						if (m_inputName[0])
+						if (m_animator->m_model3D->FindAnimation(m) == nullptr)
 						{
-							state.name = m_inputName;
+							auto animation = m_animator->m_model3D->AddAnimation(m);
+
+							auto& state = m_animationsEditingState.emplace_back();
+							state.name = animation->Name();
 						}
 					}
 				}
 				else
 				{
-					ImGui::Selectable(state.name.c_str());
-					if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
-					{
-						for (auto& s : m_animationsEditingState)
-						{
-							s.isEditingName = false;
-						}
+					std::cerr << "Import Motion ERROR!\n";
+				}
 
-						state.isEditingName = true;
-						m_inputName[0] = 0;
+			}
+			ImGui::Separator();
+
+			m_objMetadata->ForEachProperties(
+				[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+				{
+					auto var = accessor.Get();
+					if (var.Type() == VARIANT_TYPE::TRANSFORM3D)
+					{
+						DataInspector::Inspect(metadata, accessor, propertyName);
+						return false;
+					}
+
+					return true;
+				}, nullptr
+			);
+
+			ImGui::Separator();
+			wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
+			//ImGui::SetNextWindowSize(ImVec2(ImGui::GetWindowSize().x, viewPortSize.y / 4.0f));
+			ImGui::BeginChild("AnimMotions", { 0,viewPortSize.y / 4.0f }, true, wflags);
+			/*if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_::ImGuiTableFlags_BordersInnerV))
+			{
+				for (auto& a : m_animator->m_model3D->m_animations)
+				{
+					ImGui::TableNextColumn();
+					ImGui::TextUnformatted(a->Name().c_str());
+
+					ImGui::TableNextColumn();
+					ImGui::TextUnformatted((a->GetMotion()->GetModelFilePath()).c_str());
+				}
+				ImGui::EndTable();
+			}*/
+
+			ImGui::TextUnformatted("Animations: ");
+			if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH))
+			{
+				//ImGui::TableSetupColumn(nullptr);
+				//ImGui::TableSetupColumn(nullptr, ImGuiTableColumnFlags_WidthFixed, 1000);
+				//ImGui::TableHeadersRow();
+
+				auto& animations = m_animator->m_model3D->m_animations;
+				if (m_animationsEditingState.size() == 0)
+				{
+					m_animationsEditingState.resize(animations.size());
+					for (size_t i = 0; i < animations.size(); i++)
+					{
+						auto& state = m_animationsEditingState[i];
+						state.name = animations[i]->Name();
 					}
 				}
 
-				i++;
+				size_t i = 0;
+				for (auto& animation : animations)
+				{
+					auto& state = m_animationsEditingState[i];
+
+					ImGui::TableNextColumn();
+					ImGui::Text("[%d] ", i);
+
+					ImGui::TableNextColumn();
+					if (state.isEditingName)
+					{
+						ImGui::SetNextItemWidth(500);
+						if (ImGui::InputText("##Name", m_inputName, IM_ARRAYSIZE(m_inputName), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+						{
+							state.isEditingName = false;
+							if (m_inputName[0])
+							{
+								state.name = m_inputName;
+							}
+						}
+					}
+					else
+					{
+						ImGui::Selectable(state.name.c_str());
+						if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+						{
+							for (auto& s : m_animationsEditingState)
+							{
+								s.isEditingName = false;
+							}
+
+							state.isEditingName = true;
+							m_inputName[0] = 0;
+						}
+					}
+
+					i++;
+				}
+
+				ImGui::EndTable();
 			}
 
-			ImGui::EndTable();
+			ImGui::EndChild();
 		}
 
-		ImGui::EndChild();
+		// test
+		{
+			wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
+			ImGui::BeginChild("Test", { 0,0 }, true, wflags);
+			RenderModelNodeHierarchy();
+			ImGui::EndChild();
+		}
 		
 		ImGui::End();
 	}
@@ -585,6 +749,8 @@ void AnimatorEditorTab::OnOpen()
 {
 	Transform transform = {};
 
+	m_tposeLayer = m_animator->NewAnimLayer<AnimatorEditorTPoseLayer, true>();
+
 	if (!m_cam)
 	{
 		auto cameraObj = mheap::New<GameObject>();
@@ -620,6 +786,8 @@ void AnimatorEditorTab::OnOpen()
 		{
 			OnBuildNodesDone();
 		}
+
+		BuildModelHierarchy();
 		return;
 	}
 
@@ -634,6 +802,8 @@ void AnimatorEditorTab::OnOpen()
 	{
 		BuildNodesFromAnimator();
 	}
+
+	BuildModelHierarchy();
 }
 
 void AnimatorEditorTab::OnClose()
@@ -643,6 +813,20 @@ void AnimatorEditorTab::OnClose()
 		std::cerr << "Wait for done building task ... \n";
 		m_isRequestClosing = true;
 		WaitForDoneBuilding();
+	}
+
+	if (m_tposeLayer)
+	{
+		delete m_tposeLayer;
+		m_tposeLayer = nullptr;
+	}
+
+	{
+		for (auto& node : m_modelNodes)
+		{
+			delete node;
+		}
+		m_modelNodes.clear();
 	}
 
 	ed::DestroyEditor(m_nodeEditorCtx);
@@ -852,6 +1036,34 @@ void AnimatorEditorTab::BuildNodesFromAnimator()
 	OnBuildNodesDone();
 }
 
+void AnimatorEditorTab::BuildModelHierarchy()
+{
+	auto& nodes = m_animator->m_model3D->m_nodes;
+
+	std::vector<ModelNode*> modelNodes;
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		auto& node = nodes[i];
+		auto modelNode = new ModelNode();
+		modelNodes.push_back(modelNode);
+
+		modelNode->nodeIdx = i;
+
+		if (node.parentId != INVALID_ID)
+		{
+			modelNodes[node.parentId]->children.push_back(modelNode);
+			modelNode->parent = modelNodes[node.parentId];
+		}
+		else
+		{
+			assert(i == 0);
+		}
+	}
+
+	m_root = modelNodes[0];
+	m_modelNodes.swap(modelNodes);
+}
+
 void AnimatorEditorTab::OnBuildNodesDone()
 {
 	for (auto& node : m_nodes)
@@ -907,17 +1119,17 @@ AnimLayer* AnimatorEditorTab::CreateLayer(LAYER_TYPE::TYPE type)
 	switch (type)
 	{
 	case AnimatorEditorTab::LAYER_TYPE::ANIMATON_PLAYER:
-		layer = m_animator->NewAnimLayer<AnimPlayerLayer>();
+		layer = m_animator->NewAnimLayer<AnimPlayerLayer, true>();
 		break;
 	case AnimatorEditorTab::LAYER_TYPE::BLENDING:
-		layer = m_animator->NewAnimLayer<AnimBlendLayer>();
+		layer = m_animator->NewAnimLayer<AnimBlendLayer, true>();
 		break;
 	default:
 		assert(0);
 		break;
 	}
 
-	m_animator->m_animLayers.pop_back();
+	//m_animator->m_animLayers.pop_back();
 
 	return layer;
 }
@@ -1018,6 +1230,46 @@ void AnimatorEditorTab::RenderNode(Node* node)
 	builder.End();
 }
 
+void AnimatorEditorTab::RenderModelNodeHierarchy()
+{
+	RenderModelNodeHierarchyImpl(m_root);
+}
+
+void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode)
+{
+	auto& model = m_animator->m_model3D;
+	auto& nodes = model->m_nodes;
+
+	ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow
+		| ImGuiTreeNodeFlags_OpenOnDoubleClick
+		| ImGuiTreeNodeFlags_SpanAvailWidth
+		| ImGuiTreeNodeFlags_AllowItemOverlap
+		| ImGuiTreeNodeFlags_SpanFullWidth;
+
+	/*if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
+	{
+		nodeFlags |= ImGuiTreeNodeFlags_Selected;
+	}*/
+	auto& node = nodes[modelNode->nodeIdx];
+	String name = "<Unnamed>";
+	if (node.boneId != INVALID_ID)
+	{
+		name = model->m_boneNames[node.boneId];
+	}
+
+	auto open = ImGui::TreeNodeEx((void*)modelNode, nodeFlags, name.c_str());
+
+	if (open)
+	{
+		for (auto& child : modelNode->children)
+		{
+			RenderModelNodeHierarchyImpl(child);
+		}
+
+		ImGui::TreePop();
+	}
+}
+
 void AnimatorEditorTab::CreateLink(Node* src, Node* dest, ID destInputId)
 {
 	assert(
@@ -1063,6 +1315,22 @@ void AnimatorEditorTab::DeleteLink(ID linkId)
 	{
 		link->src->outputLinks[i]->srcIdx = i;
 	}
+}
+
+void AnimatorEditorTab::SetTPoseMode(bool isOn)
+{
+	m_animator->SetRunning(!isOn);
+
+	if (isOn)
+	{
+		m_tposeMode = 2;
+	}
+	else
+	{
+		m_tposeMode = 0;
+	}
+	m_isEnableTPoseMode = isOn;
+	((AnimatorEditorTPoseLayer*)m_tposeLayer)->m_once = true;
 }
 
 void AnimatorEditorTab::RenderBluePrintPanel()
@@ -1161,7 +1429,7 @@ void AnimatorEditorTab::BuildGraph()
 	};
 
 	m_buildingNow = 0;
-	m_buildingTotal = 500 + 1;
+	m_buildingTotal = m_nodes.size() + 1;
 
 	TaskSystem::PrepareHandle(&m_builtWaitingHandle);
 	TaskSystem::Submit(&m_builtWaitingHandle, task, Task::LOW);
@@ -1169,17 +1437,173 @@ void AnimatorEditorTab::BuildGraph()
 
 void AnimatorEditorTab::BuildGraphImpl()
 {
-	for (size_t i = 0; i < 500; i++)
+	String errDesc;
+	auto count = m_nodes.size();
+	int errCount = 0;
+
+	Node* root = nullptr;
+	
+	// check single graph
+	int outputNodeCount = 0;
+	{
+		for (size_t i = 0; i < count; i++)
+		{
+			if (m_isRequestClosing)
+			{
+				break;
+			}
+
+			auto node = m_nodes[i].get();
+			if (node->outputLinks.size() == 0)
+			{
+				outputNodeCount++;
+				root = node;
+			}
+		}
+
+		if (outputNodeCount != 1)
+		{
+			std::cerr << "[BUILD]: Failed. Graph must have only 1 output node.";
+			errCount++;
+		}
+	}
+
+	// check graph has no loop
+	if (outputNodeCount == 1)
+	{
+		for (size_t i = 0; i < count; i++)
+		{
+			if (m_isRequestClosing)
+			{
+				break;
+			}
+
+			auto node = m_nodes[i].get();
+			node->visited = 0;
+			node->excutionOrder = 0;
+		}
+
+		std::queue<Node*> queue;
+		root->visited = 1;
+		queue.push(root);
+
+		bool hasLoop = false;
+
+		while (!queue.empty())
+		{
+			if (m_isRequestClosing)
+			{
+				break;
+			}
+
+			auto top = queue.front();
+			queue.pop();
+
+			assert(top->visited == 1);
+
+			top->visited = 2;
+
+			for (auto& input : top->inputs)
+			{
+				if (input.link->src->visited == 0)
+				{
+					input.link->src->visited = 1;
+					queue.push(input.link->src);
+				}
+
+				if (input.link->src->visited > 1)
+				{
+					hasLoop = true;
+				}
+
+				input.link->src->excutionOrder = top->excutionOrder + 1;
+			}
+
+			if (hasLoop)
+			{
+				break;
+			}
+		}
+
+		if (hasLoop)
+		{
+			std::cerr << "[BUILD]: Failed. Graph has a loop.";
+			errCount++;
+		}
+	}
+
+	for (size_t i = 0; i < count; i++)
 	{
 		if (m_isRequestClosing)
 		{
 			break;
 		}
 
+		auto node = m_nodes[i].get();
+		auto errCode = node->ValidateBeforeBuilt(errDesc);
+		if (errCode != 0)
+		{
+			std::cerr << "[BUILD]: Failed. Error " << errCode << ", " << errDesc << "\n";
+			errCount++;
+		}
 
 		m_buildingNow++;
-		Thread::Sleep(10);
 	}
 
-	m_buildingNow = m_buildingTotal;
+	if (errCount == 0)
+	{
+		PlaceNodesToAnimatorLayers();
+
+		m_lastBuildCode = 1;
+	}
+	else
+	{
+		m_lastBuildCode = 2;
+	}
+
+	//m_buildingNow = m_buildingTotal;
+}
+
+void AnimatorEditorTab::PlaceNodesToAnimatorLayers()
+{
+	OnBuildNodesDone();
+
+	std::vector<Node*> nodes;
+	for (auto& node : m_nodes)
+	{
+		nodes.push_back(node.get());
+	}
+
+	std::sort(nodes.begin(), nodes.end(), 
+		[](const Node* a, const Node* b) 
+		{
+			return a->excutionOrder > b->excutionOrder;
+		}
+	);
+
+	std::vector<AnimLayer*> layers;
+	size_t count = 0;
+	for (auto& node : m_nodes)
+	{
+		layers.push_back(node->layer);
+		node->layerIdx = count;
+		count++;
+	}
+
+	//m_animator->m_animLayers.swap(layers);
+
+	auto sys = m_scene->GetAnimationSystem();
+	auto runner = sys->AsyncTaskRunner();
+	MAIN_SYSTEM_TASK_EXT_1(
+		sys, m_animator.Get(), AnimationSystem, AsyncTaskRunner, layers,
+		{
+			self->m_animator->m_animLayers.swap(layers);
+			for (auto& node : self->m_nodes)
+			{
+				node->ProcessSetInputLayers();
+			}
+
+			self->m_buildingNow = self->m_buildingTotal;
+		}
+	);
 }

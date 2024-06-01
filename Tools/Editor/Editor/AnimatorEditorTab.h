@@ -57,6 +57,8 @@ public:
 		ID outputPinId = INVALID_ID;
 		std::vector<Link*> outputLinks;
 
+		size_t excutionOrder = INVALID_ID;
+		byte visited = 0;
 
 		inline Node(AnimatorEditorTab* tab, size_t numInput) : tab(tab)
 		{
@@ -72,6 +74,8 @@ public:
 		virtual void OnBuiltDone() = 0;
 		virtual std::vector<AnimLayer*> GetInputLayers() = 0;
 
+		virtual void ProcessSetInputLayers() = 0;
+
 		virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) = 0;
 
 		// called when user create a link
@@ -83,9 +87,16 @@ public:
 		virtual void WriteToJson(json& json) const = 0;
 		virtual void ReadFromJson(const json& json) = 0;
 
+		inline virtual bool RenderCustomInspector() { return false; };
+
 		inline void Commit()
 		{
 			committedInputs = inputs;
+		}
+
+		inline AnimLayer* GetInputLayer(ID id)
+		{
+			return inputs[id].link->src->layer;
 		}
 
 		inline virtual ~Node()
@@ -121,6 +132,14 @@ public:
 		String name;
 	};
 
+	struct ModelNode
+	{
+		ModelNode* parent = nullptr;
+		std::vector<ModelNode*> children;
+
+		ID nodeIdx = INVALID_ID;
+	};
+
 	String m_modelPath;
 	Handle<GameObject> m_object;
 	Handle<GameObject> m_cam;
@@ -144,13 +163,25 @@ public:
 
 	std::vector<AnimationEditingState> m_animationsEditingState;
 
+	// model's hierarchy root node
+	ModelNode* m_root = nullptr;
+	std::vector<ModelNode*> m_modelNodes;
+
 	byte m_isFirstRender = 0;
 
 	bool m_isRequestClosing = false;
 	bool m_isBuilding = false;
+
+	// 0: not build yet, 1: success, 2: failed
+	byte m_lastBuildCode = 0;
 	size_t m_buildingNow = 0;
 	size_t m_buildingTotal = 1000;
 	TaskWaitingHandle m_builtWaitingHandle = { 0,0 };
+
+	AnimLayer* m_tposeLayer = nullptr;
+
+	byte m_tposeMode = 0;
+	bool m_isEnableTPoseMode = false;
 
 	inline void Trace(Tracer* tracer)
 	{
@@ -178,6 +209,7 @@ public:
 	void ReadNodeDataFromJson(Serializer* serializer, const json& j);
 
 	void BuildNodesFromAnimator();
+	void BuildModelHierarchy();
 	void OnBuildNodesDone();
 
 	LAYER_TYPE::TYPE GetNodeType(Node* node, void** concretePtr);
@@ -190,6 +222,8 @@ public:
 
 	void RenderNodeHeader(void*, Node* node, const char* title, float nodeWidth);
 	void RenderNode(Node* node);
+	void RenderModelNodeHierarchy();
+	void RenderModelNodeHierarchyImpl(ModelNode*);
 
 	inline ID GetNextId()
 	{
@@ -204,11 +238,14 @@ public:
 	void CreateLink(Node* src, Node* dest, ID destInputId);
 	void DeleteLink(ID linkId);
 
+	void SetTPoseMode(bool isOn);
+
 private:
 	void RenderBluePrintPanel();
 	void WaitForDoneBuilding();
 	void BuildGraph();
 	void BuildGraphImpl();
+	void PlaceNodesToAnimatorLayers();
 
 };
 

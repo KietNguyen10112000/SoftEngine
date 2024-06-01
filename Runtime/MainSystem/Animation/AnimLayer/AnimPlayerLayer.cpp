@@ -169,7 +169,7 @@ void AnimPlayerLayer::SetAnimation(Animation* animation, float startTime, float 
 		return;
 	}
 
-	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_3(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, animation, startTime, endTime,
 		{
 			self->SetAnimationImpl(animation, startTime, endTime);
@@ -258,7 +258,7 @@ void AnimPlayerLayer::SetCurrentTime(float t)
 		return;
 	}
 
-	MAIN_SYSTEM_TASK_EXT_1(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_1(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, tick,
 		{
 			self->SetTimeImpl(tick, -1, -1, -1);
@@ -291,7 +291,7 @@ void AnimPlayerLayer::SetStartTime(float t)
 		return;
 	}
 
-	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_3(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, tick, startTick, tickDuration,
 		{
 			self->SetTimeImpl(tick, startTick, tickDuration, -1);
@@ -330,7 +330,7 @@ void AnimPlayerLayer::SetEndTime(float t)
 		return;
 	}
 
-	MAIN_SYSTEM_TASK_EXT_3(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_3(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, tick, startTick, tickDuration,
 		{
 			self->SetTimeImpl(tick, startTick, tickDuration, -1);
@@ -351,7 +351,7 @@ void AnimPlayerLayer::SetDuration(float duration)
 		return;
 	}
 
-	MAIN_SYSTEM_TASK_EXT_1(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_1(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, tickPerSecond,
 		{
 			self->SetTimeImpl(-1, -1, -1, tickPerSecond);
@@ -381,7 +381,7 @@ void AnimPlayerLayer::SetTime(float tick, float startTime, float endTime, float 
 		return;
 	}
 
-	MAIN_SYSTEM_TASK_EXT_4(GetComponent(),
+	MAIN_SYSTEM_TASK_IMPL_4(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, tick, startTick, tickDuration, tickPerSecond,
 		{
 			self->SetTimeImpl(tick, startTick, tickDuration, tickPerSecond);

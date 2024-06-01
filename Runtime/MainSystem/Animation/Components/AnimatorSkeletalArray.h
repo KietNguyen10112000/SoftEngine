@@ -7,10 +7,12 @@
 
 NAMESPACE_BEGIN
 
-class API AnimatorSkeletalArray : public Animator
+class API AnimatorSkeletalArray : public AnimationComponent
 {
 public:
 	friend class AnimLayer;
+
+	Resource<AnimModel>	m_model3D;
 
 	ID m_animationSystemId = 0;
 
@@ -20,6 +22,8 @@ public:
 	Array<Handle<GameObject>> m_meshRendererObjs;
 
 	std::vector<AnimLayer*> m_animLayers;
+
+	bool m_isRunning = true;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -57,36 +61,24 @@ public:
 
 	virtual AABox GetGlobalAABB() override;
 
-	virtual ID FindAnimation(const String& name) override;
-
-	virtual void GetAnimationsName(std::vector<String>& output) const override;
-
-	virtual void SetDuration(float sec) override;
-
-	virtual void SetDuration(float sec, ID animationId) override;
-
-	virtual float GetDuration() const override;
-
-	virtual ID GetCurrentAnimationId() const override;
-
-	virtual void Play(float startTransitTime, ID animationId, float startTime, float beginTime, float endTime, float blendTime) override;
-
-	virtual void SetPause(bool pause) override;
-
-	virtual void SetTime(float t) override;
-
 	void Update(Scene* scene, float dt);
 
 	virtual void OnDrawDebug() override;
 
+	void UpdateDataToRenderer(Scene* _scene, AnimLayer* last);
+
+	void SetRunning(bool running);
+
 public:
-	// create and push the new anim layer to back of process
-	template <typename T, typename... Args>
+	template <typename T, bool IS_EXTERN = false, typename... Args>
 	inline T* NewAnimLayer(Args&&... args)
 	{
 		auto ret = new T(std::forward<Args>(args)...);
 		InitAnimLayer(ret);
-		m_animLayers.push_back(ret);
+
+		if constexpr (!IS_EXTERN)
+			m_animLayers.push_back(ret);
+
 		return ret;
 	}
 

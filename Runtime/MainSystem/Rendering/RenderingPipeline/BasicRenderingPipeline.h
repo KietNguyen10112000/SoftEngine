@@ -39,7 +39,7 @@ public:
 
 	virtual void Run(RenderingPipeline* pipeline) override;
 
-	void Render(std::vector<AnimMeshRenderer*>& input, SharedPtr<GraphicsPipeline>& pipeline);
+	void Render(RenderingSystem* sys, std::vector<AnimMeshRenderer*>& input, SharedPtr<GraphicsPipeline>& pipeline);
 };
 
 class BasicRenderingPass : public RenderingPass
