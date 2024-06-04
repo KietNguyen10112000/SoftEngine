@@ -168,15 +168,27 @@ void Runtime::InitializeModules()
 
 void Runtime::FinalizeModules()
 {
+	FinalPlugins();
+	for (auto& scene : m_scenes)
+	{
+		scene->CleanUp();
+	}
+
 	DisplayService::SingletonFinalize();
 	BuiltinConstantBuffers::SingletonFinalize();
 
-	FinalPlugins();
 	FinalGraphics();
 	FinalNetwork();
 
 	ScriptMeta::SingletonFinalize();
 	SerializableDB::SingletonFinalize();
+
+	m_genericStorage.Clear();
+	for (auto& m : m_modifiedRecorder)
+	{
+		m = nullptr;
+	}
+	m_scenes.clear();
 }
 
 void Runtime::InitGraphics()
@@ -227,10 +239,13 @@ void Runtime::FinalNetwork()
 
 void Runtime::InitPlugins()
 {
+	PluginLoader::SingletonInitialize();
+
 	if (StartupConfig::Get().pluginsPath)
 	{
-		if (PluginLoader::LoadAll(this, StartupConfig::Get().pluginsPath, m_plugins) == false)
+		if (PluginLoader::Get()->LoadAll(this, StartupConfig::Get().pluginsPath, m_plugins) == false)
 		{
+			std::cerr << "[PLUGIN]: Initialization failed!\n";
 			m_isRunning = false;
 		}
 		else
@@ -255,7 +270,8 @@ void Runtime::InitPlugins()
 
 void Runtime::FinalPlugins()
 {
-	PluginLoader::UnloadAll(this, m_plugins);
+	PluginLoader::Get()->UnloadAll(this, m_plugins);
+	PluginLoader::SingletonFinalize();
 }
 
 // why need this function -> this function is allowed to use fiber-based task system (fiber context switching), 
@@ -609,7 +625,7 @@ void Runtime::SwapModifiedRecorder()
 	size_t i = 0;
 	for (auto& scene : m_scenes)
 	{
-		if (i != m_nextRunningScene->m_runtimeID && scene)
+		if (!m_nextRunningScene || (i != m_nextRunningScene->m_runtimeID && scene))
 		{
 			for (size_t j = 0; j < MainSystemInfo::COUNT; j++)
 			{
@@ -890,5 +906,132 @@ void* Runtime::GetNativeHWND()
 {
 	return platform::GetWindowNativeHandle(m_window);
 }
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+void Runtime::HotReloadAllPlugins()
+{
+	struct ComponentInfo
+	{
+		Plugin* plugin;
+		ID COMPONENT_ID;
+	};
+
+	struct ReloadingComponent
+	{
+		GameObject* obj;
+		ComponentInfo* info;
+		UUID componentUUID;
+	};
+
+	auto plugins = PluginLoader::Get()->GetHotReloadablePlugins();
+
+	std::map<String, ComponentInfo> classNameByPlugin;
+
+	for (auto& plugin : plugins)
+	{
+		size_t i = 0;
+		for (auto& arr : plugin->m_customComps)
+		{
+			for (auto& compClassName : arr)
+			{
+				classNameByPlugin[compClassName] = { plugin, i };
+			}
+			i++;
+		}
+	}
+
+	Serializer serializer;
+	std::vector<ReloadingComponent> reloadingComponents;
+
+	auto RecordComponent = [&](GameObject* obj) 
+	{
+		for (auto& comp : obj->m_mainComponents)
+		{
+			if (comp)
+			{
+				auto className = comp->GetClassName();
+				auto it = classNameByPlugin.find(className);
+				if (it != classNameByPlugin.end())
+				{
+					reloadingComponents.push_back({ obj, &it->second, comp->GetUUID() });
+					serializer.Serialize(comp);
+				}
+			}
+		}
+	};
+
+	for (auto& scene : m_scenes)
+	{
+		for (auto& obj : scene->m_longLifeObjects)
+		{
+			RecordComponent(obj);
+		}
+
+		for (auto& obj : scene->m_shortLifeObjects)
+		{
+			RecordComponent(obj);
+		}
+
+		for (auto& trash : scene->m_trashObjects)
+		{
+			for (auto& obj : trash)
+			{
+				RecordComponent((GameObject*)obj.Get());
+			}
+		}
+	}
+
+	for (size_t i = 0; i < 5; i++)
+	{
+		SwapModifiedRecorder();
+	}
+
+	for (size_t i = 0; i < 5; i++)
+	{
+		byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+		gc::PerformFullSystemGC(255, resetValues);
+	}
+
+	for (auto& plugin : plugins)
+	{
+		for (auto& arr : plugin->m_customComps)
+		{
+			for (auto& compClassName : arr)
+			{
+				SerializableDB::Get()->RemoveRecord(compClassName.c_str());
+			}
+		}
+	}
+
+	PluginLoader::Get()->ReloadAll(this);
+
+	Handle<MainComponent> comp;
+	for (auto& elm : reloadingComponents)
+	{
+		auto obj = elm.obj;
+		const auto COMPONENT_ID = elm.info->COMPONENT_ID;
+		/*if (obj->m_isLongLife)
+		{
+			mheap::internal::SetHeapId(mheap::internal::HEAP_ID::STABLE_HEAP);
+		}
+		else
+		{
+			mheap::internal::SetHeapId(mheap::internal::HEAP_ID::GC_HEAP);
+		}*/
+
+		comp = nullptr;
+		serializer.Deserialize(elm.componentUUID, comp);
+		if (comp)
+		{
+			obj->m_mainComponents[COMPONENT_ID] = comp;
+			obj->m_committedComponents[COMPONENT_ID] = comp;
+		}
+	}
+
+	//mheap::internal::SetHeapId(mheap::internal::HEAP_ID::GC_HEAP);
+
+
+}
+#endif
 
 NAMESPACE_END

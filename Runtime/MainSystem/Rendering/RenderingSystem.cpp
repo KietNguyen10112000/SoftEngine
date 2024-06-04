@@ -43,6 +43,10 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene), m_eventDispa
 
 RenderingSystem::~RenderingSystem()
 {
+}
+
+void RenderingSystem::Finalize()
+{
 	for (auto& ss : m_collectInputForCameraRets)
 	{
 		m_bvh.DeleteQuerySession(ss);

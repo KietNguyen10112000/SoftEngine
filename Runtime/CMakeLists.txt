@@ -7,6 +7,8 @@ add_compile_definitions(
     EXPORTS 
     UNICODE 
     DEV
+
+    PLUGIN_ALLOW_HOT_RELOAD
 )
 
 add_compile_definitions(IMGUI_USER_CONFIG="Libraries/config/ImGUIConfig.h")
@@ -23,6 +25,7 @@ file(
     "Core/Memory/*.h"
     "Core/Memory/*.cpp"
     "Core/Structures/*.h"
+    "Core/Structures/*.cpp"
     "Core/Structures/Managed/*.h"
     "Core/Structures/Raw/*.h"
     "Core/Fiber/*.h"

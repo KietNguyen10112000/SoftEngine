@@ -1232,7 +1232,21 @@ void AnimatorEditorTab::RenderNode(Node* node)
 
 void AnimatorEditorTab::RenderModelNodeHierarchy()
 {
-	RenderModelNodeHierarchyImpl(m_root);
+	auto& model = m_animator->m_model3D;
+	auto& nodes = model->m_nodes;
+
+	ModelNode* rootBone = nullptr;
+	for (auto& node : m_modelNodes)
+	{
+		if (nodes[node->nodeIdx].boneId != INVALID_ID)
+		{
+			rootBone = node;
+			break;
+		}
+	}
+
+	if (rootBone)
+		RenderModelNodeHierarchyImpl(rootBone);
 }
 
 void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode)

@@ -13,6 +13,12 @@
 
 NAMESPACE_BEGIN
 
+namespace StringUtils
+{
+	API std::wstring StringToWString(const std::string& string);
+	API std::string WStringToString(const std::wstring& wide_string);
+};
+
 // faster compare
 class String
 {
@@ -46,6 +52,11 @@ public:
 	{
 	};
 
+	String(std::nullptr_t)
+	{
+		//*this = "";
+	};
+
 	String(const char* s)
 	{
 		*this = s;
@@ -59,6 +70,16 @@ public:
 	String(const String& s)
 	{
 		*this = s;
+	};
+
+	String(const wchar_t* s)
+	{
+		*this = StringUtils::WStringToString(s).c_str();
+	};
+
+	String(const wchar_t* s, size_t count)
+	{
+		*this = StringUtils::WStringToString(std::wstring(s, count)).c_str();
 	};
 
 	~String()
@@ -195,6 +216,12 @@ public:
 	inline String& operator=(const char_type* r)
 	{
 		Construct(r, -1);
+		return *this;
+	};
+
+	inline String& operator=(const wchar_t* r)
+	{
+		*this = StringUtils::WStringToString(r).c_str();
 		return *this;
 	};
 

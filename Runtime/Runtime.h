@@ -187,6 +187,11 @@ public:
 	{
 		return m_gameObjectCache.Get();
 	}
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+	void HotReloadAllPlugins();
+#endif
+
 };
 
 

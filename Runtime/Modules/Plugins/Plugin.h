@@ -43,6 +43,7 @@ struct PLUGIN_DESC
 class Plugin
 {
 private:
+	friend class Runtime;
 	friend class PluginLoader;
 	friend class SerializableDB;
 
@@ -57,6 +58,9 @@ private:
 
 	// custom main components from plugin of each MainComponent type
 	std::vector<String> m_customComps[MainSystemInfo::COUNT];
+
+	String m_filePath;
+	bool m_isHotReloadable = false;
 
 public:
 	virtual void GetDesc(PLUGIN_DESC* output) = 0;

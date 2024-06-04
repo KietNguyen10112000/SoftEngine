@@ -89,7 +89,7 @@ private:
 	ID m_currentDeferBufferIdx = 0;
 	ID m_prevDeferBufferIdx = 0;
 
-	MainSystem*				 m_mainSystems[MainSystemInfo::COUNT] = {};
+	Handle<MainSystem>				 m_mainSystems[MainSystemInfo::COUNT] = {};
 
 	bool m_isSettingUpLongLifeObjects = false;
 	bool m_destroyed = false;
@@ -137,7 +137,7 @@ private:
 		tracer->Trace(m_shortLifeObjects);
 		tracer->Trace(m_trashObjects);
 		tracer->Trace(m_genericStorage);
-		//tracer->Trace(m_mainSystems);
+		tracer->Trace(m_mainSystems);
 		//tracer->Trace(m_removeList);
 	}
 
@@ -168,7 +168,7 @@ private:
 	}
 
 	void AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName);
-	void AddLongLifeComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
+	//void AddLongLifeComponent(ID COMPONENT_ID, const Handle<MainComponent>& component);
 
 	// Inherited via Serializable
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
@@ -221,27 +221,27 @@ public:
 
 	inline RenderingSystem* GetRenderingSystem()
 	{
-		return (RenderingSystem*)m_mainSystems[MainSystemInfo::RENDERING_ID];
+		return (RenderingSystem*)m_mainSystems[MainSystemInfo::RENDERING_ID].Get();
 	}
 
 	inline PhysicsSystem* GetPhysicsSystem()
 	{
-		return (PhysicsSystem*)m_mainSystems[MainSystemInfo::PHYSICS_ID];
+		return (PhysicsSystem*)m_mainSystems[MainSystemInfo::PHYSICS_ID].Get();
 	}
 
 	inline ScriptingSystem* GetScriptingSystem()
 	{
-		return (ScriptingSystem*)m_mainSystems[MainSystemInfo::SCRIPTING_ID];
+		return (ScriptingSystem*)m_mainSystems[MainSystemInfo::SCRIPTING_ID].Get();
 	}
 
 	inline AudioSystem* GetAudioSystem()
 	{
-		return (AudioSystem*)m_mainSystems[MainSystemInfo::AUDIO_ID];
+		return (AudioSystem*)m_mainSystems[MainSystemInfo::AUDIO_ID].Get();
 	}
 
 	inline AnimationSystem* GetAnimationSystem()
 	{
-		return (AnimationSystem*)m_mainSystems[MainSystemInfo::ANIMATION_ID];
+		return (AnimationSystem*)m_mainSystems[MainSystemInfo::ANIMATION_ID].Get();
 	}
 
 	inline auto* GetInput()

@@ -132,7 +132,7 @@ int Model3D::Load(const String& path)
 			}
 			else
 			{
-				m_meshes[i].m_defaultDiffusePath = {};
+				m_meshes[i].m_defaultDiffusePath = "";
 			}
 
 			count++;

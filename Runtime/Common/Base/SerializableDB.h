@@ -10,6 +10,8 @@ NAMESPACE_BEGIN
 class API SerializableDB : public Singleton<SerializableDB>
 {
 public:
+	friend class Runtime;
+
 	using SerializableCtor			= Handle<Serializable> (*)();
 	using SerializableCtorRaw		= Serializable* (*)();
 	using SerializableCtorShared	= SharedPtr<Serializable>(*)();

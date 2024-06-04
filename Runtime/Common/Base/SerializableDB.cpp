@@ -23,8 +23,8 @@ void SerializableDB::AddRecord(const SerializableRecord& record)
 		script->GetScriptMetaData();
 	}
 
-	auto plugin = PluginLoader::GetCurrentLoadingPlugin();
-	if (plugin)
+	auto plugin = PluginLoader::Get()->GetCurrentLoadingPlugin();
+	if (plugin && record.COMPONENT_ID != INVALID_ID)
 	{
 		plugin->m_customComps[record.COMPONENT_ID].push_back(record.name);
 	}

@@ -92,6 +92,7 @@ private:
 public:
 	RenderingSystem(Scene* scene);
 	~RenderingSystem();
+	virtual void Finalize() override;
 
 private:
 	void AddCamera(BaseCamera* camera, CAMERA_PRIORITY priority);

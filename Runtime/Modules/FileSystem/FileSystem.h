@@ -92,6 +92,11 @@ public:
 	{
 		return m_executablePath;
 	}
+
+	inline const String& GetCachePath() const
+	{
+		return m_cachePath;
+	}
 };
 
 NAMESPACE_END

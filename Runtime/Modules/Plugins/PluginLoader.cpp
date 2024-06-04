@@ -5,6 +5,7 @@
 #include "TaskSystem/TaskSystem.h"
 
 #include "FileSystem/FileUtils.h"
+#include "FileSystem/FileSystem.h"
 
 #include "Plugin.h"
 
@@ -16,15 +17,6 @@
 NAMESPACE_BEGIN
 
 using PluginCtor = Plugin* (*)(Runtime*);
-
-struct PluginLoaderData
-{
-	std::vector<Plugin*, STDAllocatorMalloc<Plugin*>> loadedPlugins;
-
-	Plugin* currentLoadingPlugin = nullptr;
-};
-
-PluginLoaderData g_pluginData;
 
 #ifdef WIN32
 
@@ -56,15 +48,89 @@ void PluginLoader_UnloadPluginNative(void* nativeHandle)
 
 #endif // WIN32
 
-bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin*>& output)
+Plugin* PluginLoader::LoadPluginImpl(Runtime* engine, const wchar_t* filePath, ID idx)
 {
-#ifdef WIN32
-	const static auto ENDING = L".dll";
-#endif // WIN32
-
 	static TaskWaitingHandle taskHandle = { 0,0 };
 
+#ifdef WIN32
+	const static wchar_t* ENDING = L".dll";
+#endif // WIN32
+
 	std::wstring_view ending = ENDING;
+
+	std::wstring_view fullString = filePath;
+
+	bool valid = false;
+	if (fullString.length() >= ending.length())
+	{
+		valid = (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+	}
+	else
+	{
+		valid = false;
+	}
+
+	assert(valid);
+
+	void* handle = nullptr;
+	auto plugin = PluginLoader_LoadPluginNative(engine, filePath, handle);
+
+	if (plugin)
+	{
+		plugin->m_filePath = filePath;
+		TaskSystem::PrepareHandle(&taskHandle);
+
+		m_currentLoadingPlugin = plugin;
+
+		if (idx != INVALID_ID)
+		{
+			plugin->m_id = idx;
+			m_loadedPlugins[idx] = plugin;
+		}
+		else
+		{
+			plugin->m_id = m_loadedPlugins.size();
+			m_loadedPlugins.push_back(plugin);
+		}
+		
+		plugin->m_nativeHandle = handle;
+
+		auto count = TaskSystem::GetWorkerCount();
+		for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
+		{
+			Task task;
+			task.Params() = plugin;
+			task.Entry() = [](void* p)
+				{
+					auto plugin = (Plugin*)p;
+					plugin->m_initFunc(0);
+				};
+
+			TaskSystem::SubmitForThread(&taskHandle, i, task);
+		}
+
+		plugin->m_initFunc(0);
+		while (taskHandle.counter.load(std::memory_order_relaxed) != 1)
+		{
+			Thread::Sleep(5);
+		}
+		//TaskSystem::WaitForHandle(&taskHandle);
+		taskHandle.counter--;
+
+		plugin->Initialize(engine);
+
+		m_currentLoadingPlugin = nullptr;
+	}
+
+	return plugin;
+}
+
+bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin*>& output)
+{
+	if (m_pluginPath.empty())
+	{
+		m_pluginPath = path;
+	}
 
 	bool ret = true;
 
@@ -74,70 +140,30 @@ bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin
 		return false;
 	}
 
-	FileUtils::ForEachFiles(path,
-		[&](const wchar_t* filePath)
+	auto LoadPlugin = [&](const wchar_t* filePath)
+	{
+#ifdef WIN32
+		const static auto EXTENSION = "dll";
+#endif // WIN32
+		auto ext = FileUtils::GetExtension(filePath);
+		if (ext != EXTENSION)
 		{
-			std::wstring_view fullString = filePath;
-
-			bool valid = false;
-			if (fullString.length() >= ending.length()) 
-			{
-				valid = (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
-			}
-			else 
-			{
-				valid = false;
-			}
-
-			if (!valid) return;
-
-			void* handle = nullptr;
-			auto plugin = PluginLoader_LoadPluginNative(engine, filePath, handle);
-
-			if (plugin)
-			{
-				TaskSystem::PrepareHandle(&taskHandle);
-
-				g_pluginData.currentLoadingPlugin = plugin;
-
-				plugin->m_id = g_pluginData.loadedPlugins.size();
-				plugin->m_nativeHandle = handle;
-				g_pluginData.loadedPlugins.push_back(plugin);
-
-				auto count = TaskSystem::GetWorkerCount();
-				for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
-				{
-					Task task;
-					task.Params() = plugin;
-					task.Entry() = [](void* p)
-					{
-						auto plugin = (Plugin*)p;
-						plugin->m_initFunc(0);
-					};
-
-					TaskSystem::SubmitForThread(&taskHandle, i, task);
-				}
-
-				plugin->m_initFunc(0);
-				while (taskHandle.counter.load(std::memory_order_relaxed) != 1)
-				{
-					Thread::Sleep(5);
-				}
-				//TaskSystem::WaitForHandle(&taskHandle);
-				taskHandle.counter--;
-
-				plugin->Initialize(engine);
-
-				g_pluginData.currentLoadingPlugin = nullptr;
-			}
-			else
-			{
-				ret = false;
-			}
-			
-			output.push_back(plugin);
+			return;
 		}
-	);
+
+		auto plugin = LoadPluginImpl(engine, filePath);
+		if (!plugin)
+		{
+			ret = false;
+		}
+	};
+
+	FileUtils::ForEachFiles(path, LoadPlugin);
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+	LoadAllHotReloadPlugin(engine);
+#endif // PLUGIN_ALLOW_HOT_RELOAD
+
 	return ret;
 }
 
@@ -149,11 +175,11 @@ void PluginLoader::Unload(Runtime* engine, Plugin* input, bool freeLib)
 
 	assert(input != nullptr);
 
-	auto& plugin = g_pluginData.loadedPlugins[input->m_id];
-	auto back = g_pluginData.loadedPlugins.back();
+	auto& plugin = m_loadedPlugins[input->m_id];
+	auto back = m_loadedPlugins.back();
 	back->m_id = input->m_id;
 	plugin = back;
-	g_pluginData.loadedPlugins.pop_back();
+	m_loadedPlugins.pop_back();
 
 	auto currentThreadId = Thread::GetID();
 
@@ -206,15 +232,95 @@ void PluginLoader::Unload(Runtime* engine, Plugin* input, bool freeLib)
 
 void PluginLoader::UnloadAll(Runtime* engine, std::Vector<Plugin*>& input, bool freeLib)
 {
-	for (auto& plugin : input)
+	for (auto& plugin : m_loadedPlugins)
 	{
 		Unload(engine, plugin, freeLib);
 	}
 }
 
-Plugin* PluginLoader::GetCurrentLoadingPlugin()
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+
+void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 {
-	return nullptr;
+	auto LoadPlugin = [&](const wchar_t* filePath)
+	{
+#ifdef WIN32
+		const static auto EXTENSION = "dll";
+#endif // WIN32
+		auto ext = FileUtils::GetExtension(filePath);
+		if (ext != EXTENSION)
+		{
+			return;
+		}
+
+		LoadPluginImpl(engine, filePath);
+	};
+
+	auto hotReloadPath = m_pluginPath + "HotReload/";
+	auto hotReloadPathReal = FileSystem::Get()->GetCachePath() + "Plugins/HotReload/";
+
+	if (!FileUtils::IsExist(hotReloadPath.c_str()))
+	{
+		std::filesystem::create_directories(hotReloadPath.c_str());
+	}
+
+	if (!FileUtils::IsExist(hotReloadPathReal.c_str()))
+	{
+		std::filesystem::create_directories(hotReloadPathReal.c_str());
+	}
+
+	FileUtils::ForEachFiles(hotReloadPath.c_str(),
+		[&](const wchar_t* filePath)
+		{
+			auto fullpath = String(filePath);
+			if (FileSystem::Get()->IsFileChanged(fullpath.c_str()))
+			{
+				auto fileNameWithExtension = FileUtils::GetLastName(fullpath.c_str());
+				std::filesystem::copy_file(filePath, (hotReloadPathReal + fileNameWithExtension).c_str());
+			}
+		}
+	);
+
+	auto startIdx = m_loadedPlugins.size();
+	FileUtils::ForEachFiles(hotReloadPathReal, LoadPlugin);
+
+	for (size_t i = startIdx; i < m_loadedPlugins.size(); i++)
+	{
+		auto plugin = m_loadedPlugins[i];
+		plugin->m_isHotReloadable = true;
+	}
 }
+
+void PluginLoader::ReloadAll(Runtime* engine)
+{
+	size_t startIdx = INVALID_ID;
+	for (auto& plugin : m_loadedPlugins)
+	{
+		if (plugin->m_isHotReloadable)
+		{
+			Unload(engine, plugin, true);
+			plugin = nullptr;
+		}
+	}
+
+	m_loadedPlugins.resize(startIdx);
+
+	LoadAllHotReloadPlugin(engine);
+}
+
+std::vector<Plugin*> PluginLoader::GetHotReloadablePlugins()
+{
+	std::vector<Plugin*> ret;
+	for (auto& plugin : m_loadedPlugins)
+	{
+		if (plugin->m_isHotReloadable)
+		{
+			ret.push_back(plugin);
+		}
+	}
+	return ret;
+}
+
+#endif // PLUGIN_ALLOW_HOT_RELOAD
 
 NAMESPACE_END

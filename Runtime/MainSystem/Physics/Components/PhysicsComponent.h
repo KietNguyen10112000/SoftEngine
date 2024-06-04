@@ -187,6 +187,7 @@ class API PhysicsComponent : public MainComponent
 private:
 	friend class GameObject;
 	friend class PhysXSimulationCallback;
+	friend class PhysXSimulationFilterCallback;
 	friend class CharacterControllerHitCallback;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 	PHYSICS_FRIEND_CLASSES();
@@ -194,6 +195,8 @@ private:
 
 private:
 	size_t m_physicsFlag = 0;
+
+	GameObject* m_lastGameObject = nullptr;
 
 protected:
 	physx::PxActor* m_pxActor = nullptr;

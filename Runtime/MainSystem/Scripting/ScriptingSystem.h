@@ -22,6 +22,7 @@ public:
 
 	ScriptingSystem(Scene* scene);
 	~ScriptingSystem();
+	virtual void Finalize() override;
 
 public:
 	// Inherited via MainSystem

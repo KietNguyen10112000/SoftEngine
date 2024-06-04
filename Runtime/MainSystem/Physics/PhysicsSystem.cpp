@@ -107,8 +107,8 @@ public:
 		}
 
 		SharedPtr<CollisionContact> contact = std::make_shared<CollisionContact>();
-		contact->A = A->GetGameObject();
-		contact->B = B->GetGameObject();
+		contact->A = A->m_lastGameObject;
+		contact->B = B->m_lastGameObject;
 
 		if (AContacts)
 		{
@@ -203,8 +203,8 @@ class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
 		auto AComp = (PhysicsComponent*)a0->userData;
 		auto BComp = (PhysicsComponent*)a1->userData;
 
-		auto A = AComp->GetGameObject();
-		auto B = BComp->GetGameObject();
+		auto A = AComp->m_lastGameObject;
+		auto B = BComp->m_lastGameObject;
 
 		auto AShape = (PhysicsShape*)s0->userData;
 		auto BShape = (PhysicsShape*)s1->userData;
@@ -289,6 +289,11 @@ PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 }
 
 PhysicsSystem::~PhysicsSystem()
+{
+	int x = 3;
+}
+
+void PhysicsSystem::Finalize()
 {
 	((PhysXSimulationCallback*)(&m_physxSimulationCallback))->~PhysXSimulationCallback();
 	((PhysXSimulationFilterCallback*)(&m_physXSimulationFilterCallback))->~PhysXSimulationFilterCallback();
@@ -402,7 +407,7 @@ void PhysicsSystem::ProcessCollisionList()
 
 	for (auto& comp : m_activeComponentsHasContact)
 	{
-		auto obj = comp->GetGameObject();
+		auto obj = comp->m_lastGameObject;
 		auto prevCollision = comp->m_collisionResult->collision.Read();
 		auto curCollision = comp->m_collisionResult->collision.ForceWrite();
 
@@ -589,6 +594,9 @@ void PhysicsSystem::BeginModification()
 void PhysicsSystem::AddComponent(MainComponent* comp)
 {
 	auto physics = (PhysicsComponent*)comp;
+
+	physics->m_lastGameObject = comp->GetGameObject();
+
 	if (physics->m_pxActor)
 		m_pxScene->addActor(*physics->m_pxActor);
 }
@@ -609,6 +617,8 @@ void PhysicsSystem::RemoveComponent(MainComponent* comp)
 
 	if (physics->m_pxActor)
 		m_pxScene->removeActor(*physics->m_pxActor);
+
+	GetCurrentTrash().Push(comp);
 }
 
 void PhysicsSystem::OnObjectTransformChanged(MainComponent* comp)
@@ -630,6 +640,8 @@ void PhysicsSystem::Iteration(float dt)
 		comp->m_collisionResult->collision.ForceWrite()->Clear();
 	}
 	m_activeComponentsHasContact.clear();
+
+	GetCurrentTrash().clear();
 
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);

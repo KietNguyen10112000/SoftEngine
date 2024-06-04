@@ -16,6 +16,10 @@ ScriptingSystem::ScriptingSystem(Scene* scene) : MainSystem(scene)
 
 ScriptingSystem::~ScriptingSystem()
 {
+}
+
+void ScriptingSystem::Finalize()
+{
 	for (auto& s : m_schedulers)
 	{
 		if (s)

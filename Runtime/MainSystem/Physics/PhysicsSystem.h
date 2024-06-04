@@ -3,6 +3,7 @@
 #include "../MainSystem.h"
 
 #include "Core/Structures/STD/STDContainers.h"
+#include "Core/Structures/Managed/Array.h"
 #include "TaskSystem/TaskSystem.h"
 
 #include "Common/Base/AsyncTaskRunnerRaw.h"
@@ -32,6 +33,7 @@ private:
 	friend class PhysXSimulationFilterCallback;
 
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
+	constexpr static size_t NUM_TRASH_ARRAY = 2;
 
 	raw::AsyncTaskRunner<PhysicsSystem> m_asyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
 	raw::AsyncTaskRunner<PhysicsSystem> m_asyncTaskRunnerMT[NUM_DEFER_BUFFER] = {};
@@ -60,9 +62,20 @@ private:
 	size_t m_physxSimulationCallback[8] = {};
 	size_t m_physXSimulationFilterCallback[2] = {};
 
+	Array<Handle<void>> m_trashComps[NUM_TRASH_ARRAY];
+	size_t m_trashId = 0;
+
+private:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_trashComps);
+	}
+
 public:
 	PhysicsSystem(Scene* scene);
 	~PhysicsSystem();
+	virtual void Finalize() override;
 
 private:
 	inline auto* GetCurrentAsyncTaskRunnerST()
@@ -93,6 +106,16 @@ private:
 	inline auto* GetPrevAsyncTaskRunner()
 	{
 		return &m_asyncTaskRunner[m_scene->GetPrevDeferBufferIdx()];
+	}
+
+	inline auto& GetCurrentTrash()
+	{
+		return m_trashComps[m_trashId % NUM_TRASH_ARRAY];
+	}
+
+	inline auto& GetPrevTrash()
+	{
+		return m_trashComps[(m_trashId + NUM_TRASH_ARRAY - 1) % NUM_TRASH_ARRAY];
 	}
 
 	void ScheduleUpdateImpl(PhysicsComponent* comp);

@@ -26,29 +26,31 @@ Scene::Scene() : m_eventDispatcher(this)
 	SetupMainSystemModificationTasks();
 	SetupDeferLists();
 
-	m_mainSystems[MainSystemInfo::RENDERING_ID] = new RenderingSystem(this);
-	m_mainSystems[MainSystemInfo::PHYSICS_ID]	= new PhysicsSystem(this);
-	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = new ScriptingSystem(this);
-	m_mainSystems[MainSystemInfo::ANIMATION_ID] = new AnimationSystem(this);
+	m_mainSystems[MainSystemInfo::RENDERING_ID] = mheap::New<RenderingSystem>(this);
+	m_mainSystems[MainSystemInfo::PHYSICS_ID]	= mheap::New<PhysicsSystem>(this);
+	m_mainSystems[MainSystemInfo::SCRIPTING_ID] = mheap::New<ScriptingSystem>(this);
+	m_mainSystems[MainSystemInfo::ANIMATION_ID] = mheap::New<AnimationSystem>(this);
 }
 
 Scene::~Scene()
 {
-	for (auto& system : m_mainSystems)
+	/*for (auto& system : m_mainSystems)
 	{
 		if (system)
 		{
 			system->Finalize();
 		}
-	}
+	}*/
 
-	for (auto& system : m_mainSystems)
+	/*for (auto& system : m_mainSystems)
 	{
 		if (system)
 		{
 			delete system;
 		}
-	}
+	}*/
+
+	//int x = 3;
 }
 
 void Scene::BakeAllMainSystems()
@@ -69,7 +71,7 @@ void Scene::SetupMainSystemIterationTasks()
 		{
 			TASK_SYSTEM_UNPACK_PARAM_2(IterationTaskParam, p, scene, mainSystemId);
 
-			auto system = scene->m_mainSystems[mainSystemId];
+			auto& system = scene->m_mainSystems[mainSystemId];
 			if (!system)
 			{
 				//scene->EndReconstructForMainSystem(mainSystemId);
@@ -114,7 +116,7 @@ void Scene::SetupMainSystemModificationTasks()
 		{
 			TASK_SYSTEM_UNPACK_PARAM_2(IterationTaskParam, p, scene, mainSystemId);
 
-			auto system = scene->m_mainSystems[mainSystemId];
+			auto& system = scene->m_mainSystems[mainSystemId];
 			if (!system)
 			{
 				//scene->EndReconstructForMainSystem(mainSystemId);
@@ -444,6 +446,14 @@ void Scene::CleanUp()
 	for (auto& list : m_trashObjects)
 	{
 		list.clear();
+	}
+
+	for (auto& system : m_mainSystems)
+	{
+		if (system)
+		{
+			system->Finalize();
+		}
 	}
 
 	std::cout << "Scene::CleanUp()\n";
