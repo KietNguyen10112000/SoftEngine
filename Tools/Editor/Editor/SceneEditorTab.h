@@ -52,6 +52,9 @@ public:
 		ID selectedIdx = INVALID_ID;
 	} m_createComponentContext;
 
+	ID m_scriptsHotReloadListenerIdBegin = INVALID_ID;
+	ID m_scriptsHotReloadListenerIdEnd = INVALID_ID;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)

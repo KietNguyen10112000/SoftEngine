@@ -744,7 +744,34 @@ void SceneEditorTab::OnHide()
 
 void SceneEditorTab::OnOpen()
 {
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+	m_scriptsHotReloadListenerIdBegin = Runtime::Get()->EventDispatcher()->AddListener(Runtime::EVENT_HOT_RELOAD_SCRIPTS_BEGIN,
+		[](Runtime* runtime, int argc, void** argv, ID editorId)
+		{
+			auto self = (SceneEditorTab*)editorId;
+			self->m_inspectingObjectData = nullptr;
+		},
+		ID(this)
+	);
+
+	m_scriptsHotReloadListenerIdEnd = Runtime::Get()->EventDispatcher()->AddListener(Runtime::EVENT_HOT_RELOAD_SCRIPTS_END,
+		[](Runtime* runtime, int argc, void** argv, ID editorId)
+		{
+			auto self = (SceneEditorTab*)editorId;
+			if (self->m_inspectingObject)
+			{
+				self->m_inspectingObjectData = self->m_inspectingObject->GetMetadata(0);
+			}
+		},
+		ID(this)
+	);
+#endif // PLUGIN_ALLOW_HOT_RELOAD
 }
 void SceneEditorTab::OnClose()
 {
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+	Runtime::Get()->EventDispatcher()->RemoveListener(m_scriptsHotReloadListenerIdBegin);
+	Runtime::Get()->EventDispatcher()->RemoveListener(m_scriptsHotReloadListenerIdEnd);
+#endif // PLUGIN_ALLOW_HOT_RELOAD
 }

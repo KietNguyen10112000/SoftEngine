@@ -58,13 +58,14 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
 #include "MainSystem/Physics/Materials/PhysicsMaterial.h"
 #include "MainSystem/Physics/Joints/RevoluteJoint.h"
+#include "MainSystem/Physics/PhysicsSystem.h"
 
 #include "SerializableList.h"
 
 #include "MainSystem/Scripting/ScriptMeta.h"
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
 #include "MainSystem/Scripting/Components/TPPCameraScript.h"
-#include "MainSystem/Physics/PhysicsSystem.h"
+#include "MainSystem/Scripting/ScriptingSystem.h"
 
 #include "Common/Base/Serializer.h"
 
@@ -110,13 +111,6 @@ void Runtime::Finalize()
 {
 	Runtime::s_instance->FinalizeModules();
 	Runtime::s_instance.release();
-
-	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
-	gc::PerformFullSystemGC(255, resetValues);
-	for (size_t i = 0; i < 5; i++)
-	{
-		gc::Run(-1);
-	}
 
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 	if (debugGraphics)
@@ -169,10 +163,19 @@ void Runtime::InitializeModules()
 void Runtime::FinalizeModules()
 {
 	FinalPlugins();
+
+	m_genericStorage.Clear();
+	for (auto& m : m_modifiedRecorder)
+	{
+		m = nullptr;
+	}
+
 	for (auto& scene : m_scenes)
 	{
 		scene->CleanUp();
 	}
+
+	m_scenes.clear();
 
 	DisplayService::SingletonFinalize();
 	BuiltinConstantBuffers::SingletonFinalize();
@@ -183,12 +186,8 @@ void Runtime::FinalizeModules()
 	ScriptMeta::SingletonFinalize();
 	SerializableDB::SingletonFinalize();
 
-	m_genericStorage.Clear();
-	for (auto& m : m_modifiedRecorder)
-	{
-		m = nullptr;
-	}
-	m_scenes.clear();
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
 }
 
 void Runtime::InitGraphics()
@@ -604,6 +603,15 @@ void Runtime::Run()
 			ProcessDestroyScenes();
 		}*/
 
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+		if (m_reloadScripts)
+		{
+			HotReloadScriptsImpl();
+			m_reloadScripts = false;
+			continue;
+		}
+#endif
+
 		Iteration();
 		//Thread::Sleep(1);
 	}
@@ -819,26 +827,36 @@ void Runtime::SynchronizeAllSubSystems()
 
 void Runtime::ProcessDestroyScenes()
 {
-	for (size_t i = 0; i < m_destroyingScenes.size(); i++)
+	for (int64_t i = 0; i < m_destroyingScenes.size(); i++)
 	{
+		auto& info = m_destroyingScenes[i];
+
+		if (info.count != 0)
+		{
+			info.count--;
+			continue;
+		}
+
 		Task task;
 		task.Entry() = [](void* p)
 		{
 			auto scene = (Scene*)p;
 			Runtime::Get()->DestroySceneImpl(scene);
 		};
-		task.Params() = m_destroyingScenes[i];
+		task.Params() = info.scene;
 
-		TaskSystem::Submit(task, Task::CRITICAL);
+		TaskSystem::Submit(task, Task::HIGH);
 		//DestroySceneImpl(m_scenes[m_destroyingScenes[i]].Get());
+		STD_VECTOR_ROLL_TO_FILL_BLANK_2(m_destroyingScenes, i);
+		i--;
 	}
 
-	m_destroyingScenes.clear();
+	//m_destroyingScenes.clear();
 }
 
 void Runtime::DestroySceneImpl(Scene* scene)
 {
-	Thread::Sleep(30);
+	//Thread::Sleep(30);
 
 	ID id = scene->m_runtimeID;
 
@@ -852,10 +870,6 @@ void Runtime::DestroySceneImpl(Scene* scene)
 
 	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
 	gc::PerformFullSystemGC(255, resetValues);
-	for (size_t i = 0; i < 5; i++)
-	{
-		gc::Run(-1);
-	}
 
 	//scene->m_runtimeID = INVALID_ID;
 }
@@ -888,7 +902,7 @@ void Runtime::DestroyScene(Scene* scene)
 	scene->m_destroyed = true;
 
 	m_createSceneLock.lock();
-	m_destroyingScenes.push_back(scene);
+	m_destroyingScenes.push_back({ scene });
 	m_createSceneLock.unlock();
 
 	if (scene == m_runningScene && m_nextRunningScene == m_runningScene)
@@ -908,7 +922,7 @@ void* Runtime::GetNativeHWND()
 }
 
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
-void Runtime::HotReloadAllPlugins()
+void Runtime::HotReloadScriptsImpl()
 {
 	struct ComponentInfo
 	{
@@ -921,7 +935,12 @@ void Runtime::HotReloadAllPlugins()
 		GameObject* obj;
 		ComponentInfo* info;
 		UUID componentUUID;
+		String className;
+
+		std::map<String, Variant> variables;
 	};
+
+	EventDispatcher()->Dispatch(EVENT::EVENT_HOT_RELOAD_SCRIPTS_BEGIN);
 
 	auto plugins = PluginLoader::Get()->GetHotReloadablePlugins();
 
@@ -940,57 +959,76 @@ void Runtime::HotReloadAllPlugins()
 		}
 	}
 
-	Serializer serializer;
 	std::vector<ReloadingComponent> reloadingComponents;
 
-	auto RecordComponent = [&](GameObject* obj) 
-	{
-		for (auto& comp : obj->m_mainComponents)
+	auto RecordComponent = [&](Scene* scene, GameObject* obj, bool removeComp)
 		{
-			if (comp)
+			ID compId = 0;
+			for (auto& comp : obj->m_mainComponents)
 			{
-				auto className = comp->GetClassName();
-				auto it = classNameByPlugin.find(className);
-				if (it != classNameByPlugin.end())
+				if (comp && compId == Script::COMPONENT_ID)
 				{
-					reloadingComponents.push_back({ obj, &it->second, comp->GetUUID() });
-					serializer.Serialize(comp);
+					auto className = comp->GetClassName();
+					auto it = classNameByPlugin.find(className);
+					if (it != classNameByPlugin.end())
+					{
+						reloadingComponents.push_back({ obj, &it->second, comp->GetUUID(),className });
+						auto& back = reloadingComponents.back();
+						
+						auto metaData = comp->GetMetadata(0);
+						metaData->ForEachProperties(
+							[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+							{
+								if (depth != 0)
+								{
+									return;
+								}
+
+								back.variables.insert({ propertyName,accessor.Get() });
+							}, 
+							nullptr
+						);
+
+						if (removeComp)
+						{
+							//assert(compId == Script::COMPONENT_ID);
+							//scene->GetScriptingSystem()->RemoveComponent(comp);
+							obj->RemoveComponentRaw((Script*)comp.Get());
+						}
+					}
 				}
+				compId++;
 			}
-		}
-	};
+		};
 
 	for (auto& scene : m_scenes)
 	{
 		for (auto& obj : scene->m_longLifeObjects)
 		{
-			RecordComponent(obj);
+			RecordComponent(scene, obj, true);
 		}
 
 		for (auto& obj : scene->m_shortLifeObjects)
 		{
-			RecordComponent(obj);
+			RecordComponent(scene, obj, true);
 		}
 
 		for (auto& trash : scene->m_trashObjects)
 		{
 			for (auto& obj : trash)
 			{
-				RecordComponent((GameObject*)obj.Get());
+				RecordComponent(scene, (GameObject*)obj.Get(), false);
 			}
 		}
 	}
 
+	auto oldRunningScene = m_nextRunningScene;
+	m_nextRunningScene = nullptr;
 	for (size_t i = 0; i < 5; i++)
 	{
 		SwapModifiedRecorder();
 	}
-
-	for (size_t i = 0; i < 5; i++)
-	{
-		byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
-		gc::PerformFullSystemGC(255, resetValues);
-	}
+	m_nextRunningScene = oldRunningScene;
 
 	for (auto& plugin : plugins)
 	{
@@ -1003,13 +1041,23 @@ void Runtime::HotReloadAllPlugins()
 		}
 	}
 
+	for (size_t i = 0; i < 1; i++)
+	{
+		byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+		gc::PerformFullSystemGC(255, resetValues);
+	}
+
 	PluginLoader::Get()->ReloadAll(this);
 
-	Handle<MainComponent> comp;
+	EventDispatcher()->Dispatch(EVENT::EVENT_HOT_RELOAD_SCRIPTS_END);
+
 	for (auto& elm : reloadingComponents)
 	{
 		auto obj = elm.obj;
 		const auto COMPONENT_ID = elm.info->COMPONENT_ID;
+
+		assert(COMPONENT_ID == Script::COMPONENT_ID);
+
 		/*if (obj->m_isLongLife)
 		{
 			mheap::internal::SetHeapId(mheap::internal::HEAP_ID::STABLE_HEAP);
@@ -1019,18 +1067,43 @@ void Runtime::HotReloadAllPlugins()
 			mheap::internal::SetHeapId(mheap::internal::HEAP_ID::GC_HEAP);
 		}*/
 
-		comp = nullptr;
-		serializer.Deserialize(elm.componentUUID, comp);
-		if (comp)
-		{
-			obj->m_mainComponents[COMPONENT_ID] = comp;
-			obj->m_committedComponents[COMPONENT_ID] = comp;
-		}
+		auto comp = DynamicCast<Script>(SerializableDB::Get()->GetSerializableRecord(elm.className.c_str()).ctor());
+
+		auto metaData = comp->GetMetadata(0);
+		metaData->ForEachProperties(
+			[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+			{
+				if (depth != 0)
+				{
+					return;
+				}
+
+				auto it = elm.variables.find(propertyName);
+				if (it == elm.variables.end())
+				{
+					return;
+				}
+
+				if (accessor.Get().Type() == it->second.Type() && it->second.Type() != VARIANT_TYPE::UNKNOWN)
+				{
+					accessor.Set(it->second);
+				}
+			},
+			nullptr
+		);
+
+		assert(comp != nullptr);
+		obj->AddComponent(comp);
 	}
 
 	//mheap::internal::SetHeapId(mheap::internal::HEAP_ID::GC_HEAP);
 
+	std::cout << "Done reload\n";
 
+}
+void Runtime::HotReloadScripts()
+{
+	m_reloadScripts = true;
 }
 #endif
 

@@ -42,12 +42,28 @@ public:
 		// args[0] = <the scene will be destroyed>
 		EVENT_SCENE_DESTROYED,
 
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+		EVENT_HOT_RELOAD_SCRIPTS_BEGIN,
+		EVENT_HOT_RELOAD_SCRIPTS_END,
+#endif
+
 		COUNT
 	};
 
 private:
 	friend class Scene;
 	friend class GameObject;
+
+	struct DestroyingSceneInfo
+	{
+		Scene* scene;
+
+		// the scene need to be destroyed after 3 iterations after calling destroy because ModifiedRecord keeps the trace to the objects of destroying scene, 
+		// so when we perform GC, the object of destroyed scene will not be actually destroyed, defer destroy prevents some unexpected behaviours like this
+		size_t count = 3;
+
+		inline DestroyingSceneInfo(Scene* scene) : scene(scene) {};
+	};
 
 	Array<Handle<Scene>> m_scenes;
 
@@ -79,9 +95,13 @@ private:
 	Scene* m_runningScene = nullptr;
 	Scene* m_nextRunningScene = nullptr;
 
-	std::vector<Scene*> m_destroyingScenes = {};
+	std::vector<DestroyingSceneInfo> m_destroyingScenes = {};
 
 	//spinlock m_lock;
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+	bool m_reloadScripts = false;
+#endif
 
 public:
 	static Handle<Runtime> Initialize();
@@ -189,7 +209,11 @@ public:
 	}
 
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
-	void HotReloadAllPlugins();
+private:
+	void HotReloadScriptsImpl();
+
+public:
+	void HotReloadScripts();
 #endif
 
 };

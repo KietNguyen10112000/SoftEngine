@@ -76,10 +76,10 @@ void ScriptingSystem::AddComponent(MainComponent* comp)
 
 void ScriptingSystem::RemoveComponent(MainComponent* comp)
 {
-	if (comp->GetGameObject()->Parent().Get() != nullptr)
+	/*if (comp->GetGameObject()->Parent().Get() != nullptr)
 	{
 		return;
-	}
+	}*/
 
 	auto script = (Script*)comp;
 	auto metaData = script->GetScriptMetaData();

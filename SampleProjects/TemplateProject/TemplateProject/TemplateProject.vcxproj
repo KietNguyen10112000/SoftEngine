@@ -71,10 +71,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins</OutDir>
+    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins/HotReload</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins</OutDir>
+    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins/HotReload</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -108,7 +108,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;PLUGIN_ALLOW_HOT_RELOAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -126,7 +126,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;PLUGIN_ALLOW_HOT_RELOAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

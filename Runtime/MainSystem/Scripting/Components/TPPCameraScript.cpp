@@ -52,6 +52,11 @@ void TPPCameraScript::OnStart()
 
 void TPPCameraScript::OnUpdate(float dt)
 {
+	if (Input()->IsKeyUp('R'))
+	{
+		Runtime::Get()->HotReloadScripts();
+	}
+
 	if (Input()->IsKeyUp('O') && m_testBody)
 	{
 		m_testBody->AddForceAtLocalPos({ 0,0,10000 }, { 2.5f,0,0 });

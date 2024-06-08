@@ -47,6 +47,11 @@ public:
 private:
 	void OnScriptRecordAsyncTask(Script* script);
 
+public:
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+	
+#endif
+
 };
 
 NAMESPACE_END

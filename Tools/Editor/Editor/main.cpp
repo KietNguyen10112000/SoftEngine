@@ -130,6 +130,7 @@ void Initialize(Runtime* runtime)
 
 void Finalize(Runtime* runtime)
 {
+	//Runtime::Get()->GenericStorage()->Remove(EditorContext::GetInstance()->m_runTimeId);
 	EditorContext::GetInstance()->OnFinalize();
 
 	ComponentInspector::SingletonFinalize();

@@ -182,10 +182,12 @@ int main(int argc, const char** argv)
 						);
 			Thread::SwitchToFiber(FiberPool::Take(), true);
 		}
+
+		Runtime::Finalize();
 	}
 
-
-	Runtime::Finalize();
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
 
 	TaskWorker::Finalize();
 	Thread::FinalizeForThisThreadInThisModule();

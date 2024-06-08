@@ -111,13 +111,14 @@ bool FileSystem::IsDirectoryExist(const char* path)
 	return std::filesystem::is_directory(path) && std::filesystem::exists(path);
 }
 
-bool FileSystem::IsFileChanged(const char* path, bool updateLastModifiedTime)
+bool FileSystem::IsFileChanged(const char* fullpath, bool updateLastModifiedTime)
 {
-	auto fullpath = GetFullPath(path);
-	assert(fs::is_regular_file(fullpath.c_str()));
+	//auto fullpath = GetFullPath(path);
+	//std::string_view fullpath = path;
+	assert(fs::is_regular_file(fullpath));
 
 	auto lastWriteTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-		fs::last_write_time(fullpath.c_str()).time_since_epoch()
+		fs::last_write_time(fullpath).time_since_epoch()
 	).count();
 
 	auto it = m_indexedFiles.find(fullpath);

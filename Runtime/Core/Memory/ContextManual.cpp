@@ -116,6 +116,7 @@ void ContextManual::Mark(byte MARK_VALUE)
 
 void ContextManual::CallDestructor(ManagedHandle* handle)
 {
+	//std::cout << "CallDestructor: " << handle->traceTable->className << "\n";
 	auto dtor = handle->traceTable->dtor;
 	if (dtor)
 	{

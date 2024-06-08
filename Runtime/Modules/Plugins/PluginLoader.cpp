@@ -95,9 +95,16 @@ Plugin* PluginLoader::LoadPluginImpl(Runtime* engine, const wchar_t* filePath, I
 		
 		plugin->m_nativeHandle = handle;
 
+		auto currentThreadId = Thread::GetID();
+
 		auto count = TaskSystem::GetWorkerCount();
-		for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
+		for (size_t i = 0; i < TaskSystem::GetWorkerCount(); i++)
 		{
+			if (i == currentThreadId)
+			{
+				continue;
+			}
+
 			Task task;
 			task.Params() = plugin;
 			task.Entry() = [](void* p)
@@ -186,7 +193,7 @@ void PluginLoader::Unload(Runtime* engine, Plugin* input, bool freeLib)
 	auto handle = input->m_nativeHandle;
 	input->Finalize(engine);
 
-	if (Thread::GetID() != currentThreadId)
+	/*if (Thread::GetID() != currentThreadId)
 	{
 		TaskSystem::SubmitForThread(
 			{
@@ -199,10 +206,15 @@ void PluginLoader::Unload(Runtime* engine, Plugin* input, bool freeLib)
 			currentThreadId
 		);
 		Thread::SwitchToFiber(FiberPool::Take(), true);
-	}
+	}*/
 
-	for (size_t i = 1; i < TaskSystem::GetWorkerCount(); i++)
+	for (size_t i = 0; i < TaskSystem::GetWorkerCount(); i++)
 	{
+		if (i == currentThreadId)
+		{
+			continue;
+		}
+
 		Task task;
 		task.Params() = input;
 		task.Entry() = [](void* p)
@@ -276,13 +288,35 @@ void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 			if (FileSystem::Get()->IsFileChanged(fullpath.c_str()))
 			{
 				auto fileNameWithExtension = FileUtils::GetLastName(fullpath.c_str());
-				std::filesystem::copy_file(filePath, (hotReloadPathReal + fileNameWithExtension).c_str());
+				if (FileUtils::GetExtension(fileNameWithExtension) != "dll")
+				{
+					return;
+				}
+				std::filesystem::copy_file(filePath, (hotReloadPathReal + fileNameWithExtension).c_str(), std::filesystem::copy_options::overwrite_existing);
+			}
+		}
+	);
+
+	FileUtils::ForEachFiles(hotReloadPath.c_str(),
+		[&](const wchar_t* filePath)
+		{
+			auto fullpath = String(filePath);
+			{
+				auto fileNameWithExtension = FileUtils::GetLastName(fullpath.c_str());
+				if (FileUtils::GetExtension(fileNameWithExtension) != "dll")
+				{
+					return;
+				}
+				auto realPath = (hotReloadPathReal + fileNameWithExtension);
+				std::string realPathStr = (realPath.c_str());
+				std::wstring path2 = StringUtils::StringToWString(realPathStr);
+				LoadPlugin(path2.c_str());
 			}
 		}
 	);
 
 	auto startIdx = m_loadedPlugins.size();
-	FileUtils::ForEachFiles(hotReloadPathReal, LoadPlugin);
+	//FileUtils::ForEachFiles(hotReloadPathReal, LoadPlugin);
 
 	for (size_t i = startIdx; i < m_loadedPlugins.size(); i++)
 	{
@@ -300,6 +334,10 @@ void PluginLoader::ReloadAll(Runtime* engine)
 		{
 			Unload(engine, plugin, true);
 			plugin = nullptr;
+			if (startIdx == INVALID_ID)
+			{
+				startIdx = &plugin - m_loadedPlugins.data();
+			}
 		}
 	}
 

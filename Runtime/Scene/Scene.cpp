@@ -448,6 +448,9 @@ void Scene::CleanUp()
 		list.clear();
 	}
 
+	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
+	gc::PerformFullSystemGC(255, resetValues);
+
 	for (auto& system : m_mainSystems)
 	{
 		if (system)
