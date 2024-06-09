@@ -340,17 +340,17 @@ void EditorContext::RenderOxyz(OxyzRenderConfig& config)
 
 	if (config.AxisXLength != 0.0f)
 	{
-		debugGraphics->DrawDirection(Vec3(-config.AxisXLength / 2.0f, 0, 0), Vec3(config.AxisXLength, 0, 0), { 1,0,0,1 }, { 1,0,0,1 });
+		debugGraphics->DrawDirection(Vec3(-config.AxisXLength / 2.0f, 0, 0), Vec3(config.AxisXLength, 0, 0), config.AxisXColor, config.AxisXColor);
 	}
 
 	if (config.AxisYLength != 0.0f)
 	{
-		debugGraphics->DrawDirection(Vec3(0, -config.AxisYLength / 2.0f, 0), Vec3(0, config.AxisYLength, 0), { 0,1,0,1 }, { 0,1,0,1 });
+		debugGraphics->DrawDirection(Vec3(0, -config.AxisYLength / 2.0f, 0), Vec3(0, config.AxisYLength, 0), config.AxisYColor, config.AxisYColor);
 	}
 
 	if (config.AxisZLength != 0.0f)
 	{
-		debugGraphics->DrawDirection(Vec3(0, 0, -config.AxisZLength / 2.0f), Vec3(0, 0, config.AxisZLength), { 0,0,1,1 }, { 0,0,1,1 });
+		debugGraphics->DrawDirection(Vec3(0, 0, -config.AxisZLength / 2.0f), Vec3(0, 0, config.AxisZLength), config.AxisZColor, config.AxisZColor);
 	}
 
 	if (config.RenderOxzGrid)

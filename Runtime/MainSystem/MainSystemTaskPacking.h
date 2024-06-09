@@ -121,6 +121,56 @@ funcBody																			\
 )
 
 
+#define _MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																	\
+auto self = this;																									\
+if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())													\
+{																													\
+	funcBody;																										\
+	return;																											\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_0(mainComponent, MainSystemClassName, RunnerName, funcBody)							\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_0(mainComponent, MainSystemClassName, RunnerName, funcBody)											\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_1(mainComponent, MainSystemClassName, RunnerName, v0, funcBody)						\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_1(mainComponent, MainSystemClassName, RunnerName, v0, funcBody)										\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_2(mainComponent, MainSystemClassName, RunnerName, v0, v1, funcBody)					\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_2(mainComponent, MainSystemClassName, RunnerName, v0, v1, funcBody)									\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_3(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)				\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_3(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)								\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_4(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)			\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_4(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)							\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_5(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)		\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_5(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)						\
+}
+
+#define MAIN_SYSTEM_TASK_IMPL_COMMON_6(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)	\
+{																															\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+MAIN_SYSTEM_TASK_IMPL_6(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)					\
+}
+
 // =====================================================================================================
 // =====================================================================================================
 // =====================================================================================================
@@ -147,6 +197,28 @@ MAIN_SYSTEM_TASK_IMPL_5(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, v
 
 #define MAIN_SYSTEM_TASK_6(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)			\
 MAIN_SYSTEM_TASK_IMPL_6(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)
+
+// ===========================================================================================================================
+#define MAIN_SYSTEM_TASK_COMMON_0(MainSystemClassName, RunnerName, funcBody)									\
+MAIN_SYSTEM_TASK_IMPL_COMMON_0(this, MainSystemClassName, RunnerName, funcBody)
+
+#define MAIN_SYSTEM_TASK_COMMON_1(MainSystemClassName, RunnerName, v0, funcBody)								\
+MAIN_SYSTEM_TASK_IMPL_COMMON_1(this, MainSystemClassName, RunnerName, v0, funcBody)
+
+#define MAIN_SYSTEM_TASK_COMMON_2(MainSystemClassName, RunnerName, v0, v1, funcBody)							\
+MAIN_SYSTEM_TASK_IMPL_COMMON_2(this, MainSystemClassName, RunnerName, v0, v1, funcBody)
+
+#define MAIN_SYSTEM_TASK_COMMON_3(MainSystemClassName, RunnerName, v0, v1, v2, funcBody)						\
+MAIN_SYSTEM_TASK_IMPL_COMMON_3(this, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)
+
+#define MAIN_SYSTEM_TASK_COMMON_4(MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)					\
+MAIN_SYSTEM_TASK_IMPL_COMMON_4(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)
+
+#define MAIN_SYSTEM_TASK_COMMON_5(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)				\
+MAIN_SYSTEM_TASK_IMPL_COMMON_5(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)
+
+#define MAIN_SYSTEM_TASK_COMMON_6(MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)			\
+MAIN_SYSTEM_TASK_IMPL_COMMON_6(this, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)
 
 
 

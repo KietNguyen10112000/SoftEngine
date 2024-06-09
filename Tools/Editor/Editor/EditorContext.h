@@ -26,8 +26,11 @@ public:
 	struct OxyzRenderConfig
 	{
 		float AxisXLength = 0;
+		Vec4 AxisXColor = { 1,0,0,1 };
 		float AxisYLength = 0;
+		Vec4 AxisYColor = { 0,1,0,1 };
 		float AxisZLength = 0;
+		Vec4 AxisZColor = { 0,0,1,1 };
 
 		bool RenderOxzGrid = false;
 		bool RenderOxzPlane = false;

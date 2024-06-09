@@ -5,6 +5,8 @@
 
 #include "NodeEditorUtils/builders.h"
 
+#include "MainSystem/Animation/AnimLayer/AnimLayer.h"
+
 namespace soft
 {
 	class GameObject;
@@ -30,12 +32,15 @@ public:
 		{
 			NONE,
 			ANIMATON_PLAYER,
-			BLENDING
+			BLENDING,
+			MIXING,
 		};
 	};
 
 	struct Link;
 
+	// prefix "commited" mean the last successful build result 
+	// eg: inputs -> commitedInputs; <inputs> is what user see on screen graph, <commitedInputs> is what's actually running inside Animator
 	struct Node
 	{
 		struct Input
@@ -60,15 +65,25 @@ public:
 		size_t excutionOrder = INVALID_ID;
 		byte visited = 0;
 
-		inline Node(AnimatorEditorTab* tab, size_t numInput) : tab(tab)
+		inline Node(AnimatorEditorTab* tab) : tab(tab)
+		{
+			Commit();
+		}
+
+		/*inline Input& EmplaceBackNewInput()
+		{
+			auto& ret = inputs.emplace_back();
+			ret.pinId = tab->GetNextId();
+			return ret;
+		}*/
+
+		inline void ResizeInputs(size_t numInput)
 		{
 			inputs.resize(numInput);
 			for (auto& input : inputs)
 			{
 				input.pinId = tab->GetNextId();
 			}
-			
-			Commit();
 		}
 
 		virtual void OnBuiltDone() = 0;
@@ -94,9 +109,14 @@ public:
 			committedInputs = inputs;
 		}
 
-		inline AnimLayer* GetInputLayer(ID id)
+		inline AnimLayer* GetInputLayerFromNode(ID id)
 		{
 			return inputs[id].link->src->layer;
+		}
+
+		inline size_t GetInputLayerFromNodeCount()
+		{
+			return inputs.size();
 		}
 
 		inline virtual ~Node()
@@ -138,6 +158,19 @@ public:
 		std::vector<ModelNode*> children;
 
 		ID nodeIdx = INVALID_ID;
+		bool isSelected = false;
+		bool isTryingExpand = false;
+
+		template <typename Fn>
+		inline void ForEach(Fn fn)
+		{
+			fn(this);
+
+			for (auto& child : children)
+			{
+				child->ForEach(fn);
+			}
+		}
 	};
 
 	String m_modelPath;
@@ -166,6 +199,7 @@ public:
 	// model's hierarchy root node
 	ModelNode* m_root = nullptr;
 	std::vector<ModelNode*> m_modelNodes;
+	Vec3 m_renderSkeletonOffset = {};
 
 	byte m_isFirstRender = 0;
 
@@ -182,6 +216,7 @@ public:
 
 	byte m_tposeMode = 0;
 	bool m_isEnableTPoseMode = false;
+	bool m_isEnableModelInTPoseMode = false;
 
 	inline void Trace(Tracer* tracer)
 	{
@@ -222,6 +257,7 @@ public:
 
 	void RenderNodeHeader(void*, Node* node, const char* title, float nodeWidth);
 	void RenderNode(Node* node);
+	void RenderModelSkeleton();
 	void RenderModelNodeHierarchy();
 	void RenderModelNodeHierarchyImpl(ModelNode*);
 

@@ -22,6 +22,7 @@
 
 #include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimMixLayer.h"
 #include "MainSystem/Animation/AnimationSystem.h"
 #include "MainSystem/MainSystemTaskPacking.h"
 
@@ -41,7 +42,7 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 {
 	ID currentAnimId = INVALID_ID;
 
-	AnimPlayerLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab, 0)
+	AnimPlayerLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
 
 	}
@@ -60,7 +61,12 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 			}
 		}
 
-		assert(currentAnimId != INVALID_ID);
+		//assert(currentAnimId != INVALID_ID);
+		if (currentAnimId == INVALID_ID)
+		{
+			layer->SetAnimation(tab->m_animator->m_model3D->m_animations[0], -1, -1);
+			currentAnimId = 0;
+		}
 	}
 
 	virtual std::vector<AnimLayer*> GetInputLayers() override
@@ -120,35 +126,38 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 			}
 
 			builder.Separator();
-			float start = layer->m_startTick / layer->m_ticksPerSecond;
-			float end = (layer->m_startTick + layer->m_tickDuration) / layer->m_ticksPerSecond;
-			float t = (layer->m_t + layer->m_startTick) / layer->m_ticksPerSecond;
-			ImGui::SetNextItemWidth(250);
-			if (ImGui::SliderFloat("Track", &t, start, end))
+			if (layer->m_animation != nullptr)
 			{
-				layer->SetCurrentTime(t);
-			}
+				float start = layer->m_startTick / layer->m_ticksPerSecond;
+				float end = (layer->m_startTick + layer->m_tickDuration) / layer->m_ticksPerSecond;
+				float t = (layer->m_t + layer->m_startTick) / layer->m_ticksPerSecond;
+				ImGui::SetNextItemWidth(250);
+				if (ImGui::SliderFloat("Track", &t, start, end))
+				{
+					layer->SetCurrentTime(t);
+				}
 
-			auto curEnd = end;
-			end = (layer->m_animation->GetTickDuration()) / layer->m_animation->GetTicksPerSecond();
-			start = layer->m_startTick / layer->m_animation->GetTicksPerSecond();
-			ImGui::SetNextItemWidth(250);
-			if (ImGui::SliderFloat("Start", &start, 0, end))
-			{
-				layer->SetStartTime(start);
-			}
+				auto curEnd = end;
+				end = (layer->m_animation->GetTickDuration()) / layer->m_animation->GetTicksPerSecond();
+				start = layer->m_startTick / layer->m_animation->GetTicksPerSecond();
+				ImGui::SetNextItemWidth(250);
+				if (ImGui::SliderFloat("Start", &start, 0, end))
+				{
+					layer->SetStartTime(start);
+				}
 
-			ImGui::SetNextItemWidth(250);
-			if (ImGui::SliderFloat("End", &curEnd, 0, end))
-			{
-				layer->SetEndTime(curEnd);
-			}
+				ImGui::SetNextItemWidth(250);
+				if (ImGui::SliderFloat("End", &curEnd, 0, end))
+				{
+					layer->SetEndTime(curEnd);
+				}
 
-			auto curDur = layer->m_tickDuration / layer->m_ticksPerSecond;
-			ImGui::SetNextItemWidth(250);
-			if (ImGui::DragFloat("Duration", &curDur, 0.001f, 0.001f, INFINITY))
-			{
-				layer->SetDuration(curDur);
+				auto curDur = layer->m_tickDuration / layer->m_ticksPerSecond;
+				ImGui::SetNextItemWidth(250);
+				if (ImGui::DragFloat("Duration", &curDur, 0.001f, 0.001f, INFINITY))
+				{
+					layer->SetDuration(curDur);
+				}
 			}
 
 		}
@@ -185,7 +194,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 	float end = -1;
 	float fadeTime = 0;
 
-	AnimBlendLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab, 2)
+	AnimBlendLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
 
 	}
@@ -208,8 +217,8 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 	virtual void ProcessSetInputLayers() override
 	{
 		auto layer = (AnimBlendLayer*)this->layer;
-		layer->m_input[0] = GetInputLayer(0);
-		layer->m_input[1] = GetInputLayer(1);
+		layer->m_input[0] = GetInputLayerFromNode(0);
+		layer->m_input[1] = GetInputLayerFromNode(1);
 	}
 
 	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
@@ -227,12 +236,12 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 			tab->RenderNodeHeader(&builder, this, "AnimBlendLayer", 250);
 
 			{
-				assert(committedInputs.size() == 2);
+				//assert(committedInputs.size() == 2);
 
 				ImGui::BeginGroup();
 
 				{
-					auto& input = committedInputs[0];
+					auto& input = inputs[0];
 					builder.Input(input.pinId);
 					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
 					ImGui::TextUnformatted("Layer 0");
@@ -240,7 +249,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 				}
 
 				{
-					auto& input = committedInputs[1];
+					auto& input = inputs[1];
 					builder.Input(input.pinId);
 					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
 					ImGui::TextUnformatted("Layer 1");
@@ -340,12 +349,130 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 	}
 };
 
+struct AnimMixLayerNode : public AnimatorEditorTab::Node
+{
+	std::vector<std::vector<float>> layerWeights;
+	ID selectedLayerId = INVALID_ID;
+
+	AnimMixLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
+	{
+
+	}
+
+	// Inherited via Node
+	void OnBuiltDone() override
+	{
+		auto layer = (AnimMixLayer*)this->layer;
+		layerWeights.resize(layer->m_inputs.size());
+		size_t i = 0;
+		for (auto& input : layer->m_inputs)
+		{
+			layerWeights[i] = input.weight;
+			i++;
+		}
+	}
+
+	std::vector<AnimLayer*> GetInputLayers() override
+	{
+		auto layer = (AnimMixLayer*)this->layer;
+		std::vector<AnimLayer*> ret; 
+		for (auto& input : layer->m_inputs)
+		{
+			ret.push_back(input.layer);
+		}
+		return ret;
+	}
+
+	void ProcessSetInputLayers() override
+	{
+		auto layer = (AnimMixLayer*)this->layer;
+		auto& inputs = layer->m_inputs;
+		inputs.resize(GetInputLayerFromNodeCount());
+
+		for (size_t i = 0; i < inputs.size(); i++)
+		{
+			auto& input = inputs[i];
+			input.layer = GetInputLayerFromNode(i);
+			input.weight = layerWeights[i];
+		}
+	}
+
+	void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
+	{
+		namespace util = ax::NodeEditor::Utilities;
+
+		auto layer = (AnimMixLayer*)this->layer;
+		auto& animations = tab->m_animator->m_model3D->m_animations;
+
+		tab->RenderNodeHeader(&builder, this, "AnimMixLayer", 250);
+
+		{
+			ImGui::BeginGroup();
+
+			size_t i = 0;
+			for (auto& input : inputs)
+			{
+				builder.Input(input.pinId);
+				ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
+				ImGui::TextUnformatted(String::Format("Layer {}", i).c_str());
+				builder.EndOutput();
+				i++;
+			}
+
+			ImGui::EndGroup();
+		}
+
+		ImGui::SameLine(); ImGui::Dummy({ 120, 0 }); ImGui::SameLine();
+
+		{
+			builder.Output(outputPinId);
+			ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
+			builder.EndOutput();
+		}
+
+		builder.Separator();
+
+		{
+			ImGui::Dummy({ 120, 100 });
+		}
+	}
+
+	/*virtual bool RenderCustomInspector() override
+	{
+		auto wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
+		ImGui::BeginChild("Test", { 0,0 }, true, wflags);
+		tab->RenderModelNodeHierarchy();
+		ImGui::EndChild();
+
+		return true;
+	};*/
+
+	int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
+	{
+		return 0;
+	}
+
+	int ValidateBeforeBuilt(String& errDesc) override
+	{
+		return 0;
+	}
+
+	void WriteToJson(json& json) const override
+	{
+	}
+
+	void ReadFromJson(const json& json) override
+	{
+	}
+};
+
 struct AnimatorEditorTPoseLayer : public AnimLayer
 {
 public:
 	SERIALIZABLE_CLASS(AnimatorEditorTPoseLayer, SERIALIZABLE_MEM_RAW);
 
 	bool m_once = true;
+	float m_coeff = 0.0f;
 
 	// Inherited via AnimLayer
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
@@ -384,6 +511,7 @@ public:
 			if (node.boneId != INVALID_ID)
 			{
 				m_globalTransforms[i] = offsetMatrix[node.boneId].GetInverse();
+				m_globalTransforms[i] *= m_coeff;
 			}
 		}
 
@@ -427,34 +555,9 @@ void AnimatorEditorTab::OnRenderGUI()
 		m_tposeMode--;
 	}
 
-	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
-	if (debugGraphics)
+	if (m_isEnableTPoseMode && !m_isEnableModelInTPoseMode)
 	{
-		auto& model = m_animator->m_model3D;
-		auto& offsetMatrix = model->m_boneOffsetMatrixs;
-		std::vector<Vec3> bonePos;
-		bonePos.reserve(offsetMatrix.size());
-
-		auto& rootTrans = m_object->GetCommittedGlobalTransform();
-
-		for (auto& bone : model->m_boneOffsetMatrixs)
-		{
-			bonePos.push_back((bone.GetInverse() * rootTrans).Position());
-		}
-
-		size_t i = 0;
-		auto& nodes = model->m_nodes;
-		for (auto& node : nodes)
-		{
-			if (node.boneId != INVALID_ID && node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
-			{
-				auto cur = (Vec4(bonePos[node.boneId], 1.0f)).xyz() + Vec3(0, 0, 3);
-				auto parent = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f)).xyz() + Vec3(0, 0, 3);
-
-				debugGraphics->DrawLineSegment(parent, cur);
-			}
-			i++;
-		}
+		RenderModelSkeleton();
 	}
 
 	const float HEADER_HEIGHT = 65;
@@ -551,7 +654,43 @@ void AnimatorEditorTab::OnRenderGUI()
 		ImGui::SetNextWindowSize(ImVec2(viewPortSize.x / 4.0f, viewPortSize.y - HEADER_HEIGHT));
 		ImGui::Begin("Inspector ##AnimatorEditorTab", 0, wflags);
 
-		if (!selectedNode || !selectedNode->RenderCustomInspector())
+		if (m_isEnableTPoseMode)
+		{
+			if (ImGui::ToggleButton("RenderModelInTPoseModeToggle", &m_isEnableModelInTPoseMode))
+			{
+				if (m_tposeLayer)
+				{
+					auto layer = (AnimatorEditorTPoseLayer*)m_tposeLayer;
+					layer->m_once = true;
+					layer->m_coeff = m_isEnableModelInTPoseMode ? 1.0f : 0.0f;
+					layer->Run(0);
+					m_animator->UpdateDataToRenderer(m_scene, m_tposeLayer);
+				}
+			}
+			ImGui::SameLine();
+			ImGui::TextUnformatted("Show Mesh");
+
+			ImGui::SameLine();
+			if (ImGui::Button("Expand All"))
+			{
+				m_root->ForEach(
+					[](ModelNode* node)
+					{
+						node->isTryingExpand = true;
+					}
+				);
+			}
+
+			auto wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
+			ImGui::BeginChild("ModelHierarchy", { 0,ImGui::GetWindowSize().y / 2.0f - 50.0f }, true, wflags);
+			RenderModelNodeHierarchy();
+			ImGui::EndChild();
+
+			ImGui::BeginChild("CustomInspector", { 0,0 }, true, wflags);
+			selectedNode&& selectedNode->RenderCustomInspector();
+			ImGui::EndChild();
+		}
+		else if (!selectedNode || !selectedNode->RenderCustomInspector())
 		{
 			if (ImGui::Button("Import Motion"))
 			{
@@ -673,13 +812,13 @@ void AnimatorEditorTab::OnRenderGUI()
 			ImGui::EndChild();
 		}
 
-		// test
-		{
-			wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
-			ImGui::BeginChild("Test", { 0,0 }, true, wflags);
-			RenderModelNodeHierarchy();
-			ImGui::EndChild();
-		}
+		//// test
+		//{
+		//	wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
+		//	ImGui::BeginChild("Test", { 0,0 }, true, wflags);
+		//	RenderModelNodeHierarchy();
+		//	ImGui::EndChild();
+		//}
 		
 		ImGui::End();
 	}
@@ -690,6 +829,7 @@ void AnimatorEditorTab::OnRenderInGameDebugGraphics()
 	EditorContext::OxyzRenderConfig config;
 	config.RenderOxzGrid = true;
 	config.AxisYLength = 200.0f;
+	config.AxisYColor = { 1,1,1,0.5f };
 	EditorContext::GetInstance()->RenderOxyz(config);
 }
 
@@ -928,6 +1068,8 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 	{
 		std::map<ID, Node*> nodeIdToNode;
 
+		m_nextId = nodesData["NextId"];
+
 		json nodes = nodesData["Nodes"];
 		for (size_t i = 0; i < nodes.size(); i++)
 		{
@@ -978,8 +1120,6 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 
 			node->ReadFromJson(jnode);
 		}*/
-
-		m_nextId = nodesData["NextId"];
 
 		auto& links = nodesData["Links"];
 		for (size_t i = 0; i < links.size(); i++)
@@ -1084,6 +1224,9 @@ AnimatorEditorTab::LAYER_TYPE::TYPE AnimatorEditorTab::GetNodeType(Node* node, v
 	case AnimatorEditorTab::LAYER_TYPE::BLENDING:
 		*concretePtr = dynamic_cast<AnimBlendLayer*>(node->layer);
 		break;
+	case AnimatorEditorTab::LAYER_TYPE::MIXING:
+		*concretePtr = dynamic_cast<AnimMixLayer*>(node->layer);
+		break;
 	default:
 		assert(0);
 		break;
@@ -1104,6 +1247,10 @@ AnimatorEditorTab::LAYER_TYPE::TYPE AnimatorEditorTab::GetLayerType(AnimLayer* l
 	{
 		type = LAYER_TYPE::BLENDING;
 	}
+	else if (dynamic_cast<AnimMixLayer*>(layer))
+	{
+		type = LAYER_TYPE::MIXING;
+	}
 	else
 	{
 		assert(0);
@@ -1123,6 +1270,9 @@ AnimLayer* AnimatorEditorTab::CreateLayer(LAYER_TYPE::TYPE type)
 		break;
 	case AnimatorEditorTab::LAYER_TYPE::BLENDING:
 		layer = m_animator->NewAnimLayer<AnimBlendLayer, true>();
+		break; 
+	case AnimatorEditorTab::LAYER_TYPE::MIXING:
+		layer = m_animator->NewAnimLayer<AnimMixLayer, true>();
 		break;
 	default:
 		assert(0);
@@ -1147,6 +1297,9 @@ UniquePtr<AnimatorEditorTab::Node> AnimatorEditorTab::CreateNode(AnimLayer* laye
 	case AnimatorEditorTab::LAYER_TYPE::BLENDING:
 		node = std::make_unique<AnimBlendLayerNode>(this);
 		break;
+	case AnimatorEditorTab::LAYER_TYPE::MIXING:
+		node = std::make_unique<AnimMixLayerNode>(this);
+		break;
 	default:
 		assert(0);
 		break;
@@ -1157,6 +1310,7 @@ UniquePtr<AnimatorEditorTab::Node> AnimatorEditorTab::CreateNode(AnimLayer* laye
 	node->nodeId = GetNextId();
 	node->outputPinId = GetNextId();
 	node->tab = this;
+	node->ResizeInputs(node->GetInputLayers().size());
 
 	return std::move(node);
 }
@@ -1170,7 +1324,7 @@ void AnimatorEditorTab::BuildNode(Node* node, NodesBuilder& builder)
 	for (size_t i = 0; i < inputs.size(); i++)
 	{
 		auto& layer = inputs[i];
-		auto& input = node->inputs[i];
+		//auto& input = node->inputs[i];
 
 		assert(builder.animLayerToNode.find(layer) != builder.animLayerToNode.end());
 
@@ -1230,6 +1384,52 @@ void AnimatorEditorTab::RenderNode(Node* node)
 	builder.End();
 }
 
+void AnimatorEditorTab::RenderModelSkeleton()
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (debugGraphics)
+	{
+		/*if (m_renderSkeletonOffset == Vec3::ZERO)
+		{
+			m_renderSkeletonOffset = -m_object->GetCommittedGlobalTransform().Right().Normal() * 1.0f;
+		}*/
+		/*auto mat = m_object->GetLocalTransform().ToTransformMatrix();
+
+		debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
+		debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
+		debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });*/
+
+		auto& model = m_animator->m_model3D;
+		auto& offsetMatrix = model->m_boneOffsetMatrixs;
+		std::vector<Vec3> bonePos;
+		bonePos.reserve(offsetMatrix.size());
+
+		auto& rootTrans = m_object->GetCommittedGlobalTransform();
+
+		for (auto& bone : model->m_boneOffsetMatrixs)
+		{
+			bonePos.push_back((bone.GetInverse() * rootTrans).Position());
+		}
+
+		size_t i = 0;
+		auto& nodes = model->m_nodes;
+		for (auto& node : nodes)
+		{
+			if (node.boneId != INVALID_ID && node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
+			{
+				auto cur = (Vec4(bonePos[node.boneId], 1.0f)).xyz() + m_renderSkeletonOffset;
+				auto parent = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f)).xyz() + m_renderSkeletonOffset;
+
+				Vec4 color = { 0,0,0,1 };
+				color[i % 3] = 1.0f;
+
+				debugGraphics->DrawLineSegment(parent, cur, color, 0.01f);
+			}
+			i++;
+		}
+	}
+}
+
 void AnimatorEditorTab::RenderModelNodeHierarchy()
 {
 	auto& model = m_animator->m_model3D;
@@ -1253,18 +1453,20 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode)
 {
 	auto& model = m_animator->m_model3D;
 	auto& nodes = model->m_nodes;
+	auto& node = nodes[modelNode->nodeIdx];
 
 	ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow
 		| ImGuiTreeNodeFlags_OpenOnDoubleClick
 		| ImGuiTreeNodeFlags_SpanAvailWidth
 		| ImGuiTreeNodeFlags_AllowItemOverlap
-		| ImGuiTreeNodeFlags_SpanFullWidth;
+		| ImGuiTreeNodeFlags_SpanFullWidth
+		| (modelNode->isTryingExpand ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None)
+		;
 
 	/*if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
 	{
 		nodeFlags |= ImGuiTreeNodeFlags_Selected;
 	}*/
-	auto& node = nodes[modelNode->nodeIdx];
 	String name = "<Unnamed>";
 	if (node.boneId != INVALID_ID)
 	{
@@ -1353,6 +1555,59 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 
 	ed::SetCurrentEditor(m_nodeEditorCtx);
 	ed::Begin("Node Editor", ImVec2(0.0, 0.0f));
+
+	auto openPopupPosition = ImGui::GetMousePos();
+
+	ed::Suspend();
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+	//ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_WindowMinSize, ImVec2(200, 0));
+
+	if (ed::ShowBackgroundContextMenu())
+	{
+		ImGui::OpenPopup("Create New Node");
+	}
+
+	if (ImGui::BeginPopup("Create New Node"))
+	{
+		ImGui::Dummy({ 100,0 });
+
+		if (ImGui::BeginMenu("Add"))
+		{
+			UniquePtr<Node> node = nullptr;
+			if (ImGui::MenuItem("AnimPlayerLayer"))
+			{
+				node = std::move(CreateNode(CreateLayer(LAYER_TYPE::ANIMATON_PLAYER)));
+			}
+
+			if (ImGui::MenuItem("AnimBlendLayer"))
+			{
+				node = std::move(CreateNode(CreateLayer(LAYER_TYPE::BLENDING)));
+			}
+
+			if (ImGui::MenuItem("AnimMixLayer"))
+			{
+				node = std::move(CreateNode(CreateLayer(LAYER_TYPE::MIXING)));
+			}
+
+			if (node.get())
+			{
+				m_nodes.push_back(std::move(node));
+
+				ed::SetCurrentEditor(m_nodeEditorCtx);
+
+				auto raw = m_nodes.back().get();
+				ed::SetNodePosition(raw->nodeId, openPopupPosition);
+			}
+
+			ImGui::EndMenu();
+		}
+
+		ImGui::Dummy({ 100,0 });
+		ImGui::EndPopup();
+	}
+	//ImGui::PopStyleVar();
+	ImGui::PopStyleVar();
+	ed::Resume();
 
 	for (auto& node : m_nodes)
 	{

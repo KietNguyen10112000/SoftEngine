@@ -14,9 +14,10 @@ inline bool ToggleButton(const char* str_id, bool* v)
 	ImVec2 p = ImGui::GetCursorScreenPos();
 	ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-	float height = ImGui::GetFrameHeight();
+	float height = ImGui::GetFrameHeight() - 5.0f;
 	float width = height * 1.55f;
 	float radius = height * 0.50f;
+    p.y += 0.5f;
 
 	ImGui::InvisibleButton(str_id, ImVec2(width, height));
 	if (ImGui::IsItemClicked()) *v = !*v;

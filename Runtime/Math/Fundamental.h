@@ -1230,6 +1230,11 @@ public:
         return Mat4().SetIdentity();
     }
 
+    inline static Mat4 Zero()
+    {
+        return glm::zero<glm::mat4>();
+    }
+
     inline static Mat4 Transpose(const Mat4& mat)
     {
         return mat.GetTranspose();
