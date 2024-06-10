@@ -352,7 +352,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 struct AnimMixLayerNode : public AnimatorEditorTab::Node
 {
 	std::vector<std::vector<float>> layerWeights;
-	ID selectedLayerId = INVALID_ID;
+	ID selectedInputId = INVALID_ID;
 
 	AnimMixLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
@@ -419,6 +419,11 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 				i++;
 			}
 
+			if (i == 0)
+			{
+				ImGui::Dummy({ 80, 0 });
+			}
+
 			ImGui::EndGroup();
 		}
 
@@ -433,19 +438,48 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 		builder.Separator();
 
 		{
-			ImGui::Dummy({ 120, 100 });
+			ImGui::Dummy({ 120, 25 });
 		}
 	}
 
-	/*virtual bool RenderCustomInspector() override
+	virtual bool RenderCustomInspector() override
 	{
-		auto wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
-		ImGui::BeginChild("Test", { 0,0 }, true, wflags);
-		tab->RenderModelNodeHierarchy();
-		ImGui::EndChild();
+		if (!tab->m_isEnableTPoseMode)
+		{
+			return false;
+		}
+
+		if (ImGui::Button(ICON_FA_PLUS " Add Input"))
+		{
+
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button(ICON_FA_MINUS " Delete Selected Input"))
+		{
+
+		}
+
+		//auto wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
+		//ImGui::BeginChild("ChooseInput", { 0,ImGui::GetWindowSize().y / 4.0f - 50.0f }, true, wflags);
+		String previewLabel = selectedInputId == INVALID_ID ? "<Add input to select>" : String::Format("Input {}", selectedInputId);
+		if (ImGui::BeginCombo("Choose Input", previewLabel.c_str()))
+		{
+			size_t i = 0;
+			for (auto& input : inputs)
+			{
+				ImGui::Selectable(String::Format("Input {}", i).c_str(), i == selectedInputId);
+				i++;
+			}
+
+			ImGui::EndCombo();
+		}
+		
+		//ImGui::EndChild();
 
 		return true;
-	};*/
+	};
 
 	int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
 	{
@@ -463,6 +497,16 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 
 	void ReadFromJson(const json& json) override
 	{
+	}
+
+	void EmplaceBackInput()
+	{
+
+	}
+
+	void SetSelectedInput(ID id)
+	{
+
 	}
 };
 
@@ -1382,6 +1426,11 @@ void AnimatorEditorTab::RenderNode(Node* node)
 	builder.Begin(node->nodeId);
 	node->Render(builder);
 	builder.End();
+
+	if (ImGui::IsItemClicked() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
+	{
+		OnGraphNodeDoubleClicked(node);
+	}
 }
 
 void AnimatorEditorTab::RenderModelSkeleton()
@@ -1415,13 +1464,23 @@ void AnimatorEditorTab::RenderModelSkeleton()
 		auto& nodes = model->m_nodes;
 		for (auto& node : nodes)
 		{
+			auto& modelNode = m_modelNodes[i];
 			if (node.boneId != INVALID_ID && node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
 			{
 				auto cur = (Vec4(bonePos[node.boneId], 1.0f)).xyz() + m_renderSkeletonOffset;
 				auto parent = (Vec4(bonePos[nodes[node.parentId].boneId], 1.0f)).xyz() + m_renderSkeletonOffset;
 
-				Vec4 color = { 0,0,0,1 };
-				color[i % 3] = 1.0f;
+				Vec4 color = { 0,1,0,1 };
+
+				float percent = ((i % 3) + 1);
+				color[0] /= percent;
+				color[1] /= percent;
+				color[2] /= percent;
+
+				if (modelNode->isSelected)
+				{
+					color = { 1,1,0,1 };
+				}
 
 				debugGraphics->DrawLineSegment(parent, cur, color, 0.01f);
 			}
@@ -1446,10 +1505,10 @@ void AnimatorEditorTab::RenderModelNodeHierarchy()
 	}
 
 	if (rootBone)
-		RenderModelNodeHierarchyImpl(rootBone);
+		RenderModelNodeHierarchyImpl(rootBone, nullptr);
 }
 
-void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode)
+void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode, void* outRect)
 {
 	auto& model = m_animator->m_model3D;
 	auto& nodes = model->m_nodes;
@@ -1461,12 +1520,11 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode)
 		| ImGuiTreeNodeFlags_AllowItemOverlap
 		| ImGuiTreeNodeFlags_SpanFullWidth
 		| (modelNode->isTryingExpand ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None)
+		| (modelNode->children.empty() ? ImGuiTreeNodeFlags_Leaf : ImGuiTreeNodeFlags_None)
+		| (modelNode->isSelected ? ImGuiTreeNodeFlags_Selected : ImGuiTreeNodeFlags_None)
+		| ImGuiTreeNodeFlags_NavLeftJumpsBackHere
 		;
 
-	/*if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
-	{
-		nodeFlags |= ImGuiTreeNodeFlags_Selected;
-	}*/
 	String name = "<Unnamed>";
 	if (node.boneId != INVALID_ID)
 	{
@@ -1474,15 +1532,113 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode)
 	}
 
 	auto open = ImGui::TreeNodeEx((void*)modelNode, nodeFlags, name.c_str());
+	const ImRect nodeRect = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+
+	if (ImGui::IsItemClicked() && open == modelNode->isOpen)
+	{
+		if (!open)
+		{
+			modelNode->ForEach([](ModelNode* n) { n->isSelected = true; });
+		}
+		else
+		{
+			modelNode->isSelected = true;
+		}
+
+		if (ImGui::IsKeyDown(ImGuiKey::ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey::ImGuiKey_RightShift))
+		{
+			size_t i = 0;
+			size_t start = INVALID_ID;
+			size_t end = INVALID_ID;
+			for (auto& n : m_modelNodes)
+			{
+				if (n->isSelected)
+				{
+					if (start == INVALID_ID)
+					{
+						start = i;
+					}
+
+					end = i;
+				}
+				i++;
+			}
+
+			if (start != INVALID_ID && end != INVALID_ID && end > start)
+			{
+				for (i = start; i <= end; i++)
+				{
+					m_modelNodes[i]->isSelected = true;
+				}
+			}
+		}
+		else if (ImGui::IsKeyDown(ImGuiKey::ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey::ImGuiKey_RightCtrl))
+		{
+
+		}
+		else
+		{
+			for (auto& n : m_modelNodes)
+			{
+				n->isSelected = false;
+			}
+		}
+
+		if (!open)
+		{
+			modelNode->ForEach([](ModelNode* n) { n->isSelected = true; });
+		}
+		else
+		{
+			modelNode->isSelected = true;
+		}
+	}
+
+	modelNode->isOpen = open;
 
 	if (open)
 	{
+		const ImColor TreeLineColor = ImColor(128, 128, 128, 255);// ImGui::GetColorU32(ImGuiCol_Text);
+		const float SmallOffsetX = -6.0f; //for now, a hardcoded value; should take into account tree indent size
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+		ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
+		verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
+		ImVec2 verticalLineEnd = verticalLineStart;
+
+		verticalLineStart.y -= 8;
+
 		for (auto& child : modelNode->children)
 		{
-			RenderModelNodeHierarchyImpl(child);
+			ImRect childRect;
+			const float HorizontalTreeLineSize = 16.0f; //chosen arbitrarily
+
+			RenderModelNodeHierarchyImpl(child, &childRect);
+
+			const float midpoint = (childRect.Min.y + childRect.Max.y) / 2.0f;
+			drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+			verticalLineEnd.y = midpoint;
+		}
+
+		if (!modelNode->children.empty())
+		{
+			drawList->AddLine(verticalLineStart, verticalLineEnd, TreeLineColor);
 		}
 
 		ImGui::TreePop();
+	}
+
+	if (outRect)
+	{
+		*(ImRect*)outRect = nodeRect;
+	}
+}
+
+void AnimatorEditorTab::OnGraphNodeDoubleClicked(Node* node)
+{
+	if (node->layerType == LAYER_TYPE::MIXING)
+	{
+		SetTPoseMode(true);
 	}
 }
 

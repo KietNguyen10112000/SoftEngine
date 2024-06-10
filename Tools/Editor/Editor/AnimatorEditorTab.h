@@ -160,6 +160,7 @@ public:
 		ID nodeIdx = INVALID_ID;
 		bool isSelected = false;
 		bool isTryingExpand = false;
+		bool isOpen = false;
 
 		template <typename Fn>
 		inline void ForEach(Fn fn)
@@ -170,6 +171,11 @@ public:
 			{
 				child->ForEach(fn);
 			}
+		}
+
+		inline auto& Children()
+		{
+			return children;
 		}
 	};
 
@@ -259,7 +265,9 @@ public:
 	void RenderNode(Node* node);
 	void RenderModelSkeleton();
 	void RenderModelNodeHierarchy();
-	void RenderModelNodeHierarchyImpl(ModelNode*);
+	void RenderModelNodeHierarchyImpl(ModelNode*, void* outRect);
+
+	void OnGraphNodeDoubleClicked(Node* node);
 
 	inline ID GetNextId()
 	{
