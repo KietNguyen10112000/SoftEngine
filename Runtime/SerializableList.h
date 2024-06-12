@@ -16,6 +16,7 @@
 #include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 #include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimMixLayer.h"
 
 #include "MainSystem/Physics/Components/RigidBodyStatic.h"
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
@@ -69,6 +70,7 @@ public:
 			// animation layers
 			SerializableDB::Get()->Register<AnimPlayerLayer>();
 			SerializableDB::Get()->Register<AnimBlendLayer>();
+			SerializableDB::Get()->Register<AnimMixLayer>();
 		}
 
 

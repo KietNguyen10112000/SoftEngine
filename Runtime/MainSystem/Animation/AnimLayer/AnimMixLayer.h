@@ -29,6 +29,10 @@ protected:
 
 	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
 
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;

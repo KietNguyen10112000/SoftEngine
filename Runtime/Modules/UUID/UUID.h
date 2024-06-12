@@ -59,6 +59,11 @@ struct UUID
 
 		return ret;
 	}
+
+	inline bool IsEmpty() const
+	{
+		return part0 == 0 && part1 == 0;
+	}
 };
 
 // generate uuid v1

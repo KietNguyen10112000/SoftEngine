@@ -38,6 +38,7 @@ public:
 	};
 
 	struct Link;
+	struct ModelNode;
 
 	// prefix "commited" mean the last successful build result 
 	// eg: inputs -> commitedInputs; <inputs> is what user see on screen graph, <commitedInputs> is what's actually running inside Animator
@@ -79,10 +80,11 @@ public:
 
 		inline void ResizeInputs(size_t numInput)
 		{
+			auto startIdx = inputs.size();
 			inputs.resize(numInput);
-			for (auto& input : inputs)
+			for (auto i = startIdx; i < inputs.size(); i++)
 			{
-				input.pinId = tab->GetNextId();
+				inputs[i].pinId = tab->GetNextId();
 			}
 		}
 
@@ -103,6 +105,7 @@ public:
 		virtual void ReadFromJson(const json& json) = 0;
 
 		inline virtual bool RenderCustomInspector() { return false; };
+		inline virtual void RenderCustomModelTreeNode(ModelNode* node) {};
 
 		inline void Commit()
 		{
@@ -111,6 +114,11 @@ public:
 
 		inline AnimLayer* GetInputLayerFromNode(ID id)
 		{
+			if (inputs[id].link == nullptr)
+			{
+				return nullptr;
+			}
+
 			return inputs[id].link->src->layer;
 		}
 
@@ -264,8 +272,8 @@ public:
 	void RenderNodeHeader(void*, Node* node, const char* title, float nodeWidth);
 	void RenderNode(Node* node);
 	void RenderModelSkeleton();
-	void RenderModelNodeHierarchy();
-	void RenderModelNodeHierarchyImpl(ModelNode*, void* outRect);
+	void RenderModelNodeHierarchy(void (*)(ModelNode*, void*), void* userPtr);
+	void RenderModelNodeHierarchyImpl(void (*)(ModelNode*, void*), void* userPtr, ModelNode*, void* outRect);
 
 	void OnGraphNodeDoubleClicked(Node* node);
 
@@ -274,10 +282,7 @@ public:
 		return ++m_nextId;
 	}
 
-	inline Node* GetNode(ID pinId)
-	{
-		return m_pinIdToNode[pinId];
-	}
+	Node* FindNode(ID pinId);
 
 	void CreateLink(Node* src, Node* dest, ID destInputId);
 	void DeleteLink(ID linkId);

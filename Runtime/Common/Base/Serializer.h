@@ -187,6 +187,10 @@ public:
 	UUID Serialize(const Handle<T>& obj)
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
+		if (!obj.Get())
+		{
+			return {};
+		}
 
 		TrySerialize(obj, SerializedRecord::HANDLE);
 		return obj->GetUUID();
@@ -197,6 +201,11 @@ public:
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
 
+		if (!obj)
+		{
+			return {};
+		}
+
 		TrySerialize(obj.get(), SerializedRecord::SHARED);
 		return obj->GetUUID();
 	}
@@ -205,6 +214,11 @@ public:
 	UUID Serialize(T* obj)
 	{
 		static_assert(std::is_base_of_v<ResourceBase, T> || std::is_base_of_v<Serializable, T>);
+
+		if (!obj)
+		{
+			return {};
+		}
 
 		if constexpr (std::is_base_of_v<ResourceBase, T>)
 		{
@@ -221,6 +235,11 @@ public:
 	template <typename T>
 	UUID Serialize(const Resource<T>& rc)
 	{
+		if ((T*)(rc) == nullptr)
+		{
+			return {};
+		}
+
 		TrySerializeRC(rc);
 		return rc->GetUUID();
 	}
@@ -229,6 +248,11 @@ public:
 	Handle<T> Deserialize(const UUID& uuid)
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
+
+		if (uuid.IsEmpty())
+		{
+			return nullptr;
+		}
 
 		Handle<Serializable> ret = nullptr;
 		TryDeserialize(uuid, &ret, nullptr, nullptr);
@@ -240,6 +264,12 @@ public:
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
 
+		if (uuid.IsEmpty())
+		{
+			output = nullptr;
+			return;
+		}
+
 		Handle<Serializable> ret;
 		TryDeserialize(uuid, &ret, nullptr, nullptr);
 		output = DynamicCast<T>(ret);
@@ -249,6 +279,12 @@ public:
 	void Deserialize(const UUID& uuid, T*& output)
 	{
 		static_assert(std::is_base_of_v<ResourceBase, T> || std::is_base_of_v<Serializable, T>);
+
+		if (uuid.IsEmpty())
+		{
+			output = nullptr;
+			return;
+		}
 
 		if constexpr (std::is_base_of_v<ResourceBase, T>)
 		{
@@ -269,6 +305,12 @@ public:
 	{
 		static_assert(std::is_base_of_v<Serializable, T>);
 
+		if (uuid.IsEmpty())
+		{
+			output = nullptr;
+			return;
+		}
+
 		SharedPtr<Serializable> ret;
 		TryDeserialize(uuid, nullptr, nullptr, &ret);
 		output = std::dynamic_pointer_cast<T>(ret);
@@ -278,6 +320,12 @@ public:
 	void Deserialize(const UUID& uuid, Resource<T>& output)
 	{
 		static_assert(std::is_base_of_v<ResourceBase, T>);
+
+		if (uuid.IsEmpty())
+		{
+			output.Reset();
+			return;
+		}
 
 		Resource<ResourceBase> ret;
 		TryDeserializeRC(uuid, &ret);

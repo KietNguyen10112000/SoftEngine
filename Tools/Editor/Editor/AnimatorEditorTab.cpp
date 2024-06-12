@@ -354,6 +354,8 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 	std::vector<std::vector<float>> layerWeights;
 	ID selectedInputId = INVALID_ID;
 
+	float editingWeight = 0.0f;
+
 	AnimMixLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
 
@@ -421,7 +423,7 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 
 			if (i == 0)
 			{
-				ImGui::Dummy({ 80, 0 });
+				ImGui::Dummy({ 90, 0 });
 			}
 
 			ImGui::EndGroup();
@@ -449,16 +451,16 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 			return false;
 		}
 
-		if (ImGui::Button(ICON_FA_PLUS " Add Input"))
+		if (ImGui::Button("Add Input"))
 		{
-
+			EmplaceBackInput();
 		}
 
 		ImGui::SameLine();
 
-		if (ImGui::Button(ICON_FA_MINUS " Delete Selected Input"))
+		if (ImGui::Button("Delete Selected Input"))
 		{
-
+			DeleteSelectedInput();
 		}
 
 		//auto wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
@@ -469,16 +471,52 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 			size_t i = 0;
 			for (auto& input : inputs)
 			{
-				ImGui::Selectable(String::Format("Input {}", i).c_str(), i == selectedInputId);
+				if (ImGui::Selectable(String::Format("Input {}", i).c_str(), i == selectedInputId))
+				{
+					SetSelectedInput(i);
+				}
 				i++;
 			}
 
 			ImGui::EndCombo();
 		}
+
+		if (selectedInputId != INVALID_ID)
+		{
+			ImGui::Separator();
+			ImGui::DragFloat("Weight", &editingWeight, 0.001f, 0, INFINITY); 
+			if (ImGui::Button("Set Weight To Selected Bone(s)"))
+			{
+				auto& weights = layerWeights[selectedInputId];
+				size_t i = 0;
+				for (auto& node : tab->m_modelNodes)
+				{
+					if (node->isSelected)
+					{
+						weights[i] = editingWeight;
+					}
+					i++;
+				}
+			}
+			ImGui::Separator();
+		}
 		
 		//ImGui::EndChild();
 
 		return true;
+	};
+
+	virtual void RenderCustomModelTreeNode(AnimatorEditorTab::ModelNode* node)
+	{
+		if (selectedInputId == INVALID_ID)
+		{
+			return;
+		}
+
+		ImGui::PushID(node->nodeIdx);
+		ImGui::SetNextItemWidth(60);
+		ImGui::DragFloat("", &layerWeights[selectedInputId][node->nodeIdx], 0.001f, 0, INFINITY);
+		ImGui::PopID();
 	};
 
 	int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
@@ -501,12 +539,42 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 
 	void EmplaceBackInput()
 	{
+		auto layer = (AnimMixLayer*)this->layer;
 
+		auto& weight = layerWeights.emplace_back();
+		weight.resize(layer->NodeGlobalTransforms().size());
+
+		ResizeInputs(inputs.size() + 1);
 	}
 
 	void SetSelectedInput(ID id)
 	{
+		selectedInputId = id;
+	}
 
+	void DeleteSelectedInput()
+	{
+		if (selectedInputId == INVALID_ID)
+		{
+			return;
+		}
+
+		inputs.erase(inputs.begin() + selectedInputId);
+		layerWeights.erase(layerWeights.begin() + selectedInputId);
+
+		if (inputs.size() == 0)
+		{
+			selectedInputId = INVALID_ID;
+		}
+		else
+		{
+			if (selectedInputId != 0)
+			{
+				selectedInputId = selectedInputId - 1;
+			}
+		}
+
+		SetSelectedInput(selectedInputId);
 	}
 };
 
@@ -727,7 +795,18 @@ void AnimatorEditorTab::OnRenderGUI()
 
 			auto wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
 			ImGui::BeginChild("ModelHierarchy", { 0,ImGui::GetWindowSize().y / 2.0f - 50.0f }, true, wflags);
-			RenderModelNodeHierarchy();
+			RenderModelNodeHierarchy(
+				[](ModelNode* node, void* ptr) 
+				{
+					if (ptr == nullptr)
+					{
+						return;
+					}
+
+					((Node*)ptr)->RenderCustomModelTreeNode(node);
+				}, 
+				selectedNode
+			);
 			ImGui::EndChild();
 
 			ImGui::BeginChild("CustomInspector", { 0,0 }, true, wflags);
@@ -1489,7 +1568,7 @@ void AnimatorEditorTab::RenderModelSkeleton()
 	}
 }
 
-void AnimatorEditorTab::RenderModelNodeHierarchy()
+void AnimatorEditorTab::RenderModelNodeHierarchy(void (*callback)(ModelNode*, void*), void* userPtr)
 {
 	auto& model = m_animator->m_model3D;
 	auto& nodes = model->m_nodes;
@@ -1505,10 +1584,10 @@ void AnimatorEditorTab::RenderModelNodeHierarchy()
 	}
 
 	if (rootBone)
-		RenderModelNodeHierarchyImpl(rootBone, nullptr);
+		RenderModelNodeHierarchyImpl(callback, userPtr, rootBone, nullptr);
 }
 
-void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode, void* outRect)
+void AnimatorEditorTab::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*, void*), void* userPtr, ModelNode* modelNode, void* outRect)
 {
 	auto& model = m_animator->m_model3D;
 	auto& nodes = model->m_nodes;
@@ -1594,6 +1673,8 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode, void*
 		}
 	}
 
+	ImGui::SameLine(); callback(modelNode, userPtr);
+
 	modelNode->isOpen = open;
 
 	if (open)
@@ -1613,7 +1694,7 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(ModelNode* modelNode, void*
 			ImRect childRect;
 			const float HorizontalTreeLineSize = 16.0f; //chosen arbitrarily
 
-			RenderModelNodeHierarchyImpl(child, &childRect);
+			RenderModelNodeHierarchyImpl(callback, userPtr, child, &childRect);
 
 			const float midpoint = (childRect.Min.y + childRect.Max.y) / 2.0f;
 			drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
@@ -1705,6 +1786,27 @@ void AnimatorEditorTab::SetTPoseMode(bool isOn)
 	((AnimatorEditorTPoseLayer*)m_tposeLayer)->m_once = true;
 }
 
+AnimatorEditorTab::Node* AnimatorEditorTab::FindNode(ID pinId)
+{
+	for (auto& node : m_nodes)
+	{
+		for (auto& input : node->inputs)
+		{
+			if (input.pinId == pinId)
+			{
+				return node.get();
+			}
+		}
+
+		if (node->outputPinId == pinId)
+		{
+			return node.get();
+		}
+	}
+
+	return nullptr;
+}
+
 void AnimatorEditorTab::RenderBluePrintPanel()
 {
 	namespace util = ax::NodeEditor::Utilities;
@@ -1779,10 +1881,22 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 			{
 				if (ed::AcceptNewItem())
 				{
-					auto src = GetNode(ID(inputPinId));
-					auto dest = GetNode(ID(outputPinId));
+					auto src = FindNode(ID(inputPinId));
+					auto dest = FindNode(ID(outputPinId));
 
-					if (src->outputPinId == ID(inputPinId))
+					if (dest->outputPinId == ID(outputPinId) && src->outputPinId == ID(inputPinId))
+					{
+						// both are outputs
+						goto end;
+					}
+
+					if (dest->outputPinId != ID(outputPinId) && src->outputPinId != ID(inputPinId))
+					{
+						// both are inputs
+						goto end;
+					}
+
+					if (dest->outputPinId == ID(outputPinId))
 					{
 						std::swap(src, dest);
 						std::swap(inputPinId, outputPinId);
@@ -1794,20 +1908,24 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 						if (dest->inputs[i].pinId == ID(outputPinId))
 						{
 							destIdx = i;
+							break;
 						}
 					}
 					assert(destIdx != INVALID_ID);
 
-					/*if (dest->inputs[destIdx].linkId == INVALID_ID)
+					if (dest->inputs[destIdx].link != nullptr)
 					{
-						CreateLink(src, dest, destIdx);
-					}*/
+						DeleteLink(dest->inputs[destIdx].link->linkId);
+					}
+
+					CreateLink(src, dest, destIdx);
 				}
 			}
 		}
 
 	}
 
+end:
 	ed::EndCreate();
 
 	for (auto& link : m_links)
@@ -1930,6 +2048,11 @@ void AnimatorEditorTab::BuildGraphImpl()
 
 			for (auto& input : top->inputs)
 			{
+				if (input.link == nullptr)
+				{
+					continue;
+				}
+
 				if (input.link->src->visited == 0)
 				{
 					input.link->src->visited = 1;
@@ -1991,8 +2114,6 @@ void AnimatorEditorTab::BuildGraphImpl()
 
 void AnimatorEditorTab::PlaceNodesToAnimatorLayers()
 {
-	OnBuildNodesDone();
-
 	std::vector<Node*> nodes;
 	for (auto& node : m_nodes)
 	{
@@ -2008,7 +2129,7 @@ void AnimatorEditorTab::PlaceNodesToAnimatorLayers()
 
 	std::vector<AnimLayer*> layers;
 	size_t count = 0;
-	for (auto& node : m_nodes)
+	for (auto& node : nodes)
 	{
 		layers.push_back(node->layer);
 		node->layerIdx = count;
@@ -2027,6 +2148,8 @@ void AnimatorEditorTab::PlaceNodesToAnimatorLayers()
 			{
 				node->ProcessSetInputLayers();
 			}
+
+			self->OnBuildNodesDone();
 
 			self->m_buildingNow = self->m_buildingTotal;
 		}
