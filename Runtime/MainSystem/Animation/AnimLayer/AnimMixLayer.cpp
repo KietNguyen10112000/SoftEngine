@@ -17,6 +17,7 @@ void AnimMixLayer::DeserializeFromBinary(Serializer* serializer, const ByteStrea
 
 void AnimMixLayer::SerializeToJson(Serializer* serializer, json& j) const
 {
+	AnimLayer::SerializeToJson(serializer, j);
 	{
 		auto arr = json::array();
 		for (auto& input : m_inputs)
@@ -32,6 +33,7 @@ void AnimMixLayer::SerializeToJson(Serializer* serializer, json& j) const
 
 void AnimMixLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	AnimLayer::DeserializeFromJson(serializer, j);
 	{
 		auto& arr = j["Inputs"];
 		for (size_t i = 0; i < arr.size(); i++)
@@ -56,6 +58,7 @@ void AnimMixLayer::OnPropertyChanged(const UnknownAddress& var, const Variant& n
 
 void AnimMixLayer::Run(float dt)
 {
+	auto& nodes = m_model->m_nodes;
 	for (auto& input : m_inputs)
 	{
 		input.outputLayer = input.layer ? input.layer->GetOutput() : nullptr;
@@ -64,12 +67,25 @@ void AnimMixLayer::Run(float dt)
 	auto count = m_globalTransforms.size();
 	for (size_t i = 0; i < count; i++)
 	{
+		auto& node = nodes[i];
 		auto& mat = m_globalTransforms[i];
 		mat = Mat4::Zero();
 		for (auto& input : m_inputs)
 		{
 			if (input.layer)
 			{
+				auto& nodeGlobalTransform = input.outputLayer->NodeGlobalTransforms()[i];
+				if (node.parentId != INVALID_ID)
+				{
+					auto& parentGlobalTransform = m_globalTransforms[node.parentId];
+					auto& oriParentGlobalTransform = input.outputLayer->NodeGlobalTransforms()[node.parentId];
+					if (parentGlobalTransform != oriParentGlobalTransform)
+					{
+						mat += ((nodeGlobalTransform * oriParentGlobalTransform.GetInverse()) * parentGlobalTransform) * input.weight[i];
+						continue;
+					}
+				}
+
 				mat += (input.outputLayer->NodeGlobalTransforms()[i] * input.weight[i]);
 			}
 		}

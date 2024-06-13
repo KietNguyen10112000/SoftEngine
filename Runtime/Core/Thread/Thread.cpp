@@ -92,7 +92,7 @@ void Thread::SwitchToFiber(Fiber* fiber, bool returnCurrentFiberToFiberPool)
 #ifdef _DEBUG
 	if (fiber->m_lock.try_lock() == false)
 	{
-		std::cout << "[   WARN   ]\tFiber switching hazard\n";
+		//std::cout << "[   WARN   ]\tFiber switching hazard\n";
 		fiber->m_lock.lock();
 	}
 #else

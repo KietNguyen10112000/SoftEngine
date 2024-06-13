@@ -635,13 +635,14 @@ public:
 
 };
 
-AnimatorEditorTab::AnimatorEditorTab(const String& modelPath, Scene* scene)
+AnimatorEditorTab::AnimatorEditorTab(const String& modelPath, Scene* scene, const String& tabName)
 {
 	m_modelPath = modelPath;
 
 	m_nodeHeaderTexture = resource::Load<Texture2D>("Editor/BlueprintBackground.png");
 
-	auto savePath = (EditorContext::GetInstance()->GetSavePath() + "AnimatorEditor/" + m_name + ".config.json");
+	auto savePath = (EditorContext::GetInstance()->GetSavePath() + "AnimatorEditor/" + tabName + ".ucfg");
+	m_edSavePath = savePath;
 	ed::Config config;
 	config.SettingsFile = savePath.c_str();
 	config.UserPointer = this;
@@ -658,6 +659,16 @@ void AnimatorEditorTab::OnObjectsRemoved(std::vector<GameObject*>& objects)
 
 void AnimatorEditorTab::OnRenderGUI()
 {
+	if (m_animationsEditingState.size() == 0)
+	{
+		auto& animations = m_animator->m_model3D->m_animations;
+		m_animationsEditingState.resize(animations.size());
+		for (size_t i = 0; i < animations.size(); i++)
+		{
+			auto& state = m_animationsEditingState[i];
+			state.name = animations[i]->Name();
+		}
+	}
 	//ImGui::ShowDemoWindow();
 
 	if (m_tposeMode != 0)
@@ -820,7 +831,7 @@ void AnimatorEditorTab::OnRenderGUI()
 				auto path = FileChooser::OpenFileChooser("", false);
 
 				std::vector<Resource<AnimMotion>> motions;
-				if (ResourceUtils::LoadAnimMotion(path, motions) == 0)
+				if (!path.empty() && ResourceUtils::LoadAnimMotion(path, motions) == 0)
 				{
 					for (auto& m : motions)
 					{
@@ -880,15 +891,6 @@ void AnimatorEditorTab::OnRenderGUI()
 				//ImGui::TableHeadersRow();
 
 				auto& animations = m_animator->m_model3D->m_animations;
-				if (m_animationsEditingState.size() == 0)
-				{
-					m_animationsEditingState.resize(animations.size());
-					for (size_t i = 0; i < animations.size(); i++)
-					{
-						auto& state = m_animationsEditingState[i];
-						state.name = animations[i]->Name();
-					}
-				}
 
 				size_t i = 0;
 				for (auto& animation : animations)
@@ -1012,8 +1014,6 @@ void AnimatorEditorTab::OnOpen()
 {
 	Transform transform = {};
 
-	m_tposeLayer = m_animator->NewAnimLayer<AnimatorEditorTPoseLayer, true>();
-
 	if (!m_cam)
 	{
 		auto cameraObj = mheap::New<GameObject>();
@@ -1050,12 +1050,15 @@ void AnimatorEditorTab::OnOpen()
 			OnBuildNodesDone();
 		}
 
+		m_tposeLayer = m_animator->NewAnimLayer<AnimatorEditorTPoseLayer, true>();
 		BuildModelHierarchy();
 		return;
 	}
 
 	m_object = resource::Load<AnimModel>(m_modelPath)->MakeGameObject();
 	m_animator = m_object->GetComponent<AnimatorSkeletalArray>();
+
+	m_tposeLayer = m_animator->NewAnimLayer<AnimatorEditorTPoseLayer, true>();
 
 	m_scene->AddObject(m_object);
 
@@ -1118,8 +1121,11 @@ void AnimatorEditorTab::WriteNodeDataToJson(Serializer* serializer, json& j) con
 
 			jnode["LayerType"] = node->layerType;
 			jnode["LayerIdx"] = node->layerIdx;
+			jnode["Layer"] = serializer->Serialize(node->layer);
+
 			jnode["NodeId"] = node->nodeId;
 			jnode["OutputPinId"] = node->outputPinId;
+			jnode["NumInputs"] = node->inputs.size();
 
 			/*json inputs = json::array();
 			for (auto& input : node->inputs)
@@ -1200,7 +1206,12 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 
 			ID layerIdx = jnode["LayerIdx"];
 			LAYER_TYPE::TYPE layerType = jnode["LayerType"];
-			AnimLayer* layer = layerIdx == INVALID_ID ? CreateLayer(layerType) : m_animator->m_animLayers[layerIdx];
+			AnimLayer* layer = layerIdx == INVALID_ID ? nullptr : m_animator->m_animLayers[layerIdx];
+			if (layer == nullptr)
+			{
+				serializer->Deserialize(jnode["Layer"], layer);
+			}
+
 			auto node = CreateNode(layer);
 
 			node->layerType = layerType;
@@ -1208,6 +1219,8 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 			node->nodeId = jnode["NodeId"];
 			node->nodeIdx = i;
 			node->outputPinId = jnode["OutputPinId"];
+
+			node->ResizeInputs(jnode["NumInputs"]);
 
 			/*json& inputs = jnode["Inputs"];
 			for (size_t j = 0; j < inputs.size(); j++)

@@ -232,6 +232,8 @@ public:
 	bool m_isEnableTPoseMode = false;
 	bool m_isEnableModelInTPoseMode = false;
 
+	String m_edSavePath;
+
 	inline void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_object);
@@ -240,7 +242,7 @@ public:
 		tracer->Trace(m_animator);
 	}
 
-	AnimatorEditorTab(const String& modelPath, Scene* scene);
+	AnimatorEditorTab(const String& modelPath, Scene* scene, const String& tabName);
 
 	// Inherited via EditorTab
 	void OnObjectsAdded(std::vector<GameObject*>& objects) override;

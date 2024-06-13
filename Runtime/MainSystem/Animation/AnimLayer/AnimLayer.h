@@ -26,6 +26,7 @@ private:
 protected:
 	AnimModel* m_model = nullptr;
 
+	//std::vector<Mat4> m_localTransforms;
 	std::vector<Mat4> m_globalTransforms;
 	std::vector<AABox> m_meshesAABB;
 
@@ -58,6 +59,7 @@ protected:
 
 		size_t size = j["GlobalTransformsSize"];
 		m_globalTransforms.resize(size);
+		//m_localTransforms.resize(size);
 
 		size = j["MeshesAABBSize"];
 		m_meshesAABB.resize(size);
@@ -77,6 +79,11 @@ public:
 	{
 		return m_globalTransforms;
 	}
+
+	/*inline auto& NodeLocalTransforms()
+	{
+		return m_localTransforms;
+	}*/
 
 	inline auto& MeshesAABB()
 	{

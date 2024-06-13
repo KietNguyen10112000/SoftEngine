@@ -33,12 +33,14 @@ void AnimPlayerLayer::Run(float dt)
 	auto& globalTransforms = m_globalTransforms;
 	auto& nodeToChannelId = m_animation->GetNodeToChannelId();
 	auto& channels = m_animation->GetChannels();
+	//auto& localTransforms = m_localTransforms;
 
 	// root transform
 	{
 		auto& node = nodes[0];
 
 		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
+		//localTransforms[0] = node.localTransform;
 
 		auto& channelId = nodeToChannelId[0];
 		if (channelId != INVALID_ID)
@@ -54,6 +56,7 @@ void AnimPlayerLayer::Run(float dt)
 			channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
 
 			globalTransforms[0] = scaling * rotation * translation;
+			//localTransforms[0] = globalTransforms[0];
 		}
 
 		assert(node.parentId == INVALID_ID);
@@ -69,6 +72,9 @@ void AnimPlayerLayer::Run(float dt)
 
 			globalTransform = node.localTransform;
 
+			//auto& localTransform = localTransforms[i];
+			//localTransform = node.localTransform;
+
 			if (channelId != INVALID_ID)
 			{
 				auto& channel = channels[channelId];
@@ -82,6 +88,7 @@ void AnimPlayerLayer::Run(float dt)
 				channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
 
 				globalTransform = scaling * rotation * translation;
+				//localTransform = globalTransform;
 			}
 
 			globalTransform = globalTransform * globalTransforms[node.parentId];

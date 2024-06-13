@@ -630,8 +630,8 @@ Handle<GameObject> AnimModel::MakeGameObject()
 	auto l2 = animator->NewAnimLayer<AnimPlayerLayer>();
 	auto l3 = animator->NewAnimLayer<AnimBlendLayer>();
 	
-	l1->SetAnimation(0, -1, -1);
-	l2->SetAnimation(0, -1, -1);
+	l1->SetAnimation(model->m_animations[0], -1, -1);
+	l2->SetAnimation(model->m_animations[0], -1, -1);
 	l3->SetInput(l1, l2);
 
 	return ret;

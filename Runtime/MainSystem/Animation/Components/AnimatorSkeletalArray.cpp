@@ -33,6 +33,7 @@ void AnimatorSkeletalArray::InitAnimLayer(AnimLayer* animLayer)
 	animLayer->m_model = m_model3D;
 	animLayer->m_ownerComp = this;
 	animLayer->m_globalTransforms.resize(m_model3D->m_nodes.size());
+	//animLayer->m_localTransforms.resize(m_model3D->m_nodes.size());
 	animLayer->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
 }
 
@@ -497,16 +498,45 @@ void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, AnimLayer* last)
 {
 	auto scene = _scene ? _scene : GetCommittedObject()->GetCommittedScene();
 
+	auto& nodes = m_model3D->m_nodes;
 	auto& globalTransforms = last->m_globalTransforms;
+	//auto& localTransforms = last->m_localTransforms;
 	auto animMeshRenderingBuffer = m_animMeshRenderingBuffer.get();
 	auto& buffer = animMeshRenderingBuffer->buffer;
+
+	//for (size_t i = 0; i < globalTransforms.size(); i++)
+	//{
+	//	//globalTransforms[i] = localTransforms[i];
+	//	if (nodes[i].parentId != INVALID_ID)
+	//	{
+	//		localTransforms[i] = localTransforms[i] * localTransforms[nodes[i].parentId];
+	//	}
+
+	//	bool isApprox = true;
+	//	float* m1 = &localTransforms[i][0][0];
+	//	float* m2 = &globalTransforms[i][0][0];
+	//	for (size_t i = 0; i < 16; i++)
+	//	{
+	//		auto v = std::abs(m1[i] - m2[i]);
+	//		if (v > 0.01f)
+	//		{
+	//			isApprox = false;
+	//			//break;
+	//		}
+	//	}
+
+	//	if (!isApprox)
+	//	{
+	//		int x = 3;
+	//	}
+	//}
 
 	{
 		auto& offsets = m_model3D->m_boneOffsetMatrixs;
 		auto& boneBuffer = m_animMeshRenderingBuffer->buffer;
 		scene->BeginWrite<false>(boneBuffer);
 		auto& bones = boneBuffer.Write()->bones;
-		auto& nodes = m_model3D->m_nodes;
+		//auto& nodes = m_model3D->m_nodes;
 
 		size_t i = 0;
 		for (auto& node : nodes)

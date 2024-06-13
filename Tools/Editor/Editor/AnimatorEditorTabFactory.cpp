@@ -75,7 +75,7 @@ LoadJson:
 			return nullptr;
 		}
 
-		auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, nullptr);
+		auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, nullptr, data->m_name);
 		tab->m_name = data->m_name;
 
 		Handle<GameObject> obj;
@@ -114,7 +114,7 @@ Succeed:
 	m_name = m_nameBuf;
 
 	auto scene = Runtime::Get()->CreateScene();
-	auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, scene);
+	auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, scene, m_name);
 	tab->m_scene = scene;
 	tab->m_name = m_name;
 

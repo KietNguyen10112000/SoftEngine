@@ -39,12 +39,15 @@ void AnimBlendLayer::Run(float dt)
 
 	auto& transforms0 = curLayer->NodeGlobalTransforms();
 	auto& transforms1 = prevLayer->NodeGlobalTransforms();
+	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
+	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
 	for (size_t i = 0; i < num; i++)
 	{
 		auto& v0 = transforms0[i];
 		auto& v1 = transforms1[i];
 
 		m_globalTransforms[i] = Lerp(v1, v0, sBlend);
+		//m_localTransforms[i] = Lerp(ltransforms1[i], ltransforms0[i], sBlend);
 	}
 
 	num = m_meshesAABB.size();

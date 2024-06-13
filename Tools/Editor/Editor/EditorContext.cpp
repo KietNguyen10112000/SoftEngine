@@ -165,16 +165,29 @@ void EditorContext::RenderTabBar()
 
 				tab->Close();
 
+				if (m_currentTabId != 0)
+				{
+					if (m_currentTabId >= i)
+					{
+						m_currentTabId = m_currentTabId - 1;
+					}
+				}
+				else
+				{
+					if (0 == i)
+					{
+						m_tabs[0]->Show();
+					}
+				}
+
+				if (curTabId != m_currentTabId && curTabId == i)
+				{
+					m_tabs[m_currentTabId]->Show();
+				}
+
 				auto scene = tab->m_scene;
 				m_tabs.erase(i);
 				i--;
-				if (m_currentTabId != 0)
-				{
-					m_currentTabId = m_currentTabId - 1;
-					curTabId = m_currentTabId;
-
-					m_tabs[m_currentTabId]->Show();
-				}
 
 				{
 					size_t c = 0;
@@ -190,11 +203,11 @@ void EditorContext::RenderTabBar()
 			}
 		}
 
-		if (curTabId != m_currentTabId)
+		/*if (curTabId != m_currentTabId)
 		{
 			m_tabs[curTabId]->Hide();
 			m_tabs[m_currentTabId]->Show();
-		}
+		}*/
 
 		ImGui::PopStyleColor();
 
