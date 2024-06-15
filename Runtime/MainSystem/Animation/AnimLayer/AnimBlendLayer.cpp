@@ -23,13 +23,17 @@ void AnimBlendLayer::Run(float dt)
 
 	if (m_blendTime < dt)
 	{
-		m_blendTime = -1.0f;
-		if (prevLayer->IsEnable())
+		if (m_blendTime > -1.0f && !curLayer->IsEnable())
 		{
-			prevLayer->SetEnable(false);
+			curLayer->SetEnable(true);
 		}
+
+		m_blendTime = -1.0f;
 		return;
 	}
+
+	curLayer->SetEnable(false);
+	prevLayer->SetEnable(false);
 
 	m_blendTime -= dt;
 
@@ -91,7 +95,6 @@ void AnimBlendLayer::FadeTo(Animation* animation, float startTime, float endTime
 	auto nextLayerID = (m_currentLayerId + 1) % 2;
 	auto nextLayer = m_input[nextLayerID];
 	//auto prevLayer = m_input[(m_currentLayerId + 1) % 2];
-	nextLayer->SetEnable(true);
 
 	auto l0 = dynamic_cast<AnimPlayerLayer*>(nextLayer);
 	//auto l1 = dynamic_cast<AnimPlayerLayer*>(prevLayer);
@@ -107,6 +110,7 @@ void AnimBlendLayer::FadeTo(Animation* animation, float startTime, float endTime
 			self->m_blendTime = fadeTime;
 			self->m_blendTotalTime = fadeTime;
 			self->m_currentLayerId = (self->m_currentLayerId + 1) % 2;
+			self->m_input[self->m_currentLayerId]->SetEnable(true);
 		}
 	);
 

@@ -345,7 +345,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 
 	virtual void ReadFromJson(const json& json) override
 	{
-
+		
 	}
 };
 
@@ -356,6 +356,8 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 
 	float editingWeight = 0.0f;
 
+	bool firstLoad = false;
+
 	AnimMixLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
 
@@ -364,6 +366,11 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 	// Inherited via Node
 	void OnBuiltDone() override
 	{
+		if (firstLoad && layerIdx == INVALID_ID)
+		{
+			return;
+		}
+
 		auto layer = (AnimMixLayer*)this->layer;
 		layerWeights.resize(layer->m_inputs.size());
 		size_t i = 0;
@@ -531,10 +538,26 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 
 	void WriteToJson(json& json) const override
 	{
+		json["LayerWeights"] = layerWeights;
 	}
 
 	void ReadFromJson(const json& json) override
 	{
+		firstLoad = true;
+
+		if (json.contains("LayerWeights"))
+		{
+			layerWeights = json["LayerWeights"];
+		}
+		else
+		{
+			layerWeights.resize(inputs.size());
+			for (auto& w : layerWeights)
+			{
+				w.resize(this->layer->NodeGlobalTransforms().size(), 1.0f);
+				RevalueRootWeights();
+			}
+		}
 	}
 
 	void EmplaceBackInput()
@@ -542,9 +565,48 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 		auto layer = (AnimMixLayer*)this->layer;
 
 		auto& weight = layerWeights.emplace_back();
-		weight.resize(layer->NodeGlobalTransforms().size());
+		weight.resize(layer->NodeGlobalTransforms().size(), 1.0f);
+		RevalueRootWeights();
 
 		ResizeInputs(inputs.size() + 1);
+	}
+
+	void RevalueRootWeights()
+	{
+		if (tab->m_isShowRootNode)
+		{
+			return;
+		}
+
+		//const auto VALUE = 1.0f / layerWeights.size();
+		auto& nodes = tab->m_animator->m_model3D->m_nodes;
+		size_t count = 0;
+		for (auto& weights : layerWeights)
+		{
+			for (size_t i = 0; i < weights.size(); i++)
+			{
+				auto& node = nodes[i];
+
+				bool isEffectedByBone = false;
+				auto cur = i;
+				while (cur != INVALID_ID)
+				{
+					if (nodes[cur].boneId != INVALID_ID)
+					{
+						isEffectedByBone = true;
+						break;
+					}
+					cur = nodes[cur].parentId;
+				}
+
+				if (isEffectedByBone)
+				{
+					continue;
+				}
+				weights[i] = (count == 0 ? 1.0f : 0.0f);
+			}
+			count++;
+		}
 	}
 
 	void SetSelectedInput(ID id)
@@ -794,6 +856,14 @@ void AnimatorEditorTab::OnRenderGUI()
 			ImGui::TextUnformatted("Show Mesh");
 
 			ImGui::SameLine();
+			if (ImGui::ToggleButton("ShowRootNodeInTPoseModeToggle", &m_isShowRootNode))
+			{
+				
+			}
+			ImGui::SameLine();
+			ImGui::TextUnformatted("Show Root");
+
+			ImGui::SameLine();
 			if (ImGui::Button("Expand All"))
 			{
 				m_root->ForEach(
@@ -850,6 +920,33 @@ void AnimatorEditorTab::OnRenderGUI()
 				}
 
 			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Set Script"))
+			{
+				ImGui::OpenPopup("Add Script Pop Up");
+			}
+
+			if (ImGui::BeginPopup("Add Script Pop Up"))
+			{
+				auto& components = EditorContext::GetInstance()->m_components[MainSystemInfo::SCRIPTING_ID];
+				for (size_t n = 0; n < components.size(); n++)
+				{
+					auto componentRecord = components[n];
+					if (ImGui::Selectable(componentRecord->name.c_str()))
+					{
+						if (m_object->HasComponent<Script>())
+						{
+							m_object->RemoveComponentRaw(m_object->GetComponentRaw<Script>());
+						}
+
+						m_object->AddComponent(DynamicCast<Script>(componentRecord->ctor()));
+					}
+				}
+
+				ImGui::EndPopup();
+			}
+
 			ImGui::Separator();
 
 			m_objMetadata->ForEachProperties(
@@ -1139,8 +1236,9 @@ void AnimatorEditorTab::WriteNodeDataToJson(Serializer* serializer, json& j) con
 			jnode["Inputs"] = inputs;*/
 
 			jnode["Position"] = Vec2(pos.x, pos.y);
-
-			node->WriteToJson(jnode);
+			json extData;
+			node->WriteToJson(extData);
+			jnode["NodeExternData"] = extData;
 
 			nodes.push_back(jnode);
 		}
@@ -1232,7 +1330,14 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 				node->inputs.push_back(input);
 			}*/
 
-			node->ReadFromJson(jnode);
+			if (jnode.contains("NodeExternData"))
+			{
+				node->ReadFromJson(jnode["NodeExternData"]);
+			}
+			else
+			{
+				node->ReadFromJson(jnode);
+			}
 
 			Vec2 pos = jnode["Position"];
 			ed::SetNodePosition(node->nodeId, ImVec2(pos.x, pos.y));
@@ -1586,13 +1691,16 @@ void AnimatorEditorTab::RenderModelNodeHierarchy(void (*callback)(ModelNode*, vo
 	auto& model = m_animator->m_model3D;
 	auto& nodes = model->m_nodes;
 
-	ModelNode* rootBone = nullptr;
-	for (auto& node : m_modelNodes)
+	ModelNode* rootBone = m_root;
+	if (!m_isShowRootNode)
 	{
-		if (nodes[node->nodeIdx].boneId != INVALID_ID)
+		for (auto& node : m_modelNodes)
 		{
-			rootBone = node;
-			break;
+			if (nodes[node->nodeIdx].boneId != INVALID_ID)
+			{
+				rootBone = node;
+				break;
+			}
 		}
 	}
 
@@ -1622,8 +1730,9 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*
 	{
 		name = model->m_boneNames[node.boneId];
 	}
-
+	ImGui::PushID(ID(modelNode->nodeIdx));
 	auto open = ImGui::TreeNodeEx((void*)modelNode, nodeFlags, name.c_str());
+	ImGui::PopID();
 	const ImRect nodeRect = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
 
 	if (ImGui::IsItemClicked() && open == modelNode->isOpen)
@@ -1686,7 +1795,7 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*
 		}
 	}
 
-	ImGui::SameLine(); callback(modelNode, userPtr);
+	ImGui::SameLine(); callback(modelNode, userPtr); ImGui::Dummy({ 0, 0 });
 
 	modelNode->isOpen = open;
 
@@ -1833,7 +1942,17 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
 	//ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_WindowMinSize, ImVec2(200, 0));
 
-	if (ed::ShowBackgroundContextMenu())
+	ed::NodeId contextNodeId;
+	ed::LinkId contextLinkId;
+	if (ed::ShowNodeContextMenu(&contextNodeId))
+	{
+		ImGui::OpenPopup("Node Context Menu");
+	}
+	else if (ed::ShowLinkContextMenu(&contextLinkId))
+	{
+		ImGui::OpenPopup("Link Context Menu");
+	}
+	else if (ed::ShowBackgroundContextMenu())
 	{
 		ImGui::OpenPopup("Create New Node");
 	}
@@ -1876,6 +1995,53 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 		ImGui::Dummy({ 100,0 });
 		ImGui::EndPopup();
 	}
+
+	if (ImGui::BeginPopup("Node Context Menu"))
+	{
+		if (ImGui::MenuItem("Delete"))
+		{
+			ed::DeleteNode(contextNodeId);
+		}
+	}
+
+	if (ImGui::BeginPopup("Link Context Menu"))
+	{
+		if (ImGui::MenuItem("Delete"))
+		{
+			ed::DeleteLink(contextLinkId);
+		}
+	}
+
+	if (ed::BeginDelete())
+	{
+		ed::NodeId nodeId = 0;
+		while (ed::QueryDeletedNode(&nodeId))
+		{
+			if (ed::AcceptDeletedItem())
+			{
+				auto id = std::find_if(m_nodes.begin(), m_nodes.end(), [nodeId](auto& node) { return node->nodeId == ID(nodeId); });
+				if (id != m_nodes.end())
+				{
+					m_nodes.erase(id);
+				}
+			}
+		}
+
+		ed::LinkId linkId = 0;
+		while (ed::QueryDeletedLink(&linkId))
+		{
+			if (ed::AcceptDeletedItem())
+			{
+				auto id = std::find_if(m_links.begin(), m_links.end(), [linkId](auto& link) { return link->linkId == ID(linkId); });
+				if (id != m_links.end())
+				{
+					DeleteLink(id->get()->linkId);
+				}
+			}
+		}
+	}
+	ed::EndDelete();
+
 	//ImGui::PopStyleVar();
 	ImGui::PopStyleVar();
 	ed::Resume();

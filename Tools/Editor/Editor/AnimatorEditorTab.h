@@ -231,6 +231,7 @@ public:
 	byte m_tposeMode = 0;
 	bool m_isEnableTPoseMode = false;
 	bool m_isEnableModelInTPoseMode = false;
+	bool m_isShowRootNode = false;
 
 	String m_edSavePath;
 

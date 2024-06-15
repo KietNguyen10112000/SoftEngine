@@ -22,6 +22,7 @@
 #include "EditorTabFactory.h"
 
 #include "Resources/Resource.h"
+#include "Input/Input.h"
 
 EditorContext* EditorContext::s_instance = nullptr;
 
@@ -70,6 +71,12 @@ void EditorContext::RenderMenuBar()
 		{
 			gc::Run(-1);
 		}
+
+		if (ImGui::MenuItem("Reload Script"))
+		{
+			Runtime::Get()->HotReloadScripts();
+		}
+
 		ImGui::EndMenu();
 	}
 
@@ -434,10 +441,10 @@ void EditorContext::OnRenderGUI()
 	}
 	ImGui::End();*/
 
-	{
+	/*{
 		std::map<String, ResourceBase*>& map = *resource::internal::GetInternalRCMap();
 		int x = 3;
-	}
+	}*/
 }
 
 void EditorContext::OnRenderInGameDebugGraphics()

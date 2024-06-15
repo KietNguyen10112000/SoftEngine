@@ -369,7 +369,7 @@ void Runtime::Setup()
 	//	serializer.WriteToFile("Data/FastRun.AnimatorSkeletalArray.json");
 	//}
 
-	{
+	/*{
 		Handle<GameObject> o;
 		Serializer serializer = {};
 		serializer.ReadFromFile("Data/FastRun.AnimatorSkeletalArray.json");
@@ -377,7 +377,7 @@ void Runtime::Setup()
 
 		o->Name() = "Object2";
 		scene->AddObject(o);
-	}
+	}*/
 
 	/*object = ResourceUtils::LoadAnimModel("model/robot/white_robot.glb", "model/robot/white_robot_albedo.png");
 	scene->AddObject(object);

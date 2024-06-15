@@ -254,6 +254,7 @@ void PluginLoader::UnloadAll(Runtime* engine, std::Vector<Plugin*>& input, bool 
 
 void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 {
+	auto startIdx = m_loadedPlugins.size();
 	auto LoadPlugin = [&](const wchar_t* filePath)
 	{
 #ifdef WIN32
@@ -315,7 +316,6 @@ void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 		}
 	);
 
-	auto startIdx = m_loadedPlugins.size();
 	//FileUtils::ForEachFiles(hotReloadPathReal, LoadPlugin);
 
 	for (size_t i = startIdx; i < m_loadedPlugins.size(); i++)
@@ -339,6 +339,11 @@ void PluginLoader::ReloadAll(Runtime* engine)
 				startIdx = &plugin - m_loadedPlugins.data();
 			}
 		}
+	}
+
+	if (startIdx == INVALID_ID)
+	{
+		return;
 	}
 
 	m_loadedPlugins.resize(startIdx);

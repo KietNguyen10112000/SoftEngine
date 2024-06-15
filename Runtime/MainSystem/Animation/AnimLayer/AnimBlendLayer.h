@@ -40,6 +40,16 @@ public:
 	void SetInput(AnimLayer* l1, AnimLayer* l2);
 	void FadeTo(Animation* animation, float startTime, float endTime, float fadeTime);
 
+	inline auto GetCurrentLayer() const
+	{
+		return m_input[m_currentLayerId];
+	}
+
+	inline auto GetNextLayer() const
+	{
+		return m_input[(m_currentLayerId + 1) % 2];
+	}
+
 };
 
 NAMESPACE_END

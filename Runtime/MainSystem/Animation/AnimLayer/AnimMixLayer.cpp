@@ -71,6 +71,7 @@ void AnimMixLayer::Run(float dt)
 		auto& mat = m_globalTransforms[i];
 		mat = Mat4::Zero();
 		for (auto& input : m_inputs)
+		//auto& input = m_inputs[0];
 		{
 			if (input.layer)
 			{

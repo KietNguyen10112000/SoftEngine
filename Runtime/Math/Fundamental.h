@@ -349,6 +349,11 @@ public:
         return v1.x != v2.x || v1.y != v2.y || v1.z != v2.z;
     }
 
+    inline friend float AngleBetween(const Vec3& v1, const Vec3& v2)
+    {
+        return std::acos(v1.Normal().Dot(v2.Normal()));
+    }
+
 public:
     inline float Length() const
     {
@@ -635,6 +640,11 @@ public:
     inline friend bool operator==(const Quaternion& v1, const Quaternion& v2)
     {
         return v1.x == v2.x && v1.y == v2.y && v1.z == v2.z && v1.w == v2.w;
+    }
+
+    inline friend bool operator!=(const Quaternion& v1, const Quaternion& v2)
+    {
+        return v1.x != v2.x || v1.y == v2.y || v1.z == v2.z || v1.w == v2.w;
     }
 
     inline void SetFromMat4(const Mat4& mat);
@@ -1336,6 +1346,12 @@ inline float ToDegrees(float radians)
     return glm::degrees(radians);
 }
 
+inline float AngularDistance(const Quaternion& q1, const Quaternion& q2)
+{
+    auto v1 = (Vec4(1, 0, 0, 1) * Mat4::Rotation(q1)).xyz();
+    auto v2 = (Vec4(1, 0, 0, 1) * Mat4::Rotation(q2)).xyz();
+    return AngleBetween(v1, v2);
+}
 
 template <typename T, typename _Scala>
 inline T Lerp(const T& v1, const T& v2, _Scala t)

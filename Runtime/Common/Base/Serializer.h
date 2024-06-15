@@ -62,14 +62,14 @@ private:
 	struct SerializedBinary
 	{
 		UUID uuid;
-		UniquePtr<ByteStream> stream;
+		SharedPtr<ByteStream> stream;
 		SerializedRecord record;
 	};
 
 	struct SerializedJson
 	{
 		UUID uuid;
-		UniquePtr<json> j;
+		SharedPtr<json> j;
 		SerializedRecord record;
 	};
 

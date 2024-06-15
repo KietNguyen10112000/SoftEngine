@@ -62,14 +62,24 @@ void Serializer::TrySerialize(Serializable* obj, SerializedRecord::TYPE type)
 	{
 	case Serializer::MODE_BINARY: {
 		record.idx = m_binaries.size();
-		m_binaries.push_back({ uuid,std::move(std::make_unique<ByteStream>()),record });
+
+		auto& back = m_binaries.emplace_back();
+		back.uuid = uuid;
+		back.stream = std::make_shared<ByteStream>();
+		back.record = record;
+
 		m_serializedObjects.insert({ uuid,record });
 		obj->SerializeToBinary(this, *m_binaries[record.idx].stream);
 		break;
 	}
 	case Serializer::MODE_JSON: {
 		record.idx = m_jsons.size();
-		m_jsons.push_back({ uuid,std::move(std::make_unique<json>()),record });
+
+		auto& back = m_jsons.emplace_back();
+		back.uuid = uuid;
+		back.j = std::make_shared<json>();
+		back.record = record;
+
 		m_serializedObjects.insert({ uuid,record });
 		obj->SerializeToJson(this, *m_jsons[record.idx].j);
 		break;
