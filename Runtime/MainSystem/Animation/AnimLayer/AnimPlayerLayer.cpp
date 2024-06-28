@@ -3,6 +3,7 @@
 #include "MainSystem/Animation/Components/AnimationComponent.h"
 #include "MainSystem/Animation/AnimationSystem.h"
 #include "MainSystem/MainSystemTaskPacking.h"
+#include "MainSystem/Scripting/ScriptingSystem.h"
 
 #include "Scene/Scene.h"
 #include "Scene/GameObject.h"
@@ -13,7 +14,29 @@ NAMESPACE_BEGIN
 
 void AnimPlayerLayer::Run(float dt)
 {
+	auto prevT = m_t;
 	m_t += dt * m_ticksPerSecond;
+
+	m_lock.lock();
+	for (auto& event : m_events)
+	{
+		if (prevT < event->m_t && m_t > event->m_t)
+		{
+			switch (event->m_callerCompId)
+			{
+			case MainSystemInfo::RENDERING_ID:
+				break;
+			case MainSystemInfo::SCRIPTING_ID: {
+				auto system = GetCommittedObject()->GetScene()->GetScriptingSystem();
+				system->MAsyncTaskRunnerST()->RunAsync(event->m_callback);
+				break;
+			}
+			default:
+				break;
+			}
+		}
+	}
+	m_lock.unlock();
 
 	if (m_t > m_tickDuration)
 	{

@@ -35,6 +35,8 @@ void AnimatorSkeletalArray::InitAnimLayer(AnimLayer* animLayer)
 	animLayer->m_globalTransforms.resize(m_model3D->m_nodes.size());
 	//animLayer->m_localTransforms.resize(m_model3D->m_nodes.size());
 	animLayer->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
+
+	animLayer->Initialize();
 }
 
 void AnimatorSkeletalArray::OnComponentAdded()
@@ -117,6 +119,10 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 	}
 
 	AnimLayer* last = nullptr;
+	for (auto& layer : m_animLayers)
+	{
+		layer->PrevRun(dt);
+	}
 	for (auto& layer : m_animLayers)
 	{
 		if (layer && layer->IsEnable())
@@ -496,6 +502,8 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, AnimLayer* last)
 {
+	m_lastOutput = last;
+
 	auto scene = _scene ? _scene : GetCommittedObject()->GetCommittedScene();
 
 	auto& nodes = m_model3D->m_nodes;
@@ -625,7 +633,7 @@ void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* anot
 	auto src = (AnimatorSkeletalArray*)another;
 	for (auto& layer : src->m_animLayers)
 	{
-		m_animLayers.push_back(serializer->Clone(layer));
+		m_animLayers.Push(serializer->Clone(layer));
 	}
 
 	for (auto& obj : src->m_meshRendererObjs)
@@ -685,7 +693,7 @@ void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const js
 		auto count = arr.size();
 		for (size_t i = 0; i < count; i++)
 		{
-			m_animLayers.emplace_back();
+			m_animLayers.Push(nullptr);
 			serializer->Deserialize(arr[i], m_animLayers.back());
 		}
 	}

@@ -22,6 +22,7 @@
 
 #include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimTransitLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimMixLayer.h"
 #include "MainSystem/Animation/AnimationSystem.h"
 #include "MainSystem/MainSystemTaskPacking.h"
@@ -185,7 +186,7 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 	}
 };
 
-struct AnimBlendLayerNode : public AnimatorEditorTab::Node
+struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 {
 	Animation* animation = nullptr;
 	ID currentAnimId = 0;
@@ -194,7 +195,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 	float end = -1;
 	float fadeTime = 0;
 
-	AnimBlendLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
+	AnimTransitLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
 
 	}
@@ -207,18 +208,16 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 
 	virtual std::vector<AnimLayer*> GetInputLayers() override
 	{
-		auto layer = (AnimBlendLayer*)this->layer;
+		auto layer = (AnimTransitLayer*)this->layer;
 		return {
-			layer->m_input[0],
-			layer->m_input[1],
+			layer->m_input
 		};
 	}
 
 	virtual void ProcessSetInputLayers() override
 	{
-		auto layer = (AnimBlendLayer*)this->layer;
-		layer->m_input[0] = GetInputLayerFromNode(0);
-		layer->m_input[1] = GetInputLayerFromNode(1);
+		auto layer = (AnimTransitLayer*)this->layer;
+		layer->m_input = GetInputLayerFromNode(0);
 	}
 
 	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
@@ -348,6 +347,170 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 		
 	}
 };
+
+//struct AnimBlendLayerNode : public AnimatorEditorTab::Node
+//{
+//	Animation* animation = nullptr;
+//	ID currentAnimId = 0;
+//
+//	float start = -1;
+//	float end = -1;
+//	float fadeTime = 0;
+//
+//	AnimBlendLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
+//	{
+//
+//	}
+//
+//	virtual void OnBuiltDone() override
+//	{
+//		currentAnimId = 0;
+//		animation = tab->m_animator->m_model3D->m_animations[currentAnimId];
+//	}
+//
+//	virtual std::vector<AnimLayer*> GetInputLayers() override
+//	{
+//		auto layer = (AnimBlendLayer*)this->layer;
+//		return {
+//			layer->m_input[0],
+//			layer->m_input[1],
+//		};
+//	}
+//
+//	virtual void ProcessSetInputLayers() override
+//	{
+//		auto layer = (AnimBlendLayer*)this->layer;
+//		layer->m_input[0] = GetInputLayerFromNode(0);
+//		layer->m_input[1] = GetInputLayerFromNode(1);
+//	}
+//
+//	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
+//	{
+//		namespace util = ax::NodeEditor::Utilities;
+//
+//		auto layer = (AnimBlendLayer*)this->layer;
+//		auto& animations = tab->m_animator->m_model3D->m_animations;
+//
+//		//util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
+//		//builder.Begin(node->nodeId);
+//		{
+//			//ed::SetNodePosition(uniqueId, { 0,0 });
+//
+//			tab->RenderNodeHeader(&builder, this, "AnimBlendLayer", 250);
+//
+//			{
+//				//assert(committedInputs.size() == 2);
+//
+//				ImGui::BeginGroup();
+//
+//				{
+//					auto& input = inputs[0];
+//					builder.Input(input.pinId);
+//					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
+//					ImGui::TextUnformatted("Layer 0");
+//					builder.EndOutput();
+//				}
+//
+//				{
+//					auto& input = inputs[1];
+//					builder.Input(input.pinId);
+//					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
+//					ImGui::TextUnformatted("Layer 1");
+//					builder.EndOutput();
+//				}
+//
+//				ImGui::EndGroup();
+//			}
+//
+//			ImGui::SameLine(); ImGui::Dummy({ 120, 0 }); ImGui::SameLine();
+//
+//			{
+//				builder.Output(outputPinId);
+//				ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
+//				builder.EndOutput();
+//			}
+//
+//			{
+//				builder.Separator();
+//
+//				ImGui::SetNextItemWidth(100);
+//				if (ImGui::ArrowButton("Fade", ImGuiDir_::ImGuiDir_Right))
+//				{
+//					layer->FadeTo(animation, start, end, fadeTime);
+//
+//					auto UpdateInput = [](Node* input)
+//						{
+//							auto playerLayerNode = dynamic_cast<AnimPlayerLayerNode*>(input);
+//							if (playerLayerNode)
+//							{
+//								playerLayerNode->currentAnimId = INVALID_ID;
+//							}
+//						};
+//
+//					if (committedInputs[0].link)
+//						UpdateInput(committedInputs[0].link->src);
+//
+//					if (committedInputs[1].link)
+//						UpdateInput(committedInputs[1].link->src);
+//				}
+//				ImGui::SameLine(); //ImGui::Dummy({ 20, 0 }); ImGui::SameLine();
+//				ImGui::TextUnformatted("Fade Animation");
+//
+//				ImGui::SetNextItemWidth(250);
+//				if (ed::BeginNodeCombo("##ChooseAnimation", tab->m_animationsEditingState[currentAnimId].name.c_str(), 0))
+//				{
+//					for (size_t i = 0; i < animations.size(); i++)
+//					{
+//						auto& animation = animations[i];
+//						auto& state = tab->m_animationsEditingState[i];
+//						if (ImGui::Selectable(state.name.c_str()))
+//						{
+//							currentAnimId = i;
+//							this->animation = animation;
+//						}
+//					}
+//					ed::EndNodeCombo();
+//				}
+//
+//				auto anim = animation;
+//				ImGui::SetNextItemWidth(100);
+//				ImGui::DragFloat("Start", &start, 0.001f, -1.0f, INFINITY);
+//				//ImGui::SameLine();
+//
+//				ImGui::SetNextItemWidth(100);
+//				ImGui::DragFloat("End", &end, 0.001f, -1.0f, INFINITY);
+//				//ImGui::SameLine(); 
+//
+//				ImGui::SetNextItemWidth(100);
+//				ImGui::DragFloat("Fade Time", &fadeTime, 0.001f, 0.001f, INFINITY);
+//				//ImGui::SameLine();
+//
+//
+//			}
+//		}
+//		//builder.End();
+//	}
+//
+//	virtual int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
+//	{
+//		return 0;
+//	}
+//
+//	virtual int ValidateBeforeBuilt(String& errDesc) override
+//	{
+//		return 0;
+//	}
+//
+//	virtual void WriteToJson(json& json) const override
+//	{
+//
+//	}
+//
+//	virtual void ReadFromJson(const json& json) override
+//	{
+//
+//	}
+//};
 
 struct AnimMixLayerNode : public AnimatorEditorTab::Node
 {

@@ -4,21 +4,21 @@
 
 NAMESPACE_BEGIN
 
-class API AnimMixLayer : public AnimLayer
+class API AnimJointLayer : public AnimLayer
 {
 protected:
-	SERIALIZABLE_CLASS(AnimMixLayer);
+	SERIALIZABLE_CLASS(AnimJointLayer);
 
 public:
 	struct InputLayer
 	{
 	private:
-		friend class AnimMixLayer;
+		friend class AnimJointLayer;
 		AnimLayer* outputLayer = nullptr;
 
 	public:
 		AnimLayer* layer = nullptr;
-		float weight = 1.0f;
+		std::vector<float> weight;
 	};
 
 	std::vector<InputLayer> m_inputs;
@@ -40,12 +40,12 @@ protected:
 	void Run(float dt) override;
 
 private:
-	void AddInputImpl(AnimLayer*, float weight);
-	void SetWeightImpl(ID index, float weight);
+	void AddInputImpl(AnimLayer*, const std::vector<float>& weight);
+	void SetWeightImpl(ID index, const std::vector<float>& weight);
 
 public:
-	void AddInput(AnimLayer*, float weight);
-	void SetWeight(ID index, float weight);
+	void AddInput(AnimLayer*, const std::vector<float>& weight);
+	void SetWeight(ID index, const std::vector<float>& weight);
 
 };
 

@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Core/Structures/Raw/UnorderedList.h"
+#include "Common/Base/AsyncTaskRunner.h"
 
 NAMESPACE_BEGIN
 
@@ -20,9 +21,22 @@ public:
 	std::vector<ScriptScheduler*> m_schedulers;
 	std::vector<ScriptScheduler*> m_callAsyncSchedulers[NUM_DEFER_BUFFER];
 
+	AsyncTaskRunner m_mAsyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
+
 	ScriptingSystem(Scene* scene);
 	~ScriptingSystem();
 	virtual void Finalize() override;
+
+private:
+	inline auto* GetCurrentMAsyncTaskRunnerST()
+	{
+		return &m_mAsyncTaskRunnerST[m_scene->GetCurrentDeferBufferIdx()];
+	}
+
+	inline auto* GetPrevMAsyncTaskRunnerST()
+	{
+		return &m_mAsyncTaskRunnerST[m_scene->GetPrevDeferBufferIdx()];
+	}
 
 public:
 	// Inherited via MainSystem
@@ -51,6 +65,11 @@ public:
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
 	
 #endif
+
+	inline auto* MAsyncTaskRunnerST()
+	{
+		return GetCurrentMAsyncTaskRunnerST();
+	}
 
 };
 

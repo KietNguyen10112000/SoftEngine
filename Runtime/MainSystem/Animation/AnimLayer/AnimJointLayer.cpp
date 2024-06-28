@@ -1,4 +1,4 @@
-#include "AnimMixLayer.h"
+#include "AnimJointLayer.h"
 
 #include "Scene/GameObject.h"
 
@@ -7,15 +7,15 @@
 
 NAMESPACE_BEGIN
 
-void AnimMixLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+void AnimJointLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
 {
 }
 
-void AnimMixLayer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+void AnimJointLayer::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
 {
 }
 
-void AnimMixLayer::SerializeToJson(Serializer* serializer, json& j) const
+void AnimJointLayer::SerializeToJson(Serializer* serializer, json& j) const
 {
 	AnimLayer::SerializeToJson(serializer, j);
 	{
@@ -31,7 +31,7 @@ void AnimMixLayer::SerializeToJson(Serializer* serializer, json& j) const
 	}
 }
 
-void AnimMixLayer::DeserializeFromJson(Serializer* serializer, const json& j)
+void AnimJointLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	AnimLayer::DeserializeFromJson(serializer, j);
 	{
@@ -42,21 +42,21 @@ void AnimMixLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 
 			InputLayer& input = m_inputs.emplace_back();
 			serializer->Deserialize(jInput["Layer"], input.layer);
-			input.weight = jInput["Weight"];
+			input.weight = jInput["Weight"].get<std::vector<float>>();
 		}
 	}
 }
 
-Handle<ClassMetadata> AnimMixLayer::GetMetadata(size_t sign)
+Handle<ClassMetadata> AnimJointLayer::GetMetadata(size_t sign)
 {
 	return Handle<ClassMetadata>();
 }
 
-void AnimMixLayer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+void AnimJointLayer::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
 }
 
-void AnimMixLayer::Run(float dt)
+void AnimJointLayer::Run(float dt)
 {
 	auto& nodes = m_model->m_nodes;
 	for (auto& input : m_inputs)
@@ -71,10 +71,23 @@ void AnimMixLayer::Run(float dt)
 		auto& mat = m_globalTransforms[i];
 		mat = Mat4::Zero();
 		for (auto& input : m_inputs)
+		//auto& input = m_inputs[0];
 		{
 			if (input.layer)
 			{
-				mat += (input.outputLayer->NodeGlobalTransforms()[i] * input.weight);
+				auto& nodeGlobalTransform = input.outputLayer->NodeGlobalTransforms()[i];
+				if (node.parentId != INVALID_ID)
+				{
+					auto& parentGlobalTransform = m_globalTransforms[node.parentId];
+					auto& oriParentGlobalTransform = input.outputLayer->NodeGlobalTransforms()[node.parentId];
+					if (parentGlobalTransform != oriParentGlobalTransform)
+					{
+						mat += ((nodeGlobalTransform * oriParentGlobalTransform.GetInverse()) * parentGlobalTransform) * input.weight[i];
+						continue;
+					}
+				}
+
+				mat += (input.outputLayer->NodeGlobalTransforms()[i] * input.weight[i]);
 			}
 		}
 	}
@@ -90,28 +103,30 @@ void AnimMixLayer::Run(float dt)
 			if (input.layer)
 			{
 				auto& temp = input.outputLayer->MeshesAABB()[i];
-				aabb.m_center += (temp.m_center * input.weight);
-				aabb.m_halfDimensions += (temp.m_halfDimensions * input.weight);
+				aabb.m_center += (temp.m_center * input.weight[i]);
+				aabb.m_halfDimensions += (temp.m_halfDimensions * input.weight[i]);
 			}
 		}
 	}
 }
 
-void AnimMixLayer::AddInputImpl(AnimLayer* layer, float weight)
+void AnimJointLayer::AddInputImpl(AnimLayer* layer, const std::vector<float>& weight)
 {
 	auto& input = m_inputs.emplace_back();
 	input.layer = layer;
 	input.weight = weight;
 }
 
-void AnimMixLayer::SetWeightImpl(ID index, float weight)
+void AnimJointLayer::SetWeightImpl(ID index, const std::vector<float>& weight)
 {
 	auto& input = m_inputs[index];
 	input.weight = weight;
 }
 
-void AnimMixLayer::AddInput(AnimLayer* layer, float weight)
+void AnimJointLayer::AddInput(AnimLayer* layer, const std::vector<float>& weight)
 {
+	assert(weight.size() == m_globalTransforms.size());
+
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, layer, weight,
 		{
@@ -120,8 +135,10 @@ void AnimMixLayer::AddInput(AnimLayer* layer, float weight)
 	);
 }
 
-void AnimMixLayer::SetWeight(ID index, float weight)
+void AnimJointLayer::SetWeight(ID index, const std::vector<float>& weight)
 {
+	assert(weight.size() == m_globalTransforms.size());
+
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, index, weight,
 		{

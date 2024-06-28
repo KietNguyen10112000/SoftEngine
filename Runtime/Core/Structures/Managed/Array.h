@@ -268,7 +268,7 @@ public:
 		Reserve(size);
 	}
 
-	inline void erase(ID idx)
+	/*inline void erase(ID idx)
 	{
 		assert(idx >= 0 && idx < size());
 
@@ -284,7 +284,12 @@ public:
 			m_buffer[i] = m_buffer[i + 1];
 		}
 		Pop();
-	}
+	}*/
+
+	/*inline void insert(T* it)
+	{
+
+	}*/
 
 public:
 	inline T& operator[](size_t i) const

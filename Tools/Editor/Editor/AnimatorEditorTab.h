@@ -31,9 +31,11 @@ public:
 		enum TYPE
 		{
 			NONE,
-			ANIMATON_PLAYER,
-			BLENDING,
-			MIXING,
+			PLAYER,
+			TRANSIT,
+			BLEND,
+			JOINT,
+			MIX,
 		};
 	};
 

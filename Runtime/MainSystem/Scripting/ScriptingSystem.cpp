@@ -30,6 +30,7 @@ void ScriptingSystem::Finalize()
 
 void ScriptingSystem::FlushAsyncTasks()
 {
+	GetPrevMAsyncTaskRunnerST()->Flush();
 }
 
 void ScriptingSystem::BeginModification()
@@ -117,6 +118,8 @@ void ScriptingSystem::PrevIteration()
 
 void ScriptingSystem::Iteration(float dt)
 {
+	GetPrevMAsyncTaskRunnerST()->Flush();
+
 	auto& prevAsyncList = m_callAsyncSchedulers[m_scene->GetPrevDeferBufferIdx()];
 	for (auto& s : prevAsyncList)
 	{

@@ -21,7 +21,8 @@ public:
 	// include both animMesh and static mesh
 	Array<Handle<GameObject>> m_meshRendererObjs;
 
-	std::vector<AnimLayer*> m_animLayers;
+	Array<Handle<AnimLayer>> m_animLayers;
+	AnimLayer* m_lastOutput = nullptr;
 
 	bool m_isRunning = true;
 
@@ -30,6 +31,7 @@ protected:
 	inline void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_meshRendererObjs);
+		tracer->Trace(m_animLayers);
 	}
 
 public:
@@ -71,17 +73,21 @@ public:
 
 public:
 	template <typename T, bool IS_EXTERN = false, typename... Args>
-	inline T* NewAnimLayer(Args&&... args)
+	inline Handle<T> NewAnimLayer(Args&&... args)
 	{
-		auto ret = new T(std::forward<Args>(args)...);
+		auto ret = mheap::New<T>(std::forward<Args>(args)...);
 		InitAnimLayer(ret);
 
 		if constexpr (!IS_EXTERN)
-			m_animLayers.push_back(ret);
+			m_animLayers.Push(ret);
 
 		return ret;
 	}
 
+	inline auto* GetLastAnimLayerOutput() const
+	{
+		return m_lastOutput;
+	}
 };
 
 

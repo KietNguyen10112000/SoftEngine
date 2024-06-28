@@ -38,15 +38,15 @@ protected:
 
 		m_ownerComp = serializer->Clone(src->m_ownerComp);
 
-		m_model				= src->m_model;
-		m_globalTransforms	= src->m_globalTransforms;
-		m_meshesAABB		= src->m_meshesAABB;
+		m_model = src->m_model;
+		m_globalTransforms = src->m_globalTransforms;
+		m_meshesAABB = src->m_meshesAABB;
 	}
 
 	inline void SerializeToJson(Serializer* serializer, json& j) const
 	{
-		j["OwnerComp"]	= serializer->Serialize(m_ownerComp);
-		j["Model"]		= serializer->Serialize(m_model);
+		j["OwnerComp"] = serializer->Serialize(m_ownerComp);
+		j["Model"] = serializer->Serialize(m_model);
 
 		j["GlobalTransformsSize"] = m_globalTransforms.size();
 		j["MeshesAABBSize"] = m_meshesAABB.size();
@@ -68,6 +68,8 @@ protected:
 public:
 	inline virtual ~AnimLayer() {};
 
+	inline virtual void Initialize() {}; 
+	inline virtual void PrevRun(float dt) {};
 	virtual void Run(float dt) = 0;
 
 	inline virtual AnimLayer* GetOutput()
@@ -110,6 +112,11 @@ public:
 		return m_ownerComp;
 	}
 
+	template <typename T> 
+	inline auto* GetComponentAs()
+	{
+		return (T*)m_ownerComp;
+	}
 };
 
 NAMESPACE_END

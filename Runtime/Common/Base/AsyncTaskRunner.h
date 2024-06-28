@@ -34,6 +34,11 @@ public:
 		return ret;
 	}
 
+	inline void RunAsync(const Handle<FunctionBase>& function)
+	{
+		m_functions.Add(function);
+	}
+
 };
 
 NAMESPACE_END

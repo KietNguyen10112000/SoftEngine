@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Common/Base/SerializableDB.h"
+#include "Common/Math/Function1D.h"
 
 #include "MainSystem/Rendering/Components/Camera.h"
 #include "MainSystem/Rendering/Components/CameraTPP.h"
@@ -40,6 +41,13 @@ public:
 	{
 		SerializableDB::Get()->Register<Scene>();
 		SerializableDB::Get()->Register<GameObject>();
+
+
+		// common math
+		{
+			SerializableDB::Get()->Register<FunctionLinear1D>();
+			SerializableDB::Get()->Register<FunctionQuadratic1D>();
+		}
 
 
 		// built-in rendering components

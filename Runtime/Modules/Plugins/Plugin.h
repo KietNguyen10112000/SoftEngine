@@ -18,7 +18,7 @@ EXTERN_C EXPORT void ___pluginInit(Runtime*);			\
 EXTERN_C EXPORT void ___pluginFinal(Runtime*);
 
 #define IMPL_PLUGIN(name)																\
-Plugin* ___plugin(Runtime*) { static auto instance = new name(); return instance; };	\
+Plugin* ___plugin(Runtime*) { static auto instance = new name(); Plugin::s_instance = instance; return instance; };	\
 void ___pluginInit(Runtime*) { Thread::InitializeForThisThreadInThisModule(); };		\
 void ___pluginFinal(Runtime*) { Thread::FinalizeForThisThreadInThisModule(); };
 
@@ -47,6 +47,8 @@ private:
 	friend class PluginLoader;
 	friend class SerializableDB;
 
+	inline static Plugin* s_instance = nullptr;
+
 	size_t m_id = INVALID_ID;
 	void* m_nativeHandle = nullptr;
 
@@ -73,6 +75,11 @@ public:
 	inline const auto& GetComponentNameList(ID COMPONENT_ID) const
 	{
 		return m_customComps[COMPONENT_ID];
+	}
+
+	inline static Plugin* GetInstance()
+	{
+		return s_instance;
 	}
 };
 

@@ -13,36 +13,28 @@ NAMESPACE_BEGIN
 
 void AnimBlendLayer::Run(float dt)
 {
-	auto curLayer = m_input[m_currentLayerId];
-	auto prevLayer = m_input[(m_currentLayerId + 1) % 2];
-
-	if (!curLayer || !prevLayer)
+	if (m_t == m_rangeMax)
 	{
 		return;
 	}
 
-	if (m_blendTime < dt)
-	{
-		if (m_blendTime > -1.0f && !curLayer->IsEnable())
-		{
-			curLayer->SetEnable(true);
-		}
+	auto l0 = m_input[0];
+	auto l1 = m_input[1];
 
-		m_blendTime = -1.0f;
+	if (!l0 || !l1)
+	{
 		return;
 	}
 
-	curLayer->SetEnable(false);
-	prevLayer->SetEnable(false);
+	m_t = std::clamp(m_t + dt, m_rangeMin, m_rangeMax);
 
-	m_blendTime -= dt;
-
-	auto sBlend = 1.0f - std::min(1.0f, m_blendTime / m_blendTotalTime);
+	auto& sBlend = m_blendFactor;
+	sBlend = m_controlFunction->Test(m_t);
 
 	auto num = m_globalTransforms.size();
 
-	auto& transforms0 = curLayer->NodeGlobalTransforms();
-	auto& transforms1 = prevLayer->NodeGlobalTransforms();
+	auto& transforms0 = l0->NodeGlobalTransforms();
+	auto& transforms1 = l1->NodeGlobalTransforms();
 	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
 	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
 	for (size_t i = 0; i < num; i++)
@@ -56,8 +48,8 @@ void AnimBlendLayer::Run(float dt)
 
 	num = m_meshesAABB.size();
 
-	auto& meshAABB0 = curLayer->MeshesAABB();
-	auto& meshAABB1 = prevLayer->MeshesAABB();
+	auto& meshAABB0 = l0->MeshesAABB();
+	auto& meshAABB1 = l1->MeshesAABB();
 	for (size_t i = 0; i < num; i++)
 	{
 		auto& v0 = meshAABB0[i];
@@ -73,12 +65,7 @@ AnimLayer* AnimBlendLayer::GetOutput()
 {
 	if (!IsEnable())
 	{
-		return m_input[m_currentLayerId];
-	}
-
-	if (m_blendTime < 0)
-	{
-		return m_input[m_currentLayerId];
+		return GetMainLayer();
 	}
 
 	return this;
@@ -90,30 +77,34 @@ void AnimBlendLayer::SetInput(AnimLayer* l1, AnimLayer* l2)
 	m_input[1] = l2;
 }
 
-void AnimBlendLayer::FadeTo(Animation* animation, float startTime, float endTime, float fadeTime)
+void AnimBlendLayer::SetControlFunction(const SharedPtr<Function1D>& func1D, float rangeMin, float rangeMax)
 {
-	auto nextLayerID = (m_currentLayerId + 1) % 2;
-	auto nextLayer = m_input[nextLayerID];
-	//auto prevLayer = m_input[(m_currentLayerId + 1) % 2];
-
-	auto l0 = dynamic_cast<AnimPlayerLayer*>(nextLayer);
-	//auto l1 = dynamic_cast<AnimPlayerLayer*>(prevLayer);
-
-	if (l0)
-	{
-		l0->SetAnimation(animation, startTime, endTime);
-	}
-
-	MAIN_SYSTEM_TASK_IMPL_1(GetComponent(),
-		AnimationSystem, AsyncTaskRunner, fadeTime,
+	MAIN_SYSTEM_TASK_IMPL_COMMON_3(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, func1D, rangeMin, rangeMax,
 		{
-			self->m_blendTime = fadeTime;
-			self->m_blendTotalTime = fadeTime;
-			self->m_currentLayerId = (self->m_currentLayerId + 1) % 2;
-			self->m_input[self->m_currentLayerId]->SetEnable(true);
+			self->m_controlFunction = func1D;
+			if (self->m_controlFunction == nullptr)
+			{
+				// f(x) = x;
+				self->m_controlFunction = std::make_shared<FunctionLinear1D>(1.0f, 0.0f);
+			}
+
+			self->m_rangeMin = rangeMin;
+			self->m_rangeMax = rangeMax;
+
+			self->m_t = 0;
 		}
 	);
+}
 
+void AnimBlendLayer::SetTime(float t)
+{
+	MAIN_SYSTEM_TASK_IMPL_COMMON_1(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, t,
+		{
+			self->m_t = t;
+		}
+	);
 }
 
 void AnimBlendLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
@@ -130,6 +121,12 @@ void AnimBlendLayer::SerializeToJson(Serializer* serializer, json& j) const
 
 	j["Input0"] = serializer->Serialize(m_input[0]); 
 	j["Input1"] = serializer->Serialize(m_input[1]);
+
+	j["RangeMin"] = m_rangeMin;
+	j["RangeMax"] = m_rangeMax;
+	j["Time"] = m_t;
+
+	j["ControlFunction"] = serializer->Serialize(m_controlFunction);
 }
 
 void AnimBlendLayer::DeserializeFromJson(Serializer* serializer, const json& j)
@@ -138,6 +135,14 @@ void AnimBlendLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 
 	serializer->Deserialize(j["Input0"], m_input[0]);
 	serializer->Deserialize(j["Input1"], m_input[1]);
+
+	m_rangeMin = j["RangeMin"];
+	m_rangeMax = j["RangeMax"]; 
+	m_t = j["Time"];
+
+	serializer->Deserialize(j["ControlFunction"], m_controlFunction);
+
+	m_blendFactor = m_controlFunction->Test(m_t);
 
 	Run(0);
 }

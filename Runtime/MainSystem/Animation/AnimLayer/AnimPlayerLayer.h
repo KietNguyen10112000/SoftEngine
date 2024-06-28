@@ -1,13 +1,45 @@
 #pragma once
 
 #include "AnimLayer.h"
+#include "Common/Base/AsyncTaskRunner.h"
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+#include "Plugins/Plugin.h"
+#endif
 
 NAMESPACE_BEGIN
 
 class API AnimPlayerLayer : public AnimLayer
 {
+public:
+	class EventListener
+	{
+	private:
+		friend class AnimPlayerLayer;
+
+		Handle<FunctionBase> m_callback;
+
+		ID m_callerCompId = INVALID_ID;
+
+		float m_t = 0;
+		uint32_t m_id = uint32_t(INVALID_ID);
+
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+		Plugin* m_ownedPlugin = nullptr;
+#endif // PLUGIN_ALLOW_HOT_RELOAD
+
+		TRACEABLE_FRIEND();
+		inline void Trace(Tracer* tracer)
+		{
+			tracer->Trace(m_callback);
+		}
+
+	};
+
 protected:
-	SERIALIZABLE_CLASS(AnimPlayerLayer, SERIALIZABLE_MEM_RAW);
+	SERIALIZABLE_CLASS(AnimPlayerLayer);
+
+	friend class AnimTransitLayer;
 
 	Animation*						m_animation;
 
@@ -23,6 +55,16 @@ protected:
 	float m_t = 0;
 
 	bool m_needResetKeyFrameIndex = false;
+
+	spinlock m_lock;
+	Array<Handle<EventListener>> m_events = {};
+
+protected:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_events);
+	}
 
 protected:
 	// Inherited via AnimLayer
@@ -57,6 +99,27 @@ public:
 	void SetEndTime(float t);
 	void SetDuration(float duration);
 	void SetTime(float currentTime, float startTime, float endTime, float duration);
+
+public:
+	template <typename _MainComponent, typename Fn, typename... Args>
+	inline auto AddEventListener(_MainComponent* caller, float t, Fn fn, Args&&... args)
+	{
+		auto listener = mheap::New<EventListener>();
+		listener->m_callback = MakeAsyncFunction(fn, Handle<_MainComponent>(caller), std::forward<Args>(args)...);
+		listener->m_callerCompId = _MainComponent::COMPONENT_ID;
+		listener->m_t = t;
+		
+#ifdef PLUGIN_ALLOW_HOT_RELOAD
+		listener->m_ownedPlugin = Plugin::GetInstance();
+#endif // PLUGIN_ALLOW_HOT_RELOAD
+
+		m_lock.lock();
+		listener->m_id = m_events.size();
+		m_events.Push(listener);
+		m_lock.unlock();
+
+		return listener;
+	}
 
 };
 
