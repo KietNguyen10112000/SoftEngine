@@ -3,6 +3,7 @@
 #include "MainSystem/Animation/Components/AnimationComponent.h"
 #include "MainSystem/Animation/AnimationSystem.h"
 #include "MainSystem/MainSystemTaskPacking.h"
+#include "MainSystem/Rendering/RenderingSystem.h"
 #include "MainSystem/Scripting/ScriptingSystem.h"
 
 #include "Scene/Scene.h"
@@ -14,9 +15,10 @@ NAMESPACE_BEGIN
 
 void AnimPlayerLayer::Run(float dt)
 {
-	auto prevT = m_t;
 	m_t += dt * m_ticksPerSecond;
 
+	// early dispatch event
+	auto prevT = m_t;
 	m_lock.lock();
 	for (auto& event : m_events)
 	{
@@ -24,8 +26,11 @@ void AnimPlayerLayer::Run(float dt)
 		{
 			switch (event->m_callerCompId)
 			{
-			case MainSystemInfo::RENDERING_ID:
+			case MainSystemInfo::RENDERING_ID: {
+				auto system = GetCommittedObject()->GetScene()->GetRenderingSystem();
+				system->MAsyncTaskRunnerST()->RunAsync(event->m_callback);
 				break;
+			}
 			case MainSystemInfo::SCRIPTING_ID: {
 				auto system = GetCommittedObject()->GetScene()->GetScriptingSystem();
 				system->MAsyncTaskRunnerST()->RunAsync(event->m_callback);
@@ -417,6 +422,24 @@ void AnimPlayerLayer::SetTime(float tick, float startTime, float endTime, float 
 			self->SetTimeImpl(tick, startTick, tickDuration, tickPerSecond);
 		}
 	);
+}
+
+void AnimPlayerLayer::RemoveListener(EventListener* listener)
+{
+	if (listener->m_id == uint32_t(INVALID_ID) || listener != m_events[listener->m_id])
+	{
+		return;
+	}
+
+	m_lock.lock();
+
+	m_events.Remove(m_events.begin() + listener->m_id);
+	for (auto& e : m_events)
+	{
+		e->m_id = &e - m_events.data();
+	}
+	
+	m_lock.unlock();
 }
 
 void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)

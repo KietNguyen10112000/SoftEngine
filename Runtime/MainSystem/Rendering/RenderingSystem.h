@@ -10,6 +10,7 @@
 #include "Common/ComponentQueryStructures/DoubleBVH.h"
 #include "Common/Base/AsyncTaskRunnerRaw.h"
 #include "Common/Utils/EventDispatcher.h"
+#include "Common/Base/AsyncTaskRunner.h"
 
 #include "Resources/Texture2D.h"
 
@@ -89,6 +90,15 @@ private:
 
 	raw::AsyncTaskRunnerForMainComponent<RenderingSystem> m_asyncTaskRunner[NUM_DEFER_BUFFER] = {};
 
+	AsyncTaskRunner m_mAsyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
+
+private:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_mAsyncTaskRunnerST);
+	}
+
 public:
 	RenderingSystem(Scene* scene);
 	~RenderingSystem();
@@ -131,6 +141,16 @@ private:
 	inline auto* GetPrevAsyncTaskRunner()
 	{
 		return &m_asyncTaskRunner[m_scene->GetPrevDeferBufferIdx()];
+	}
+
+	inline auto* GetCurrentMAsyncTaskRunnerST()
+	{
+		return &m_mAsyncTaskRunnerST[m_scene->GetCurrentDeferBufferIdx()];
+	}
+
+	inline auto* GetPrevMAsyncTaskRunnerST()
+	{
+		return &m_mAsyncTaskRunnerST[m_scene->GetPrevDeferBufferIdx()];
 	}
 
 public:
@@ -188,6 +208,11 @@ public:
 	inline auto* AsyncTaskRunner()
 	{
 		return GetCurrentAsyncTaskRunner();
+	}
+
+	inline auto* MAsyncTaskRunnerST()
+	{
+		return GetCurrentMAsyncTaskRunnerST();
 	}
 };
 

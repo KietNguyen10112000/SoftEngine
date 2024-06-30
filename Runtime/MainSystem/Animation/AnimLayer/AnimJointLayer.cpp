@@ -24,7 +24,7 @@ void AnimJointLayer::SerializeToJson(Serializer* serializer, json& j) const
 		{
 			json jInput;
 			jInput["Layer"] = serializer->Serialize(input.layer);
-			jInput["Weight"] = input.weight;
+			jInput["Mask"] = input.mask;
 			arr.push_back(jInput);
 		}
 		j["Inputs"] = arr;
@@ -42,7 +42,7 @@ void AnimJointLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 
 			InputLayer& input = m_inputs.emplace_back();
 			serializer->Deserialize(jInput["Layer"], input.layer);
-			input.weight = jInput["Weight"].get<std::vector<float>>();
+			input.mask = jInput["Weight"].get<std::vector<bool>>();
 		}
 	}
 }
@@ -73,7 +73,7 @@ void AnimJointLayer::Run(float dt)
 		for (auto& input : m_inputs)
 		//auto& input = m_inputs[0];
 		{
-			if (input.layer)
+			if (input.outputLayer && input.mask[i])
 			{
 				auto& nodeGlobalTransform = input.outputLayer->NodeGlobalTransforms()[i];
 				if (node.parentId != INVALID_ID)
@@ -82,12 +82,12 @@ void AnimJointLayer::Run(float dt)
 					auto& oriParentGlobalTransform = input.outputLayer->NodeGlobalTransforms()[node.parentId];
 					if (parentGlobalTransform != oriParentGlobalTransform)
 					{
-						mat += ((nodeGlobalTransform * oriParentGlobalTransform.GetInverse()) * parentGlobalTransform) * input.weight[i];
+						mat += ((nodeGlobalTransform * oriParentGlobalTransform.GetInverse()) * parentGlobalTransform);
 						continue;
 					}
 				}
 
-				mat += (input.outputLayer->NodeGlobalTransforms()[i] * input.weight[i]);
+				mat += (input.outputLayer->NodeGlobalTransforms()[i]);
 			}
 		}
 	}
@@ -103,46 +103,46 @@ void AnimJointLayer::Run(float dt)
 			if (input.layer)
 			{
 				auto& temp = input.outputLayer->MeshesAABB()[i];
-				aabb.m_center += (temp.m_center * input.weight[i]);
-				aabb.m_halfDimensions += (temp.m_halfDimensions * input.weight[i]);
+				aabb.m_center += (temp.m_center * float(input.mask[i]));
+				aabb.m_halfDimensions += (temp.m_halfDimensions * float(input.mask[i]));
 			}
 		}
 	}
 }
 
-void AnimJointLayer::AddInputImpl(AnimLayer* layer, const std::vector<float>& weight)
+void AnimJointLayer::AddInputImpl(AnimLayer* layer, const std::vector<bool>& mask)
 {
 	auto& input = m_inputs.emplace_back();
 	input.layer = layer;
-	input.weight = weight;
+	input.mask = mask;
 }
 
-void AnimJointLayer::SetWeightImpl(ID index, const std::vector<float>& weight)
+void AnimJointLayer::SetMaskImpl(ID index, const std::vector<bool>& mask)
 {
 	auto& input = m_inputs[index];
-	input.weight = weight;
+	input.mask = mask;
 }
 
-void AnimJointLayer::AddInput(AnimLayer* layer, const std::vector<float>& weight)
+void AnimJointLayer::AddInput(AnimLayer* layer, const std::vector<bool>& mask)
 {
-	assert(weight.size() == m_globalTransforms.size());
+	assert(mask.size() == m_globalTransforms.size());
 
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
-		AnimationSystem, AsyncTaskRunner, layer, weight,
+		AnimationSystem, AsyncTaskRunner, layer, mask,
 		{
-			self->AddInputImpl(layer, weight);
+			self->AddInputImpl(layer, mask);
 		}
 	);
 }
 
-void AnimJointLayer::SetWeight(ID index, const std::vector<float>& weight)
+void AnimJointLayer::SetMask(ID index, const std::vector<bool>& mask)
 {
-	assert(weight.size() == m_globalTransforms.size());
+	assert(mask.size() == m_globalTransforms.size());
 
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
-		AnimationSystem, AsyncTaskRunner, index, weight,
+		AnimationSystem, AsyncTaskRunner, index, mask,
 		{
-			self->SetWeightImpl(index, weight);
+			self->SetMaskImpl(index, mask);
 		}
 	);
 }

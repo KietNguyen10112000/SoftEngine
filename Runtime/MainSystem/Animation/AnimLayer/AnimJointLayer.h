@@ -18,7 +18,7 @@ public:
 
 	public:
 		AnimLayer* layer = nullptr;
-		std::vector<float> weight;
+		std::vector<bool> mask;
 	};
 
 	std::vector<InputLayer> m_inputs;
@@ -40,12 +40,12 @@ protected:
 	void Run(float dt) override;
 
 private:
-	void AddInputImpl(AnimLayer*, const std::vector<float>& weight);
-	void SetWeightImpl(ID index, const std::vector<float>& weight);
+	void AddInputImpl(AnimLayer*, const std::vector<bool>& mask);
+	void SetMaskImpl(ID index, const std::vector<bool>& mask);
 
 public:
-	void AddInput(AnimLayer*, const std::vector<float>& weight);
-	void SetWeight(ID index, const std::vector<float>& weight);
+	void AddInput(AnimLayer*, const std::vector<bool>& mask);
+	void SetMask(ID index, const std::vector<bool>& mask);
 
 };
 

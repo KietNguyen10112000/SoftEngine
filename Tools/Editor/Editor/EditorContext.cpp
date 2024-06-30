@@ -193,7 +193,7 @@ void EditorContext::RenderTabBar()
 				}
 
 				auto scene = tab->m_scene;
-				m_tabs.erase(i);
+				m_tabs.Remove(m_tabs.begin() + i);
 				i--;
 
 				{
@@ -505,7 +505,7 @@ void EditorContext::CloseTab(const Handle<EditorTab>& tab)
 	tab->Close();
 
 	auto scene = tab->m_scene;
-	m_tabs.erase(i);
+	m_tabs.Remove(m_tabs.begin() + i);
 	if (m_currentTabId != 0)
 	{
 		m_currentTabId = m_currentTabId - 1;

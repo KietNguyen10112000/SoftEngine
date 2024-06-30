@@ -100,13 +100,18 @@ public:
 	void SetDuration(float duration);
 	void SetTime(float currentTime, float startTime, float endTime, float duration);
 
+	inline float GetTime() const
+	{
+		return m_t / m_ticksPerSecond;
+	}
+
 public:
-	template <typename _MainComponent, typename Fn, typename... Args>
-	inline auto AddEventListener(_MainComponent* caller, float t, Fn fn, Args&&... args)
+	template <ID MAIN_SYSTEM_ID, typename _Caller, typename Fn, typename... Args>
+	inline auto AddListener(_Caller* caller, float t, Fn fn, Args&&... args)
 	{
 		auto listener = mheap::New<EventListener>();
-		listener->m_callback = MakeAsyncFunction(fn, Handle<_MainComponent>(caller), std::forward<Args>(args)...);
-		listener->m_callerCompId = _MainComponent::COMPONENT_ID;
+		listener->m_callback = MakeAsyncFunction(fn, Handle<_Caller>(caller), std::forward<Args>(args)...);
+		listener->m_callerCompId = MAIN_SYSTEM_ID;
 		listener->m_t = t;
 		
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
@@ -120,6 +125,14 @@ public:
 
 		return listener;
 	}
+
+	template <typename _MainComponent, typename Fn, typename... Args>
+	inline auto AddListener(_MainComponent* caller, float t, Fn fn, Args&&... args)
+	{
+		return AddListener<_MainComponent::COMPONENT_ID>(caller, t, fn, std::forward<Args>(args)...);
+	}
+
+	void RemoveListener(EventListener* listener);
 
 };
 

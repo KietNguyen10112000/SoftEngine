@@ -18,7 +18,7 @@ EXTERN_C EXPORT void ___pluginInit(Runtime*);			\
 EXTERN_C EXPORT void ___pluginFinal(Runtime*);
 
 #define IMPL_PLUGIN(name)																\
-Plugin* ___plugin(Runtime*) { static auto instance = new name(); Plugin::s_instance = instance; return instance; };	\
+Plugin* ___plugin(Runtime*) { static auto instance = new name(); return instance; };	\
 void ___pluginInit(Runtime*) { Thread::InitializeForThisThreadInThisModule(); };		\
 void ___pluginFinal(Runtime*) { Thread::FinalizeForThisThreadInThisModule(); };
 
@@ -65,6 +65,14 @@ private:
 	bool m_isHotReloadable = false;
 
 public:
+	Plugin()
+	{
+		if (s_instance == nullptr)
+		{
+			s_instance = this;
+		}
+	}
+
 	virtual void GetDesc(PLUGIN_DESC* output) = 0;
 	virtual void Update() = 0;
 

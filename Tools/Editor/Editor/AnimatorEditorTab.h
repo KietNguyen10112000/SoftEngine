@@ -53,7 +53,7 @@ public:
 		};
 
 		LAYER_TYPE::TYPE layerType = LAYER_TYPE::NONE;
-		AnimLayer* layer = nullptr;
+		Handle<AnimLayer> layer = nullptr;
 		ID layerIdx = INVALID_ID;
 
 		AnimatorEditorTab* tab = nullptr;
@@ -67,6 +67,12 @@ public:
 
 		size_t excutionOrder = INVALID_ID;
 		byte visited = 0;
+
+		TRACEABLE_FRIEND();
+		inline void Trace(Tracer* tracer)
+		{
+			tracer->Trace(layer);
+		}
 
 		inline Node(AnimatorEditorTab* tab) : tab(tab)
 		{
@@ -133,7 +139,7 @@ public:
 		{
 			if (layerIdx == INVALID_ID && layer)
 			{
-				delete layer;
+				//delete layer;
 				layer = nullptr;
 				layerType = LAYER_TYPE::NONE;
 			}
@@ -205,7 +211,7 @@ public:
 	std::vector<UniquePtr<Link>> m_links;
 	std::map<ID, Node*> m_pinIdToNode;
 
-	std::vector<UniquePtr<Node>> m_nodes;
+	Array<Handle<Node>> m_nodes;
 	//std::vector<Vec2> m_savedPositions;
 
 	char m_inputName[256] = {};
@@ -228,7 +234,7 @@ public:
 	size_t m_buildingTotal = 1000;
 	TaskWaitingHandle m_builtWaitingHandle = { 0,0 };
 
-	AnimLayer* m_tposeLayer = nullptr;
+	Handle<AnimLayer> m_tposeLayer = nullptr;
 
 	byte m_tposeMode = 0;
 	bool m_isEnableTPoseMode = false;
@@ -237,12 +243,16 @@ public:
 
 	String m_edSavePath;
 
+	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_object);
 		tracer->Trace(m_cam);
 		tracer->Trace(m_objMetadata);
 		tracer->Trace(m_animator);
+
+		tracer->Trace(m_nodes);
+		tracer->Trace(m_tposeLayer);
 	}
 
 	AnimatorEditorTab(const String& modelPath, Scene* scene, const String& tabName);
@@ -269,8 +279,8 @@ public:
 	LAYER_TYPE::TYPE GetNodeType(Node* node, void** concretePtr);
 	LAYER_TYPE::TYPE GetLayerType(AnimLayer* layer);
 
-	AnimLayer* CreateLayer(LAYER_TYPE::TYPE type);
-	UniquePtr<Node> CreateNode(AnimLayer* layer);
+	Handle<AnimLayer> CreateLayer(LAYER_TYPE::TYPE type);
+	Handle<Node> CreateNode(AnimLayer* layer);
 
 	void BuildNode(Node* node, NodesBuilder& builder);
 

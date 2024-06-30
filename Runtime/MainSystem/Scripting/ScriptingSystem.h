@@ -28,6 +28,12 @@ public:
 	virtual void Finalize() override;
 
 private:
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_mAsyncTaskRunnerST);
+	}
+
 	inline auto* GetCurrentMAsyncTaskRunnerST()
 	{
 		return &m_mAsyncTaskRunnerST[m_scene->GetCurrentDeferBufferIdx()];

@@ -232,6 +232,7 @@ Begin:
 
 void RenderingSystem::FlushAsyncTasks()
 {
+	GetPrevMAsyncTaskRunnerST()->Flush();
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
@@ -263,6 +264,7 @@ void RenderingSystem::EndModification()
 
 void RenderingSystem::Iteration(float dt)
 {
+	GetPrevMAsyncTaskRunnerST()->Flush();
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);

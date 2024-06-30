@@ -291,6 +291,17 @@ public:
 
 	}*/
 
+	inline void Concat(T* begin, T* end)
+	{
+		auto i = size();
+		Resize(i + (end - begin));
+		while (begin != end)
+		{
+			m_buffer[i++] = *begin;
+			begin++;
+		}
+	}
+
 public:
 	inline T& operator[](size_t i) const
 	{
