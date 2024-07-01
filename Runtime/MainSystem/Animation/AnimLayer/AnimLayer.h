@@ -82,6 +82,11 @@ public:
 		return m_globalTransforms;
 	}
 
+	inline auto* GetAnimModel()
+	{
+		return m_model;
+	}
+
 	/*inline auto& NodeLocalTransforms()
 	{
 		return m_localTransforms;

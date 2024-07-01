@@ -34,6 +34,12 @@ public:
 			tracer->Trace(m_callback);
 		}
 
+	public:
+		inline auto& TriggerTick()
+		{
+			return m_t;
+		}
+
 	};
 
 protected:
@@ -107,7 +113,7 @@ public:
 
 public:
 	template <ID MAIN_SYSTEM_ID, typename _Caller, typename Fn, typename... Args>
-	inline auto AddListener(_Caller* caller, float t, Fn fn, Args&&... args)
+	inline auto AddPlayingListener(_Caller* caller, float t, Fn fn, Args&&... args)
 	{
 		auto listener = mheap::New<EventListener>();
 		listener->m_callback = MakeAsyncFunction(fn, Handle<_Caller>(caller), std::forward<Args>(args)...);
@@ -127,12 +133,14 @@ public:
 	}
 
 	template <typename _MainComponent, typename Fn, typename... Args>
-	inline auto AddListener(_MainComponent* caller, float t, Fn fn, Args&&... args)
+	inline auto AddPlayingListener(_MainComponent* caller, float t, Fn fn, Args&&... args)
 	{
-		return AddListener<_MainComponent::COMPONENT_ID>(caller, t, fn, std::forward<Args>(args)...);
+		return AddPlayingListener<_MainComponent::COMPONENT_ID>(caller, t, fn, std::forward<Args>(args)...);
 	}
 
 	void RemoveListener(EventListener* listener);
+
+	static void MakeClipCut(std::vector<Mat4>& globalTransforms, std::vector<AABox>& bounds, AnimModel* model, Animation* animation, float tick);
 
 };
 

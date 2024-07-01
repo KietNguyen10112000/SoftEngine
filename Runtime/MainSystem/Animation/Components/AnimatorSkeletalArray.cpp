@@ -21,10 +21,10 @@ AnimatorSkeletalArray::AnimatorSkeletalArray() : AnimationComponent(ANIMATION_TY
 
 AnimatorSkeletalArray::~AnimatorSkeletalArray()
 {
-	for (auto& layer : m_animLayers)
+	/*for (auto& layer : m_animLayers)
 	{
 		delete layer;
-	}
+	}*/
 	m_animLayers.clear();
 }
 

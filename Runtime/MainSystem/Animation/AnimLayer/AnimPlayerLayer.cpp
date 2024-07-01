@@ -568,4 +568,81 @@ void AnimPlayerLayer::OnPropertyChanged(const UnknownAddress& var, const Variant
 {
 }
 
+void AnimPlayerLayer::MakeClipCut(std::vector<Mat4>& globalTransforms, std::vector<AABox>& bounds, AnimModel* model, Animation* animation, float tick)
+{
+	auto& t = tick;
+
+	auto& nodes = model->m_nodes;
+	//auto& globalTransforms = output->NodeGlobalTransforms();
+	auto& nodeToChannelId = animation->GetNodeToChannelId();
+	auto& channels = animation->GetChannels();
+
+	{
+		auto& node = nodes[0];
+
+		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
+		//localTransforms[0] = node.localTransform;
+
+		auto& channelId = nodeToChannelId[0];
+		if (channelId != INVALID_ID)
+		{
+			auto& channel = channels[channelId];
+
+			Mat4 scaling;
+			scaling.SetScale(channel.BinaryFindScale(t, nullptr));
+			Mat4 rotation;
+			rotation.SetRotation(channel.BinaryFindRotation(t, nullptr));
+			Mat4 translation;
+			translation.SetTranslation(channel.BinaryFindTranslation(t, nullptr));
+
+			globalTransforms[0] = scaling * rotation * translation;
+			//localTransforms[0] = globalTransforms[0];
+		}
+
+		assert(node.parentId == INVALID_ID);
+	}
+
+	{
+		auto num = nodes.size();
+		for (size_t i = 1; i < num; i++)
+		{
+			auto& node = nodes[i];
+			auto& channelId = nodeToChannelId[i];
+			auto& globalTransform = globalTransforms[i];
+
+			globalTransform = node.localTransform;
+
+			//auto& localTransform = localTransforms[i];
+			//localTransform = node.localTransform;
+
+			if (channelId != INVALID_ID)
+			{
+				auto& channel = channels[channelId];
+
+				Mat4 scaling;
+				scaling.SetScale(channel.BinaryFindScale(t, nullptr));
+				Mat4 rotation;
+				rotation.SetRotation(channel.BinaryFindRotation(t, nullptr));
+				Mat4 translation;
+				translation.SetTranslation(channel.BinaryFindTranslation(t, nullptr));
+
+				globalTransform = scaling * rotation * translation;
+				//localTransform = globalTransform;
+			}
+
+			globalTransform = globalTransform * globalTransforms[node.parentId];
+		}
+	}
+
+	{
+		auto& meshesAABBs = bounds;
+		auto& animMeshLocalAABoxKeyFrames = animation->GetMeshLocalAABBKeyFrames();
+		auto num = animMeshLocalAABoxKeyFrames.size();
+		for (uint32_t i = 0; i < num; i++)
+		{
+			meshesAABBs[i] = animMeshLocalAABoxKeyFrames[i].BinaryFind(t, nullptr);
+		}
+	}
+}
+
 NAMESPACE_END

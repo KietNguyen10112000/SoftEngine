@@ -18,6 +18,8 @@
 #include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
 #include "MainSystem/Animation/AnimLayer/AnimMixLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimTransitLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimJointLayer.h"
 
 #include "MainSystem/Physics/Components/RigidBodyStatic.h"
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
@@ -77,8 +79,10 @@ public:
 
 			// animation layers
 			SerializableDB::Get()->Register<AnimPlayerLayer>();
+			SerializableDB::Get()->Register<AnimTransitLayer>();
 			SerializableDB::Get()->Register<AnimBlendLayer>();
 			SerializableDB::Get()->Register<AnimMixLayer>();
+			SerializableDB::Get()->Register<AnimJointLayer>();
 		}
 
 

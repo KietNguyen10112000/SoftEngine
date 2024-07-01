@@ -195,14 +195,39 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 	float start = -1;
 	float end = -1;
 	float fadeTime = 0;
+	AnimTransitLayer::TransitDirection::DIRECTION transitDirection = AnimTransitLayer::TransitDirection::DIRECTION::FORWARD;
+
+	inline static const char* TRANSIT_DIRECTION_NAMES[] = {
+		"FORWARD",
+		"BACKWARD"
+	};
 
 	AnimPlayerLayer::EventListener* m_inputPlayerLayerListener = nullptr;
 	AnimPlayerLayer* m_inputPlayerLayer = nullptr;
+	Animation* m_inputPlayerLayerPrevAnim = nullptr;
 	bool isEnableFadeTimeTest = false;
+
+	bool isNeedRefreshInputNode = false;
+	AnimTransitLayer::EventListener* m_endTransitListener = nullptr;
 
 	AnimTransitLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
 	{
 
+	}
+
+	inline void UpdateCommitedInput()
+	{
+		auto UpdateInput = [](Node* input)
+		{
+			auto playerLayerNode = dynamic_cast<AnimPlayerLayerNode*>(input);
+			if (playerLayerNode)
+			{
+				playerLayerNode->currentAnimId = INVALID_ID;
+			}
+		};
+
+		if (committedInputs[0].link)
+			UpdateInput(committedInputs[0].link->src);
 	}
 
 	virtual void OnBuiltDone() override
@@ -214,13 +239,39 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 		if (playerInputLayer)
 		{
 			m_inputPlayerLayer = playerInputLayer;
-			m_inputPlayerLayerListener = playerInputLayer->AddListener<MainSystemInfo::RENDERING_ID>(
-				this, -1.0f,
+			m_inputPlayerLayerListener = playerInputLayer->AddPlayingListener<MainSystemInfo::RENDERING_ID>(
+				this, 0.0f,
 				[](Handle<AnimTransitLayerNode> self, AnimTransitLayer* layer)
 				{
-					if (self->isEnableFadeTimeTest)
+					auto l0 = dynamic_cast<AnimPlayerLayer*>(layer->m_input);
+					if (l0 && self->isEnableFadeTimeTest)
 					{
-						layer->FadeTo(self->fadeTime, self->animation, self->start, self->end);
+						//l0->SetAnimation();
+						layer->FadeTo(self->transitDirection, self->fadeTime, self->animation, self->start, self->end);
+					}
+				},
+				layer
+			);
+		}
+
+		transitDirection = layer->m_lastFadeState.direction;
+
+		if (m_endTransitListener == nullptr)
+		{
+			m_endTransitListener = layer->AddEndTransitListener<MainSystemInfo::RENDERING_ID>(
+				this,
+				[](Handle<AnimTransitLayerNode> self, AnimTransitLayer* layer)
+				{
+					auto l0 = dynamic_cast<AnimPlayerLayer*>(layer->m_input);
+					if (l0 && self->isEnableFadeTimeTest && self->m_inputPlayerLayerPrevAnim)
+					{
+						l0->SetAnimation(self->m_inputPlayerLayerPrevAnim, -1, -1);
+					}
+
+					if (self->isNeedRefreshInputNode)
+					{
+						self->UpdateCommitedInput();
+						self->isNeedRefreshInputNode = false;
 					}
 				},
 				layer
@@ -272,15 +323,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 					auto& input = inputs[0];
 					builder.Input(input.pinId);
 					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
-					ImGui::TextUnformatted("Layer 0");
-					builder.EndOutput();
-				}
-
-				{
-					auto& input = inputs[1];
-					builder.Input(input.pinId);
-					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
-					ImGui::TextUnformatted("Layer 1");
+					ImGui::TextUnformatted("Input");
 					builder.EndOutput();
 				}
 
@@ -301,25 +344,25 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 				ImGui::SetNextItemWidth(100);
 				if (ImGui::ArrowButton("Fade", ImGuiDir_::ImGuiDir_Right))
 				{
-					layer->FadeTo(fadeTime, animation, start, end);
-
-					auto UpdateInput = [](Node* input)
-					{
-						auto playerLayerNode= dynamic_cast<AnimPlayerLayerNode*>(input);
-						if (playerLayerNode)
-						{
-							playerLayerNode->currentAnimId = INVALID_ID;
-						}
-					};
-
-					if (committedInputs[0].link)
-						UpdateInput(committedInputs[0].link->src);
-
-					if (committedInputs[1].link)
-						UpdateInput(committedInputs[1].link->src);
+					layer->FadeTo(transitDirection, fadeTime, animation, start, end);
+					//UpdateCommitedInput();
+					isNeedRefreshInputNode = true;
 				}
 				ImGui::SameLine(); //ImGui::Dummy({ 20, 0 }); ImGui::SameLine();
 				ImGui::TextUnformatted("Fade Animation");
+				
+				ImGui::SetNextItemWidth(250);
+				if (ed::BeginNodeCombo("##FadeDirection", TRANSIT_DIRECTION_NAMES[transitDirection], 0))
+				{
+					for (size_t i = 0; i < sizeof(TRANSIT_DIRECTION_NAMES) / sizeof(TRANSIT_DIRECTION_NAMES[0]); i++)
+					{
+						if (ImGui::Selectable(TRANSIT_DIRECTION_NAMES[i]))
+						{
+							transitDirection = (decltype(transitDirection))i;
+						}
+					}
+					ed::EndNodeCombo();
+				}
 
 				ImGui::SetNextItemWidth(250);
 				if (ed::BeginNodeCombo("##ChooseAnimation", tab->m_animationsEditingState[currentAnimId].name.c_str(), 0))
@@ -350,8 +393,21 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 				ImGui::DragFloat("Fade Time", &fadeTime, 0.001f, 0.001f, INFINITY);
 				//ImGui::SameLine();
 
+				auto l0 = dynamic_cast<AnimPlayerLayer*>(committedInputs[0].link->src->layer.Get());
+				if (l0)
+				{
+					ImGui::SetNextItemWidth(250);
+					ImGui::Checkbox("Test Fade Anim", &isEnableFadeTimeTest);
 
-
+					ImGui::BeginDisabled(!isEnableFadeTimeTest);
+					ImGui::SetNextItemWidth(200);
+					auto v = m_inputPlayerLayerListener->TriggerTick() / l0->m_animation->GetTicksPerSecond();
+					if (ImGui::SliderFloat("StartTick", &v, 0.0f, l0->m_animation->GetTickDuration() / l0->m_animation->GetTicksPerSecond()))
+					{
+						m_inputPlayerLayerListener->TriggerTick() = v * l0->m_animation->GetTicksPerSecond();
+					}
+					ImGui::EndDisabled();
+				}
 			}
 		}
 		//builder.End();

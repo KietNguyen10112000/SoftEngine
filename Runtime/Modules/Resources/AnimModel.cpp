@@ -11,6 +11,9 @@
 
 #include "Utils/LoadAnimModel.h"
 
+#include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimTransitLayer.h"
+
 NAMESPACE_BEGIN
 
 namespace ResourceUtils
@@ -627,12 +630,10 @@ Handle<GameObject> AnimModel::MakeGameObject()
 	}
 
 	auto l1 = animator->NewAnimLayer<AnimPlayerLayer>();
-	auto l2 = animator->NewAnimLayer<AnimPlayerLayer>();
-	auto l3 = animator->NewAnimLayer<AnimBlendLayer>();
+	auto l3 = animator->NewAnimLayer<AnimTransitLayer>();
 	
 	l1->SetAnimation(model->m_animations[0], -1, -1);
-	l2->SetAnimation(model->m_animations[0], -1, -1);
-	l3->SetInput(l1, l2);
+	l3->SetInput(l1);
 
 	return ret;
 }
