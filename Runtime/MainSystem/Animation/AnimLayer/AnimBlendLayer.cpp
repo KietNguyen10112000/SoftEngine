@@ -13,11 +13,6 @@ NAMESPACE_BEGIN
 
 void AnimBlendLayer::Run(float dt)
 {
-	if (m_t == m_rangeMax)
-	{
-		return;
-	}
-
 	auto l0 = m_input[0];
 	auto l1 = m_input[1];
 
@@ -42,7 +37,7 @@ void AnimBlendLayer::Run(float dt)
 		auto& v0 = transforms0[i];
 		auto& v1 = transforms1[i];
 
-		m_globalTransforms[i] = Lerp(v1, v0, sBlend);
+		m_globalTransforms[i] = Lerp(v0, v1, sBlend);
 		//m_localTransforms[i] = Lerp(ltransforms1[i], ltransforms0[i], sBlend);
 	}
 
@@ -56,14 +51,14 @@ void AnimBlendLayer::Run(float dt)
 		auto& v1 = meshAABB1[i];
 
 		auto& aabb = m_meshesAABB[i];
-		aabb.m_center = Lerp(v1.m_center, v0.m_center, sBlend);
-		aabb.m_halfDimensions = Lerp(v1.m_halfDimensions, v0.m_halfDimensions, sBlend);
+		aabb.m_center = Lerp(v0.m_center, v1.m_center, sBlend);
+		aabb.m_halfDimensions = Lerp(v0.m_halfDimensions, v1.m_halfDimensions, sBlend);
 	}
 }
 
 AnimLayer* AnimBlendLayer::GetOutput()
 {
-	if (!IsEnable())
+	if (!IsEnable() || m_blendFactor == 0.0f || m_blendFactor == 1.0f)
 	{
 		return GetMainLayer();
 	}

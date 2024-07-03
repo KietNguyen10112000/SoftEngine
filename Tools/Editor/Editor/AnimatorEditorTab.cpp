@@ -35,6 +35,7 @@
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 
 #include "ImGuiExtern.h"
+#include "ExpressionEval/ExpressionEval.h"
 
 #include <queue>
 
@@ -330,7 +331,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 				ImGui::EndGroup();
 			}
 
-			ImGui::SameLine(); ImGui::Dummy({ 120, 0 }); ImGui::SameLine();
+			ImGui::SameLine(); ImGui::Dummy({ 140, 0 }); ImGui::SameLine();
 
 			{
 				builder.Output(outputPinId);
@@ -393,20 +394,26 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 				ImGui::DragFloat("Fade Time", &fadeTime, 0.001f, 0.001f, INFINITY);
 				//ImGui::SameLine();
 
-				auto l0 = dynamic_cast<AnimPlayerLayer*>(committedInputs[0].link->src->layer.Get());
-				if (l0)
+				if (committedInputs[0].link)
 				{
-					ImGui::SetNextItemWidth(250);
-					ImGui::Checkbox("Test Fade Anim", &isEnableFadeTimeTest);
-
-					ImGui::BeginDisabled(!isEnableFadeTimeTest);
-					ImGui::SetNextItemWidth(200);
-					auto v = m_inputPlayerLayerListener->TriggerTick() / l0->m_animation->GetTicksPerSecond();
-					if (ImGui::SliderFloat("StartTick", &v, 0.0f, l0->m_animation->GetTickDuration() / l0->m_animation->GetTicksPerSecond()))
+					auto l0 = dynamic_cast<AnimPlayerLayer*>(committedInputs[0].link->src->layer.Get());
+					if (l0)
 					{
-						m_inputPlayerLayerListener->TriggerTick() = v * l0->m_animation->GetTicksPerSecond();
+						ImGui::SetNextItemWidth(250);
+						if (ImGui::Checkbox("Test Fade Anim", &isEnableFadeTimeTest))
+						{
+							m_inputPlayerLayerPrevAnim = l0->m_animation;
+						}
+
+						ImGui::BeginDisabled(!isEnableFadeTimeTest);
+						ImGui::SetNextItemWidth(160);
+						auto v = m_inputPlayerLayerListener->TriggerTick() / l0->m_animation->GetTicksPerSecond();
+						if (ImGui::SliderFloat("StartTick", &v, 0.0f, l0->m_animation->GetTickDuration() / l0->m_animation->GetTicksPerSecond()))
+						{
+							m_inputPlayerLayerListener->TriggerTick() = v * l0->m_animation->GetTicksPerSecond();
+						}
+						ImGui::EndDisabled();
 					}
-					ImGui::EndDisabled();
 				}
 			}
 		}
@@ -434,169 +441,391 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 	}
 };
 
-//struct AnimBlendLayerNode : public AnimatorEditorTab::Node
-//{
-//	Animation* animation = nullptr;
-//	ID currentAnimId = 0;
-//
-//	float start = -1;
-//	float end = -1;
-//	float fadeTime = 0;
-//
-//	AnimBlendLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
-//	{
-//
-//	}
-//
-//	virtual void OnBuiltDone() override
-//	{
-//		currentAnimId = 0;
-//		animation = tab->m_animator->m_model3D->m_animations[currentAnimId];
-//	}
-//
-//	virtual std::vector<AnimLayer*> GetInputLayers() override
-//	{
-//		auto layer = (AnimBlendLayer*)this->layer;
-//		return {
-//			layer->m_input[0],
-//			layer->m_input[1],
-//		};
-//	}
-//
-//	virtual void ProcessSetInputLayers() override
-//	{
-//		auto layer = (AnimBlendLayer*)this->layer;
-//		layer->m_input[0] = GetInputLayerFromNode(0);
-//		layer->m_input[1] = GetInputLayerFromNode(1);
-//	}
-//
-//	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
-//	{
-//		namespace util = ax::NodeEditor::Utilities;
-//
-//		auto layer = (AnimBlendLayer*)this->layer;
-//		auto& animations = tab->m_animator->m_model3D->m_animations;
-//
-//		//util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
-//		//builder.Begin(node->nodeId);
-//		{
-//			//ed::SetNodePosition(uniqueId, { 0,0 });
-//
-//			tab->RenderNodeHeader(&builder, this, "AnimBlendLayer", 250);
-//
-//			{
-//				//assert(committedInputs.size() == 2);
-//
-//				ImGui::BeginGroup();
-//
-//				{
-//					auto& input = inputs[0];
-//					builder.Input(input.pinId);
-//					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
-//					ImGui::TextUnformatted("Layer 0");
-//					builder.EndOutput();
-//				}
-//
-//				{
-//					auto& input = inputs[1];
-//					builder.Input(input.pinId);
-//					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
-//					ImGui::TextUnformatted("Layer 1");
-//					builder.EndOutput();
-//				}
-//
-//				ImGui::EndGroup();
-//			}
-//
-//			ImGui::SameLine(); ImGui::Dummy({ 120, 0 }); ImGui::SameLine();
-//
-//			{
-//				builder.Output(outputPinId);
-//				ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
-//				builder.EndOutput();
-//			}
-//
-//			{
-//				builder.Separator();
-//
-//				ImGui::SetNextItemWidth(100);
-//				if (ImGui::ArrowButton("Fade", ImGuiDir_::ImGuiDir_Right))
-//				{
-//					layer->FadeTo(animation, start, end, fadeTime);
-//
-//					auto UpdateInput = [](Node* input)
-//						{
-//							auto playerLayerNode = dynamic_cast<AnimPlayerLayerNode*>(input);
-//							if (playerLayerNode)
-//							{
-//								playerLayerNode->currentAnimId = INVALID_ID;
-//							}
-//						};
-//
-//					if (committedInputs[0].link)
-//						UpdateInput(committedInputs[0].link->src);
-//
-//					if (committedInputs[1].link)
-//						UpdateInput(committedInputs[1].link->src);
-//				}
-//				ImGui::SameLine(); //ImGui::Dummy({ 20, 0 }); ImGui::SameLine();
-//				ImGui::TextUnformatted("Fade Animation");
-//
-//				ImGui::SetNextItemWidth(250);
-//				if (ed::BeginNodeCombo("##ChooseAnimation", tab->m_animationsEditingState[currentAnimId].name.c_str(), 0))
-//				{
-//					for (size_t i = 0; i < animations.size(); i++)
-//					{
-//						auto& animation = animations[i];
-//						auto& state = tab->m_animationsEditingState[i];
-//						if (ImGui::Selectable(state.name.c_str()))
-//						{
-//							currentAnimId = i;
-//							this->animation = animation;
-//						}
-//					}
-//					ed::EndNodeCombo();
-//				}
-//
-//				auto anim = animation;
-//				ImGui::SetNextItemWidth(100);
-//				ImGui::DragFloat("Start", &start, 0.001f, -1.0f, INFINITY);
-//				//ImGui::SameLine();
-//
-//				ImGui::SetNextItemWidth(100);
-//				ImGui::DragFloat("End", &end, 0.001f, -1.0f, INFINITY);
-//				//ImGui::SameLine(); 
-//
-//				ImGui::SetNextItemWidth(100);
-//				ImGui::DragFloat("Fade Time", &fadeTime, 0.001f, 0.001f, INFINITY);
-//				//ImGui::SameLine();
-//
-//
-//			}
-//		}
-//		//builder.End();
-//	}
-//
-//	virtual int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
-//	{
-//		return 0;
-//	}
-//
-//	virtual int ValidateBeforeBuilt(String& errDesc) override
-//	{
-//		return 0;
-//	}
-//
-//	virtual void WriteToJson(json& json) const override
-//	{
-//
-//	}
-//
-//	virtual void ReadFromJson(const json& json) override
-//	{
-//
-//	}
-//};
+struct AnimBlendLayerNode : public AnimatorEditorTab::Node
+{
+	struct EditType
+	{
+		enum TYPE
+		{
+			FIXED_VALUE,
+			LINEAR,
+			QUADRATIC,
+			CUSTOM_FUNCTION
+		};
+
+		inline static const char* NAMES[] = {
+			"FIXED_VALUE",
+			"LINEAR",
+			"QUADRATIC",
+			"CUSTOM_FUNCTION"
+		};
+	};
+
+	class FixedFunction1D : public Function1D
+	{
+	public:
+		SERIALIZABLE_CLASS(FixedFunction1D, SERIALIZABLE_MEM_SHARED);
+
+		mutable float m_value = 0;
+
+		virtual float Test(float v) const override
+		{
+			return m_value;
+		}
+
+		void CloneFrom(Serializer* serializer, Serializable* another) override
+		{
+		}
+		void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
+		{
+		}
+		void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override
+		{
+		}
+		void SerializeToJson(Serializer* serializer, json& j) const override
+		{
+			j["FixedValue"] = m_value;
+		}
+		void DeserializeFromJson(Serializer* serializer, const json& j) override
+		{
+			m_value = j["FixedValue"];
+		}
+		Handle<ClassMetadata> GetMetadata(size_t sign) override
+		{
+			return Handle<ClassMetadata>();
+		}
+		void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override
+		{
+		}
+	};
+
+	class CustomFunction1D : public Function1D
+	{
+	public:
+		SERIALIZABLE_CLASS(CustomFunction1D, SERIALIZABLE_MEM_SHARED);
+
+		String m_exprtStr;
+		ExpressionEval1D* m_exprEval = nullptr;
+
+		CustomFunction1D()
+		{
+			m_exprEval = ExpressionEval1D::New();
+		}
+
+		~CustomFunction1D()
+		{
+			ExpressionEval1D::Delete(m_exprEval);
+		}
+
+		virtual float Test(float v) const override
+		{
+			return m_exprEval->Test(v);
+		}
+
+		void SetExpression(const String& exprtStr)
+		{
+			if (!m_exprEval->SetExpression(exprtStr.c_str()))
+			{
+				return;
+			}
+
+			m_exprtStr = exprtStr;
+		}
+
+		// Inherited via Function1D
+		void CloneFrom(Serializer* serializer, Serializable* another) override
+		{
+		}
+		void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
+		{
+		}
+		void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override
+		{
+		}
+		void SerializeToJson(Serializer* serializer, json& j) const override
+		{
+			j["ExpressionString"] = m_exprtStr;
+		}
+		void DeserializeFromJson(Serializer* serializer, const json& j) override
+		{
+			m_exprtStr = j["ExpressionString"];
+			m_exprEval->SetExpression(m_exprtStr.c_str());
+		}
+		Handle<ClassMetadata> GetMetadata(size_t sign) override
+		{
+			return Handle<ClassMetadata>();
+		}
+		void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override
+		{
+		}
+	};
+		
+	SharedPtr<Function1D> m_currentFunction = nullptr;
+	SharedPtr<CustomFunction1D> m_customFunction = nullptr;
+	SharedPtr<FixedFunction1D> m_fixedFunction = nullptr;
+	float m_rangeMin = 0;
+	float m_rangeMax = 1;
+
+	EditType::TYPE m_editType = EditType::CUSTOM_FUNCTION;
+
+	char m_textEditBuffer[1024] = {};
+
+	AnimBlendLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
+	{
+		m_fixedFunction = std::make_shared<FixedFunction1D>();
+		m_customFunction = std::make_shared<CustomFunction1D>();
+		m_currentFunction = m_customFunction;
+	}
+
+	virtual void OnBuiltDone() override
+	{
+		auto layer = (AnimBlendLayer*)this->layer.Get();
+		auto func = layer->m_controlFunction.get();
+
+		if (dynamic_cast<FixedFunction1D*>(func))
+		{
+			m_editType = EditType::FIXED_VALUE;
+		}
+		else if (dynamic_cast<FunctionLinear1D*>(func))
+		{
+			m_editType = EditType::LINEAR;
+		}
+		else if (dynamic_cast<FunctionQuadratic1D*>(func))
+		{
+			m_editType = EditType::QUADRATIC;
+		}
+		else if (dynamic_cast<CustomFunction1D*>(func))
+		{
+			m_editType = EditType::CUSTOM_FUNCTION;
+
+			if (m_customFunction.get() != layer->m_controlFunction.get())
+			{
+				m_customFunction = std::dynamic_pointer_cast<CustomFunction1D>(layer->m_controlFunction);
+			}
+		}
+
+		if (m_currentFunction.get() != func)
+		{
+			m_currentFunction = layer->m_controlFunction;
+		}
+	}
+
+	virtual std::vector<AnimLayer*> GetInputLayers() override
+	{
+		auto layer = (AnimBlendLayer*)this->layer.Get();
+		return {
+			layer->m_input[0],
+			layer->m_input[1],
+		};
+	}
+
+	virtual void ProcessSetInputLayers() override
+	{
+		auto layer = (AnimBlendLayer*)this->layer.Get();
+		layer->m_input[0] = GetInputLayerFromNode(0);
+		layer->m_input[1] = GetInputLayerFromNode(1);
+	}
+
+	virtual void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
+	{
+		namespace util = ax::NodeEditor::Utilities;
+
+		auto layer = (AnimBlendLayer*)this->layer.Get();
+		auto& animations = tab->m_animator->m_model3D->m_animations;
+
+		//util::BlueprintNodeBuilder builder(m_nodeHeaderTexture->GetNativeHandle(), m_nodeHeaderTexture->Width(), m_nodeHeaderTexture->Height());
+		//builder.Begin(node->nodeId);
+		{
+			//ed::SetNodePosition(uniqueId, { 0,0 });
+
+			tab->RenderNodeHeader(&builder, this, "AnimBlendLayer", 250);
+
+			{
+				//assert(committedInputs.size() == 2);
+
+				ImGui::BeginGroup();
+
+				{
+					auto& input = inputs[0];
+					builder.Input(input.pinId);
+					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
+					ImGui::TextUnformatted("Layer 0");
+					builder.EndOutput();
+				}
+
+				{
+					auto& input = inputs[1];
+					builder.Input(input.pinId);
+					ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
+					ImGui::TextUnformatted("Layer 1");
+					builder.EndOutput();
+				}
+
+				ImGui::EndGroup();
+			}
+
+			ImGui::SameLine(); ImGui::Dummy({ 120, 0 }); ImGui::SameLine();
+
+			{
+				builder.Output(outputPinId);
+				ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
+				builder.EndOutput();
+			}
+
+			{
+				builder.Separator();
+
+				if (ImGui::ArrowButton("Run", ImGuiDir_::ImGuiDir_Right))
+				{
+					OnRunBtnClicked();
+				}
+
+				ImGui::SetNextItemWidth(250);
+				if (ed::BeginNodeCombo("##Type", EditType::NAMES[m_editType], 0))
+				{
+					for (size_t i = 0; i < sizeof(EditType::NAMES) / sizeof(EditType::NAMES[0]); i++)
+					{
+						if (ImGui::Selectable(EditType::NAMES[i]))
+						{
+							m_editType = (decltype(m_editType))i;
+
+							switch (m_editType)
+							{
+							case AnimBlendLayerNode::EditType::FIXED_VALUE:
+								m_currentFunction = m_fixedFunction;
+								break;
+							case AnimBlendLayerNode::EditType::LINEAR:
+								assert(0);
+								break;
+							case AnimBlendLayerNode::EditType::QUADRATIC:
+								assert(0);
+								break;
+							case AnimBlendLayerNode::EditType::CUSTOM_FUNCTION:
+								m_currentFunction = m_customFunction;
+								break;
+							default:
+								break;
+							}
+						}
+					}
+					ed::EndNodeCombo();
+				}
+
+				ImGui::SetNextItemWidth(200);
+				ImGui::DragFloat("Min", &m_rangeMin, 0.001f, -INFINITY, INFINITY);
+				ImGui::SetNextItemWidth(200);
+				ImGui::DragFloat("Max", &m_rangeMax, 0.001f, -INFINITY, INFINITY);
+
+				m_rangeMin = std::min(m_rangeMin, m_rangeMax);
+
+				builder.Separator();
+
+				switch (m_editType)
+				{
+				case AnimBlendLayerNode::EditType::FIXED_VALUE:
+					EditFixed();
+					break;
+				case AnimBlendLayerNode::EditType::LINEAR:
+					EditLinear();
+					break;
+				case AnimBlendLayerNode::EditType::QUADRATIC:
+					EditQuadratic();
+					break;
+				case AnimBlendLayerNode::EditType::CUSTOM_FUNCTION:
+					EditCustomFunction();
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		//builder.End();
+	}
+
+	virtual int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
+	{
+		return 0;
+	}
+
+	virtual int ValidateBeforeBuilt(String& errDesc) override
+	{
+		return 0;
+	}
+
+	virtual void WriteToJson(json& json) const override
+	{
+
+	}
+
+	virtual void ReadFromJson(const json& json) override
+	{
+
+	}
+
+	virtual bool RenderCustomInspector() override
+	{
+		if (ImGui::ArrowButton("Run", ImGuiDir_::ImGuiDir_Right))
+		{
+			OnRunBtnClicked();
+		}
+
+		if (m_editType == EditType::CUSTOM_FUNCTION)
+		{
+			auto size = ImGui::GetWindowSize();
+			ImGui::TextUnformatted("Expression:");
+			ImGui::InputTextMultiline("##edit", m_textEditBuffer, sizeof(m_textEditBuffer), { size.x,size.y / 4.0f });
+		}
+		
+		return true;
+	}
+
+	inline void OnRunBtnClicked()
+	{
+		if (m_editType == EditType::CUSTOM_FUNCTION)
+		{
+			m_customFunction->SetExpression(m_textEditBuffer);
+		}
+
+		auto layer = (AnimBlendLayer*)this->layer.Get();
+		if (m_editType == EditType::CUSTOM_FUNCTION && m_customFunction->m_exprtStr.empty())
+		{
+			return;
+		}
+
+		layer->SetControlFunction(m_currentFunction, m_rangeMin, m_rangeMax);
+	}
+	
+	inline void EditFixed()
+	{
+		ImGui::SetNextItemWidth(200);
+		ImGui::SliderFloat("Value", &m_fixedFunction->m_value, 0, 1.0f);
+	}
+
+	inline void EditLinear()
+	{
+
+	}
+
+	inline void EditQuadratic()
+	{
+
+	}
+
+	inline void EditCustomFunction()
+	{
+		if (ImGui::Button(ICON_FA_PEN_TO_SQUARE))
+		{
+			ed::SelectNode(nodeId);
+		}
+		ImGui::SameLine();
+		ImGui::TextUnformatted("Expression:");
+		
+		ImGui::SetNextItemWidth(250);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+		ImGui::TextUnformatted(m_textEditBuffer);
+		ImGui::PopStyleVar();
+	}
+};
 
 struct AnimJointLayerNode : public AnimatorEditorTab::Node
 {
@@ -815,7 +1044,7 @@ struct AnimJointLayerNode : public AnimatorEditorTab::Node
 
 	void EmplaceBackInput()
 	{
-		auto layer = (AnimMixLayer*)this->layer.Get();
+		auto layer = (AnimJointLayer*)this->layer.Get();
 
 		auto& weight = masks.emplace_back();
 		weight.resize(layer->NodeGlobalTransforms().size(), 1.0f);
@@ -893,10 +1122,199 @@ struct AnimJointLayerNode : public AnimatorEditorTab::Node
 	}
 };
 
+struct AnimMixLayerNode : public AnimatorEditorTab::Node
+{
+	struct Weight
+	{
+		ID frameFromLastClick = 0;
+		int remainToDeleteCount = 2; 
+		float weight = 0;
+		ID commitedInputIdx = INVALID_ID;
+	};
+
+	std::vector<Weight> m_weights;
+
+	AnimMixLayerNode(AnimatorEditorTab* tab) : AnimatorEditorTab::Node(tab)
+	{
+
+	}
+
+	// Inherited via Node
+	void OnBuiltDone() override
+	{
+		auto layer = (AnimMixLayer*)this->layer.Get();
+		m_weights.resize(layer->m_inputs.size());
+		size_t i = 0;
+		for (auto& input : layer->m_inputs)
+		{
+			m_weights[i].weight = input.weight;
+			m_weights[i].commitedInputIdx = i;
+			i++;
+		}
+	}
+
+	std::vector<AnimLayer*> GetInputLayers() override
+	{
+		auto layer = (AnimMixLayer*)this->layer.Get();
+		std::vector<AnimLayer*> ret;
+		for (auto& input : layer->m_inputs)
+		{
+			ret.push_back(input.layer);
+		}
+		return ret;
+	}
+
+	void ProcessSetInputLayers() override
+	{
+		auto layer = (AnimMixLayer*)this->layer.Get();
+		auto& inputs = layer->m_inputs;
+		inputs.resize(GetInputLayerFromNodeCount());
+
+		for (size_t i = 0; i < inputs.size(); i++)
+		{
+			auto& input = inputs[i];
+			input.layer = GetInputLayerFromNode(i);
+			input.weight = m_weights[i].weight;
+			m_weights[i].commitedInputIdx = i;
+		}
+	}
+
+	void Render(ax::NodeEditor::Utilities::BlueprintNodeBuilder& builder) override
+	{
+		namespace util = ax::NodeEditor::Utilities;
+
+		auto layer = (AnimMixLayer*)this->layer.Get();
+		auto& animations = tab->m_animator->m_model3D->m_animations;
+
+		tab->RenderNodeHeader(&builder, this, "AnimMixLayer", 285);
+
+		//bool doubleClicked = ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left);
+
+		{
+			ImGui::BeginGroup();
+
+			size_t deleteIdx = INVALID_ID;
+			size_t i = 0;
+			for (auto& input : inputs)
+			{
+				auto& weight = m_weights[i];
+
+				builder.Input(input.pinId);
+				ax::Widgets::Icon(ImVec2(24, 32), ax::Drawing::IconType::Circle, false); ImGui::SameLine();
+
+				ImVec2 cursor = ImGui::GetCursorPos();
+				cursor.x += 0.0f;
+				cursor.y += 3.0f;
+				ImGui::SetCursorPos(cursor);
+				ImGui::TextUnformatted(String::Format("Layer {}", i).c_str());
+
+				ImGui::SameLine(0, 20);
+				ImGui::PushID(i);
+				ImGui::SetNextItemWidth(50);
+				if (ImGui::DragFloat("##edit", &weight.weight, 0.001f, 0.0f, INFINITY))
+				{
+					if (weight.commitedInputIdx != INVALID_ID)
+					{
+						layer->m_inputs[weight.commitedInputIdx].weight = weight.weight;
+					}
+				}
+				ImGui::PopID();
+
+				ImGui::SameLine();
+				ImGui::PushID(i + inputs.size() + 1);
+				if (ImGui::Button(ICON_FA_TRASH))
+				{
+					weight.frameFromLastClick = 0;
+					if ((--weight.remainToDeleteCount) <= 0)
+					{
+						deleteIdx = i;
+					}
+				}
+				ImGui::PopID();
+
+				builder.EndOutput();
+				i++;
+
+				if (weight.frameFromLastClick++ > 100)
+				{
+					weight.remainToDeleteCount = 2;
+				}
+			}
+
+			if (i == 0)
+			{
+				ImGui::Dummy({ 198, 0 });
+			}
+
+			if (deleteIdx != INVALID_ID)
+			{
+				DeleteInput(deleteIdx);
+			}
+
+			ImGui::EndGroup();
+		}
+
+		ImGui::SameLine(); ImGui::Dummy({ 50, 0 }); ImGui::SameLine();
+
+		{
+			builder.Output(outputPinId);
+			ax::Widgets::Icon(ImVec2(24, 24), ax::Drawing::IconType::Flow, false);
+			builder.EndOutput();
+		}
+
+		builder.Separator();
+
+		if (ImGui::Button(ICON_FA_PLUS "  Add Input"))
+		{
+			EmplaceBackInput();
+		}
+
+		/*{
+			ImGui::Dummy({ 120, 25 });
+		}*/
+	}
+
+	int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
+	{
+		return 0;
+	}
+	int ValidateBeforeBuilt(String& errDesc) override
+	{
+		return 0;
+	}
+	void WriteToJson(json& json) const override
+	{
+	}
+	void ReadFromJson(const json& json) override
+	{
+	}
+
+	void EmplaceBackInput()
+	{
+		auto layer = (AnimMixLayer*)this->layer.Get();
+
+		auto& weight = m_weights.emplace_back();
+		ResizeInputs(inputs.size() + 1);
+	}
+
+	void DeleteInput(size_t idx)
+	{
+		std::cout << "DeleteInput: " << idx << "\n";
+		auto& input = inputs[idx];
+		if (input.link)
+		{
+			tab->DeleteLink(input.link->linkId);
+		}
+
+		inputs.erase(inputs.begin() + idx);
+		m_weights.erase(m_weights.begin() + idx);
+	}
+};
+
 struct AnimatorEditorTPoseLayer : public AnimLayer
 {
 public:
-	SERIALIZABLE_CLASS(AnimatorEditorTPoseLayer, SERIALIZABLE_MEM_RAW);
+	SERIALIZABLE_CLASS(AnimatorEditorTPoseLayer);
 
 	bool m_once = true;
 	float m_coeff = 0.0f;
@@ -1084,6 +1502,15 @@ void AnimatorEditorTab::OnRenderGUI()
 			}
 		);
 		selectedNode = (*it).Get();
+	}
+
+	if (selectedNodes.size() == 0)
+	{
+		if (m_lastDoubleClickNode)
+		{
+			OnGraphNodeUnDoubleClicked(m_lastDoubleClickNode);
+			m_lastDoubleClickNode = nullptr;
+		}
 	}
 
 	{
@@ -1811,8 +2238,14 @@ Handle<AnimatorEditorTab::Node> AnimatorEditorTab::CreateNode(AnimLayer* layer)
 	case AnimatorEditorTab::LAYER_TYPE::TRANSIT:
 		node = mheap::New<AnimTransitLayerNode>(this);
 		break;
+	case AnimatorEditorTab::LAYER_TYPE::BLEND:
+		node = mheap::New<AnimBlendLayerNode>(this);
+		break;
 	case AnimatorEditorTab::LAYER_TYPE::JOINT:
 		node = mheap::New<AnimJointLayerNode>(this);
+		break;
+	case AnimatorEditorTab::LAYER_TYPE::MIX:
+		node = mheap::New<AnimMixLayerNode>(this);
 		break;
 	default:
 		assert(0);
@@ -2112,9 +2545,19 @@ void AnimatorEditorTab::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*
 
 void AnimatorEditorTab::OnGraphNodeDoubleClicked(Node* node)
 {
+	m_lastDoubleClickNode = node;
+
 	if (node->layerType == LAYER_TYPE::JOINT)
 	{
 		SetTPoseMode(true);
+	}
+}
+
+void AnimatorEditorTab::OnGraphNodeUnDoubleClicked(Node* node)
+{
+	if (node->layerType == LAYER_TYPE::JOINT)
+	{
+		//SetTPoseMode(false);
 	}
 }
 
@@ -2163,6 +2606,8 @@ void AnimatorEditorTab::DeleteLink(ID linkId)
 	{
 		link->src->outputLinks[i]->srcIdx = i;
 	}
+
+	m_deletedLinks.push_back(std::move(link));
 }
 
 void AnimatorEditorTab::SetTPoseMode(bool isOn)
@@ -2209,176 +2654,223 @@ void AnimatorEditorTab::RenderBluePrintPanel()
 	ed::SetCurrentEditor(m_nodeEditorCtx);
 	ed::Begin("Node Editor", ImVec2(0.0, 0.0f));
 
-	auto openPopupPosition = ImGui::GetMousePos();
-
-	ed::Suspend();
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
-	//ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_WindowMinSize, ImVec2(200, 0));
-
-	ed::NodeId contextNodeId;
-	ed::LinkId contextLinkId;
-	if (ed::ShowNodeContextMenu(&contextNodeId))
-	{
-		ImGui::OpenPopup("Node Context Menu");
-	}
-	else if (ed::ShowLinkContextMenu(&contextLinkId))
-	{
-		ImGui::OpenPopup("Link Context Menu");
-	}
-	else if (ed::ShowBackgroundContextMenu())
-	{
-		ImGui::OpenPopup("Create New Node");
-	}
-
-	if (ImGui::BeginPopup("Create New Node"))
-	{
-		ImGui::Dummy({ 100,0 });
-
-		if (ImGui::BeginMenu("Add"))
-		{
-			Handle<Node> node = nullptr;
-			if (ImGui::MenuItem("AnimPlayerLayer"))
-			{
-				node = CreateNode(CreateLayer(LAYER_TYPE::PLAYER));
-			}
-
-			if (ImGui::MenuItem("AnimBlendLayer"))
-			{
-				node = CreateNode(CreateLayer(LAYER_TYPE::BLEND));
-			}
-
-			if (ImGui::MenuItem("AnimMixLayer"))
-			{
-				node = CreateNode(CreateLayer(LAYER_TYPE::MIX));
-			}
-
-			if (node)
-			{
-				m_nodes.Push(node);
-
-				ed::SetCurrentEditor(m_nodeEditorCtx);
-
-				auto& raw = m_nodes.back();
-				ed::SetNodePosition(raw->nodeId, openPopupPosition);
-			}
-
-			ImGui::EndMenu();
-		}
-
-		ImGui::Dummy({ 100,0 });
-		ImGui::EndPopup();
-	}
-
-	if (ImGui::BeginPopup("Node Context Menu"))
-	{
-		if (ImGui::MenuItem("Delete"))
-		{
-			ed::DeleteNode(contextNodeId);
-		}
-	}
-
-	if (ImGui::BeginPopup("Link Context Menu"))
-	{
-		if (ImGui::MenuItem("Delete"))
-		{
-			ed::DeleteLink(contextLinkId);
-		}
-	}
-
-	if (ed::BeginDelete())
-	{
-		ed::NodeId nodeId = 0;
-		while (ed::QueryDeletedNode(&nodeId))
-		{
-			if (ed::AcceptDeletedItem())
-			{
-				auto id = std::find_if(m_nodes.begin(), m_nodes.end(), [nodeId](auto& node) { return node->nodeId == ID(nodeId); });
-				if (id != m_nodes.end())
-				{
-					m_nodes.Remove(id);
-				}
-			}
-		}
-
-		ed::LinkId linkId = 0;
-		while (ed::QueryDeletedLink(&linkId))
-		{
-			if (ed::AcceptDeletedItem())
-			{
-				auto id = std::find_if(m_links.begin(), m_links.end(), [linkId](auto& link) { return link->linkId == ID(linkId); });
-				if (id != m_links.end())
-				{
-					DeleteLink(id->get()->linkId);
-				}
-			}
-		}
-	}
-	ed::EndDelete();
-
-	//ImGui::PopStyleVar();
-	ImGui::PopStyleVar();
-	ed::Resume();
-
 	for (auto& node : m_nodes)
 	{
 		RenderNode(node.Get());
 	}
 
-	if (ed::BeginCreate(ImColor(255, 255, 255), 2.0f))
+	// pop up section
 	{
-		ed::PinId inputPinId, outputPinId;
-		if (ed::QueryNewLink(&inputPinId, &outputPinId))
+		auto openPopupPosition = ImGui::GetMousePos();
+
+		ed::Suspend();
+		//ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 8));
+		//ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_WindowMinSize, ImVec2(200, 0));
+
+		ed::NodeId& contextNodeId = *(ed::NodeId*)&m_contextNodeId;
+		ed::LinkId& contextLinkId = *(ed::LinkId*)&m_contextLinkId;
+		if (ed::ShowNodeContextMenu(&contextNodeId))
 		{
-			if (inputPinId && outputPinId)
+			ImGui::OpenPopup("Node Context Menu");
+		}
+		else if (ed::ShowLinkContextMenu(&contextLinkId))
+		{
+			ImGui::OpenPopup("Link Context Menu");
+		}
+		else if (ed::ShowBackgroundContextMenu())
+		{
+			ImGui::OpenPopup("Create New Node");
+		}
+		ed::Resume();
+
+		ed::Suspend();
+		if (ImGui::BeginPopup("Create New Node"))
+		{
+			ImGui::Dummy({ 100,0 });
+
+			if (ImGui::BeginMenu("Add"))
 			{
-				if (ed::AcceptNewItem())
+				Handle<Node> node = nullptr;
+				if (ImGui::MenuItem("Player"))
 				{
-					auto src = FindNode(ID(inputPinId));
-					auto dest = FindNode(ID(outputPinId));
+					node = CreateNode(CreateLayer(LAYER_TYPE::PLAYER));
+				}
 
-					if (dest->outputPinId == ID(outputPinId) && src->outputPinId == ID(inputPinId))
-					{
-						// both are outputs
-						goto end;
-					}
+				if (ImGui::MenuItem("Blend"))
+				{
+					node = CreateNode(CreateLayer(LAYER_TYPE::BLEND));
+				}
 
-					if (dest->outputPinId != ID(outputPinId) && src->outputPinId != ID(inputPinId))
-					{
-						// both are inputs
-						goto end;
-					}
+				if (ImGui::MenuItem("Transit"))
+				{
+					node = CreateNode(CreateLayer(LAYER_TYPE::TRANSIT));
+				}
 
-					if (dest->outputPinId == ID(outputPinId))
-					{
-						std::swap(src, dest);
-						std::swap(inputPinId, outputPinId);
-					}
+				if (ImGui::MenuItem("Joint"))
+				{
+					node = CreateNode(CreateLayer(LAYER_TYPE::JOINT));
+				}
 
-					ID destIdx = INVALID_ID;
-					for (size_t i = 0; i < dest->inputs.size(); i++)
+				if (ImGui::MenuItem("Mix"))
+				{
+					node = CreateNode(CreateLayer(LAYER_TYPE::MIX));
+				}
+
+				if (node)
+				{
+					node->Commit();
+					node->OnBuiltDone();
+
+					m_nodes.Push(node);
+
+					ed::SetCurrentEditor(m_nodeEditorCtx);
+
+					auto& raw = m_nodes.back();
+					ed::SetNodePosition(raw->nodeId, openPopupPosition);
+				}
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::Dummy({ 100,0 });
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("Node Context Menu"))
+		{
+			if (ImGui::MenuItem("Delete"))
+			{
+				ed::DeleteNode(contextNodeId);
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::BeginPopup("Link Context Menu"))
+		{
+			if (ImGui::MenuItem("Delete"))
+			{
+				ed::DeleteLink(contextLinkId);
+			}
+
+			ImGui::EndPopup();
+		}
+
+		//ImGui::PopStyleVar();
+		//ImGui::PopStyleVar();
+		ed::Resume();
+	}
+
+	// create section
+	{
+		if (ed::BeginCreate(ImColor(255, 255, 255), 2.0f))
+		{
+			ed::PinId inputPinId, outputPinId;
+			if (ed::QueryNewLink(&inputPinId, &outputPinId))
+			{
+				if (inputPinId && outputPinId)
+				{
+					if (ed::AcceptNewItem())
 					{
-						if (dest->inputs[i].pinId == ID(outputPinId))
+						auto src = FindNode(ID(inputPinId));
+						auto dest = FindNode(ID(outputPinId));
+
+						if (dest->outputPinId == ID(outputPinId) && src->outputPinId == ID(inputPinId))
 						{
-							destIdx = i;
-							break;
+							// both are outputs
+							goto end;
 						}
-					}
-					assert(destIdx != INVALID_ID);
 
-					if (dest->inputs[destIdx].link != nullptr)
+						if (dest->outputPinId != ID(outputPinId) && src->outputPinId != ID(inputPinId))
+						{
+							// both are inputs
+							goto end;
+						}
+
+						if (dest->outputPinId == ID(outputPinId))
+						{
+							std::swap(src, dest);
+							std::swap(inputPinId, outputPinId);
+						}
+
+						ID destIdx = INVALID_ID;
+						for (size_t i = 0; i < dest->inputs.size(); i++)
+						{
+							if (dest->inputs[i].pinId == ID(outputPinId))
+							{
+								destIdx = i;
+								break;
+							}
+						}
+						assert(destIdx != INVALID_ID);
+
+						if (dest->inputs[destIdx].link != nullptr)
+						{
+							DeleteLink(dest->inputs[destIdx].link->linkId);
+						}
+
+						CreateLink(src, dest, destIdx);
+					}
+				}
+			}
+
+		}
+
+	end:
+		ed::EndCreate();
+	}
+
+	// delete section
+	{
+		if (ed::BeginDelete())
+		{
+			ed::NodeId nodeId = 0;
+			while (ed::QueryDeletedNode(&nodeId))
+			{
+				if (ed::AcceptDeletedItem())
+				{
+					auto id = std::find_if(m_nodes.begin(), m_nodes.end(), [nodeId](auto& node) { return node->nodeId == ID(nodeId); });
+					if (id != m_nodes.end())
 					{
-						DeleteLink(dest->inputs[destIdx].link->linkId);
-					}
+						m_deletedNodes.Push(*id);
 
-					CreateLink(src, dest, destIdx);
+						auto& node = *id;
+						for (auto& input : node->inputs)
+						{
+							if (input.link)
+							{
+								DeleteLink(input.link->linkId);
+							}
+						}
+
+						for (auto& outputLink : node->outputLinks)
+						{
+							if (outputLink)
+							{
+								DeleteLink(outputLink->linkId);
+							}
+						}
+
+						m_nodes.Remove(id);
+					}
+				}
+			}
+
+			ed::LinkId linkId = 0;
+			while (ed::QueryDeletedLink(&linkId))
+			{
+				if (ed::AcceptDeletedItem())
+				{
+					auto id = std::find_if(m_links.begin(), m_links.end(), [linkId](auto& link) { return link->linkId == ID(linkId); });
+					if (id != m_links.end())
+					{
+						DeleteLink(id->get()->linkId);
+					}
 				}
 			}
 		}
-
+		ed::EndDelete();
 	}
-
-end:
-	ed::EndCreate();
 
 	for (auto& link : m_links)
 	{
@@ -2606,8 +3098,21 @@ void AnimatorEditorTab::PlaceNodesToAnimatorLayers()
 			}
 
 			self->OnBuildNodesDone();
+			self->ProcessDeletedNodes();
 
 			self->m_buildingNow = self->m_buildingTotal;
 		}
 	);
+}
+
+void AnimatorEditorTab::ProcessDeletedNodes()
+{
+	m_deletedNodes.clear();
+	m_deletedLinks.clear();
+}
+
+void AnimatorEditorTab::InitializeSerializableList()
+{
+	SerializableDB::Get()->Register<AnimBlendLayerNode::CustomFunction1D>();
+	SerializableDB::Get()->Register<AnimBlendLayerNode::FixedFunction1D>();
 }

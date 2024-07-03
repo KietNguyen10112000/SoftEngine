@@ -19,10 +19,11 @@ void AnimPlayerLayer::Run(float dt)
 
 	// early dispatch event
 	auto prevT = m_t;
+	auto nextT = prevT + dt * m_ticksPerSecond;
 	m_lock.lock();
 	for (auto& event : m_events)
 	{
-		if (prevT < event->m_t && m_t > event->m_t)
+		if (prevT < event->m_t && nextT > event->m_t)
 		{
 			switch (event->m_callerCompId)
 			{

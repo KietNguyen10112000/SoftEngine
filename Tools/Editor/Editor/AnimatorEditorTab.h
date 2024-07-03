@@ -209,10 +209,11 @@ public:
 
 	ID m_nextId = 0;
 	std::vector<UniquePtr<Link>> m_links;
+	std::vector<UniquePtr<Link>> m_deletedLinks;
 	std::map<ID, Node*> m_pinIdToNode;
 
 	Array<Handle<Node>> m_nodes;
-	//std::vector<Vec2> m_savedPositions;
+	Array<Handle<Node>> m_deletedNodes;
 
 	char m_inputName[256] = {};
 
@@ -243,6 +244,10 @@ public:
 
 	String m_edSavePath;
 
+	Node* m_lastDoubleClickNode = nullptr;
+	ID m_contextNodeId = 0;
+	ID m_contextLinkId = 0;
+
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
@@ -252,6 +257,7 @@ public:
 		tracer->Trace(m_animator);
 
 		tracer->Trace(m_nodes);
+		tracer->Trace(m_deletedNodes);
 		tracer->Trace(m_tposeLayer);
 	}
 
@@ -291,6 +297,7 @@ public:
 	void RenderModelNodeHierarchyImpl(void (*)(ModelNode*, void*), void* userPtr, ModelNode*, void* outRect);
 
 	void OnGraphNodeDoubleClicked(Node* node);
+	void OnGraphNodeUnDoubleClicked(Node* node);
 
 	inline ID GetNextId()
 	{
@@ -310,6 +317,10 @@ private:
 	void BuildGraph();
 	void BuildGraphImpl();
 	void PlaceNodesToAnimatorLayers();
+	void ProcessDeletedNodes();
+
+public:
+	static void InitializeSerializableList();
 
 };
 

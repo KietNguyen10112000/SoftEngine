@@ -28,3 +28,6 @@
 [submodule "Tools/Editor/Libraries/IconFontCppHeaders"]
 	path = Tools/Editor/Libraries/IconFontCppHeaders
 	url = git@github.com:juliettef/IconFontCppHeaders.git
+[submodule "Tools/Editor/Libraries/exprtk"]
+	path = Tools/Editor/Libraries/exprtk
+	url = git@github.com:ArashPartow/exprtk.git

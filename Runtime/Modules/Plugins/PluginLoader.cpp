@@ -26,6 +26,7 @@ Plugin* PluginLoader_LoadPluginNative(Runtime* engine, const wchar_t* path, void
 
 	if (handle == NULL)
 	{
+		auto err = GetLastError();
 		return nullptr;
 	}
 
