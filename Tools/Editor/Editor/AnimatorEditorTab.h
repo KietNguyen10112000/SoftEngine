@@ -52,6 +52,8 @@ public:
 			Link* link = nullptr;
 		};
 
+		String nodeName = "";
+
 		LAYER_TYPE::TYPE layerType = LAYER_TYPE::NONE;
 		Handle<AnimLayer> layer = nullptr;
 		ID layerIdx = INVALID_ID;
@@ -247,6 +249,13 @@ public:
 	Node* m_lastDoubleClickNode = nullptr;
 	ID m_contextNodeId = 0;
 	ID m_contextLinkId = 0;
+	Node* m_renamingNode = nullptr;
+	char m_renamingNodeNameBuffer[KB] = {};
+	bool m_isHoveringEditName = false;
+
+	String m_exportResourcePath = "./";
+	String m_exportCppPath = "./"; 
+	char m_exportInputName[256] = {};
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -318,6 +327,9 @@ private:
 	void BuildGraphImpl();
 	void PlaceNodesToAnimatorLayers();
 	void ProcessDeletedNodes();
+	bool ValidateInputNodeName();
+	void RenderSettingPopup();
+	bool ValidateSetting();
 
 public:
 	static void InitializeSerializableList();

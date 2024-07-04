@@ -294,14 +294,14 @@ void DataInspector::InspectString(ClassMetadata* metadata, Accessor& accessor, c
 	ImGui::LabelText("##label", path.c_str());
 }
 
-void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, bool allowOutsideResources)
+void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, bool allowOutsideResources, float width)
 {
 	auto path = variant.AsString();
 	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
 
 	auto labelName = path + "##" + propertyName;
 
-	bool clicked = ImGui::Button(labelName.c_str(), ImVec2(ImGui::GetWindowWidth() * 0.8f, 0));
+	bool clicked = ImGui::Button(labelName.c_str(), ImVec2(width <= 0 ? ImGui::GetWindowWidth() * 0.8f : width, 0));
 
 	ImGui::PopStyleVar();
 

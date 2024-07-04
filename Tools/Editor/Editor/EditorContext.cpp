@@ -525,3 +525,32 @@ void EditorContext::CloseTab(const Handle<EditorTab>& tab)
 	Runtime::Get()->SetRunningScene(m_tabs[m_currentTabId]->m_scene);
 	Runtime::Get()->DestroyScene(scene);
 }
+
+bool EditorContext::IsVariableNameValid(const String& name)
+{
+	std::string_view view = name.c_str();
+	if (view.empty()
+		|| std::isdigit(view[0]))
+	{
+		std::cerr << "[ERROR]: Invalid Variable's name!\n";
+		return false;
+	}
+
+	bool ret = true;
+	std::for_each(view.begin(), view.end(),
+		[&](char c)
+		{
+			if (!std::isalnum(c))
+			{
+				if (c != '_')
+				{
+					std::cerr << "[ERROR]: Variable's name can not be contained special characters!\n";
+					ret = false;
+					return;
+				}
+			}
+		}
+	);
+
+	return ret;
+}

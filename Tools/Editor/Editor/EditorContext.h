@@ -97,6 +97,8 @@ public:
 	void RunTab(const Handle<EditorTab>& tab);
 	void CloseTab(const Handle<EditorTab>& tab);
 
+	bool IsVariableNameValid(const String& name);
+
 public:
 	inline auto& Lock()
 	{

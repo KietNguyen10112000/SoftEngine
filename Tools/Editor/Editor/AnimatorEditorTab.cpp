@@ -37,6 +37,8 @@
 #include "ImGuiExtern.h"
 #include "ExpressionEval/ExpressionEval.h"
 
+#include "EditorFont.h"
+
 #include <queue>
 
 namespace ed = ax::NodeEditor;
@@ -1299,7 +1301,6 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 
 	void DeleteInput(size_t idx)
 	{
-		std::cout << "DeleteInput: " << idx << "\n";
 		auto& input = inputs[idx];
 		if (input.link)
 		{
@@ -1392,6 +1393,8 @@ void AnimatorEditorTab::OnObjectsRemoved(std::vector<GameObject*>& objects)
 
 void AnimatorEditorTab::OnRenderGUI()
 {
+	bool isOpenSettingPopUp = false;
+
 	if (m_animationsEditingState.size() == 0)
 	{
 		auto& animations = m_animator->m_model3D->m_animations;
@@ -1482,6 +1485,19 @@ void AnimatorEditorTab::OnRenderGUI()
 			ImGui::BeginDisabled(disableEditor);
 			RenderBluePrintPanel();
 			ImGui::EndDisabled();
+
+			//auto mousePos = ImGui::GetMousePos();
+			auto windowPos = ImGui::GetWindowPos();
+			auto windowSize = ImGui::GetWindowSize();
+			if (!m_isHoveringEditName && ImGui::IsMouseHoveringRect(windowPos, ImVec2(windowPos.x + windowSize.x, windowPos.y + windowSize.y))
+				&&
+				(ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Left)
+					|| ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Right)
+					|| ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Middle)))
+			{
+				m_renamingNode = nullptr;
+			}
+
 			ImGui::End();
 		}
 	}
@@ -1627,6 +1643,12 @@ void AnimatorEditorTab::OnRenderGUI()
 				ImGui::EndPopup();
 			}
 
+			ImGui::SameLine();
+			if (ImGui::Button(ICON_FA_GEAR " Setting"))
+			{
+				isOpenSettingPopUp = true;
+			}
+
 			ImGui::Separator();
 
 			m_objMetadata->ForEachProperties(
@@ -1724,6 +1746,13 @@ void AnimatorEditorTab::OnRenderGUI()
 		
 		ImGui::End();
 	}
+
+	if (isOpenSettingPopUp)
+	{
+		ImGui::OpenPopup("Animator Editor Setting");
+	}
+
+	RenderSettingPopup();
 }
 
 void AnimatorEditorTab::OnRenderInGameDebugGraphics()
@@ -1896,6 +1925,7 @@ void AnimatorEditorTab::WriteNodeDataToJson(Serializer* serializer, json& j) con
 
 			json jnode;
 
+			jnode["NodeName"] = node->nodeName;
 			jnode["LayerType"] = node->layerType;
 			jnode["LayerIdx"] = node->layerIdx;
 			jnode["Layer"] = serializer->Serialize(node->layer);
@@ -1958,6 +1988,14 @@ void AnimatorEditorTab::WriteNodeDataToJson(Serializer* serializer, json& j) con
 
 	nodesData["NextId"] = m_nextId;
 	j["EditorData"] = nodesData;
+
+	{
+		json exportData;
+		exportData["ExportName"] = std::string(m_exportInputName);
+		exportData["ExportResourcePath"] = m_exportResourcePath;
+		exportData["ExportCppPath"] = m_exportCppPath;
+		j["ExportData"] = exportData;
+	}
 }
 
 void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json& j)
@@ -1997,6 +2035,11 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 			node->nodeId = jnode["NodeId"];
 			node->nodeIdx = i;
 			node->outputPinId = jnode["OutputPinId"];
+
+			if (jnode.contains("NodeName"))
+			{
+				node->nodeName = jnode["NodeName"];
+			}
 
 			node->ResizeInputs(jnode["NumInputs"]);
 
@@ -2067,6 +2110,16 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 
 			m_animationsEditingState.push_back(state);
 		}
+	}
+
+	if (j.contains("ExportData"))
+	{
+		const json& exportData = j["ExportData"];
+		std::string name = exportData["ExportName"];
+		std::memcpy(m_inputName, name.data(), name.length() + 1);
+
+		m_exportResourcePath = exportData["ExportResourcePath"];
+		m_exportCppPath = exportData["ExportCppPath"];
 	}
 }
 
@@ -2259,6 +2312,8 @@ Handle<AnimatorEditorTab::Node> AnimatorEditorTab::CreateNode(AnimLayer* layer)
 	node->tab = this;
 	node->ResizeInputs(node->GetInputLayers().size());
 
+	node->nodeName = String::Format("Node_{}", node->nodeId);
+
 	return node;
 }
 
@@ -2300,10 +2355,44 @@ void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title,
 
 	ImGui::Dummy(ImVec2(0, 3));
 
+	ImGui::BeginGroup();
+	if (m_renamingNode != node)
+	{
+		//ImGui::Dummy(ImVec2(0, 1));
+		ImGui::TextUnformatted(node->nodeName.c_str()); 
+		ImGui::Dummy(ImVec2(0, 2.0f));
+	}
+	else
+	{
+		ImGui::SetNextItemWidth(nodeWidth - 80.0f);
+		if (ImGui::InputText("##EditNodeName", m_renamingNodeNameBuffer, sizeof(m_renamingNodeNameBuffer), ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			if (ValidateInputNodeName())
+			{
+				m_renamingNode->nodeName = m_renamingNodeNameBuffer;
+				m_renamingNode = nullptr;
+			}
+		}
+
+		m_isHoveringEditName = ImGui::IsItemHovered();
+	}
+
+	ImGui::PushFont(EditorFont::Get()->GetFont(22));
 	ImGui::TextUnformatted(title);
+	ImGui::PopFont();
+	ImGui::EndGroup();
 
-	ImGui::SameLine(0, nodeWidth - ImGui::GetItemRectSize().x - 25.0f);
+	ImGui::SameLine(0, nodeWidth - ImGui::GetItemRectSize().x - 25.0f - 40.0f);
 
+	ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0.5f, 0.7f, 1.0f));
+	if (ImGui::Button(ICON_FA_PEN_TO_SQUARE))
+	{
+		m_renamingNode = node;
+		std::memcpy(m_renamingNodeNameBuffer, node->nodeName.c_str(), node->nodeName.length());
+	}
+	ImGui::PopStyleColor();
+
+	ImGui::SameLine();
 	auto icon = node->layer->IsEnable() ? ICON_FA_PAUSE : ICON_FA_PLAY;
 	auto btnColor = node->layer->IsEnable() ? ImColor(128, 128, 128) : ImColor(128,195,255);
 
@@ -3109,6 +3198,103 @@ void AnimatorEditorTab::ProcessDeletedNodes()
 {
 	m_deletedNodes.clear();
 	m_deletedLinks.clear();
+
+	m_renamingNode = nullptr;
+}
+
+bool AnimatorEditorTab::ValidateInputNodeName()
+{
+	std::string_view nodeName = m_renamingNodeNameBuffer;
+
+	bool ret = EditorContext::Get()->IsVariableNameValid(m_renamingNodeNameBuffer);
+
+	for (auto& node : m_nodes)
+	{
+		if (node != m_renamingNode && nodeName == node->nodeName.c_str())
+		{
+			std::cerr << "[ERROR]: Node's name must be unique!\n";
+
+			ret = false;
+			break;
+		}
+	}
+
+	return ret;
+}
+
+void AnimatorEditorTab::RenderSettingPopup()
+{
+	ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+	auto viewPortSize = ImGui::GetMainViewport()->Size;
+	ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+	ImGui::SetNextWindowSize(ImVec2(viewPortSize.x / 2, viewPortSize.y / 2));
+	if (!ImGui::BeginPopupModal("Animator Editor Setting", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+	{
+		return;
+	}
+
+	if (ImGui::BeginTable("Exports", 2, ImGuiTableFlags_SizingFixedFit))
+	{
+		auto secondColumnWidth = 0.7f * ImGui::GetWindowWidth();
+		{
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted("Export Name"); ImGui::SameLine();
+
+			ImGui::TableNextColumn();
+			ImGui::SetNextItemWidth(secondColumnWidth);
+			ImGui::InputText("## Edit export name", m_exportInputName, sizeof(m_exportInputName));
+		}
+
+		{
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted("Export Resource Path"); ImGui::SameLine();
+
+			ImGui::TableNextColumn();
+			Accessor temp = Accessor::ForString("Path", m_exportResourcePath, nullptr);
+			Variant var = Variant(VARIANT_TYPE::STRING_PATH);
+			var.AsString() = m_exportResourcePath;
+			DataInspector::InspectStringPathEx(nullptr, temp, var, "Export Resource Path", true, secondColumnWidth);
+		}
+
+		{
+			ImGui::TableNextColumn();
+			ImGui::TextUnformatted("Export C++ Path"); ImGui::SameLine();
+
+			ImGui::TableNextColumn();
+			Accessor temp = Accessor::ForString("Path", m_exportCppPath, nullptr);
+			Variant var = Variant(VARIANT_TYPE::STRING_PATH);
+			var.AsString() = m_exportCppPath;
+			DataInspector::InspectStringPathEx(nullptr, temp, var, "Export C++ Path", true, secondColumnWidth);
+		}
+
+		ImGui::EndTable();
+	}
+	//ImGui::EndGroup();
+
+	ImGui::Separator();
+
+	ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() / 2 - 50, ImGui::GetWindowHeight() - 40));
+
+	if (ImGui::Button("OK", ImVec2(100, 0)))
+	{
+		if (ValidateSetting())
+		{
+			ImGui::CloseCurrentPopup();
+		}
+	}
+
+	ImGui::EndPopup();
+}
+
+bool AnimatorEditorTab::ValidateSetting()
+{
+	bool ret = EditorContext::Get()->IsVariableNameValid(m_exportInputName);
+	if (!ret)
+	{
+		std::cerr << "[ERROR]: Export Name illegal!\n";
+	}
+
+	return ret;
 }
 
 void AnimatorEditorTab::InitializeSerializableList()
