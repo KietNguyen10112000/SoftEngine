@@ -42,6 +42,8 @@ public:
 	struct Link;
 	struct ModelNode;
 
+#define ANIMATOR_EDITOR_NODE_CPP_EXE_ID String::Format("constexpr static ID ID = {}", excutionOrder)
+
 	// prefix "commited" mean the last successful build result 
 	// eg: inputs -> commitedInputs; <inputs> is what user see on screen graph, <commitedInputs> is what's actually running inside Animator
 	struct Node
@@ -113,6 +115,8 @@ public:
 
 		virtual void WriteToJson(json& json) const = 0;
 		virtual void ReadFromJson(const json& json) = 0;
+
+		virtual String GetCppClassSource() = 0;
 
 		inline virtual bool RenderCustomInspector() { return false; };
 		inline virtual void RenderCustomModelTreeNode(ModelNode* node) {};
@@ -256,6 +260,7 @@ public:
 	String m_exportResourcePath = "./";
 	String m_exportCppPath = "./"; 
 	char m_exportInputName[256] = {};
+	bool m_isExporting = false;
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -330,6 +335,8 @@ private:
 	bool ValidateInputNodeName();
 	void RenderSettingPopup();
 	bool ValidateSetting();
+	void Export(); 
+	void ExportImpl();
 
 public:
 	static void InitializeSerializableList();

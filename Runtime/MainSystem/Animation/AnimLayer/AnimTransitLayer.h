@@ -52,7 +52,7 @@ public:
 
 	struct FadeState
 	{
-		Animation* animation = nullptr;
+		SharedPtr<Animation> animation = nullptr;
 		TransitDirection::DIRECTION direction = TransitDirection::FORWARD;
 		float fadeTime;
 		float startTime;
@@ -110,8 +110,8 @@ public:
 	virtual AnimLayer* GetOutput() override;
 
 	void SetInput(AnimLayer* l);
-	void FadeTo(TransitDirection::DIRECTION direction, float fadeTime, Animation* animation, float startTime, float endTime);
-	void QueuedFadeTo(TransitDirection::DIRECTION direction, float fadeTime, Animation* animation, float startTime, float endTime);
+	void FadeTo(TransitDirection::DIRECTION direction, float fadeTime, const SharedPtr<Animation>& animation, float startTime, float endTime);
+	void QueuedFadeTo(TransitDirection::DIRECTION direction, float fadeTime, const SharedPtr<Animation>& animation, float startTime, float endTime);
 
 	bool IsEndFade() const;
 

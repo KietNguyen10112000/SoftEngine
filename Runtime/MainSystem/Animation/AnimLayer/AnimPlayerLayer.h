@@ -47,7 +47,7 @@ protected:
 
 	friend class AnimTransitLayer;
 
-	Animation*						m_animation;
+	SharedPtr<Animation>			m_animation;
 
 	std::vector<KeyFramesIndex>		m_keyFramesIndex;
 	std::vector<uint32_t>			m_aabbKeyFrameIndex;
@@ -92,12 +92,12 @@ public:
 	virtual void Run(float dt) override;
 
 private:
-	void SetAnimationImpl(Animation* animation, float startTime, float endTime);
+	void SetAnimationImpl(const SharedPtr<Animation>& animation, float startTime, float endTime);
 	void SetTimeImpl(float tick, float startTick, float tickDuration, float tickPerSecond);
 
 public:
 	// time in sec
-	void SetAnimation(Animation* animation, float startTime, float endTime);
+	void SetAnimation(const SharedPtr<Animation>& animation, float startTime, float endTime);
 
 	// t in sec
 	void SetCurrentTime(float t);

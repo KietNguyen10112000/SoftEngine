@@ -135,7 +135,7 @@ void AnimPlayerLayer::Run(float dt)
 	}
 }
 
-void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, float endTime)
+void AnimPlayerLayer::SetAnimationImpl(const SharedPtr<Animation>& animation, float startTime, float endTime)
 {
 	m_animation = animation;//m_model->m_animations[animationId];
 
@@ -192,7 +192,7 @@ void AnimPlayerLayer::SetAnimationImpl(Animation* animation, float startTime, fl
 	m_t = 0;
 }
 
-void AnimPlayerLayer::SetAnimation(Animation* animation, float startTime, float endTime)
+void AnimPlayerLayer::SetAnimation(const SharedPtr<Animation>& animation, float startTime, float endTime)
 {
 	assert(m_model->FindAnimation(animation->GetMotion()) == animation);
 

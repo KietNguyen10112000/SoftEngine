@@ -88,7 +88,7 @@ void AnimTransitLayer::PrevRun(float dt)
 				else if (currentFateState.direction == TransitDirection::BACKWARD)
 				{
 					AnimPlayerLayer::MakeClipCut(m_lastGlobalTransforms, m_lastMeshesAABB, m_model,
-						currentFateState.animation, currentFateState.startTime * currentFateState.animation->GetTicksPerSecond());
+						currentFateState.animation.get(), currentFateState.startTime * currentFateState.animation->GetTicksPerSecond());
 				}
 			}
 
@@ -175,7 +175,7 @@ void AnimTransitLayer::SetInput(AnimLayer* l)
 	m_input = l;
 }
 
-void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeTime, Animation* animation, float startTime, float endTime)
+void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeTime, const SharedPtr<Animation>& animation, float startTime, float endTime)
 {
 	if (direction == TransitDirection::FORWARD)
 	{
@@ -210,7 +210,7 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 				else if (direction == TransitDirection::BACKWARD)
 				{
 					AnimPlayerLayer::MakeClipCut(self->m_lastGlobalTransforms, self->m_lastMeshesAABB, self->m_model,
-						animation, startTick);
+						animation.get(), startTick);
 				}
 			}
 
@@ -220,7 +220,7 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 
 }
 
-void AnimTransitLayer::QueuedFadeTo(TransitDirection::DIRECTION direction, float fadeTime, Animation* animation, float startTime, float endTime)
+void AnimTransitLayer::QueuedFadeTo(TransitDirection::DIRECTION direction, float fadeTime, const SharedPtr<Animation>& animation, float startTime, float endTime)
 {
 }
 

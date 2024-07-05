@@ -218,7 +218,7 @@ public:
 	std::map<String, ID> m_nodeIds;
 
 	// list of model animation
-	std::vector<Animation*> m_animations;
+	std::vector<SharedPtr<Animation>> m_animations;
 
 	// inversed of node's global transform
 	std::vector<Mat4> m_boneOffsetMatrixs;
@@ -255,7 +255,7 @@ protected:
 public:
 	std::vector<AnimMeshVertices> LoadAnimMeshVertices() const;
 
-	Animation* AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
+	SharedPtr<Animation> AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
 
 	// LoadAnimation(PlaceHolderAnimation(motion)) same as AddAnimation(motion)
 	ID PlaceHolderAnimation(const Resource<AnimMotion>& motion);
@@ -263,7 +263,14 @@ public:
 
 	virtual Handle<GameObject> MakeGameObject() override;
 
-	Animation* FindAnimation(AnimMotion* motion) const;
+	const SharedPtr<Animation>& FindAnimation(AnimMotion* motion) const;
+
+	void RemoveAnimation(Animation* animation);
+
+	inline const auto& GetAnimation(ID id) const
+	{
+		return m_animations[id];
+	}
 
 };
 

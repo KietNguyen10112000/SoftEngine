@@ -7,9 +7,11 @@
 #include "Input/Input.h"
 
 #include "FileSystem/FileSystem.h"
+#include "FileSystem/FileUtils.h"
 
 #ifdef _WIN32
 #include <Windows.h>
+#include <shlobj_core.h>
 #undef near
 #undef far
 #endif
@@ -294,7 +296,8 @@ void DataInspector::InspectString(ClassMetadata* metadata, Accessor& accessor, c
 	ImGui::LabelText("##label", path.c_str());
 }
 
-void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, bool allowOutsideResources, float width)
+void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
+	bool allowOutsideResources, float width, bool directory)
 {
 	auto path = variant.AsString();
 	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
@@ -313,40 +316,55 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 	if (clicked)
 	{
 #ifdef _WIN32
-		OPENFILENAME ofn;
-		TCHAR Filestring[MAX_PATH] = { 0 };
-
-		ZeroMemory(&ofn, sizeof(ofn));
-		ofn.lStructSize = sizeof(ofn);
-		ofn.lpstrFile = Filestring;
-		ofn.nMaxFile = sizeof(Filestring);
-		ofn.lpstrFilter = L"All\0*.*\0Text\0*.TXT\0";
-		ofn.nFilterIndex = 1;
-		ofn.lpstrFileTitle = NULL;
-		ofn.nMaxFileTitle = 0;
-		ofn.lpstrInitialDir = NULL;
-		ofn.Flags = OFN_NOCHANGEDIR;//OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
-		if (GetOpenFileName(&ofn) == TRUE)
+		if (!directory)
 		{
-			//std::wcout << ofn.lpstrFile << "\n";
+			OPENFILENAME ofn;
+			TCHAR Filestring[MAX_PATH] = { 0 };
 
-			std::wstring_view wstr = ofn.lpstrFile;
+			ZeroMemory(&ofn, sizeof(ofn));
+			ofn.lStructSize = sizeof(ofn);
+			ofn.lpstrFile = Filestring;
+			ofn.nMaxFile = sizeof(Filestring);
+			ofn.lpstrFilter = L"All\0*.*\0Text\0*.TXT\0";
+			ofn.nFilterIndex = 1;
+			ofn.lpstrFileTitle = NULL;
+			ofn.nMaxFileTitle = 0;
+			ofn.lpstrInitialDir = NULL;
+			ofn.Flags = OFN_NOCHANGEDIR;//OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-			int size_needed = WideCharToMultiByte(CP_UTF8, 0, &ofn.lpstrFile[0], (int)wstr.length(), NULL, 0, NULL, NULL);
-			std::string fullPath(size_needed, 0);
-			WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
-
-			std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
-
-			auto input = Variant(VARIANT_TYPE::STRING_PATH);
-			if (allowOutsideResources)
+			if (GetOpenFileName(&ofn) == TRUE)
 			{
-				auto rcpath = FileSystem::Get()->GetExecutablePath();
+				//std::wcout << ofn.lpstrFile << "\n";
+
+				std::wstring_view wstr = ofn.lpstrFile;
+
+				int size_needed = WideCharToMultiByte(CP_UTF8, 0, &ofn.lpstrFile[0], (int)wstr.length(), NULL, 0, NULL, NULL);
+				std::string fullPath(size_needed, 0);
+				WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
+
+				std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
+
+				auto input = Variant(VARIANT_TYPE::STRING_PATH);
+				if (allowOutsideResources)
+				{
+					auto rcpath = FileSystem::Get()->GetExecutablePath();
+					if (fullPath.find(rcpath.c_str()) != 0)
+					{
+						input.As<String>() = fullPath.c_str();
+						accessor.Set(input);
+						return;
+					}
+
+					auto rpath = fullPath.substr(rcpath.length());
+					input.As<String>() = rpath.c_str();
+					accessor.Set(input);
+				}
+
+				auto rcpath = FileSystem::Get()->GetResourcesRootPath();
+
 				if (fullPath.find(rcpath.c_str()) != 0)
 				{
-					input.As<String>() = fullPath.c_str();
-					accessor.Set(input);
+					std::cerr << "Resources must be placed under \"" << rcpath << "\"\n";
 					return;
 				}
 
@@ -354,18 +372,77 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 				input.As<String>() = rpath.c_str();
 				accessor.Set(input);
 			}
+		}
+		
+		if (directory)
+		{
+			//TCHAR szDir[MAX_PATH];
+			//BROWSEINFO bInfo;
+			//bInfo.hwndOwner = nullptr;
+			//bInfo.pidlRoot = NULL;
+			//bInfo.pszDisplayName = szDir; // Address of a buffer to receive the display name of the folder selected by the user
+			//bInfo.lpszTitle = L"Select a folder"; // Title of the dialog
+			//bInfo.ulFlags = 0;
+			//bInfo.lpfn = NULL;
+			//bInfo.lParam = 0;
+			//bInfo.iImage = -1;
 
-			auto rcpath = FileSystem::Get()->GetResourcesRootPath();
+			//LPITEMIDLIST lpItem = SHBrowseForFolder(&bInfo);
+			//if (lpItem != NULL)
+			//{
+			//	SHGetPathFromIDList(lpItem, szDir);
 
-			if (fullPath.find(rcpath.c_str()) != 0)
+			//	std::wstring_view wstr = szDir;
+			//	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &szDir[0], (int)wstr.length(), NULL, 0, NULL, NULL);
+			//	std::string fullPath(size_needed, 0);
+			//	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
+
+			//	auto input = Variant(VARIANT_TYPE::STRING_PATH);
+			//	input.As<String>() = fullPath.c_str();
+			//	accessor.Set(input);
+			//}
+
+			//std::cout << "OpenDirectory: " << Thread::GetID() << "\n";
+
+			LPWSTR path = nullptr;
+
+			IFileDialog* pfd;
+			if (SUCCEEDED(CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pfd))))
 			{
-				std::cerr << "Resources must be placed under \"" << rcpath << "\"\n";
-				return;
+				DWORD dwOptions;
+				if (SUCCEEDED(pfd->GetOptions(&dwOptions)))
+				{
+					pfd->SetOptions(dwOptions | FOS_PICKFOLDERS);
+				}
+				if (SUCCEEDED(pfd->Show(NULL)))
+				{
+					IShellItem* psi;
+					if (SUCCEEDED(pfd->GetResult(&psi)))
+					{
+						if (!SUCCEEDED(psi->GetDisplayName(SIGDN_DESKTOPABSOLUTEPARSING, &path)))
+						{
+							MessageBox(NULL, L"GetIDListName() failed", NULL, NULL);
+						}
+						psi->Release();
+					}
+				}
+				pfd->Release();
 			}
 
-			auto rpath = fullPath.substr(rcpath.length());
-			input.As<String>() = rpath.c_str();
-			accessor.Set(input);
+			if (path)
+			{
+				std::wstring_view wstr = path;
+				int size_needed = WideCharToMultiByte(CP_UTF8, 0, &path[0], (int)wstr.length(), NULL, 0, NULL, NULL);
+				std::string fullPath(size_needed, 0);
+				WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
+
+				const std::filesystem::path base = FileUtils::PopPath(FileSystem::Get()->GetExecutablePath()).c_str();
+				const std::filesystem::path p = fullPath.c_str();
+
+				auto input = Variant(VARIANT_TYPE::STRING_PATH);
+				input.As<String>() = (std::filesystem::relative(p, base).generic_string() + "/").c_str();
+				accessor.Set(input);
+			}
 		}
 #endif // WIN32
 	}

@@ -160,10 +160,10 @@ int AnimModel::Load(const String& path)
 
 AnimModel::~AnimModel()
 {
-	for (auto& anim : m_animations)
+	/*for (auto& anim : m_animations)
 	{
 		delete anim;
-	}
+	}*/
 	m_animations.clear();
 }
 
@@ -400,7 +400,7 @@ void AnimModel::LoadAABoxAnimMesh(AnimModel::AnimMesh* animMesh, Animation* anim
 ID AnimModel::PlaceHolderAnimation(const Resource<AnimMotion>& motion)
 {
 	auto animationId = m_animations.size();
-	auto animation = new Animation();
+	auto animation = std::make_shared<Animation>();
 
 	animation->m_motion = motion;
 
@@ -489,7 +489,7 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 						model->LoadAABoxAnimMesh(animMesh, animation, vertices);
 					};
 
-				param.animation = animation;
+				param.animation = animation.get();
 				param.animMesh = &animMesh;
 				param.vertices = vertices + count;
 				param.model = this;
@@ -505,11 +505,11 @@ void AnimModel::LoadAnimation(ID animationId, const AnimMotion* motion, AnimMesh
 
 		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 
-		CreateCache(animation, stream, streamPath);
+		CreateCache(animation.get(), stream, streamPath);
 	}
 	else
 	{
-		ReadCache(animation, stream);
+		ReadCache(animation.get(), stream);
 	}
 }
 
@@ -557,7 +557,7 @@ std::vector<AnimModel::AnimMeshVertices> AnimModel::LoadAnimMeshVertices() const
 	return vertices;
 }
 
-Animation* AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices)
+SharedPtr<Animation> AnimModel::AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices)
 {
 	auto animationId = PlaceHolderAnimation(motion);
 	LoadAnimation(animationId, motion, vertices);
@@ -680,7 +680,7 @@ void AnimModel::AnimMeshRenderingBuffer::OnPropertyChanged(const UnknownAddress&
 {
 }
 
-Animation* AnimModel::FindAnimation(AnimMotion* motion) const
+const SharedPtr<Animation>& AnimModel::FindAnimation(AnimMotion* motion) const
 {
 	for (auto& anim : m_animations)
 	{
@@ -690,6 +690,19 @@ Animation* AnimModel::FindAnimation(AnimMotion* motion) const
 		}
 	}
 	return nullptr;
+}
+
+void AnimModel::RemoveAnimation(Animation* animation)
+{
+	for (long long i = 0; i < m_animations.size(); i++)
+	{
+		auto& anim = m_animations[i];
+		if (anim.get() == animation)
+		{
+			m_animations.erase(m_animations.begin() + i);
+			return;
+		}
+	}
 }
 
 void AnimModel::SerializeExtDataToJson(Serializer* serializer, json& j) const

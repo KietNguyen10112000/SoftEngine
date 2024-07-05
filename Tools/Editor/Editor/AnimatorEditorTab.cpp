@@ -188,11 +188,23 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 	{
 
 	}
+
+	virtual String GetCppClassSource() override
+	{
+		auto ret = String::Format(R"xxx(
+struct {}
+{
+	{};
+};
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+
+		return ret;
+	}
 };
 
 struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 {
-	Animation* animation = nullptr;
+	SharedPtr<Animation> animation = nullptr;
 	ID currentAnimId = 0;
 
 	float start = -1;
@@ -207,7 +219,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 
 	AnimPlayerLayer::EventListener* m_inputPlayerLayerListener = nullptr;
 	AnimPlayerLayer* m_inputPlayerLayer = nullptr;
-	Animation* m_inputPlayerLayerPrevAnim = nullptr;
+	SharedPtr<Animation> m_inputPlayerLayerPrevAnim = nullptr;
 	bool isEnableFadeTimeTest = false;
 
 	bool isNeedRefreshInputNode = false;
@@ -440,6 +452,18 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 	virtual void ReadFromJson(const json& json) override
 	{
 		
+	}
+
+	virtual String GetCppClassSource() override
+	{
+		auto ret = String::Format(R"xxx(
+struct {}
+{
+	{};
+};
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+
+		return ret;
 	}
 };
 
@@ -781,6 +805,18 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 		return true;
 	}
 
+	virtual String GetCppClassSource() override
+	{
+		auto ret = String::Format(R"xxx(
+struct {}
+{
+	{};
+};
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+
+		return ret;
+	}
+
 	inline void OnRunBtnClicked()
 	{
 		if (m_editType == EditType::CUSTOM_FUNCTION)
@@ -1009,6 +1045,18 @@ struct AnimJointLayerNode : public AnimatorEditorTab::Node
 		}
 		ImGui::PopID();
 	};
+
+	virtual String GetCppClassSource() override
+	{
+		auto ret = String::Format(R"xxx(
+struct {}
+{
+	{};
+};
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+
+		return ret;
+	}
 
 	int ValidateNewInput(Node* input, ID inputIdx, String& errDesc) override
 	{
@@ -1291,6 +1339,18 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 	{
 	}
 
+	virtual String GetCppClassSource() override
+	{
+		auto ret = String::Format(R"xxx(
+struct {}
+{
+	{};
+};
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+
+		return ret;
+	}
+
 	void EmplaceBackInput()
 	{
 		auto layer = (AnimMixLayer*)this->layer.Get();
@@ -1395,6 +1455,9 @@ void AnimatorEditorTab::OnRenderGUI()
 {
 	bool isOpenSettingPopUp = false;
 
+	Animation* deleteAnimation = nullptr;
+	ID deleteAnimationId = INVALID_ID;
+
 	if (m_animationsEditingState.size() == 0)
 	{
 		auto& animations = m_animator->m_model3D->m_animations;
@@ -1453,7 +1516,6 @@ void AnimatorEditorTab::OnRenderGUI()
 			if (ImGui::Button(ICON_FA_HAMMER "  Build"))
 			{
 				BuildGraph();
-				m_isBuilding = true;
 			}
 
 			if (m_isBuilding)
@@ -1529,6 +1591,23 @@ void AnimatorEditorTab::OnRenderGUI()
 		}
 	}
 
+	if (ImGui::IsKeyPressed(ImGuiKey::ImGuiKey_Space))
+	{
+		std::set<ID> set;
+		for (auto& nodeId : selectedNodes)
+		{
+			set.insert(ID(nodeId));
+		}
+
+		for (auto& node : m_nodes)
+		{
+			if (set.find(node->nodeId) != set.end())
+			{
+				node->layer->SetEnable(!node->layer->IsEnable());
+			}
+		}
+	}
+
 	{
 		wflags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
 		ImGui::SetNextWindowPos({ 0,HEADER_HEIGHT }, ImGuiCond_Appearing);
@@ -1592,7 +1671,7 @@ void AnimatorEditorTab::OnRenderGUI()
 		}
 		else if (!selectedNode || !selectedNode->RenderCustomInspector())
 		{
-			if (ImGui::Button("Import Motion"))
+			if (ImGui::Button(ICON_FA_FILE_IMPORT " Import Motion"))
 			{
 				auto path = FileChooser::OpenFileChooser("", false);
 
@@ -1647,6 +1726,12 @@ void AnimatorEditorTab::OnRenderGUI()
 			if (ImGui::Button(ICON_FA_GEAR " Setting"))
 			{
 				isOpenSettingPopUp = true;
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button(ICON_FA_FILE_EXPORT " Export"))
+			{
+				Export();
 			}
 
 			ImGui::Separator();
@@ -1705,10 +1790,13 @@ void AnimatorEditorTab::OnRenderGUI()
 						ImGui::SetNextItemWidth(500);
 						if (ImGui::InputText("##Name", m_inputName, IM_ARRAYSIZE(m_inputName), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
 						{
-							state.isEditingName = false;
-							if (m_inputName[0])
+							if (EditorContext::Get()->IsVariableNameValid(m_inputName))
 							{
-								state.name = m_inputName;
+								state.isEditingName = false;
+								if (m_inputName[0])
+								{
+									state.name = m_inputName;
+								}
 							}
 						}
 					}
@@ -1725,6 +1813,18 @@ void AnimatorEditorTab::OnRenderGUI()
 							state.isEditingName = true;
 							m_inputName[0] = 0;
 						}
+
+						if (ImGui::BeginPopupContextItem())
+						{
+							if (ImGui::MenuItem("Delete"))
+							{
+								deleteAnimation = animation.get();
+								deleteAnimationId = i;
+							}
+
+							ImGui::EndPopup();
+						}
+
 					}
 
 					i++;
@@ -1747,12 +1847,24 @@ void AnimatorEditorTab::OnRenderGUI()
 		ImGui::End();
 	}
 
+	if (deleteAnimation)
+	{
+		m_animationsEditingState.erase(m_animationsEditingState.begin() + deleteAnimationId);
+		m_animator->m_model3D->RemoveAnimation(deleteAnimation);
+	}
+
 	if (isOpenSettingPopUp)
 	{
 		ImGui::OpenPopup("Animator Editor Setting");
 	}
 
 	RenderSettingPopup();
+
+	if (m_isExporting && !m_isBuilding)
+	{
+		ExportImpl();
+		m_isExporting = false;
+	}
 }
 
 void AnimatorEditorTab::OnRenderInGameDebugGraphics()
@@ -2116,7 +2228,7 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 	{
 		const json& exportData = j["ExportData"];
 		std::string name = exportData["ExportName"];
-		std::memcpy(m_inputName, name.data(), name.length() + 1);
+		std::memcpy(m_exportInputName, name.data(), name.length() + 1);
 
 		m_exportResourcePath = exportData["ExportResourcePath"];
 		m_exportCppPath = exportData["ExportCppPath"];
@@ -2389,6 +2501,7 @@ void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title,
 	{
 		m_renamingNode = node;
 		std::memcpy(m_renamingNodeNameBuffer, node->nodeName.c_str(), node->nodeName.length());
+		m_renamingNodeNameBuffer[node->nodeName.length()] = '\0';
 	}
 	ImGui::PopStyleColor();
 
@@ -2997,6 +3110,7 @@ void AnimatorEditorTab::BuildGraph()
 		return;
 	}
 
+	m_isBuilding = true;
 	Task task;
 	task.Params() = this;
 	task.Entry() = [](void* p)
@@ -3160,6 +3274,12 @@ void AnimatorEditorTab::PlaceNodesToAnimatorLayers()
 		}
 	);
 
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		auto& node = nodes[i];
+		node->excutionOrder = i;
+	}
+
 	std::vector<AnimLayer*> layers;
 	size_t count = 0;
 	for (auto& node : nodes)
@@ -3253,7 +3373,7 @@ void AnimatorEditorTab::RenderSettingPopup()
 			Accessor temp = Accessor::ForString("Path", m_exportResourcePath, nullptr);
 			Variant var = Variant(VARIANT_TYPE::STRING_PATH);
 			var.AsString() = m_exportResourcePath;
-			DataInspector::InspectStringPathEx(nullptr, temp, var, "Export Resource Path", true, secondColumnWidth);
+			DataInspector::InspectStringPathEx(nullptr, temp, var, "Export Resource Path", true, secondColumnWidth, true);
 		}
 
 		{
@@ -3264,7 +3384,7 @@ void AnimatorEditorTab::RenderSettingPopup()
 			Accessor temp = Accessor::ForString("Path", m_exportCppPath, nullptr);
 			Variant var = Variant(VARIANT_TYPE::STRING_PATH);
 			var.AsString() = m_exportCppPath;
-			DataInspector::InspectStringPathEx(nullptr, temp, var, "Export C++ Path", true, secondColumnWidth);
+			DataInspector::InspectStringPathEx(nullptr, temp, var, "Export C++ Path", true, secondColumnWidth, true);
 		}
 
 		ImGui::EndTable();
@@ -3295,6 +3415,75 @@ bool AnimatorEditorTab::ValidateSetting()
 	}
 
 	return ret;
+}
+
+void AnimatorEditorTab::Export()
+{
+	if (m_isExporting)
+	{
+		return;
+	}
+
+	if (!ValidateSetting())
+	{
+		return;
+	}
+
+	m_isExporting = true;
+
+	BuildGraph();
+}
+
+void AnimatorEditorTab::ExportImpl()
+{
+	// export resource
+	{
+		auto script = m_object->GetComponent<Script>();
+		if (script)
+			m_object->RemoveComponent(script);
+
+		Serializer serializer;
+		serializer.SetRootUUID(m_object->GetUUID());
+		serializer.Serialize(m_object);
+		serializer.WriteToFile(m_exportResourcePath + m_exportInputName + ".json");
+
+		if (script)
+			m_object->AddComponent(script);
+	}
+	
+	// export cpp
+	{
+		String cpp = R"xxx(#pragma once
+
+struct )xxx";
+
+		cpp = cpp + m_exportInputName;
+		cpp = cpp + "\n{\n";
+
+		String animationIdStr = "";
+		for (size_t i = 0; i < m_animationsEditingState.size(); i++)
+		{
+			auto& state = m_animationsEditingState[i];
+			animationIdStr = animationIdStr + String::Format("\tconstexpr static ID {} = {};\n", state.name, i);
+		}
+
+		cpp = cpp + String::Format(R"(
+struct AnimationID
+{
+
+{}
+};
+)", animationIdStr);
+
+		for (auto& node : m_nodes)
+		{
+			cpp = cpp + node->GetCppClassSource() + "\n";
+		}
+
+		cpp = cpp + "};\n";
+
+		FileUtils::WriteFile((m_exportCppPath + m_exportInputName + ".h").c_str(), cpp.c_str(), cpp.length());
+	}
 }
 
 void AnimatorEditorTab::InitializeSerializableList()
