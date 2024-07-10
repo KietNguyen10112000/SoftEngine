@@ -67,7 +67,7 @@ void TPPCameraScript::OnUpdate(float dt)
 		m_testBody->AddForceAtLocalPos({ 0,0,-10000 }, { 2.5f,0,0 });
 	}
 
-	if (Input()->IsKeyUp('V'))
+	if (m_camera && m_fppCamScript && Input()->IsKeyUp('V'))
 	{
 		std::cout << "1 pressed\n";
 		m_camera->SetTPPEnabled(!m_camera->IsTPPEnabled());
@@ -79,7 +79,7 @@ void TPPCameraScript::OnUpdate(float dt)
 		}
 	}
 
-	if (!m_camera->IsTPPEnabled())
+	if (m_camera && !m_camera->IsTPPEnabled())
 	{
 		return;
 	}

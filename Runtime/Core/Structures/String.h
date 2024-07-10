@@ -255,6 +255,27 @@ public:
 		return ret;
 	};
 
+	inline String& operator+=(const String& r)
+	{
+		auto& ret = *this;
+		ret = ret + r;
+		return ret;
+	};
+
+	inline String& operator+=(const char_type* r)
+	{
+		auto& ret = *this;
+		ret = ret + r;
+		return ret;
+	};
+
+	inline String& operator+=(const char_type& r)
+	{
+		auto& ret = *this;
+		ret = ret + &r;
+		return ret;
+	};
+
 	// fast compare
 	inline bool operator>(const String& r) const
 	{

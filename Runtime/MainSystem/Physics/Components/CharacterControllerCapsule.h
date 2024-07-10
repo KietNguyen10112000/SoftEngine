@@ -23,8 +23,13 @@ public:
 
 	SharedPtr<PhysicsShape> m_shape;
 
+	CharacterControllerCapsuleDesc m_desc;
+
 	inline CharacterControllerCapsule() {};
-	CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc);
+	CharacterControllerCapsule(const CharacterControllerCapsuleDesc& desc);
+
+private:
+	void InitializeCCT(Scene* scene);
 
 protected:
 	virtual void OnDrawDebug() override;

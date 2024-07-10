@@ -126,6 +126,108 @@ inline void from_json(const json& ret, Transform& transform)
 	transform.Position() = ret["position"];
 }
 
+inline void to_json(json& ret, const Line& line)
+{
+	ret["point"]		= line.m_point;
+	ret["direction"]	= line.m_direction;
+}
+
+inline void from_json(const json& ret, Line& line)
+{
+	line.m_point		= ret["point"];
+	line.m_direction	= ret["direction"];
+}
+
+inline void to_json(json& ret, const Plane& plane)
+{
+	ret["a"] = plane.a;
+	ret["b"] = plane.b;
+	ret["c"] = plane.c;
+	ret["d"] = plane.d;
+}
+
+inline void from_json(const json& ret, Plane& plane)
+{
+	plane.a = ret["a"];
+	plane.b = ret["b"];
+	plane.c = ret["c"];
+	plane.d = ret["d"];
+}
+
+inline void to_json(json& ret, const Sphere& sphere)
+{
+	ret["center"] = sphere.m_center;
+	ret["radius"] = sphere.m_radius;
+}
+
+inline void from_json(const json& ret, Sphere& sphere)
+{
+	sphere.m_center = ret["center"];
+	sphere.m_radius = ret["radius"];
+}
+
+inline void to_json(json& ret, const Box& box)
+{
+	ret["position"] = box.m_position;
+	ret["d1"]		= box.m_d1;
+	ret["d2"]		= box.m_d2;
+	ret["d3"]		= box.m_d3;
+}
+
+inline void from_json(const json& ret, Box& box)
+{
+	box.m_position	= ret["position"];
+	box.m_d1		= ret["d1"];
+	box.m_d2		= ret["d2"];
+	box.m_d3		= ret["d3"];
+}
+
+inline void to_json(json& ret, const AABox& aaBox)
+{
+	ret["center"]			= aaBox.m_center;
+	ret["halfDimensions"]	= aaBox.m_halfDimensions;
+}
+
+inline void from_json(const json& ret, AABox& aaBox)
+{
+	aaBox.m_center			= ret["center"];
+	aaBox.m_halfDimensions	= ret["halfDimensions"];
+}
+
+inline void to_json(json& ret, const Capsule& capsule)
+{
+	ret["center"]	= capsule.m_center;
+	ret["height"]	= capsule.m_height;
+	ret["up"]		= capsule.m_up;
+}
+
+inline void from_json(const json& ret, Capsule& capsule)
+{
+	capsule.m_center	= ret["center"];
+	capsule.m_height	= ret["height"];
+	capsule.m_up		= ret["up"];
+}
+
+inline void to_json(json& ret, const Frustum& frustum)
+{
+	ret["p0"] = frustum.m_planes[0];
+	ret["p1"] = frustum.m_planes[1];
+	ret["p2"] = frustum.m_planes[2];
+	ret["p3"] = frustum.m_planes[3];
+	ret["p4"] = frustum.m_planes[4];
+	ret["p5"] = frustum.m_planes[5];
+}
+
+inline void from_json(const json& ret, Frustum& frustum)
+{
+	frustum.m_planes[0] = ret["p0"];
+	frustum.m_planes[1] = ret["p1"];
+	frustum.m_planes[2] = ret["p2"];
+	frustum.m_planes[3] = ret["p3"];
+	frustum.m_planes[4] = ret["p4"];
+	frustum.m_planes[5] = ret["p5"];
+}
+
 //}
 
 }

@@ -9,6 +9,7 @@
 #include "../FILTER_DATA.h"
 
 #include "../Shapes/PhysicsShapeCapsule.h"
+#include "../Materials/PhysicsMaterial.h"
 
 #include "Scene/GameObject.h"
 
@@ -18,8 +19,15 @@ NAMESPACE_BEGIN
 
 extern void* g_defaultPxControllerHitCallbackPtr;
 
-CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const CharacterControllerCapsuleDesc& desc)
+CharacterControllerCapsule::CharacterControllerCapsule(const CharacterControllerCapsuleDesc& desc)
 {
+	m_desc = desc;
+}
+
+void CharacterControllerCapsule::InitializeCCT(Scene* scene)
+{
+	auto& desc = m_desc;
+
 	PxCapsuleControllerDesc pxDesc = {};
 	pxDesc.height = desc.capsule.m_height;
 	pxDesc.radius = desc.capsule.m_radius;
@@ -38,7 +46,7 @@ CharacterControllerCapsule::CharacterControllerCapsule(Scene* scene, const Chara
 	PxShape* shape = nullptr;
 	pxActor->getShapes(&shape, 1);
 
-	m_shape = PhysicsShapeCapsule::MakeDummy(shape, desc.capsule.m_height, desc.capsule.m_radius, desc.material, true);
+	m_shape = PhysicsShapeCapsule::MakeDummy(shape, desc.capsule.m_height, desc.capsule.m_radius, desc.material);
 
 	if (shape)
 	{
@@ -102,10 +110,16 @@ void CharacterControllerCapsule::OnDrawDebug()
 
 void CharacterControllerCapsule::OnComponentAdded()
 {
+	InitializeCCT(GetGameObject()->GetScene());
 }
 
 void CharacterControllerCapsule::OnComponentRemoved()
 {
+	assert(m_pxCharacterController != nullptr);
+
+	m_shape = nullptr;
+	m_pxCharacterController->release();
+	m_pxCharacterController = nullptr;
 }
 
 AABox CharacterControllerCapsule::GetGlobalAABB()
@@ -127,10 +141,17 @@ void CharacterControllerCapsule::DeserializeFromBinary(Serializer* serializer, c
 
 void CharacterControllerCapsule::SerializeToJson(Serializer* serializer, json& j) const
 {
+	json jDesc;
+	jDesc["Capsule"] = m_desc.capsule; 
+	jDesc["Material"] = serializer->Serialize(m_desc.material);
+	j["Desc"] = jDesc;
 }
 
 void CharacterControllerCapsule::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	auto& jDesc = j["Desc"];
+	m_desc.capsule = jDesc["Capsule"];
+	serializer->Deserialize(jDesc["Material"], m_desc.material);
 }
 
 Handle<ClassMetadata> CharacterControllerCapsule::GetMetadata(size_t sign)

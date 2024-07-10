@@ -5,6 +5,7 @@
 #include "PxPhysicsAPI.h"
 
 #include "PhysX/PhysX.h"
+#include "PhysX/Utils.h"
 
 #include "MainSystem/MainSystemTaskPacking.h"
 
@@ -202,10 +203,39 @@ void RigidBodyDynamic::DeserializeFromBinary(Serializer* serializer, const ByteS
 
 void RigidBodyDynamic::SerializeToJson(Serializer* serializer, json& j) const
 {
+	RigidBody::SerializeToJson(serializer, j);
+
+	auto body = m_pxActor->is<PxRigidDynamic>();
+	j["LinearVelocity"]				= PhysXUtils::ToVec3(body->getLinearVelocity());
+	j["AngularVelocity"]			= PhysXUtils::ToVec3(body->getAngularVelocity());
+	j["MassSpaceInertiaTensor"]		= PhysXUtils::ToVec3(body->getMassSpaceInertiaTensor());
+	j["Mass"]						= body->getMass();
+	//j["ContactReportThreshold"]		= body->getContactReportThreshold();
+	//j["ContactSlopCoefficient"]		= body->getContactSlopCoefficient();
+	//j["DominanceGroup"]				= body->getDominanceGroup();
+	//j["LinearDamping"]				= body->getLinearDamping();
 }
 
 void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	RigidBody::DeserializeFromJson(serializer, j);
+
+	auto physics = PhysX::Get()->GetPxPhysics();
+	auto body = physics->createRigidDynamic(PxTransform(PxIdentity));
+	m_pxActor = body;
+	m_pxActor->userData = this;
+
+	for (auto& shape : m_shapes)
+	{
+		body->attachShape(*shape->m_pxShape);
+	}
+
+	{
+		body->setLinearVelocity(PhysXUtils::ToPxVec3(j["LinearVelocity"]));
+		body->setAngularVelocity(PhysXUtils::ToPxVec3(j["AngularVelocity"]));
+		body->setMassSpaceInertiaTensor(PhysXUtils::ToPxVec3(j["MassSpaceInertiaTensor"]));
+		body->setMass(j["Mass"]);
+	}
 }
 
 Handle<ClassMetadata> RigidBodyDynamic::GetMetadata(size_t sign)

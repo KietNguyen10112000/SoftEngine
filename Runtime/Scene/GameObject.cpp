@@ -80,6 +80,11 @@ void GameObject::RemoveFromParent()
 
 void GameObject::RecalculateTransform(const Mat4& parentTransform)
 {
+	if (m_transformConstraint == TRANSFORM_CONSTRAINT::FREE)
+	{
+		return;
+	}
+
 	if (m_transformConstraint == TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL)
 	{
 		m_globalTransform = m_localTransform.ToTransformMatrix() * parentTransform;
@@ -171,7 +176,7 @@ void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_
 	RecalculateTransform(m_parent ? m_parent->m_globalTransform : Mat4::Identity());
 }
 
-void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID)
+void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE transformConstraint)
 {
 	if (transform == m_globalTransform)
 	{
@@ -184,14 +189,17 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID)
 
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 
-	m_lock.lock();
-	for (auto& c : m_children)
+	if (transformConstraint != TRANSFORM_CONSTRAINT::FREE)
 	{
-		c->RecalculateTransform(m_globalTransform);
+		m_lock.lock();
+		for (auto& c : m_children)
+		{
+			c->RecalculateTransform(m_globalTransform);
+		}
+		m_lock.unlock();
 	}
-	m_lock.unlock();
 
-	m_transformConstraint = TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL;
+	m_transformConstraint = transformConstraint;
 }
 
 void GameObject::ForceRefreshTransform(ID SRC_COMPONENT_ID, bool recursive)

@@ -44,7 +44,7 @@ void Initialize(Runtime* runtime)
 				EditorContext::s_instance = editorContext;
 				EditorContext::s_instance->m_runTimeId = editorContextId;
 
-				{
+				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<AnimatorEditorTabFactory>();
 
 					factory->m_modelPath = "Editor/AnimatorEditor/Test.json";
@@ -52,7 +52,7 @@ void Initialize(Runtime* runtime)
 					EditorContext::s_instance->RunTab(tab);
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
-				}
+				}*/
 			}
 
 			ID editorContextId = EditorContext::s_instance->m_runTimeId;

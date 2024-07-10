@@ -51,4 +51,39 @@ void PhysicsMaterial::SetRestitution(float restitution)
 	m_pxMaterial->setRestitution(restitution);
 }
 
+void PhysicsMaterial::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void PhysicsMaterial::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void PhysicsMaterial::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void PhysicsMaterial::SerializeToJson(Serializer* serializer, json& j) const
+{
+	j["StaticFriction"] = m_pxMaterial->getStaticFriction();
+	j["DynamicFriction"] = m_pxMaterial->getDynamicFriction();
+	j["Restitution"] = m_pxMaterial->getRestitution();
+}
+
+void PhysicsMaterial::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	assert(m_pxMaterial == nullptr);
+
+	new (this) PhysicsMaterial(j["StaticFriction"], j["DynamicFriction"], j["Restitution"]);
+}
+
+Handle<ClassMetadata> PhysicsMaterial::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void PhysicsMaterial::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
+}
+
 NAMESPACE_END

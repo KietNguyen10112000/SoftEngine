@@ -248,6 +248,11 @@ class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
 
 		pairFlags = (PxPairFlags)myPairFlags;
 
+		if (PxFilterObjectIsKinematic(attributes0) && PxFilterObjectIsKinematic(attributes1)) 
+		{ 
+			pairFlags &= ~PxPairFlag::eSOLVE_CONTACT; 
+		}
+
 		return PxFilterFlag::eDEFAULT;
 	}
 	void pairLost(PxU64 pairID, PxFilterObjectAttributes attributes0, PxFilterData filterData0, PxFilterObjectAttributes attributes1, PxFilterData filterData1, bool objectRemoved) override

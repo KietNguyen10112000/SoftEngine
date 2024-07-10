@@ -63,10 +63,24 @@ void RigidBodyStatic::DeserializeFromBinary(Serializer* serializer, const ByteSt
 
 void RigidBodyStatic::SerializeToJson(Serializer* serializer, json& j) const
 {
+	RigidBody::SerializeToJson(serializer, j);
 }
 
 void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	assert(m_pxActor == nullptr);
+
+	RigidBody::DeserializeFromJson(serializer, j);
+
+	auto physics = PhysX::Get()->GetPxPhysics();
+	auto body = physics->createRigidStatic(PxTransform(PxIdentity));
+	m_pxActor = body;
+	m_pxActor->userData = this;
+
+	for (auto& shape : m_shapes)
+	{
+		body->attachShape(*shape->m_pxShape);
+	}
 }
 
 Handle<ClassMetadata> RigidBodyStatic::GetMetadata(size_t sign)

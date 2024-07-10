@@ -147,6 +147,39 @@ void RigidBody::OnDrawDebug()
 	}
 }
 
+void RigidBody::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void RigidBody::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void RigidBody::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void RigidBody::SerializeToJson(Serializer* serializer, json& j) const
+{
+	auto arr = json::array();
+	for (auto& shape : m_shapes)
+	{
+		arr.push_back(serializer->Serialize(shape));
+	}
+	j["Shapes"] = arr;
+}
+
+void RigidBody::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	auto& arr = j["Shapes"];
+	for (size_t i = 0; i < arr.size(); i++)
+	{
+		SharedPtr<PhysicsShape> shape;
+		serializer->Deserialize(arr[i], shape);
+		m_shapes.push_back(shape);
+	}
+}
+
 void RigidBody::SetContactFilterCallback(ContactReportFilterCallback callback)
 {
 	m_contactFilterCallback = callback;
