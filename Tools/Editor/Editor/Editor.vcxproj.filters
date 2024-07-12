@@ -103,6 +103,9 @@
     <ClCompile Include="EditorFont.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SceneEditorTabFactory.cpp">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -176,6 +179,9 @@
     </ClInclude>
     <ClInclude Include="EditorFont.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneEditorTabFactory.h">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

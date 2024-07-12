@@ -555,7 +555,7 @@ void Runtime::Setup()
 			CharacterControllerCapsuleDesc desc = {};
 			desc.capsule = Capsule(Vec3::ZERO + Vec3::UP, 1.0f, 0.5f);
 			desc.material = material;
-			auto cct = obj->NewComponent<CharacterControllerCapsule>(scene, desc);
+			auto cct = obj->NewComponent<CharacterControllerCapsule>(desc);
 			cct->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
 
 			auto script = obj->NewComponent<TPPCameraScript>();

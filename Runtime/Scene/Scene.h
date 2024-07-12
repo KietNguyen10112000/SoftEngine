@@ -179,6 +179,9 @@ private:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
+	void ResolveDependencies(GameObject* obj, GameObjectDependenciesRecorder* output);
+	void AddObjectImpl(GameObject* obj, bool indexedName = false);
+	void RemoveObjectImpl(GameObject* obj);
 public:
 	// defer implementation, multithreaded
 	void AddObject(const Handle<GameObject>& obj, bool indexedName = false);

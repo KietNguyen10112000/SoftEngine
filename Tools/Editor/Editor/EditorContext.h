@@ -48,6 +48,37 @@ public:
 		COUNT
 	};
 
+	enum DIALOG_RESULT
+	{
+		OK,
+		CANCEL,
+		CLOSE_TOP_CALL
+	};
+
+	struct DialogDesc
+	{
+		String title = "";
+		Vec2 size = { 0.5f,0.5f };
+	};
+
+	using DialogBodyCallback = void (*)(void*);
+
+	// return true to close dialog
+	using DialogResultCallback = bool (*)(DIALOG_RESULT, void*);
+
+	struct DialogData
+	{
+		DialogBodyCallback bodyCallback = nullptr;
+		void* bodyUserPtr = nullptr;
+		DialogResultCallback resultCallback = nullptr;
+		void* resultUserPtr = nullptr;
+
+		DialogDesc desc;
+
+		DialogData(DialogBodyCallback a1, void* a2, DialogResultCallback a3, void* a4, const DialogDesc& a5)
+			: bodyCallback(a1), bodyUserPtr(a2), resultCallback(a3), resultUserPtr(a4), desc(a5) {};
+	};
+
 	Array<Handle<EditorTab>> m_tabs;
 
 	ID m_currentTabId = INVALID_ID;
@@ -56,14 +87,18 @@ public:
 	std::vector<SerializableDB::SerializableRecord*> m_components[MainSystemInfo::COUNT];
 
 	ReentrantLock m_lock;
-	bool m_padd[3];
+	bool m_padd[2];
 
+	bool m_needCloseTabCreationPopUp = false;
 	EditorTabFactory* m_tabFactory = nullptr;
 
 	String m_savePath = "./Editor/";
 
 	EventDispatcher<EditorContext, EVENT::COUNT, EVENT, ID> m_eventDispatcher = { this };
 	GenericStorage m_genericStorage;
+
+	std::vector<DialogData*> m_closeDialogs;
+	std::vector<UniquePtr<DialogData>> m_dialogs;
 
 private:
 	TRACEABLE_FRIEND();
@@ -83,6 +118,10 @@ private:
 	void RenderTabBar();
 	void RenderTabCreationPopUp();
 
+	void RenderDialogs();
+
+	void CloseDialogImpl(DialogData* dialog);
+
 public:
 	void OnObjectsAdded(std::vector<GameObject*>& objects, Scene* scene);
 	void OnObjectsRemoved(std::vector<GameObject*>& objects, Scene* scene);
@@ -98,6 +137,11 @@ public:
 	void CloseTab(const Handle<EditorTab>& tab);
 
 	bool IsVariableNameValid(const String& name);
+
+	DialogData* OpenOkCancelDialog(const DialogDesc& desc, DialogBodyCallback bodyCallback, void* bodyUserPtr, DialogResultCallback resultCallback, void* resultUserPtr);
+	void CloseDialog(DialogData* dialog);
+
+	void CloseTabCreationPopUp();
 
 public:
 	inline auto& Lock()

@@ -28,6 +28,8 @@ EditorContext* EditorContext::s_instance = nullptr;
 
 EditorContext::EditorContext(Scene* initScene)
 {
+	EditorContext::s_instance = this;
+
 	ReloadSerializableList();
 
 	if (initScene)
@@ -291,6 +293,28 @@ void EditorContext::RenderTabCreationPopUp()
 		return;
 	}
 
+	if (m_needCloseTabCreationPopUp)
+	{
+		m_needCloseTabCreationPopUp = false;
+
+		auto tab = m_tabFactory->CreateInstance();
+
+		if (!tab)
+		{
+			std::cerr << "TabCreation ERROR. \n";
+		}
+		else
+		{
+			RunTab(tab);
+			m_tabFactory = nullptr;
+			ImGui::CloseCurrentPopup();
+		}
+
+		//ImGui::CloseCurrentPopup();
+		ImGui::EndPopup();
+		return;
+	}
+
 	auto tabFactory = m_tabFactory;
 
 	ImGui::Text(tabFactory->m_tabKindName.c_str(), "");
@@ -332,10 +356,10 @@ void EditorContext::RenderTabCreationPopUp()
 			Runtime::Get()->SetRunningScene(scene);*/
 
 			RunTab(tab);
-		}
 
-		m_tabFactory = nullptr;
-		ImGui::CloseCurrentPopup();
+			m_tabFactory = nullptr;
+			ImGui::CloseCurrentPopup();
+		}
 	}
 
 	ImGui::SameLine(0, 20);
@@ -351,6 +375,90 @@ void EditorContext::RenderTabCreationPopUp()
 	}
 
 	ImGui::EndPopup();
+}
+
+void EditorContext::RenderDialogs()
+{
+	if (!m_closeDialogs.empty())
+	{
+		for (auto& d : m_closeDialogs)
+		{
+			CloseDialogImpl(d);
+		}
+		m_closeDialogs.clear();
+	}
+
+	bool close = false;
+	for (auto& pdialog : m_dialogs)
+	{
+		auto& dialog = *pdialog;
+		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		if (dialog.desc.size.x <= 1.0f && dialog.desc.size.y <= 1.0f)
+		{
+			auto viewPortSize = ImGui::GetMainViewport()->Size;
+			ImGui::SetNextWindowSize(ImVec2(viewPortSize.x * dialog.desc.size.x, viewPortSize.y * dialog.desc.size.y));
+		}
+		else
+		{
+			ImGui::SetNextWindowSize(ImVec2(dialog.desc.size.x, dialog.desc.size.y));
+		}
+
+		if (!ImGui::BeginPopupModal(dialog.desc.title.c_str(), 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+		{
+			continue;
+		}
+
+		dialog.bodyCallback(dialog.bodyUserPtr);
+
+		ImGui::Separator();
+
+		ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() / 2 - 100, ImGui::GetWindowHeight() - 40));
+
+		if (ImGui::Button("OK", ImVec2(100, 0)))
+		{
+			if (dialog.resultCallback(DIALOG_RESULT::OK, dialog.resultUserPtr))
+			{
+				close = true;
+				assert(&pdialog - m_dialogs.data() == m_dialogs.size() - 1);
+				ImGui::CloseCurrentPopup();
+			}
+		}
+
+		ImGui::SameLine(0, 20);
+		if (ImGui::Button("Cancel", ImVec2(100, 0)))
+		{
+			if (dialog.resultCallback(DIALOG_RESULT::CANCEL, dialog.resultUserPtr))
+			{
+				close = true;
+				assert(&pdialog - m_dialogs.data() == m_dialogs.size() - 1);
+				ImGui::CloseCurrentPopup();
+			}
+		}
+	}
+
+	if (close)
+	{
+		m_dialogs.pop_back();
+	}
+}
+
+void EditorContext::CloseDialogImpl(DialogData* dialog)
+{
+	ID idx = INVALID_ID;
+	for (auto& d : m_dialogs)
+	{
+		if (d.get() == dialog)
+		{
+			idx = &d - m_dialogs.data();
+			break;
+		}
+	}
+
+	if (idx != INVALID_ID)
+	{
+		m_dialogs.erase(m_dialogs.begin() + idx);
+	}
 }
 
 void EditorContext::RenderOxyz(OxyzRenderConfig& config)
@@ -434,6 +542,8 @@ void EditorContext::OnRenderGUI()
 
 	RenderTabCreationPopUp();
 
+	RenderDialogs();
+
 	/*ImGui::Begin("Debug");
 	if (ImGui::Button("Run GC"))
 	{
@@ -473,7 +583,7 @@ void EditorContext::RunTab(const Handle<EditorTab>& tab)
 		scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
 			[](Scene* scene, int argc, void** argv, ID id)
 			{
-				auto tab = scene->GenericStorage()->Get<AnimatorEditorTab>(id);
+				auto tab = scene->GenericStorage()->Get<EditorTab>(id);
 
 				if (EditorContext::GetInstance()->m_currentTabId != tab->m_id)
 				{
@@ -553,4 +663,27 @@ bool EditorContext::IsVariableNameValid(const String& name)
 	);
 
 	return ret;
+}
+
+EditorContext::DialogData* EditorContext::OpenOkCancelDialog(const DialogDesc& desc, DialogBodyCallback bodyCallback, void* bodyUserPtr, DialogResultCallback resultCallback, void* resultUserPtr)
+{
+	auto ptr = std::make_unique<DialogData>(
+		bodyCallback, bodyUserPtr,
+		resultCallback, resultUserPtr,
+		desc
+	);
+	auto ret = ptr.get();
+	m_dialogs.push_back(std::move(ptr));
+
+	return ret;
+}
+
+void EditorContext::CloseDialog(DialogData* dialog)
+{
+	m_closeDialogs.push_back(dialog);
+}
+
+void EditorContext::CloseTabCreationPopUp()
+{
+	m_needCloseTabCreationPopUp = true;
 }

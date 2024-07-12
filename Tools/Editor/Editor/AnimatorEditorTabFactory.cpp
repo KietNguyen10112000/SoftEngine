@@ -20,6 +20,7 @@ void AnimatorEditorTabFactory::Begin()
 {
 	m_nameBuf[0] = 0;
 	m_modelPath = "";
+	m_overwriteExist = false;
 }
 
 void AnimatorEditorTabFactory::End()
@@ -42,6 +43,8 @@ Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 {
 	auto ifdx = m_modelPath.FindLastOf(".");
 	auto ext = FileUtils::GetExtension(m_modelPath);
+	String tabName = m_nameBuf;
+
 	if (ext == "json")
 	{
 		goto LoadJson;
@@ -55,6 +58,35 @@ Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 	if (m_nameBuf[0] == 0)
 	{
 		goto Failed;
+	}
+
+	if (tabName.empty() || (FileSystem::Get()->IsFileExist(AnimatorEditorTab::GetSavePath(tabName).c_str()) && !m_overwriteExist))
+	{
+		goto Failed;
+	}
+	else
+	{
+		// should I overwrite to the existed file
+		EditorContext::Get()->OpenOkCancelDialog({},
+			[](void* p) 
+			{
+				auto self = (AnimatorEditorTabFactory*)p;
+				String tabName = self->m_nameBuf;
+				ImGui::TextUnformatted(String::Format("File \"{}\" existed!", AnimatorEditorTab::GetSavePath(tabName)).c_str());
+			}, this,
+			[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+			{
+				auto self = (AnimatorEditorTabFactory*)p;
+
+				if (result == EditorContext::DIALOG_RESULT::OK)
+				{
+					self->m_overwriteExist = true;
+					EditorContext::Get()->CloseTabCreationPopUp();
+				}
+
+				return true;
+			}, this
+		);
 	}
 
 	goto Succeed;

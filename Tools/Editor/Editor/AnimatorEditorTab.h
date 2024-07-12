@@ -340,6 +340,7 @@ private:
 
 public:
 	static void InitializeSerializableList();
+	static String GetSavePath(const String& name);
 
 };
 

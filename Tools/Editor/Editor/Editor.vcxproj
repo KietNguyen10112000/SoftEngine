@@ -161,6 +161,7 @@
     <ClCompile Include="NodeEditorUtils\widgets.cpp" />
     <ClCompile Include="RotateScript.cpp" />
     <ClCompile Include="SceneEditorTab.cpp" />
+    <ClCompile Include="SceneEditorTabFactory.cpp" />
     <ClCompile Include="TestScript.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -186,6 +187,7 @@
     <ClInclude Include="NodeEditorUtils\widgets.h" />
     <ClInclude Include="RotateScript.h" />
     <ClInclude Include="SceneEditorTab.h" />
+    <ClInclude Include="SceneEditorTabFactory.h" />
     <ClInclude Include="ScriptList.h" />
     <ClInclude Include="TestScript.h" />
   </ItemGroup>

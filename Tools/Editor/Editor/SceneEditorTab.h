@@ -55,6 +55,8 @@ public:
 	ID m_scriptsHotReloadListenerIdBegin = INVALID_ID;
 	ID m_scriptsHotReloadListenerIdEnd = INVALID_ID;
 
+	ID m_onSaveListenerId = INVALID_ID;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)

@@ -24,6 +24,11 @@ CharacterControllerCapsule::CharacterControllerCapsule(const CharacterController
 	m_desc = desc;
 }
 
+CharacterControllerCapsule::~CharacterControllerCapsule()
+{
+	m_pxActor = nullptr;
+}
+
 void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 {
 	auto& desc = m_desc;
@@ -45,10 +50,12 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 
 	PxShape* shape = nullptr;
 	pxActor->getShapes(&shape, 1);
+	assert(shape != nullptr);
 
 	m_shape = PhysicsShapeCapsule::MakeDummy(shape, desc.capsule.m_height, desc.capsule.m_radius, desc.material);
+	m_shapes.push_back(m_shape);
 
-	if (shape)
+	//if (shape)
 	{
 		PxFilterData data;
 		data.word0 = PHYSICS_FILTER_DATA_CCT;
@@ -60,6 +67,8 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 	auto mass = m_pxCharacterController->getActor()->getMass();
 	mass = mass <= 0 ? 1 : mass;
 	m_mass = mass;
+
+	m_pxActor = pxActor;
 }
 
 void CharacterControllerCapsule::OnDrawDebug()

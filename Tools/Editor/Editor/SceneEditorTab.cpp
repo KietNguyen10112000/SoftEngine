@@ -736,10 +736,25 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 
 void SceneEditorTab::OnShow()
 {
+	m_onSaveListenerId = EditorContext::Get()->EventDispatcher()->AddListener(EditorContext::EVENT::MENU_ON_SAVE,
+		[](EditorContext* ctx, int argc, void** argv, ID id)
+		{
+			auto& path = *(String*)argv[0];
+			auto tab = (SceneEditorTab*)id;
+
+		},
+		ID(this)
+	);
 }
 
 void SceneEditorTab::OnHide()
 {
+	if (m_onSaveListenerId != INVALID_ID)
+	{
+		//auto d = EditorContext::Get()->EventDispatcher();
+		EditorContext::Get()->EventDispatcher()->RemoveListener(m_onSaveListenerId);
+		m_onSaveListenerId = INVALID_ID;
+	}
 }
 
 void SceneEditorTab::OnOpen()

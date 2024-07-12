@@ -10,6 +10,8 @@ public:
 	String m_name;
 	String m_modelPath;
 
+	bool m_overwriteExist = false;
+
 	AnimatorEditorTabFactory();
 
 	// Inherited via EditorTabFactory

@@ -11,25 +11,38 @@ NAMESPACE_BEGIN
 
 RevoluteJoint::RevoluteJoint(const Handle<RigidBody>& body0, const Transform& localFrame0, const Handle<RigidBody>& body1, const Transform& localFrame1)
 {
-	auto px = PhysX::Get()->GetPxPhysics();
+	InitJoint(PxRevoluteJointCreate, body0, localFrame0, body1, localFrame1);
+}
 
-	auto a0 = body0->m_pxActor;
-	auto a1 = body1->m_pxActor;
+void RevoluteJoint::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
 
-	auto joint = PxRevoluteJointCreate(*px,
-		a0->is<PxRigidActor>(),
-		PhysXUtils::ToPxTransform(localFrame0),
-		a1->is<PxRigidActor>(),
-		PhysXUtils::ToPxTransform(localFrame1)
-	);
+void RevoluteJoint::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
 
-	/*joint->setLimit(PxJointAngularLimitPair(-PxPi / 4, PxPi / 4));
-	joint->setRevoluteJointFlag(PxRevoluteJointFlag::eLIMIT_ENABLED, true);
+void RevoluteJoint::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
 
-	joint->setDriveVelocity(10.0f);
-	joint->setRevoluteJointFlag(PxRevoluteJointFlag::eDRIVE_ENABLED, true);*/
+void RevoluteJoint::SerializeToJson(Serializer* serializer, json& j) const
+{
+	Joint::SerializeToJson(serializer, j);
+}
 
-	InitJoint(joint, body0, body1);
+void RevoluteJoint::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	InitJoint(PxRevoluteJointCreate, serializer, j);
+}
+
+Handle<ClassMetadata> RevoluteJoint::GetMetadata(size_t sign)
+{
+	return Handle<ClassMetadata>();
+}
+
+void RevoluteJoint::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
+{
 }
 
 NAMESPACE_END

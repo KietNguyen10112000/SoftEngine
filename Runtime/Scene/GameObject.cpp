@@ -57,12 +57,15 @@ void GameObject::RemoveFromParent()
 
 	RecalculateTransform(Mat4::Identity());
 	
+	auto root = this;
+	m_root = root;
 	{
 		auto scene = m_scene;
 		auto& recorder = Runtime::Get()->GetModifiedRecorder();
 		PreTraversal1([&](GameObject* o)
 			{
 				o->m_scene = nullptr;
+				o->m_root = root;
 				for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 				{
 					auto& comp = o->m_mainComponents[i];
@@ -145,6 +148,7 @@ void GameObject::AddChild(const Handle<GameObject>& obj)
 		obj->PreTraversal1([&](GameObject* o)
 			{
 				o->m_scene = scene;
+				o->m_root = this->m_root;
 				for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 				{
 					auto& comp = o->m_mainComponents[i];

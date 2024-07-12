@@ -6,6 +6,8 @@
 #include "Components/RigidBodyDynamic.h"
 #include "Components/CharacterController.h"
 
+#include "Joints/Joint.h"
+
 #include "Shapes/PhysicsShape.h"
 
 #include "Scene/GameObject.h"
@@ -263,6 +265,35 @@ class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
 		return false;
 	}
 };
+
+void PhysicsSystem::PhysicsSystemDependenciesResolver::Resolve(GameObjectDependenciesRecorder* recorder, GameObject* input)
+{
+	/*if (!input->HasComponent(PhysicsComponent::COMPONENT_ID))
+	{
+		return;
+	}*/
+
+	auto comp = input->GetComponentRaw<PhysicsComponent>();
+	
+	auto type = comp->GetPhysicsType();
+	switch (type)
+	{
+	case soft::PHYSICS_TYPE_RIGID_BODY_STATIC:
+	case soft::PHYSICS_TYPE_RIGID_BODY_DYNAMIC:
+	case soft::PHYSICS_TYPE_CHARACTER_CONTROLLER:
+	{
+		auto rigidBody = (RigidBody*)comp;
+		for (auto& joint : rigidBody->m_joints)
+		{
+			auto another = joint->m_body0.Get() == rigidBody ? joint->m_body1.Get() : joint->m_body0.Get();
+			recorder->Record(another->GetGameObject());
+		}
+		break;
+	}
+	default:
+		break;
+	}
+}
 
 PhysicsSystem::PhysicsSystem(Scene* scene) : MainSystem(scene)
 {

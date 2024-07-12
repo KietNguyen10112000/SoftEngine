@@ -28,6 +28,8 @@ public:
 	inline CharacterControllerCapsule() {};
 	CharacterControllerCapsule(const CharacterControllerCapsuleDesc& desc);
 
+	~CharacterControllerCapsule();
+
 private:
 	void InitializeCCT(Scene* scene);
 

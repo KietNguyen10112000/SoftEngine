@@ -40,7 +40,8 @@ friend class ScriptScheduler;			\
 friend class GameObject;				\
 friend class ScriptMeta;				\
 friend class RigidBodyDynamic;			\
-friend class CharacterController;
+friend class CharacterController;		\
+friend class GameObjectDependenciesRecorder;
 
 
 NAMESPACE_END

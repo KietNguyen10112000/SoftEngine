@@ -25,7 +25,7 @@
 }
 
 #define MAIN_SYSTEM_TASK_EXT_BASE(mainComponent, MainSystemClassName, RunnerName, VTypes, ParamVTypesDecl, VTypesAssignment,TASK_SYSTEM_UNPACK_PARAM_REF_NUM, funcBody)	\
-MAIN_SYSTEM_TASK_EXT_BASE_0(GetCommittedObject()->GetCommittedScene()->Get##MainSystemClassName(),										\
+MAIN_SYSTEM_TASK_EXT_BASE_0(mainComponent->GetCommittedObject()->GetCommittedScene()->Get##MainSystemClassName(),										\
 mainComponent, MainSystemClassName, RunnerName, VTypes, ParamVTypesDecl, VTypesAssignment,TASK_SYSTEM_UNPACK_PARAM_REF_NUM, funcBody)
 
 #define MAIN_SYSTEM_TASK_IMPL_0(mainComponent, MainSystemClassName, RunnerName, funcBody)				\
@@ -121,9 +121,9 @@ funcBody																			\
 )
 
 
-#define _MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																	\
+#define _MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)														\
 auto self = this;																									\
-if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())													\
+if (!mainComponent->GetCommittedObject() || !mainComponent->GetCommittedObject()->IsInAnyScene())					\
 {																													\
 	funcBody;																										\
 	return;																											\
@@ -131,43 +131,43 @@ if (!GetCommittedObject() || !GetCommittedObject()->IsInAnyScene())													
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_0(mainComponent, MainSystemClassName, RunnerName, funcBody)							\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_0(mainComponent, MainSystemClassName, RunnerName, funcBody)											\
 }
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_1(mainComponent, MainSystemClassName, RunnerName, v0, funcBody)						\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_1(mainComponent, MainSystemClassName, RunnerName, v0, funcBody)										\
 }
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_2(mainComponent, MainSystemClassName, RunnerName, v0, v1, funcBody)					\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_2(mainComponent, MainSystemClassName, RunnerName, v0, v1, funcBody)									\
 }
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_3(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)				\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_3(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, funcBody)								\
 }
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_4(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)			\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_4(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, funcBody)							\
 }
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_5(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)		\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_5(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, funcBody)						\
 }
 
 #define MAIN_SYSTEM_TASK_IMPL_COMMON_6(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)	\
 {																															\
-_MAIN_SYSTEM_TASK_DIRECT_IMPL_(funcBody)																					\
+_MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)																		\
 MAIN_SYSTEM_TASK_IMPL_6(mainComponent, MainSystemClassName, RunnerName, v0, v1, v2, v3, v4, v5, funcBody)					\
 }
 

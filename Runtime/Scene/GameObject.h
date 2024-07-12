@@ -64,6 +64,7 @@ private:
 	// external components
 	Array<ComponentSlot> m_components = {};
 
+	GameObject*					m_root = this;
 	Handle<GameObject>			m_parent = nullptr;
 	Array<Handle<GameObject>>	m_children = {};
 
@@ -463,6 +464,11 @@ public:
 	inline const auto& Children() const
 	{
 		return m_children;
+	}
+
+	inline auto GetRoot()
+	{
+		return m_root;
 	}
 
 	inline auto& Name()

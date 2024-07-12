@@ -10,8 +10,8 @@
 #include "MainSystem/Animation/AnimationSystem.h"
 
 #include "DeferredBuffer.h"
-
 #include "ModifiedRecorder.h"
+#include "GameObjectDependenciesRecorder.h"
 
 
 NAMESPACE_BEGIN
@@ -261,7 +261,36 @@ void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
 	m_longLifeObjects.Push(obj);
 }
 
-void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
+void Scene::ResolveDependencies(GameObject* obj, GameObjectDependenciesRecorder* output)
+{
+	GameObjectDependenciesResolver* resolvers[MainSystemInfo::COUNT] = {};
+	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	{
+		if (m_mainSystems[i])
+		{
+			resolvers[i] = m_mainSystems[i]->GetDependenciesResolver();
+		}
+	}
+
+	GameObjectDependenciesRecorder& recorder = *output;
+	recorder.Record(obj);
+	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	{
+		auto resolver = resolvers[i];
+		if (resolver)
+		{
+			for (auto& o : recorder.m_objects)
+			{
+				if (o->HasComponent(i))
+				{
+					resolver->Resolve(&recorder, o);
+				}
+			}
+		}
+	}
+}
+
+void Scene::AddObjectImpl(GameObject* obj, bool indexedName)
 {
 	obj->RecordAllComponetsAsModified();
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, GameObject::ModifiedFlag::HEIRARCHY);
@@ -274,7 +303,7 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 
 	obj->ForceRefreshTransform(INVALID_ID - 1, true);
 
-	obj->PreTraversal1([this](GameObject* o) 
+	obj->PreTraversal1([this](GameObject* o)
 		{
 			o->m_scene = this;
 			Runtime::Get()->GetModifiedRecorder()->RecordGameObject(o, GameObject::ModifiedFlag::HEIRARCHY);
@@ -293,7 +322,18 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 	m_shortLifeObjects.Push(obj);
 }
 
-void Scene::RemoveObject(const Handle<GameObject>& obj)
+void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
+{
+	GameObjectDependenciesRecorder recorder = this;
+	ResolveDependencies(obj, &recorder);
+
+	for (auto& root : recorder.m_rootObjects)
+	{
+		AddObjectImpl(root, indexedName);
+	}
+}
+
+void Scene::RemoveObjectImpl(GameObject* obj)
 {
 	obj->RecordAllComponetsAsModified();
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, GameObject::ModifiedFlag::HEIRARCHY);
@@ -322,6 +362,18 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 	obj->m_sceneId = INVALID_ID;
 
 	GetCurrentTrash().Push(obj);
+}
+
+void Scene::RemoveObject(const Handle<GameObject>& obj)
+{
+	GameObjectDependenciesRecorder recorder = this;
+	ResolveDependencies(obj, &recorder);
+
+	for (auto& root : recorder.m_rootObjects)
+	{
+		assert(root->m_scene == this);
+		RemoveObjectImpl(root);
+	}
 }
 
 Handle<GameObject> Scene::FindObjectByIndexedName(String name)

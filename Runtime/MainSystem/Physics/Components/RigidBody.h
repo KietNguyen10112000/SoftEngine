@@ -5,6 +5,7 @@
 NAMESPACE_BEGIN
 
 class PhysicsShape;
+class Joint;
 
 // same as PxPairFlag
 struct PhysicsCollisionPairFlag
@@ -45,10 +46,20 @@ private:
 	friend class PhysXSimulationFilterCallback;
 	ContactReportFilterCallback m_contactFilterCallback = nullptr;
 
+	friend class Joint;
+	MAIN_SYSTEM_FRIEND_CLASSES();
+
 protected:
 	//Mat4 m_lastGlobalTransform;
 
+	Array<Handle<Joint>> m_joints;
 	std::vector<SharedPtr<PhysicsShape>> m_shapes;
+
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_joints);
+	}
 
 	inline RigidBody() {};
 

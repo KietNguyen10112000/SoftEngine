@@ -10,7 +10,7 @@ class PxController;
 
 NAMESPACE_BEGIN
 
-class CharacterController : public PhysicsComponent
+class CharacterController : public RigidBody
 {
 private:
 	friend class PhysXSimulationFilterCallback;

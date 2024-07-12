@@ -10,6 +10,7 @@
 #include "Runtime/Config.h"
 
 #include "Scene/Scene.h"
+#include "Scene/GameObjectDependenciesRecorder.h"
 
 #include "PhysicsClasses.h"
 
@@ -34,6 +35,13 @@ private:
 
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
 	constexpr static size_t NUM_TRASH_ARRAY = 2;
+
+	class PhysicsSystemDependenciesResolver : public GameObjectDependenciesResolver
+	{
+	public:
+		virtual void Resolve(GameObjectDependenciesRecorder* recorder, GameObject* input) override;
+
+	};
 
 	raw::AsyncTaskRunner<PhysicsSystem> m_asyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
 	raw::AsyncTaskRunner<PhysicsSystem> m_asyncTaskRunnerMT[NUM_DEFER_BUFFER] = {};
@@ -64,6 +72,8 @@ private:
 
 	Array<Handle<void>> m_trashComps[NUM_TRASH_ARRAY];
 	size_t m_trashId = 0;
+
+	PhysicsSystemDependenciesResolver m_dependenciesResolver;
 
 private:
 	TRACEABLE_FRIEND();
@@ -149,6 +159,11 @@ public:
 	virtual void Iteration(float dt) override;
 
 	virtual void PostIteration() override;
+
+	inline virtual GameObjectDependenciesResolver* GetDependenciesResolver() override
+	{
+		return &m_dependenciesResolver;
+	}
 
 	inline auto* AsyncTaskRunnerST()
 	{
