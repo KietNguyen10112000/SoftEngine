@@ -287,6 +287,11 @@ public:
 	void OnOpen() override;
 	void OnClose() override;
 
+	inline String GetSaveFilePath() override
+	{
+		return GetSavePath(m_name);
+	}
+
 	bool IsCloseable() override;
 
 	void WriteNodeDataToJson(Serializer* serializer, json& j) const;

@@ -39,6 +39,7 @@ friend class AnimatorSkeletalArray;		\
 friend class ScriptScheduler;			\
 friend class GameObject;				\
 friend class ScriptMeta;				\
+friend class RigidBody;					\
 friend class RigidBodyDynamic;			\
 friend class CharacterController;		\
 friend class GameObjectDependenciesRecorder;

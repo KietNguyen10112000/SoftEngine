@@ -44,6 +44,7 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 	pxDesc.contactOffset = 0.01f;
 
 	m_pxCharacterController = scene->GetPhysicsSystem()->m_pxControllerManager->createController(pxDesc);
+	m_pxCharacterController->setUserData(this);
 
 	auto pxActor = m_pxCharacterController->getActor();
 	pxActor->userData = this;

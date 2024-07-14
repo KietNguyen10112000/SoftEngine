@@ -739,9 +739,13 @@ void SceneEditorTab::OnShow()
 	m_onSaveListenerId = EditorContext::Get()->EventDispatcher()->AddListener(EditorContext::EVENT::MENU_ON_SAVE,
 		[](EditorContext* ctx, int argc, void** argv, ID id)
 		{
-			auto& path = *(String*)argv[0];
-			auto tab = (SceneEditorTab*)id;
-
+			auto self = (SceneEditorTab*)id;
+			auto path = GetSavePath(self->m_name);
+			
+			Serializer serializer = {};
+			serializer.Serialize(self->m_scene);
+			serializer.SetRootUUID(self->m_scene->GetUUID());
+			serializer.WriteToFile(path);
 		},
 		ID(this)
 	);
@@ -789,4 +793,14 @@ void SceneEditorTab::OnClose()
 	Runtime::Get()->EventDispatcher()->RemoveListener(m_scriptsHotReloadListenerIdBegin);
 	Runtime::Get()->EventDispatcher()->RemoveListener(m_scriptsHotReloadListenerIdEnd);
 #endif // PLUGIN_ALLOW_HOT_RELOAD
+}
+
+String SceneEditorTab::GetSavePath(const String& name)
+{
+	return EditorContext::Get()->GetSavePath() + "SceneEditor/" + name + ".json";
+}
+
+String SceneEditorTab::GetSaveFilePath()
+{
+	return GetSavePath(m_name);
 }

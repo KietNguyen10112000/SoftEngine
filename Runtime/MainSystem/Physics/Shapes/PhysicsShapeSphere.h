@@ -14,6 +14,7 @@ class PhysicsShapeSphere : public PhysicsShape
 {
 	SERIALIZABLE_CLASS(PhysicsShapeSphere, SERIALIZABLE_MEM_SHARED);
 public:
+	inline PhysicsShapeSphere() {};
 	PhysicsShapeSphere(float radius, const SharedPtr<PhysicsMaterial>& material);
 
 	inline virtual PHYSICS_SHAPE_TYPE GetType() const 

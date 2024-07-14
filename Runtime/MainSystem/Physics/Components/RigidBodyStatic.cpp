@@ -81,6 +81,8 @@ void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
 	{
 		body->attachShape(*shape->m_pxShape);
 	}
+
+	RigidBody::DeserializeFromJson(serializer, j);
 }
 
 Handle<ClassMetadata> RigidBodyStatic::GetMetadata(size_t sign)

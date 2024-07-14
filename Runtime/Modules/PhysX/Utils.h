@@ -18,7 +18,7 @@ public:
 
 	inline static Quaternion ToQuaternion(const physx::PxQuat& quat)
 	{
-		return Quaternion(quat.x, quat.y, quat.z, quat.w);
+		return Quaternion(quat.w, quat.x, quat.y, quat.z);
 	}
 
 	inline static physx::PxVec3 ToPxVec3(const Vec3& vec)

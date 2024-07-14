@@ -52,7 +52,13 @@ public:
 	{
 		OK,
 		CANCEL,
-		CLOSE_TOP_CALL
+		CLOSE_CALL
+	};
+
+	enum class DIALOG_TYPE
+	{
+		OK,
+		OK_CANCEL,
 	};
 
 	struct DialogDesc
@@ -68,12 +74,19 @@ public:
 
 	struct DialogData
 	{
+	private:
+		friend class EditorContext;
+		String popUpId = "";
+
+	public:
 		DialogBodyCallback bodyCallback = nullptr;
 		void* bodyUserPtr = nullptr;
 		DialogResultCallback resultCallback = nullptr;
 		void* resultUserPtr = nullptr;
 
 		DialogDesc desc;
+
+		DIALOG_TYPE type = DIALOG_TYPE::OK_CANCEL;
 
 		DialogData(DialogBodyCallback a1, void* a2, DialogResultCallback a3, void* a4, const DialogDesc& a5)
 			: bodyCallback(a1), bodyUserPtr(a2), resultCallback(a3), resultUserPtr(a4), desc(a5) {};
@@ -99,6 +112,8 @@ public:
 
 	std::vector<DialogData*> m_closeDialogs;
 	std::vector<UniquePtr<DialogData>> m_dialogs;
+
+	EditorTab* m_tabHolder = nullptr;
 
 private:
 	TRACEABLE_FRIEND();
@@ -142,6 +157,8 @@ public:
 	void CloseDialog(DialogData* dialog);
 
 	void CloseTabCreationPopUp();
+
+	void PlaceHolderTab(EditorTab* tab);
 
 public:
 	inline auto& Lock()

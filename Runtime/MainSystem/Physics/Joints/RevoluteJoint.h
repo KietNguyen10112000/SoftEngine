@@ -8,6 +8,7 @@ class RevoluteJoint : public Joint
 {
 	SERIALIZABLE_CLASS(RevoluteJoint);
 public:
+	inline RevoluteJoint() {};
 	RevoluteJoint(
 		const Handle<RigidBody>& body0, 
 		const Transform& localFrame0, 

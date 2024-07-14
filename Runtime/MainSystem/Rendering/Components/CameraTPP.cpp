@@ -26,6 +26,35 @@ void CameraTPP::OnCameraRenderBegin()
 	//m_globalTransform.Inverse();
 }
 
+void CameraTPP::CloneFrom(Serializer* serializer, Serializable* another)
+{
+	Camera::CloneFrom(serializer, another);
+}
+
+void CameraTPP::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void CameraTPP::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void CameraTPP::SerializeToJson(Serializer* serializer, json& j) const
+{
+	Camera::SerializeToJson(serializer, j);
+
+	j["Target"] = serializer->Serialize(m_target);
+	j["EnableTPP"] = m_enableTPP;
+}
+
+void CameraTPP::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	Camera::DeserializeFromJson(serializer, j);
+
+	serializer->Deserialize(j["Target"], m_target);
+	m_enableTPP = j["EnableTPP"];
+}
+
 //Mat4 CameraTPP::GetView()
 //{
 //	return Mat4::Translation(-m_target->ReadGlobalTransformMat().Position()) * m_view;

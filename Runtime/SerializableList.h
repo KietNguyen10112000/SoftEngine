@@ -24,6 +24,12 @@
 #include "MainSystem/Physics/Components/RigidBodyStatic.h"
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 #include "MainSystem/Physics/Components/CharacterControllerCapsule.h"
+#include "MainSystem/Physics/Materials/PhysicsMaterial.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapeCapsule.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapeSphere.h"
+#include "MainSystem/Physics/Joints/RevoluteJoint.h"
 
 #include "Scene/GameObject.h"
 #include "Scene/Scene.h"
@@ -91,6 +97,13 @@ public:
 			SerializableDB::Get()->Register<RigidBodyStatic>();
 			SerializableDB::Get()->Register<RigidBodyDynamic>();
 			SerializableDB::Get()->Register<CharacterControllerCapsule>();
+
+			SerializableDB::Get()->Register<PhysicsMaterial>();
+			SerializableDB::Get()->Register<PhysicsShapeBox>();
+			SerializableDB::Get()->Register<PhysicsShapeCapsule>();
+			SerializableDB::Get()->Register<PhysicsShapePlane>();
+			SerializableDB::Get()->Register<PhysicsShapeSphere>();
+			SerializableDB::Get()->Register<RevoluteJoint>();
 		}
 
 

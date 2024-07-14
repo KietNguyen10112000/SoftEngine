@@ -197,6 +197,30 @@ Handle<ClassMetadata> TPPCameraScript::GetMetadata(size_t sign)
 	return metadata;
 }
 
+void TPPCameraScript::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void TPPCameraScript::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void TPPCameraScript::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void TPPCameraScript::SerializeToJson(Serializer* serializer, json& j) const
+{
+	j["CameraTPP"] = serializer->Serialize(m_camera);
+	j["FPPCamScript"] = serializer->Serialize(m_fppCamScript);
+}
+
+void TPPCameraScript::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	serializer->Deserialize(j["CameraTPP"], m_camera);
+	serializer->Deserialize(j["FPPCamScript"], m_fppCamScript);
+}
+
 //void TestScript2::OnUpdate(float dt)
 //{
 //	auto transform = GetLocalTransform();

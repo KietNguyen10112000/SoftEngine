@@ -20,11 +20,12 @@ private:
 
 	bool m_isShowing = false;
 	bool m_isFirstShow = true;
-	bool m_padd[2];
+	bool m_isPlacedHolder = false;
+	bool m_padd[1];
 
 public:
 	ID m_id = INVALID_ID;
-	String m_name = "Unnamed";
+	String m_name = "<Unnamed>";
 	Scene* m_scene = nullptr;
 
 private:
@@ -68,6 +69,8 @@ public:
 
 	virtual void OnOpen() = 0;
 	virtual void OnClose() = 0;
+
+	virtual String GetSaveFilePath() = 0;
 
 	inline virtual bool IsCloseable() { return true; };
 

@@ -281,7 +281,7 @@ void Scene::ResolveDependencies(GameObject* obj, GameObjectDependenciesRecorder*
 		{
 			for (auto& o : recorder.m_objects)
 			{
-				if (o->HasComponent(i))
+				if (o->m_mainComponents[i])
 				{
 					resolver->Resolve(&recorder, o);
 				}
@@ -324,6 +324,11 @@ void Scene::AddObjectImpl(GameObject* obj, bool indexedName)
 
 void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 {
+	if (obj->m_scene == this)
+	{
+		return;
+	}
+
 	GameObjectDependenciesRecorder recorder = this;
 	ResolveDependencies(obj, &recorder);
 
@@ -366,6 +371,11 @@ void Scene::RemoveObjectImpl(GameObject* obj)
 
 void Scene::RemoveObject(const Handle<GameObject>& obj)
 {
+	if (obj->m_scene == nullptr)
+	{
+		return;
+	}
+
 	GameObjectDependenciesRecorder recorder = this;
 	ResolveDependencies(obj, &recorder);
 
@@ -558,7 +568,8 @@ void Scene::DeserializeFromJson(Serializer* serializer, const json& j)
 			for (auto& j1 : arr)
 			{
 				serializer->Deserialize(j1, obj);
-				AddObject(obj);
+				obj->Commit();
+				AddObjectImpl(obj);
 			}
 
 			EndSetupLongLifeObject();
@@ -571,7 +582,8 @@ void Scene::DeserializeFromJson(Serializer* serializer, const json& j)
 		for (auto& j1 : arr)
 		{
 			serializer->Deserialize(j1, obj);
-			AddObject(obj);
+			obj->Commit();
+			AddObjectImpl(obj);
 		}
 	}
 }

@@ -14,6 +14,7 @@ class PhysicsShapePlane : public PhysicsShape
 {
 	SERIALIZABLE_CLASS(PhysicsShapePlane, SERIALIZABLE_MEM_SHARED);
 public:
+	inline PhysicsShapePlane() {};
 	PhysicsShapePlane(const SharedPtr<PhysicsMaterial>& material);
 
 	inline virtual PHYSICS_SHAPE_TYPE GetType() const

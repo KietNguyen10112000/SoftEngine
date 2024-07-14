@@ -23,6 +23,7 @@ protected:
 	physx::PxMaterial* m_pxMaterial = nullptr;
 
 public:
+	inline PhysicsMaterial() {};
 	PhysicsMaterial(float staticFriction, float dynamicFriction, float restitution);
 	virtual ~PhysicsMaterial();
 

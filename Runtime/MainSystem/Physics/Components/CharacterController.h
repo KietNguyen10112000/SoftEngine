@@ -15,6 +15,7 @@ class CharacterController : public RigidBody
 private:
 	friend class PhysXSimulationFilterCallback;
 	friend class PhysXSimulationCallback;
+	friend class PhysicsSystem;
 	RigidBody::ContactReportFilterCallback m_contactFilterCallback = nullptr;
 
 protected:

@@ -206,6 +206,7 @@ void RigidBodyDynamic::SerializeToJson(Serializer* serializer, json& j) const
 	RigidBody::SerializeToJson(serializer, j);
 
 	auto body = m_pxActor->is<PxRigidDynamic>();
+	j["IsKinematic"]				= m_isKinematic;
 	j["LinearVelocity"]				= PhysXUtils::ToVec3(body->getLinearVelocity());
 	j["AngularVelocity"]			= PhysXUtils::ToVec3(body->getAngularVelocity());
 	j["MassSpaceInertiaTensor"]		= PhysXUtils::ToVec3(body->getMassSpaceInertiaTensor());
@@ -235,7 +236,15 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 		body->setAngularVelocity(PhysXUtils::ToPxVec3(j["AngularVelocity"]));
 		body->setMassSpaceInertiaTensor(PhysXUtils::ToPxVec3(j["MassSpaceInertiaTensor"]));
 		body->setMass(j["Mass"]);
+
+		m_isKinematic = j["IsKinematic"];
+		if (m_isKinematic)
+		{
+			body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		}
 	}
+
+	RigidBody::DeserializeFromJson(serializer, j);
 }
 
 Handle<ClassMetadata> RigidBodyDynamic::GetMetadata(size_t sign)

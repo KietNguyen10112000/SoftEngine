@@ -1,9 +1,11 @@
 #include "EditorTabFactory.h"
 
+#include "SceneEditorTabFactory.h"
 #include "AnimatorEditorTabFactory.h"
 
 EditorTabFactoryManager::EditorTabFactoryManager()
 {
+	RegisterFactory<SceneEditorTabFactory>();
 	RegisterFactory<AnimatorEditorTabFactory>();
 }
 

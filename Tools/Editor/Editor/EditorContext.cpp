@@ -48,6 +48,8 @@ EditorContext::EditorContext(Scene* initScene)
 
 void EditorContext::RenderMenuBar()
 {
+	static char textBuf[256] = {};
+
 	ImGui::BeginMainMenuBar();
 
 	if (ImGui::BeginMenu("File"))
@@ -60,8 +62,50 @@ void EditorContext::RenderMenuBar()
 		ImGui::Separator();
 		if (ImGui::MenuItem("Save"))
 		{
-			String path("");
-			EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
+			auto currentTab = GetCurrentTab();
+			if (currentTab)
+			{
+				if (currentTab->m_name.empty() || !IsVariableNameValid(currentTab->m_name))
+				{
+					textBuf[0] = 0;
+					OpenOkCancelDialog({},
+						[](void* p)
+						{
+							auto self = (EditorContext*)p;
+							auto currentTab = self->GetCurrentTab();
+
+							ImGui::TextUnformatted("File wasn't named!");
+							ImGui::InputText("File Name", textBuf, sizeof(textBuf));
+
+						}, this,
+						[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+						{
+							auto self = (EditorContext*)p;
+							auto currentTab = self->GetCurrentTab();
+
+							if (result == DIALOG_RESULT::OK)
+							{
+								if (!self->IsVariableNameValid(textBuf))
+								{
+									return false;
+								}
+
+								currentTab->m_name = textBuf;
+
+								String path("");
+								self->EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
+							}
+							
+							return true;
+						}, this
+					);
+				}
+				else
+				{
+					String path("");
+					EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
+				}
+			}
 		}
 
 		ImGui::EndMenu();
@@ -297,6 +341,7 @@ void EditorContext::RenderTabCreationPopUp()
 	{
 		m_needCloseTabCreationPopUp = false;
 
+		m_tabHolder = nullptr;
 		auto tab = m_tabFactory->CreateInstance();
 
 		if (!tab)
@@ -392,6 +437,13 @@ void EditorContext::RenderDialogs()
 	for (auto& pdialog : m_dialogs)
 	{
 		auto& dialog = *pdialog;
+
+		if (dialog.popUpId.empty())
+		{
+			dialog.popUpId = String::Format("{} {} {}", dialog.desc.title, "## dialog", pdialog.get());
+			ImGui::OpenPopup(dialog.popUpId.c_str());
+		}
+
 		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 		if (dialog.desc.size.x <= 1.0f && dialog.desc.size.y <= 1.0f)
@@ -404,7 +456,7 @@ void EditorContext::RenderDialogs()
 			ImGui::SetNextWindowSize(ImVec2(dialog.desc.size.x, dialog.desc.size.y));
 		}
 
-		if (!ImGui::BeginPopupModal(dialog.desc.title.c_str(), 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+		if (!ImGui::BeginPopupModal(dialog.popUpId.c_str(), 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
 		{
 			continue;
 		}
@@ -435,6 +487,8 @@ void EditorContext::RenderDialogs()
 				ImGui::CloseCurrentPopup();
 			}
 		}
+
+		ImGui::EndPopup();
 	}
 
 	if (close)
@@ -514,6 +568,14 @@ void EditorContext::OnObjectsAdded(std::vector<GameObject*>& objects, Scene* sce
 {
 	if (scene != GetCurrentTab()->m_scene)
 	{
+		for (auto& tab : m_tabs)
+		{
+			if (tab->m_scene == scene)
+			{
+				tab->OnObjectsAdded(objects);
+				return;
+			}
+		}
 		return;
 	}
 
@@ -524,6 +586,14 @@ void EditorContext::OnObjectsRemoved(std::vector<GameObject*>& objects, Scene* s
 {
 	if (scene != GetCurrentTab()->m_scene)
 	{
+		for (auto& tab : m_tabs)
+		{
+			if (tab->m_scene == scene)
+			{
+				tab->OnObjectsRemoved(objects);
+				return;
+			}
+		}
 		return;
 	}
 
@@ -576,8 +646,16 @@ void EditorContext::RunTab(const Handle<EditorTab>& tab)
 	auto scene = tab->m_scene;
 	if (tab->m_id == INVALID_ID)
 	{
-		tab->m_id = m_tabs.size();
-		m_tabs.Push(tab);
+		if (tab->m_isPlacedHolder == false)
+		{
+			tab->m_id = m_tabs.size();
+			m_tabs.Push(tab);
+			tab->m_isPlacedHolder = true;
+		}
+		else
+		{
+			tab->m_id = m_tabs.size() - 1;
+		}
 
 		auto tabId = scene->GenericStorage()->Store(tab);
 		scene->EventDispatcher()->AddListener(Scene::EVENT_BEGIN_RUNNING,
@@ -686,4 +764,15 @@ void EditorContext::CloseDialog(DialogData* dialog)
 void EditorContext::CloseTabCreationPopUp()
 {
 	m_needCloseTabCreationPopUp = true;
+}
+
+void EditorContext::PlaceHolderTab(EditorTab* tab)
+{
+	if (!tab->m_isPlacedHolder)
+	{
+		m_tabs.Push(tab);
+		tab->m_isPlacedHolder = true;
+
+		m_tabHolder = tab;
+	}
 }

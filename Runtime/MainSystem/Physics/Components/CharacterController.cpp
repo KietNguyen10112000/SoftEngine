@@ -111,6 +111,9 @@ void* g_defaultPxControllerHitCallbackPtr = &g_defaultPxControllerHitCallback;
 
 CharacterController::~CharacterController()
 {
+	if (m_pxCharacterController)
+		m_pxCharacterController->setUserData(nullptr);
+
 	PX_RELEASE(m_pxCharacterController);
 }
 

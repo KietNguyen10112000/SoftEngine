@@ -273,7 +273,7 @@ void PhysicsSystem::PhysicsSystemDependenciesResolver::Resolve(GameObjectDepende
 		return;
 	}*/
 
-	auto comp = input->GetComponentRaw<PhysicsComponent>();
+	auto comp = (PhysicsComponent*)input->m_mainComponents[PhysicsComponent::COMPONENT_ID].Get();
 	
 	auto type = comp->GetPhysicsType();
 	switch (type)
@@ -286,7 +286,11 @@ void PhysicsSystem::PhysicsSystemDependenciesResolver::Resolve(GameObjectDepende
 		for (auto& joint : rigidBody->m_joints)
 		{
 			auto another = joint->m_body0.Get() == rigidBody ? joint->m_body1.Get() : joint->m_body0.Get();
-			recorder->Record(another->GetGameObject());
+			if (another->m_object == nullptr)
+			{
+				int x = 3;
+			}
+			recorder->Record(another->m_object);
 		}
 		break;
 	}
@@ -333,6 +337,17 @@ void PhysicsSystem::Finalize()
 {
 	((PhysXSimulationCallback*)(&m_physxSimulationCallback))->~PhysXSimulationCallback();
 	((PhysXSimulationFilterCallback*)(&m_physXSimulationFilterCallback))->~PhysXSimulationFilterCallback();
+
+	auto count = m_pxControllerManager->getNbControllers();
+	for (size_t i = 0; i < count; i++)
+	{
+		auto pxCct = m_pxControllerManager->getController(i);
+		auto cct = (CharacterController*)pxCct->getUserData();
+		if (cct)
+		{
+			cct->m_pxCharacterController = nullptr;
+		}
+	}
 
 	m_pxControllerManager->release();
 	m_pxScene->release();

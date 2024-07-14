@@ -24,6 +24,13 @@ public:
 	virtual void OnCameraRenderBegin() override;
 	//virtual Mat4 GetView() override;
 
+	// Inherited via Serializable
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+
 	void SetTarget(const Handle<GameObject>& object);
 
 	void SetViewPoint(const Vec3& point, const Vec3& up = Vec3::UP);

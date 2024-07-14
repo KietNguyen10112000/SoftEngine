@@ -197,6 +197,7 @@ inline void from_json(const json& ret, AABox& aaBox)
 inline void to_json(json& ret, const Capsule& capsule)
 {
 	ret["center"]	= capsule.m_center;
+	ret["radius"]	= capsule.m_radius;
 	ret["height"]	= capsule.m_height;
 	ret["up"]		= capsule.m_up;
 }
@@ -204,6 +205,7 @@ inline void to_json(json& ret, const Capsule& capsule)
 inline void from_json(const json& ret, Capsule& capsule)
 {
 	capsule.m_center	= ret["center"];
+	capsule.m_radius	= ret["radius"];
 	capsule.m_height	= ret["height"];
 	capsule.m_up		= ret["up"];
 }

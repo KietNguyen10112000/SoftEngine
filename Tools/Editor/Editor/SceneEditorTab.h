@@ -88,6 +88,8 @@ public:
 	void OnOpen() override;
 	void OnClose() override;
 
+	String GetSaveFilePath() override;
+
 public:
 	inline auto& Lock()
 	{
@@ -96,6 +98,8 @@ public:
 
 public:
 	void Inspect(ClassMetadata* metaData);
+
+	static String GetSavePath(const String& name);
 
 };
 

@@ -30,6 +30,7 @@ private:
 	}
 
 public:
+	inline PhysicsShapeCapsule() {};
 	PhysicsShapeCapsule(float height, float radius, const SharedPtr<PhysicsMaterial>& material);
 
 

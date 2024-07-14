@@ -360,6 +360,7 @@ void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 			{
 				serializer->Deserialize(j1, m_mainComponents[i]);
 				m_mainComponents[i]->m_object = this;
+				m_mainComponents[i]->m_committedObject = this;
 			}
 		}
 	}

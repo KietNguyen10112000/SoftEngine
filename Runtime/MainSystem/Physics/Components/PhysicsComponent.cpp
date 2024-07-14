@@ -80,4 +80,32 @@ void PhysicsComponent::SetPhysicsFlag(PHYSICS_FLAG flag, bool value)
 
 }
 
+void PhysicsComponent::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void PhysicsComponent::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void PhysicsComponent::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void PhysicsComponent::SerializeToJson(Serializer* serializer, json& j) const
+{
+	j["PhysicsFlags"] = m_physicsFlag;
+}
+
+void PhysicsComponent::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	m_physicsFlag = j["PhysicsFlags"];
+
+	for (size_t i = 0; i < sizeof(m_physicsFlag) * 8; i++)
+	{
+		auto enable = ((m_physicsFlag & (1ull << i)) >> i);
+		SetPhysicsFlag(PHYSICS_FLAG((1ull << i)), enable);
+	}
+}
+
 NAMESPACE_END

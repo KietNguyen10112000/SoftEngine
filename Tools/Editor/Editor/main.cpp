@@ -67,6 +67,12 @@ void Initialize(Runtime* runtime)
 				}
 			);*/
 
+			if (EditorContext::s_instance->m_tabHolder)
+			{
+				assert(EditorContext::s_instance->m_tabHolder->m_scene == nullptr);
+				EditorContext::s_instance->m_tabHolder->m_scene = scene;
+			}
+
 			scene->GetRenderingSystem()->EventDispatcher()->AddListener(RenderingSystem::EVENT_RENDER_GUI,
 				[](RenderingSystem* renderingSystem, int argc, void** argv, ID editorContextId)
 				{

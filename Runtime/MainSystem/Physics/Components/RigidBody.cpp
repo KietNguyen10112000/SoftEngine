@@ -12,6 +12,7 @@
 
 #include "../Shapes/PhysicsShape.h"
 #include "../FILTER_DATA.h"
+#include "../Joints/Joint.h"
 
 using namespace physx;
 
@@ -53,7 +54,7 @@ void RigidBody::OnTransformChanged()
 
 void RigidBody::OnDrawDebug()
 {
-	return;
+	//return;
 
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 
@@ -161,22 +162,53 @@ void RigidBody::DeserializeFromBinary(Serializer* serializer, const ByteStream& 
 
 void RigidBody::SerializeToJson(Serializer* serializer, json& j) const
 {
-	auto arr = json::array();
-	for (auto& shape : m_shapes)
+	PhysicsComponent::SerializeToJson(serializer, j);
+
 	{
-		arr.push_back(serializer->Serialize(shape));
+		auto arr = json::array();
+		for (auto& shape : m_shapes)
+		{
+			arr.push_back(serializer->Serialize(shape));
+		}
+		j["Shapes"] = arr;
 	}
-	j["Shapes"] = arr;
+
+	{
+		auto arr = json::array();
+		for (auto& joint : m_joints)
+		{
+			arr.push_back(serializer->Serialize(joint));
+		}
+		j["Joints"] = arr;
+	}
 }
 
 void RigidBody::DeserializeFromJson(Serializer* serializer, const json& j)
 {
-	auto& arr = j["Shapes"];
-	for (size_t i = 0; i < arr.size(); i++)
+	if (m_shapes.size() == 0)
 	{
-		SharedPtr<PhysicsShape> shape;
-		serializer->Deserialize(arr[i], shape);
-		m_shapes.push_back(shape);
+		PhysicsComponent::DeserializeFromJson(serializer, j);
+
+		auto& arr = j["Shapes"];
+		for (size_t i = 0; i < arr.size(); i++)
+		{
+			SharedPtr<PhysicsShape> shape;
+			serializer->Deserialize(arr[i], shape);
+			m_shapes.push_back(shape);
+		}
+	}
+
+	if (m_pxActor && m_joints.size() == 0)
+	{
+		auto& arr = j["Joints"];
+		Handle<Joint> joint;
+		for (size_t i = 0; i < arr.size(); i++)
+		{
+			serializer->Deserialize(arr[i], joint);
+			auto& idx = joint->m_body0 == this ? joint->m_idx0 : joint->m_idx1;
+			idx = m_joints.size();
+			m_joints.Push(joint);
+		}
 	}
 }
 
