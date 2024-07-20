@@ -151,6 +151,8 @@ void CharacterControllerCapsule::DeserializeFromBinary(Serializer* serializer, c
 
 void CharacterControllerCapsule::SerializeToJson(Serializer* serializer, json& j) const
 {
+	PhysicsComponent::SerializeToJson(serializer, j);
+
 	json jDesc;
 	jDesc["Capsule"] = m_desc.capsule; 
 	jDesc["Material"] = serializer->Serialize(m_desc.material);
@@ -159,6 +161,8 @@ void CharacterControllerCapsule::SerializeToJson(Serializer* serializer, json& j
 
 void CharacterControllerCapsule::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	PhysicsComponent::DeserializeFromJson(serializer, j);
+
 	auto& jDesc = j["Desc"];
 	m_desc.capsule = jDesc["Capsule"];
 	serializer->Deserialize(jDesc["Material"], m_desc.material);

@@ -13,6 +13,7 @@
 #include "ComponentInspector.h"
 #include "EditorTabFactory.h"
 #include "AnimatorEditorTabFactory.h"
+#include "SceneEditorTabFactory.h"
 
 #include "ScriptList.h"
 
@@ -53,6 +54,16 @@ void Initialize(Runtime* runtime)
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
 				}*/
+
+				{
+					auto factory = EditorTabFactoryManager::Get()->GetFactory<SceneEditorTabFactory>();
+
+					factory->m_filePath = "Editor/SceneEditor/Test.json";
+					auto tab = factory->CreateInstance();
+					EditorContext::s_instance->RunTab(tab);
+
+					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
+				}
 			}
 
 			ID editorContextId = EditorContext::s_instance->m_runTimeId;
@@ -69,7 +80,11 @@ void Initialize(Runtime* runtime)
 
 			if (EditorContext::s_instance->m_tabHolder)
 			{
-				assert(EditorContext::s_instance->m_tabHolder->m_scene == nullptr);
+				//assert(EditorContext::s_instance->m_tabHolder->m_scene == nullptr);
+				if (EditorContext::s_instance->m_tabHolder->m_scene != nullptr)
+				{
+					assert(EditorContext::s_instance->m_tabHolder->m_scene == scene);
+				}
 				EditorContext::s_instance->m_tabHolder->m_scene = scene;
 			}
 

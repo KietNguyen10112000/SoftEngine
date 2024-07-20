@@ -6,6 +6,8 @@
 
 #include "FileSystem/FileSystem.h"
 
+#include "JSON/JSON.h"
+
 NAMESPACE_BEGIN
 
 namespace resource
@@ -14,7 +16,8 @@ namespace resource
 class ResourceManager : public Singleton<ResourceManager>
 {
 public:
-	inline static const char* META_PATH = "Meta/.resources";
+	//inline static const char* META_PATH = "Meta/.resources";
+	inline static const char* META_PATH = "Meta/resources.json";
 
 	std::map<String, UUID> m_uuidMap;
 
@@ -22,30 +25,37 @@ public:
 
 	ResourceManager()
 	{
-		ByteStream stream;
-		if (FileSystem::Get()->ReadStream(META_PATH, &stream))
+		if (FileSystem::Get()->IsFileExist(META_PATH))
 		{
-			auto size = stream.Get<size_t>();
-			for (size_t i = 0; i < size; i++)
+			byte* buffer = nullptr; size_t fileSize = 0;
+			FileUtils::ReadFile(META_PATH, buffer, fileSize);
+
+			auto arr = json::parse(buffer);
+			for (size_t i = 0; i < arr.size(); i++)
 			{
-				auto uuid = stream.Get<UUID>();
-				auto path = stream.Get<String>();
+				auto& rc = arr[i];
+				UUID uuid = rc["UUID"];
+				String path = rc["Path"];
 				m_uuidMap.insert({ path,uuid });
 			}
+
+			FileUtils::FreeBuffer(buffer);
 		}
 	}
 
 	~ResourceManager()
 	{
-		ByteStream stream;
-		stream.Put(m_uuidMap.size());
+		auto arr = json::array();
 		for (auto& [key, value] : m_uuidMap)
 		{
-			stream.Put(value);
-			stream.Put(key);
+			json j;
+			j["UUID"] = value;
+			j["Path"] = key;
+			arr.push_back(j);
 		}
 
-		FileSystem::Get()->WriteStream(META_PATH, &stream);
+		auto str = arr.dump(2);
+		FileUtils::WriteFile(META_PATH, str.c_str(), str.length());
 	}
 
 	inline UUID GetResourceUUID(const String& path)

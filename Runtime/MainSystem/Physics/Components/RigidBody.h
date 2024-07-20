@@ -63,11 +63,15 @@ protected:
 
 	inline RigidBody() {};
 
+private:
+	void SetupCollisionStruct();
+
 public:
 	void OnTransformChanged() override;
 
 protected:
 	virtual void OnDrawDebug() override;
+	virtual void OnPhysicsFlagSetted(PHYSICS_FLAG flag, bool value) override;
 
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;

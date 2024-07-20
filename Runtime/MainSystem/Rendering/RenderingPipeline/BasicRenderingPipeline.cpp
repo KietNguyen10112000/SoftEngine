@@ -434,7 +434,7 @@ void BasicAnimModelRenderingPass::Render(RenderingSystem* sys, std::vector<AnimM
 	{
 		auto& globalTransform = comp->GetGameObject()->GetCommittedGlobalTransform();
 		//m_objectBuffer->UpdateBuffer(&comp->GlobalTransform(), sizeof(Mat4));
-		graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
+		//graphics->GetDebugGraphics()->DrawAABox(comp->GetGlobalAABB());
 
 		auto* shaderBuffer = comp->m_animMeshRenderingBuffer.get();
 		if (prevBuffer != (void*)shaderBuffer)

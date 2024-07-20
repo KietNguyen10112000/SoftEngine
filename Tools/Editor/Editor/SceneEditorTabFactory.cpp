@@ -105,6 +105,8 @@ LoadJson:
 		tab->m_name = fileName.SubString(0, fileName.FindLastOf('.'));
 		tab->m_scene = scene;
 
+		EditorContext::Get()->PlaceHolderTab(nullptr);
+
 		return tab;
 	}
 

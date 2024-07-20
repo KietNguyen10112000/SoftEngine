@@ -358,6 +358,7 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 					auto rpath = fullPath.substr(rcpath.length());
 					input.As<String>() = rpath.c_str();
 					accessor.Set(input);
+					return;
 				}
 
 				auto rcpath = FileSystem::Get()->GetResourcesRootPath();

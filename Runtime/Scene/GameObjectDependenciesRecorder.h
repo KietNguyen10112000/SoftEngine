@@ -17,8 +17,10 @@ private:
 	std::vector<GameObject*> m_objects;
 	std::vector<GameObject*> m_rootObjects;
 
+	Scene* m_scene = nullptr;
+
 private:
-	void UnRecordAll();
+	void UnRecordAll(Scene* scene);
 
 public:
 	GameObjectDependenciesRecorder(Scene* scene);

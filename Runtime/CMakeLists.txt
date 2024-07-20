@@ -9,6 +9,7 @@ add_compile_definitions(
     DEV
 
     PLUGIN_ALLOW_HOT_RELOAD
+    #MEMORY_RHEAP_ALLOW_MULTIPLE_INHERITANCE
 )
 
 add_compile_definitions(IMGUI_USER_CONFIG="Libraries/config/ImGUIConfig.h")

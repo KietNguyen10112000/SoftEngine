@@ -9,7 +9,8 @@ enum PHYSICS_FLAG
 	// default is 0
 	PHYSICS_FLAG_CORRECT_LOCAL_TRANSFORM	= (1 << 0),
 
-	PHYSICS_FLAG_ENABLE_COLLISION			= (1 << 1),
+	// default 0, should this component receive collision result from physics system
+	PHYSICS_FLAG_COLLISION_RESULT			= (1 << 1),
 };
 
 NAMESPACE_END

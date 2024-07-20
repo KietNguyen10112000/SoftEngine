@@ -40,6 +40,7 @@ void PhysicsShapeSphere::SerializeToJson(Serializer* serializer, json& j) const
 void PhysicsShapeSphere::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	assert(m_pxShape == nullptr);
+	this->~PhysicsShapeSphere();
 	new (this) PhysicsShapeSphere(j["Radius"], GetDeserializedMaterial(serializer, j));
 	PhysicsShape::DeserializeFromJson(serializer, j);
 }

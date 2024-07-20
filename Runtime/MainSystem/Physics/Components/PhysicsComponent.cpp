@@ -4,6 +4,9 @@
 
 #include "Scene/GameObject.h"
 
+#include "MainSystem/MainSystemTaskPacking.h"
+#include "MainSystem/Physics/PhysicsSystem.h"
+
 NAMESPACE_BEGIN
 
 PhysicsComponent::~PhysicsComponent() 
@@ -65,17 +68,23 @@ void PhysicsComponent::SetPhysicsFlag(PHYSICS_FLAG flag, bool value)
 		m_physicsFlag &= ~flag;
 	}
 
-	if (flag == PHYSICS_FLAG_ENABLE_COLLISION) 
+	if (flag == PHYSICS_FLAG_COLLISION_RESULT)
 	{
-		if (m_collisionResult)
-		{
-			m_collisionResult->Clear();
-		}
+		MAIN_SYSTEM_TASK_COMMON_1(PhysicsSystem, AsyncTaskRunnerST, value,
+			{
+				/*if (self->m_collisionResult)
+				{
+					m_collisionResult->Clear();
+				}*/
 
-		if (HasPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION))
-		{
-			m_collisionResult = new PhysicsCollisionResult();
-		}
+				if (self->HasPhysicsFlag(PHYSICS_FLAG_COLLISION_RESULT))
+				{
+					self->m_collisionResult = new PhysicsCollisionResult();
+				}
+
+				self->OnPhysicsFlagSetted(PHYSICS_FLAG_COLLISION_RESULT, value);
+			}
+		);
 	}
 
 }

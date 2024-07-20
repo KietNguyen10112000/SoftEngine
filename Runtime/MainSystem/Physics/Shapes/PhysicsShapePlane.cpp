@@ -38,6 +38,7 @@ void PhysicsShapePlane::SerializeToJson(Serializer* serializer, json& j) const
 void PhysicsShapePlane::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	assert(m_pxShape == nullptr);
+	this->~PhysicsShapePlane();
 	new (this) PhysicsShapePlane(GetDeserializedMaterial(serializer, j));
 	PhysicsShape::DeserializeFromJson(serializer, j);
 }

@@ -86,7 +86,7 @@ public:
 		for (auto a : pairHeader.actors)
 		{
 			auto comp = (PhysicsComponent*)a->userData;
-			if (comp && comp->HasPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION) 
+			if (comp && comp->m_collisionResult
 				&& comp->m_collisionResult->lastActiveIterationCount != m_system->GetScene()->GetIterationCount())
 			{
 				comp->m_collisionResult->lastActiveIterationCount = m_system->GetScene()->GetIterationCount();
@@ -353,9 +353,27 @@ void PhysicsSystem::Finalize()
 	m_pxScene->release();
 }
 
+void PhysicsSystem::SchedulePrevUpdateImpl(PhysicsComponent* comp)
+{
+	if (comp->PrevUpdateId() != uint32_t(INVALID_ID))
+	{
+		return;
+	}
+
+	comp->PrevUpdateId() = m_prevUpdateList.size();
+	comp->IsPrevUpdateIdRemoved() = false;
+	m_prevUpdateList.push_back(comp);
+}
+
+void PhysicsSystem::UnschedulePrevUpdateImpl(PhysicsComponent* comp)
+{
+	STD_VECTOR_ROLL_TO_FILL_BLANK(m_prevUpdateList, comp, PrevUpdateId());
+	comp->PrevUpdateId() = INVALID_ID;
+}
+
 void PhysicsSystem::ScheduleUpdateImpl(PhysicsComponent* comp)
 {
-	if (comp->UpdateId() != INVALID_ID)
+	if (comp->UpdateId() != uint32_t(INVALID_ID))
 	{
 		return;
 	}
@@ -371,22 +389,35 @@ void PhysicsSystem::UnscheduleUpdateImpl(PhysicsComponent* comp)
 	comp->UpdateId() = INVALID_ID;
 }
 
-void PhysicsSystem::SchedulePostUpdateImpl(PhysicsComponent* comp)
+//void PhysicsSystem::SchedulePostUpdateImpl(PhysicsComponent* comp)
+//{
+//	if (comp->PostUpdateId() != INVALID_ID)
+//	{
+//		return;
+//	}
+//
+//	comp->PostUpdateId() = m_postUpdateList.size();
+//	comp->IsPostUpdateIdRemoved() = false;
+//	m_postUpdateList.push_back(comp);
+//}
+//
+//void PhysicsSystem::UnschedulePostUpdateImpl(PhysicsComponent* comp)
+//{
+//	STD_VECTOR_ROLL_TO_FILL_BLANK(m_postUpdateList, comp, PostUpdateId());
+//	comp->PostUpdateId() = INVALID_ID;
+//}
+
+void PhysicsSystem::UnschedulePrevUpdate(PhysicsComponent* comp)
 {
-	if (comp->PostUpdateId() != INVALID_ID)
+	m_prevUpdateListLock.lock();
+
+	if (!comp->IsPrevUpdateIdRemoved())
 	{
-		return;
+		m_removePrevUpdateList.push_back(comp);
+		comp->IsPrevUpdateIdRemoved() = true;
 	}
 
-	comp->PostUpdateId() = m_postUpdateList.size();
-	comp->IsPostUpdateIdRemoved() = false;
-	m_postUpdateList.push_back(comp);
-}
-
-void PhysicsSystem::UnschedulePostUpdateImpl(PhysicsComponent* comp)
-{
-	STD_VECTOR_ROLL_TO_FILL_BLANK(m_postUpdateList, comp, PostUpdateId());
-	comp->PostUpdateId() = INVALID_ID;
+	m_prevUpdateListLock.unlock();
 }
 
 void PhysicsSystem::UnscheduleUpdate(PhysicsComponent* comp)
@@ -402,32 +433,49 @@ void PhysicsSystem::UnscheduleUpdate(PhysicsComponent* comp)
 	m_updateListLock.unlock();
 }
 
-void PhysicsSystem::UnschedulePostUpdate(PhysicsComponent* comp)
-{
-	m_postUpdateListLock.lock();
-
-	if (!comp->IsPostUpdateIdRemoved())
-	{
-		m_removePostUpdateList.push_back(comp);
-		comp->IsPostUpdateIdRemoved() = true;
-	}
-
-	m_postUpdateListLock.unlock();
-}
+//void PhysicsSystem::UnschedulePostUpdate(PhysicsComponent* comp)
+//{
+//	m_postUpdateListLock.lock();
+//
+//	if (!comp->IsPostUpdateIdRemoved())
+//	{
+//		m_removePostUpdateList.push_back(comp);
+//		comp->IsPostUpdateIdRemoved() = true;
+//	}
+//
+//	m_postUpdateListLock.unlock();
+//}
 
 void PhysicsSystem::RebuildUpdateList()
 {
+	for (auto& comp : m_removePrevUpdateList)
+	{
+		UnschedulePrevUpdateImpl(comp);
+	}
+	m_removePrevUpdateList.clear();
+
 	for (auto& comp : m_removeUpdateList)
 	{
 		UnscheduleUpdateImpl(comp);
 	}
 	m_removeUpdateList.clear();
 
-	for (auto& comp : m_removePostUpdateList)
+	/*for (auto& comp : m_removePostUpdateList)
 	{
 		UnschedulePostUpdateImpl(comp);
 	}
-	m_removePostUpdateList.clear();
+	m_removePostUpdateList.clear();*/
+}
+
+void PhysicsSystem::ProcessPrevUpdateList()
+{
+	auto size = m_prevUpdateList.size();
+	for (size_t i = 0; i < size; i++)
+	{
+		auto comp = m_prevUpdateList[i];
+		if (!comp->IsPrevUpdateIdRemoved())
+			comp->OnPrevUpdate(m_dt);
+	}
 }
 
 void PhysicsSystem::ProcessUpdateList()
@@ -441,16 +489,16 @@ void PhysicsSystem::ProcessUpdateList()
 	}
 }
 
-void PhysicsSystem::ProcessPostUpdateList()
-{
-	auto size = m_postUpdateList.size();
-	for (size_t i = 0; i < size; i++)
-	{
-		auto comp = m_postUpdateList[i];
-		if (!comp->IsPostUpdateIdRemoved())
-			comp->OnPostUpdate(m_dt);
-	}
-}
+//void PhysicsSystem::ProcessPostUpdateList()
+//{
+//	auto size = m_postUpdateList.size();
+//	for (size_t i = 0; i < size; i++)
+//	{
+//		auto comp = m_postUpdateList[i];
+//		if (!comp->IsPostUpdateIdRemoved())
+//			comp->OnPostUpdate(m_dt);
+//	}
+//}
 
 void PhysicsSystem::ProcessCollisionList()
 {
@@ -656,15 +704,20 @@ void PhysicsSystem::RemoveComponent(MainComponent* comp)
 {
 	auto physics = (PhysicsComponent*)comp;
 
+	if (physics->PrevUpdateId() != INVALID_ID && !physics->IsPrevUpdateIdRemoved())
+	{
+		UnschedulePrevUpdateImpl(physics);
+	}
+
 	if (physics->UpdateId() != INVALID_ID && !physics->IsUpdateIdRemoved())
 	{
 		UnscheduleUpdateImpl(physics);
 	}
 
-	if (physics->PostUpdateId() != INVALID_ID && !physics->IsPostUpdateIdRemoved())
+	/*if (physics->PostUpdateId() != INVALID_ID && !physics->IsPostUpdateIdRemoved())
 	{
 		UnschedulePostUpdateImpl(physics);
-	}
+	}*/
 
 	if (physics->m_pxActor)
 		m_pxScene->removeActor(*physics->m_pxActor);
@@ -703,9 +756,12 @@ void PhysicsSystem::Iteration(float dt)
 		dt = 1.0f / 120.0f;
 	}
 
-	m_pxScene->simulate(dt);
-
 	m_dt = dt;
+
+	RebuildUpdateList();
+	ProcessPrevUpdateList();
+
+	m_pxScene->simulate(dt);
 
 	RebuildUpdateList();
 	ProcessUpdateList();
@@ -714,8 +770,8 @@ void PhysicsSystem::Iteration(float dt)
 	m_pxScene->fetchResults(true);
 
 	RebuildUpdateList();
-	ProcessPostUpdateList();
-	RebuildUpdateList();
+	/*ProcessPostUpdateList();
+	RebuildUpdateList();*/
 
 	ProcessCollisionList();
 

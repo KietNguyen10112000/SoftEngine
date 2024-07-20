@@ -23,10 +23,14 @@ void SceneEditorTab::OnObjectsAdded(std::vector<GameObject*>& objects)
 {
 	for (auto& obj : objects)
 	{
-		if (!obj->HasComponent<GameObjectEditorComponent>())
-		{
-			obj->NewComponent<GameObjectEditorComponent>();
-		}
+		obj->PostTraversal([](GameObject* o)
+			{
+				if (!o->HasComponent<GameObjectEditorComponent>())
+				{
+					o->NewComponent<GameObjectEditorComponent>();
+				}
+			}
+		);
 
 		auto editorComp = obj->GetComponentRaw<GameObjectEditorComponent>();
 		editorComp->id = m_objects.size();
@@ -78,7 +82,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				nodeFlags |= ImGuiTreeNodeFlags_Selected;
 			}
 
-			auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj->GetComponentRaw<GameObjectEditorComponent>()->id,
+			auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj,
 				nodeFlags, obj->Name().empty() ? "<Unnamed>" : obj->Name().c_str());
 
 			if (obj->Parent().Get() == nullptr && m_searchNameIdx == obj->GetComponentRaw<GameObjectEditorComponent>()->id)
@@ -519,6 +523,11 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 
 		ImGui::InputText("Name", m_nameInputTxt, NAME_INPUT_MAX_LEN);
 
+		Accessor temp = Accessor::ForString("Path", m_loadObjectFileName, nullptr);
+		Variant var = Variant(VARIANT_TYPE::STRING_PATH);
+		var.AsString() = m_loadObjectFileName;
+		DataInspector::InspectStringPathEx(nullptr, temp, var, "Load from file", true);
+
 		ImGui::EndChild();
 
 		ImGui::Separator();
@@ -527,10 +536,18 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 
 		if (ImGui::Button("OK", ImVec2(100, 0)))
 		{
-			auto gameObject = mheap::New<GameObject>();
-			gameObject->Name() = m_nameInputTxt;
-			m_scene->AddObject(gameObject);
+			if (!m_loadObjectFileName.empty())
+			{
+				LoadGameObjectFromFile(m_loadObjectFileName);
+			}
+			else
+			{
+				auto gameObject = mheap::New<GameObject>();
+				gameObject->Name() = m_nameInputTxt;
+				m_scene->AddObject(gameObject);
+			}
 
+			m_loadObjectFileName = "";
 			m_nameInputTxt[0] = 0;
 			ImGui::CloseCurrentPopup();
 		}
@@ -538,6 +555,7 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 		ImGui::SameLine(0, 20);
 		if (ImGui::Button("Cancel", ImVec2(100, 0)))
 		{
+			m_loadObjectFileName = "";
 			m_nameInputTxt[0] = 0;
 			ImGui::CloseCurrentPopup();
 		}
@@ -546,7 +564,28 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 	}
 }
 
+void SceneEditorTab::LoadGameObjectFromFile(const String& path)
+{
+	auto ext = FileUtils::GetExtension(path);
+	if (ext != "json")
+	{
+		std::cerr << "[ERROR]: SceneEditorTab::LoadGameObjectFromFile() - invalid file!\n";
+		return;
+	}
 
+	Serializer serializer = {};
+	serializer.ReadFromFile(path);
+
+	Handle<GameObject> obj;
+	serializer.Deserialize(serializer.GetRootUUID(), obj);
+	if (obj == nullptr)
+	{
+		std::cerr << "[ERROR]: SceneEditorTab::LoadGameObjectFromFile() - invalid file!\n";
+		return;
+	}
+
+	m_scene->AddObject(obj);
+}
 
 void SceneEditorTab::OnRenderGUI()
 {
@@ -554,6 +593,17 @@ void SceneEditorTab::OnRenderGUI()
 	RenderInspectorPanel();
 
 	ImGui::ShowDemoWindow(0);
+}
+
+void SceneEditorTab::OnRenderMenuBar(const String& menuName)
+{
+	if (menuName == "Tab")
+	{
+		if (ImGui::MenuItem("Draw Debug", NULL, m_isDrawingDebug))
+		{
+			m_isDrawingDebug = !m_isDrawingDebug;
+		}
+	}
 }
 
 void SceneEditorTab::OnRenderInGameDebugGraphics()
@@ -564,7 +614,7 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 
 	if (m_inspectingObject)
 	{
-		auto mat = m_inspectingObject->GetLocalTransform().ToTransformMatrix();
+		auto& mat = m_inspectingObject->GetCommittedGlobalTransform();
 
 		debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
 		debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
@@ -577,41 +627,44 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 		}*/
 	}
 
-	for (auto& obj : m_objects)
+	if (m_isDrawingDebug)
 	{
-		auto physicsComp = obj->GetComponentRaw<PhysicsComponent>();
-		if (physicsComp)
+		for (auto& obj : m_objects)
 		{
-			physicsComp->OnDrawDebug();
-		}
+			auto physicsComp = obj->GetComponentRaw<PhysicsComponent>();
+			if (physicsComp)
+			{
+				physicsComp->OnDrawDebug();
+			}
 
-		auto renderingComp = obj->GetComponentRaw<RenderingComponent>();
-		if (renderingComp)
-		{
-			renderingComp->OnDrawDebug();
-		}
+			auto renderingComp = obj->GetComponentRaw<RenderingComponent>();
+			if (renderingComp)
+			{
+				renderingComp->OnDrawDebug();
+			}
 
-		auto animationComp = obj->GetComponentRaw<AnimationComponent>();
-		if (animationComp)
-		{
-			animationComp->OnDrawDebug();
+			auto animationComp = obj->GetComponentRaw<AnimationComponent>();
+			if (animationComp)
+			{
+				animationComp->OnDrawDebug();
+			}
 		}
 	}
+	
+	//debugGraphics->DrawDirection(Vec3(-10, 0, 0), Vec3(20, 0, 0), { 1,0,0,1 }, { 1,0,0,1 });
+	//debugGraphics->DrawDirection(Vec3(0, -10, 0), Vec3(0, 20, 0), { 0,1,0,1 }, { 0,1,0,1 });
+	//debugGraphics->DrawDirection(Vec3(0, 0, -10), Vec3(0, 0, 20), { 0,0,1,1 }, { 0,0,1,1 });
 
-	debugGraphics->DrawDirection(Vec3(-10, 0, 0), Vec3(20, 0, 0), { 1,0,0,1 }, { 1,0,0,1 });
-	debugGraphics->DrawDirection(Vec3(0, -10, 0), Vec3(0, 20, 0), { 0,1,0,1 }, { 0,1,0,1 });
-	debugGraphics->DrawDirection(Vec3(0, 0, -10), Vec3(0, 0, 20), { 0,0,1,1 }, { 0,0,1,1 });
 
+	//// test
+	//debugGraphics->DrawSphere({ Vec3(0, 0, 0), 1 }, Vec4(1, 0, 0, 1));
+	//debugGraphics->DrawDirection(Vec3(0, 0, 0.5f), Vec3::X_AXIS, { 0,0,1,1 }, { 0,1,0,1 });
 
-	// test
-	debugGraphics->DrawSphere({ Vec3(0, 0, 0), 1 }, Vec4(1, 0, 0, 1));
-	debugGraphics->DrawDirection(Vec3(0, 0, 0.5f), Vec3::X_AXIS, { 0,0,1,1 }, { 0,1,0,1 });
+	//debugGraphics->DrawCapsule(Capsule(Vec3(5, 0, 5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
+	//debugGraphics->DrawDirection(Vec3(5, 0, 5), Capsule::DEFAULT_UP_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
+	//debugGraphics->DrawDirection(Vec3(5, 2.5f, 5), Vec3::X_AXIS * 2.0f, { 0,0,1,1 }, { 0,1,0,1 });
 
-	debugGraphics->DrawCapsule(Capsule(Vec3(5, 0, 5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
-	debugGraphics->DrawDirection(Vec3(5, 0, 5), Capsule::DEFAULT_UP_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
-	debugGraphics->DrawDirection(Vec3(5, 2.5f, 5), Vec3::X_AXIS * 2.0f, { 0,0,1,1 }, { 0,1,0,1 });
-
-	debugGraphics->DrawCapsule(Capsule(Vec3(1, 1, 1), Vec3(5, 0, -5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
+	//debugGraphics->DrawCapsule(Capsule(Vec3(1, 1, 1), Vec3(5, 0, -5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
 	//debugGraphics->DrawDirection(Vec3(5, 0, -5), Vec3::X_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
 	//debugGraphics->DrawDirection(Vec3(5, 0, -5), Vec3::Y_AXIS * 2.0f, { 0,0,1,1 }, { 0,1,0,1 });
 
@@ -686,7 +739,7 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 					ImGui::SetCursorPos(pos);
 				}
 
-				if (open)
+				if (open && propertyName)
 				{
 					if (ComponentInspector::Get()->Inspect(0, metadata->GetInstance(), metadata, propertyName))
 					{
@@ -698,7 +751,7 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 			}
 
 			bool open = m_inspectPropertiesIsOpenStack.back();
-			if (open && m_inspectPropertiesIsRawInspectStack.back())
+			if (open && m_inspectPropertiesIsRawInspectStack.back() && propertyName)
 			{
 				ImGui::Text(propertyName);
 

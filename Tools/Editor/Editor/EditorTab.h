@@ -63,6 +63,7 @@ public:
 	virtual void OnObjectsRemoved(std::vector<GameObject*>& objects) = 0;
 	virtual void OnRenderGUI() = 0;
 	virtual void OnRenderInGameDebugGraphics() = 0;
+	inline virtual void OnRenderMenuBar(const String& menuName) {};
 
 	virtual void OnShow() = 0;
 	virtual void OnHide() = 0;

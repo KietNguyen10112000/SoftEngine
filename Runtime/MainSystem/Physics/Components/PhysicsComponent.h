@@ -193,6 +193,22 @@ private:
 	PHYSICS_FRIEND_CLASSES();
 	constexpr static ID COMPONENT_ID = MainSystemInfo::PHYSICS_ID;
 
+protected:
+	struct ScheduleUpdateInfo
+	{
+		uint32_t prevUpdateId = uint32_t(INVALID_ID);
+		bool isPrevUpdateIdRemoved = false;
+		bool padd0[3];
+
+		uint32_t updateId = uint32_t(INVALID_ID);
+		bool isUpdateIdRemoved = false;
+		bool padd1[3];
+
+		uint32_t postUpdateId = uint32_t(INVALID_ID);
+		bool isPostUpdateIdRemoved = false;
+		bool padd2[3];
+	};
+
 private:
 	size_t m_physicsFlag = 0;
 
@@ -223,31 +239,50 @@ public:
 protected:
 	virtual void OnPhysicsTransformChanged() = 0;
 
+	inline virtual void OnPrevUpdate(float dt) {};
+
 	// called before PhysX fetchResults, use PhysicsSystem::ScheduleUpdate() to schedule update
 	inline virtual void OnUpdate(float dt) {};
 
 	// called after PhysX fetchResults, use PhysicsSystem::SchedulePostUpdate() to schedule post update
 	inline virtual void OnPostUpdate(float dt) {};
 
-	inline size_t& UpdateId()
+	inline virtual void OnPhysicsFlagSetted(PHYSICS_FLAG flag, bool value) {};
+
+	inline auto& ScheduleUpdateInfo()
 	{
-		return m_doubleBVHId[0].bvhId;
+		return *(struct ScheduleUpdateInfo*)&m_doubleBVHId[0];
+	}
+
+	inline uint32_t& PrevUpdateId()
+	{
+		return ScheduleUpdateInfo().prevUpdateId;
+	}
+
+	inline bool& IsPrevUpdateIdRemoved()
+	{
+		return ScheduleUpdateInfo().isPrevUpdateIdRemoved;
+	}
+
+	inline uint32_t& UpdateId()
+	{
+		return ScheduleUpdateInfo().updateId;
 	}
 
 	inline bool& IsUpdateIdRemoved()
 	{
-		return *(bool*)&m_doubleBVHId[0].ulistId;
+		return ScheduleUpdateInfo().isUpdateIdRemoved;
 	}
 
-	inline size_t& PostUpdateId()
+	/*inline uint32_t& PostUpdateId()
 	{
-		return m_doubleBVHId[1].bvhId;
+		return ScheduleUpdateInfo().postUpdateId;
 	}
 
 	inline bool& IsPostUpdateIdRemoved()
 	{
-		return *(bool*)&m_doubleBVHId[1].ulistId;
-	}
+		return ScheduleUpdateInfo().isPostUpdateIdRemoved;
+	}*/
 
 	bool HasCollisionContactPairsBegin();
 	bool HasCollisionContactPairsEnd();

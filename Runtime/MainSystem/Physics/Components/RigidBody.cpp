@@ -18,6 +18,18 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
+void RigidBody::SetupCollisionStruct()
+{
+	if (!GetGameObject() || !GetGameObject()->GetScene())
+	{
+		return;
+	}
+
+	auto pxScene = GetGameObject()->GetScene()->GetPhysicsSystem()->m_pxScene;
+
+	//pxScene->overlap()
+}
+
 void RigidBody::OnTransformChanged()
 {
 	auto gameObject = GetGameObject();
@@ -54,7 +66,7 @@ void RigidBody::OnTransformChanged()
 
 void RigidBody::OnDrawDebug()
 {
-	//return;
+	return;
 
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 
@@ -145,6 +157,23 @@ void RigidBody::OnDrawDebug()
 		default:
 			break;
 		}
+	}
+}
+
+void RigidBody::OnPhysicsFlagSetted(PHYSICS_FLAG flag, bool value)
+{
+	switch (flag)
+	{
+	case PHYSICS_FLAG_COLLISION_RESULT:
+	{
+		if (value)
+		{
+			SetupCollisionStruct();
+		}
+		break;
+	}
+	default:
+		break;
 	}
 }
 

@@ -51,14 +51,17 @@ private:
 	physx::PxScene* m_pxScene = nullptr;
 	physx::PxControllerManager* m_pxControllerManager = nullptr;
 
+	std::vector<PhysicsComponent*> m_prevUpdateList;
 	std::vector<PhysicsComponent*> m_updateList;
-	std::vector<PhysicsComponent*> m_postUpdateList;
+	//std::vector<PhysicsComponent*> m_postUpdateList;
 
+	std::vector<PhysicsComponent*> m_removePrevUpdateList;
 	std::vector<PhysicsComponent*> m_removeUpdateList;
-	std::vector<PhysicsComponent*> m_removePostUpdateList;
+	//std::vector<PhysicsComponent*> m_removePostUpdateList;
 
+	Spinlock m_prevUpdateListLock;
 	Spinlock m_updateListLock;
-	Spinlock m_postUpdateListLock;
+	//Spinlock m_postUpdateListLock;
 	bool m_padd[2];
 
 	float m_dt;
@@ -128,15 +131,19 @@ private:
 		return m_trashComps[(m_trashId + NUM_TRASH_ARRAY - 1) % NUM_TRASH_ARRAY];
 	}
 
+	void SchedulePrevUpdateImpl(PhysicsComponent* comp);
+	void UnschedulePrevUpdateImpl(PhysicsComponent* comp);
+
 	void ScheduleUpdateImpl(PhysicsComponent* comp);
 	void UnscheduleUpdateImpl(PhysicsComponent* comp);
 
-	void SchedulePostUpdateImpl(PhysicsComponent* comp);
-	void UnschedulePostUpdateImpl(PhysicsComponent* comp);
+	//void SchedulePostUpdateImpl(PhysicsComponent* comp);
+	//void UnschedulePostUpdateImpl(PhysicsComponent* comp);
 
 	void RebuildUpdateList();
+	void ProcessPrevUpdateList();
 	void ProcessUpdateList();
-	void ProcessPostUpdateList();
+	//void ProcessPostUpdateList();
 
 	void ProcessCollisionList();
 
@@ -181,6 +188,15 @@ public:
 	}
 
 public:
+	inline void SchedulePrevUpdate(PhysicsComponent* comp)
+	{
+		m_prevUpdateListLock.lock();
+		SchedulePrevUpdateImpl(comp);
+		m_prevUpdateListLock.unlock();
+	}
+
+	void UnschedulePrevUpdate(PhysicsComponent* comp);
+
 	inline void ScheduleUpdate(PhysicsComponent* comp)
 	{
 		m_updateListLock.lock();
@@ -190,14 +206,14 @@ public:
 
 	void UnscheduleUpdate(PhysicsComponent* comp);
 
-	inline void SchedulePostUpdate(PhysicsComponent* comp)
+	/*inline void SchedulePostUpdate(PhysicsComponent* comp)
 	{
 		m_postUpdateListLock.lock();
 		SchedulePostUpdateImpl(comp);
 		m_postUpdateListLock.unlock();
 	}
 
-	void UnschedulePostUpdate(PhysicsComponent* comp);
+	void UnschedulePostUpdate(PhysicsComponent* comp);*/
 
 	inline auto& GetGravity() const
 	{

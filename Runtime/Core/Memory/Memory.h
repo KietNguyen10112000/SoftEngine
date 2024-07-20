@@ -124,7 +124,7 @@ namespace rheap
 
 #ifdef _DEBUG
 	API void* malloc(size_t nBytes);
-
+	API void* malloc_debug(size_t nBytes, const char* className = nullptr);
 	API void free(void* p);
 #else
 	inline void* malloc(size_t nBytes)
@@ -189,7 +189,16 @@ namespace rheap
 	template <typename T>
 	void Delete(T* ptr)
 	{
-		auto p = dynamic_cast<void*>(ptr);
+		void* p;
+		if constexpr (std::is_polymorphic_v<T>)
+		{
+			p = dynamic_cast<void*>(ptr);
+		}
+		else
+		{
+			p = (void*)ptr;
+		}
+
 		ManagedHandle* handle = (ManagedHandle*)p - 1;
 		TraceTable* table = handle->traceTable;
 

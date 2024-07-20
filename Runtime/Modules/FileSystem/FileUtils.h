@@ -50,6 +50,7 @@ inline void ReadFile(String fileName, byte*& buffer, size_t& fileSize)
 
 	buffer = buf;
 	fileSize = size;
+	buffer[fileSize] = '\0';
 }
 
 

@@ -378,6 +378,7 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 
 	GameObjectDependenciesRecorder recorder = this;
 	ResolveDependencies(obj, &recorder);
+	recorder.UnRecordAll(this);
 
 	for (auto& root : recorder.m_rootObjects)
 	{

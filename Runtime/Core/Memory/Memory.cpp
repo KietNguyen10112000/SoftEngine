@@ -157,6 +157,27 @@ void* rheap::malloc(size_t nBytes)
     size_t* p = (size_t*)mem;
     *p = MALLOC_SIGN_BEGIN;
 
+    p++;
+    *p = (size_t)0;
+
+    p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
+    *p = MALLOC_SIGN_END;
+
+    auto ret = ((size_t*)mem) + 2;
+    return ret;
+}
+
+void* rheap::malloc_debug(size_t nBytes, const char* className)
+{
+    auto handle = soft::g_rawHeap->Allocate(nBytes + 3 * sizeof(size_t), 0, 0, 0);
+    auto mem = handle->GetUsableMemAddress();
+
+    size_t* p = (size_t*)mem;
+    *p = MALLOC_SIGN_BEGIN;
+
+    p++;
+    *p = (size_t)className;
+
     p = (size_t*)((byte*)(handle - 1) + handle->TotalSize() - sizeof(size_t));
     *p = MALLOC_SIGN_END;
 

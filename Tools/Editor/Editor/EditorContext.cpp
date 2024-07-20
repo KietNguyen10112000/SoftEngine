@@ -50,6 +50,8 @@ void EditorContext::RenderMenuBar()
 {
 	static char textBuf[256] = {};
 
+	auto currentTab = GetCurrentTab();
+
 	ImGui::BeginMainMenuBar();
 
 	if (ImGui::BeginMenu("File"))
@@ -108,6 +110,11 @@ void EditorContext::RenderMenuBar()
 			}
 		}
 
+		if (currentTab)
+		{
+			currentTab->OnRenderMenuBar("File");
+		}
+
 		ImGui::EndMenu();
 	}
 
@@ -123,7 +130,21 @@ void EditorContext::RenderMenuBar()
 			Runtime::Get()->HotReloadScripts();
 		}
 
+		if (currentTab)
+		{
+			currentTab->OnRenderMenuBar("Runtime");
+		}
+
 		ImGui::EndMenu();
+	}
+
+	if (currentTab)
+	{
+		if (ImGui::BeginMenu("Tab"))
+		{
+			currentTab->OnRenderMenuBar("Tab");
+			ImGui::EndMenu();
+		}
 	}
 
 	ImGui::EndMainMenuBar();
@@ -768,6 +789,12 @@ void EditorContext::CloseTabCreationPopUp()
 
 void EditorContext::PlaceHolderTab(EditorTab* tab)
 {
+	if (tab == nullptr)
+	{
+		m_tabHolder = nullptr;
+		return;
+	}
+
 	if (!tab->m_isPlacedHolder)
 	{
 		m_tabs.Push(tab);

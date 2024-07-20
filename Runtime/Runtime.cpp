@@ -494,7 +494,7 @@ void Runtime::Setup()
 
 			auto shape = std::make_shared<PhysicsShapeBox>(Vec3(5.0f, 5.0f, 5.0f), material);
 			auto dyn = obj->NewComponent<RigidBodyDynamic>(shape);//->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
-			dyn->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+			dyn->SetPhysicsFlag(PHYSICS_FLAG_COLLISION_RESULT, true);
 			dyn->SetDensity(2.5f);
 
 			//obj->NewComponent<TestScript2>();
@@ -556,7 +556,7 @@ void Runtime::Setup()
 			desc.capsule = Capsule(Vec3::ZERO + Vec3::UP, 1.0f, 0.5f);
 			desc.material = material;
 			auto cct = obj->NewComponent<CharacterControllerCapsule>(desc);
-			cct->SetPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION, true);
+			cct->SetPhysicsFlag(PHYSICS_FLAG_COLLISION_RESULT, true);
 
 			auto script = obj->NewComponent<TPPCameraScript>();
 			script->m_camera = camera;

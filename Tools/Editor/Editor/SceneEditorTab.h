@@ -13,7 +13,7 @@ class SceneEditorTab : public EditorTab
 public:
 	struct GameObjectEditorComponent
 	{
-		ID id;
+		ID id = INVALID_ID;
 	};
 
 	constexpr static size_t NAME_INPUT_MAX_LEN = 2048;
@@ -37,6 +37,7 @@ public:
 	bool m_openInputNamePopup = false;
 	GameObject* m_renameObject = nullptr;
 	char m_nameInputTxt[NAME_INPUT_MAX_LEN] = {};
+	String m_loadObjectFileName = "";
 
 	char m_searchNameInputTxt[NAME_INPUT_MAX_LEN] = {};
 	size_t m_searchNameIdx = -1;
@@ -57,6 +58,8 @@ public:
 
 	ID m_onSaveListenerId = INVALID_ID;
 
+	bool m_isDrawingDebug = true;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -74,12 +77,15 @@ private:
 	void ShowCreateComponentPopup();
 	void ShowCreateGameObjectPopup();
 
+	void LoadGameObjectFromFile(const String& path);
+
 public:
 	SceneEditorTab();
 
 	void OnObjectsAdded(std::vector<GameObject*>& objects) override;
 	void OnObjectsRemoved(std::vector<GameObject*>& objects) override;
 	void OnRenderGUI() override;
+	virtual void OnRenderMenuBar(const String& menuName) override;
 
 	void OnRenderInGameDebugGraphics() override;
 	

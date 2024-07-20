@@ -45,6 +45,7 @@ void PhysicsShapeBox::SerializeToJson(Serializer* serializer, json& j) const
 void PhysicsShapeBox::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	assert(m_pxShape == nullptr);
+	this->~PhysicsShapeBox();
 	new (this) PhysicsShapeBox(j["Dimensions"], GetDeserializedMaterial(serializer, j));
 	PhysicsShape::DeserializeFromJson(serializer, j);
 }

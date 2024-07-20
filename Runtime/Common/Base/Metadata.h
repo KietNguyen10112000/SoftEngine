@@ -118,7 +118,7 @@ using GetAccessor = Variant (*)(UnknownAddress& var, Serializable* instance);
 class API Accessor
 {
 private:
-	const char* m_name = nullptr;
+	String m_name = nullptr;
 	UnknownAddress m_var = {};
 	SetAccessor m_setter = nullptr;
 	GetAccessor m_getter = nullptr;
@@ -197,7 +197,7 @@ public:
 
 	inline auto GetName()
 	{
-		return m_name;
+		return m_name.c_str();
 	}
 
 	inline auto& Var() const
@@ -247,7 +247,7 @@ public:
 class ClassMetadata
 {
 private:
-	const char* m_className = nullptr;
+	String m_className = nullptr;
 	Handle<Serializable> m_instance = nullptr;
 
 	std::vector<Accessor> m_properties;
@@ -256,7 +256,7 @@ private:
 
 	// class contains class
 	Array<Handle<ClassMetadata>> m_subClasses;
-	std::vector<const char*> m_subClassesPropertyNames;
+	std::vector<String> m_subClassesPropertyNames;
 
 	size_t m_visited = 0;
 
@@ -293,18 +293,34 @@ private:
 		bool recursive = true;
 		if constexpr (PREV_CALL)
 		{
-			for (auto& a : m_properties)
+			if (m_properties.empty())
 			{
+				Accessor temp = {};
 				if constexpr (std::is_void_v<std::invoke_result_t<Fn1, ClassMetadata*, const char*, Accessor&, size_t>>)
 				{
 					// param: (current class type, current class instance name, property name)
-					fn1(this, a.GetName(), a, depth);
+					fn1(this, nullptr, temp, depth);
 				}
 				else
 				{
-					recursive &= (fn1(this, a.GetName(), a, depth));
+					recursive &= (fn1(this, nullptr, temp, depth));
 				}
-				
+			}
+			else
+			{
+				for (auto& a : m_properties)
+				{
+					if constexpr (std::is_void_v<std::invoke_result_t<Fn1, ClassMetadata*, const char*, Accessor&, size_t>>)
+					{
+						// param: (current class type, current class instance name, property name)
+						fn1(this, a.GetName(), a, depth);
+					}
+					else
+					{
+						recursive &= (fn1(this, a.GetName(), a, depth));
+					}
+
+				}
 			}
 		}
 
@@ -317,7 +333,7 @@ private:
 				{
 					if (!c->IsVisited())
 					{
-						c->ForEachPropertiesImpl<RECURSIVE, PREV_CALL, POST_CALL>(fn1, fn2, m_subClassesPropertyNames[i], depth + 1);
+						c->ForEachPropertiesImpl<RECURSIVE, PREV_CALL, POST_CALL>(fn1, fn2, m_subClassesPropertyNames[i].c_str(), depth + 1);
 					}
 					i++;
 				}
@@ -326,10 +342,18 @@ private:
 
 		if constexpr (POST_CALL)
 		{
-			for (auto& a : m_properties)
+			if (m_properties.empty())
 			{
-				// param: (current class type, current class instance name, property name)
-				fn2(this, a.GetName(), a, depth);
+				Accessor temp = {};
+				fn2(this, nullptr, temp, depth);
+			}
+			else
+			{
+				for (auto& a : m_properties)
+				{
+					// param: (current class type, current class instance name, property name)
+					fn2(this, a.GetName(), a, depth);
+				}
 			}
 		}
 	}
@@ -404,7 +428,7 @@ public:
 
 	inline auto GetName()
 	{
-		return m_className;
+		return m_className.c_str();
 	}
 
 	inline auto GetInlinePropertiesCount()

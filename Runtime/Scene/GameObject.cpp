@@ -83,10 +83,10 @@ void GameObject::RemoveFromParent()
 
 void GameObject::RecalculateTransform(const Mat4& parentTransform)
 {
-	if (m_transformConstraint == TRANSFORM_CONSTRAINT::FREE)
+	/*if (m_transformConstraint == TRANSFORM_CONSTRAINT::FREE)
 	{
 		return;
-	}
+	}*/
 
 	if (m_transformConstraint == TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL)
 	{
@@ -193,7 +193,7 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, 
 
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 
-	if (transformConstraint != TRANSFORM_CONSTRAINT::FREE)
+	//if (transformConstraint != TRANSFORM_CONSTRAINT::FREE)
 	{
 		m_lock.lock();
 		for (auto& c : m_children)
@@ -251,7 +251,12 @@ Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 	{
 		if (comp)
 		{
-			metadata->AddProperty(MainSystemInfo::COMPONENT_NAME[i], comp->GetMetadata(sign));
+			auto compMeta = comp->GetMetadata(0);
+			if (compMeta == nullptr)
+			{
+				compMeta = mheap::New<ClassMetadata>(comp->GetClassName(), comp.Get());
+			}
+			metadata->AddProperty(MainSystemInfo::COMPONENT_NAME[i], compMeta);
 		}
 		i++;
 	}

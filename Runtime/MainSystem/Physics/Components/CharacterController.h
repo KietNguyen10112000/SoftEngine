@@ -36,12 +36,15 @@ protected:
 	//Mat4 m_lastGlobalTransform;
 
 	physx::PxController* m_pxCharacterController = nullptr;
+	Quaternion m_rotation = {};
+
 	Vec3 m_gravity = Vec3::ZERO;
 	Vec3 m_velocity = Vec3::ZERO;
 
 	Vec3 m_sumF = Vec3::ZERO;
 
 	Vec3 m_sumDisp[2] = { Vec3::ZERO, Vec3::ZERO };
+	Vec3 m_lastDisp = Vec3::ZERO;
 	size_t m_lastMoveIterationCount = 0;
 
 	std::vector<CollisionPlane> m_collisionPlanes;
@@ -58,14 +61,14 @@ protected:
 private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
-	bool IsHasNextMove();
+	//bool IsHasNextMove();
 
 protected:
 	virtual void Wake() override;
 	virtual void OnPhysicsTransformChanged() override;
 
 	virtual void OnUpdate(float dt);
-	virtual void OnPostUpdate(float dt);
+	virtual void OnPrevUpdate(float dt);
 
 public:
 	void OnTransformChanged() override;
@@ -85,6 +88,8 @@ public:
 	void CCTApplyImpulse(const Vec3& impulse);
 	bool CCTIsOnGround();
 	void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
+
+	void CCTSetRotation(const Quaternion& rotation);
 
 };
 

@@ -156,14 +156,14 @@ CharacterController::~CharacterController()
 //	gameObject->m_isNeedRecalculateLocalTransform = true;
 //}
 
-bool CharacterController::IsHasNextMove()
-{
-	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-	return m_lastMoveIterationCount >= GetGameObject()->GetScene()->GetIterationCount() - 1 
-		|| disp != Vec3::ZERO 
-		|| m_gravity != Vec3::ZERO 
-		|| m_velocity != Vec3::ZERO;
-}
+//bool CharacterController::IsHasNextMove()
+//{
+//	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+//	return m_lastMoveIterationCount >= GetGameObject()->GetScene()->GetIterationCount() - 1 
+//		|| disp != Vec3::ZERO 
+//		|| m_gravity != Vec3::ZERO 
+//		|| m_velocity != Vec3::ZERO;
+//}
 
 void CharacterController::Wake()
 {
@@ -190,6 +190,7 @@ void CharacterController::OnPhysicsTransformChanged()
 	auto& pxPosition = pxController->getPosition();
 
 	Mat4 global = Mat4::Identity();
+	global *= Mat4::Rotation(m_rotation);
 	global.SetPosition(pxPosition.x, pxPosition.y, pxPosition.z);
 	obj->SetGlobalTransform(global, COMPONENT_ID);
 }
@@ -313,7 +314,9 @@ void CharacterController::OnUpdate(float dt)
 
 	m_velocity += (m_sumF / mass)  * dt;
 
-	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	auto& disp = m_lastDisp;
+	disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()] = Vec3::ZERO;
 
 	if (m_collisionPlanes.size() != 0)
 	//if (HasCollisionContactPairs())
@@ -409,9 +412,9 @@ void CharacterController::OnUpdate(float dt)
 	}
 }
 
-void CharacterController::OnPostUpdate(float dt)
+void CharacterController::OnPrevUpdate(float dt)
 {
-	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	auto& disp = m_lastDisp;
 
 	disp += m_velocity * dt;
 	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
@@ -431,11 +434,17 @@ void CharacterController::OnTransformChanged()
 	auto gameObject = GetGameObject();
 	auto& globalTransform = gameObject->GetCommittedGlobalTransform();
 
+	Vec3 pos, scale;
+	globalTransform.Decompose(scale, m_rotation, pos);
+
+	auto rotationMat = Mat4::Rotation(m_rotation);
+
 	//if (::memcmp(&m_lastGlobalTransform, &globalTransform, sizeof(Mat4)) != 0)
 	{
 		auto& pos = globalTransform.Position();
 		PxExtendedVec3 position = { pos.x, pos.y, pos.z };
 		m_pxCharacterController->setPosition(position);
+		m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>(rotationMat.Up()));
 
 		//m_lastGlobalTransform = globalTransform;
 	}
@@ -501,12 +510,12 @@ void CharacterController::SetGravity(const Vec3& g)
 			if (g == Vec3::ZERO)
 			{
 				system->UnscheduleUpdate(self);
-				system->UnschedulePostUpdate(self);
+				system->UnschedulePrevUpdate(self);
 				return;
 			}
 
 			system->ScheduleUpdate(self);
-			system->SchedulePostUpdate(self);
+			system->SchedulePrevUpdate(self);
 		}
 	);
 }
@@ -545,6 +554,16 @@ void CharacterController::CCTSetContactFilterCallback(RigidBody::ContactReportFi
 			auto pxActor = self->m_pxCharacterController->getActor();
 			pxActor->getShapes(&shape, 1);
 			shape->setSimulationFilterData(data);
+		}
+	);
+}
+
+void CharacterController::CCTSetRotation(const Quaternion& rotation)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, rotation,
+		{
+			self->m_rotation = rotation;
 		}
 	);
 }
