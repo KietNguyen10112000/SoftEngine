@@ -389,7 +389,25 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 
 Handle<GameObject> Scene::FindObjectByIndexedName(String name)
 {
-	return Handle<GameObject>();
+	std::cerr << "[WARN]: names aren't indexed!\n";
+
+	for (auto& o : m_longLifeObjects)
+	{
+		if (o->Name() == name)
+		{
+			return o;
+		}
+	}
+
+	for (auto& o : m_shortLifeObjects)
+	{
+		if (o->Name() == name)
+		{
+			return o;
+		}
+	}
+
+	return nullptr;
 }
 
 bool Scene::BeginSetupLongLifeObject()

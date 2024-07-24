@@ -318,6 +318,8 @@ void CharacterController::OnUpdate(float dt)
 	disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
 	m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()] = Vec3::ZERO;
 
+	//std::cout << json(disp) << "\n";
+
 	if (m_collisionPlanes.size() != 0)
 	//if (HasCollisionContactPairs())
 	{

@@ -10,7 +10,7 @@ class PxController;
 
 NAMESPACE_BEGIN
 
-class CharacterController : public RigidBody
+class API CharacterController : public RigidBody
 {
 private:
 	friend class PhysXSimulationFilterCallback;
@@ -90,6 +90,11 @@ public:
 	void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
 
 	void CCTSetRotation(const Quaternion& rotation);
+
+	inline const auto& CCTGetRotation() const
+	{
+		return m_rotation;
+	}
 
 };
 

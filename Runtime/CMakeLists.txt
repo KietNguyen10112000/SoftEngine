@@ -55,6 +55,8 @@ file(
     "Common/ComponentQueryStructures/*.cpp"
     "Common/QueryStructures/*.h"
     "Common/QueryStructures/*.cpp"
+    "Common/Actions/*.h"
+    "Common/Actions/*.cpp"
 
 
     "MainSystem/*.h"

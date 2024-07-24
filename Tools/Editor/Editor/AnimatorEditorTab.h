@@ -117,6 +117,7 @@ public:
 		virtual void ReadFromJson(const json& json) = 0;
 
 		virtual String GetCppClassSource() = 0;
+		virtual String GetCppInitializeSource(const String& animatorVarName) = 0;
 
 		inline virtual bool RenderCustomInspector() { return false; };
 		inline virtual void RenderCustomModelTreeNode(ModelNode* node) {};

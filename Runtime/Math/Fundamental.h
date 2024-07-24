@@ -392,6 +392,18 @@ public:
         return ret;
     }
 
+    inline bool IsParallel(const Vec3& v) const
+    {
+        auto dot = Dot(v);
+        return (dot * dot - Length2() * v.Length2()) == 0;
+    }
+
+    inline bool IsSameDirection(const Vec3& v) const
+    {
+        auto dot = Dot(v);
+        return (dot * dot - Length2() * v.Length2()) == 0 && dot > 0;
+    }
+
     // take xy component as Vec2
     inline Vec2& xy() const
     {

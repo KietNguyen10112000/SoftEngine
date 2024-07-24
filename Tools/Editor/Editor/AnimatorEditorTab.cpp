@@ -192,11 +192,22 @@ struct AnimPlayerLayerNode : public AnimatorEditorTab::Node
 	virtual String GetCppClassSource() override
 	{
 		auto ret = String::Format(R"xxx(
-struct {}
-{
-	{};
-};
-)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+	struct {}
+	{
+		{};
+	};
+
+	AnimPlayerLayer* {} = nullptr;
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID, nodeName);
+
+		return ret;
+	}
+
+	virtual String GetCppInitializeSource(const String& animatorVarName) override
+	{
+		auto ret = String::Format(R"xxx(
+		{} = (AnimPlayerLayer*)({}->m_animLayers[{}].Get());
+)xxx", nodeName, animatorVarName, excutionOrder);
 
 		return ret;
 	}
@@ -457,11 +468,22 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 	virtual String GetCppClassSource() override
 	{
 		auto ret = String::Format(R"xxx(
-struct {}
-{
-	{};
-};
-)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+	struct {}
+	{
+		{};
+	};
+
+	AnimTransitLayer* {} = nullptr;
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID, nodeName);
+
+		return ret;
+	}
+
+	virtual String GetCppInitializeSource(const String& animatorVarName) override
+	{
+		auto ret = String::Format(R"xxx(
+		{} = (AnimTransitLayer*)({}->m_animLayers[{}].Get());
+)xxx", nodeName, animatorVarName, excutionOrder);
 
 		return ret;
 	}
@@ -808,11 +830,22 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 	virtual String GetCppClassSource() override
 	{
 		auto ret = String::Format(R"xxx(
-struct {}
-{
-	{};
-};
-)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+	struct {}
+	{
+		{};
+	};
+
+	AnimBlendLayer* {} = nullptr;
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID, nodeName);
+
+		return ret;
+	}
+
+	virtual String GetCppInitializeSource(const String& animatorVarName) override
+	{
+		auto ret = String::Format(R"xxx(
+		{} = (AnimBlendLayer*)({}->m_animLayers[{}].Get());
+)xxx", nodeName, animatorVarName, excutionOrder);
 
 		return ret;
 	}
@@ -1049,11 +1082,22 @@ struct AnimJointLayerNode : public AnimatorEditorTab::Node
 	virtual String GetCppClassSource() override
 	{
 		auto ret = String::Format(R"xxx(
-struct {}
-{
-	{};
-};
-)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+	struct {}
+	{
+		{};
+	};
+
+	AnimJointLayer* {} = nullptr;
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID, nodeName);
+
+		return ret;
+	}
+
+	virtual String GetCppInitializeSource(const String& animatorVarName) override
+	{
+		auto ret = String::Format(R"xxx(
+		{} = (AnimJointLayer*)({}->m_animLayers[{}].Get());
+)xxx", nodeName, animatorVarName, excutionOrder);
 
 		return ret;
 	}
@@ -1342,11 +1386,22 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 	virtual String GetCppClassSource() override
 	{
 		auto ret = String::Format(R"xxx(
-struct {}
-{
-	{};
-};
-)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID);
+	struct {}
+	{
+		{};
+	};
+
+	AnimMixLayer* {} = nullptr;
+)xxx", nodeName, ANIMATOR_EDITOR_NODE_CPP_EXE_ID, nodeName);
+
+		return ret;
+	}
+
+	virtual String GetCppInitializeSource(const String& animatorVarName) override
+	{
+		auto ret = String::Format(R"xxx(
+		{} = (AnimMixLayer*)({}->m_animLayers[{}].Get());
+)xxx", nodeName, animatorVarName, excutionOrder);
 
 		return ret;
 	}
@@ -3455,6 +3510,27 @@ void AnimatorEditorTab::ExportImpl()
 	{
 		String cpp = R"xxx(#pragma once
 
+#include "MainSystem/Animation/AnimLayer/AnimPlayerLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimBlendLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimTransitLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimJointLayer.h"
+#include "MainSystem/Animation/AnimLayer/AnimMixLayer.h"
+#include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
+#include "MainSystem/Animation/Utils/Animation.h"
+
+namespace soft
+{
+	class AnimatorSkeletalArray;
+	class AnimPlayerLayer;
+	class AnimBlendLayer;
+	class AnimTransitLayer;
+	class AnimMixLayer;
+	class AnimJointLayer;
+	class Animation;
+}
+
+using namespace soft;
+
 struct )xxx";
 
 		cpp = cpp + m_exportInputName;
@@ -3464,23 +3540,59 @@ struct )xxx";
 		for (size_t i = 0; i < m_animationsEditingState.size(); i++)
 		{
 			auto& state = m_animationsEditingState[i];
-			animationIdStr = animationIdStr + String::Format("\tconstexpr static ID {} = {};\n", state.name, i);
+			animationIdStr = animationIdStr + String::Format("\t\tconstexpr static ID {} = {};\n", state.name, i);
+		}
+
+		String animationsStr = "";
+		for (size_t i = 0; i < m_animationsEditingState.size(); i++)
+		{
+			auto& state = m_animationsEditingState[i];
+			animationsStr = animationsStr + String::Format("\t\tSharedPtr<Animation> {};\n", state.name);
+		}
+
+		String animationsInitializeStr = "";
+		for (size_t i = 0; i < m_animationsEditingState.size(); i++)
+		{
+			auto& state = m_animationsEditingState[i];
+			animationsInitializeStr = animationsInitializeStr + String::Format("\t\tAnimations.{} = animator->m_model3D->GetAnimation({});\n", state.name, i);
 		}
 
 		cpp = cpp + String::Format(R"(
-struct AnimationID
-{
+	struct AnimationID
+	{
 
 {}
-};
-)", animationIdStr);
+	};
+
+	struct _Animations
+	{
+
+{}
+	};
+
+	_Animations Animations;
+)", animationIdStr, animationsStr);
 
 		for (auto& node : m_nodes)
 		{
 			cpp = cpp + node->GetCppClassSource() + "\n";
 		}
 
-		cpp = cpp + "};\n";
+		String initStr = "";
+		for (auto& node : m_nodes)
+		{
+			initStr = initStr + node->GetCppInitializeSource("animator");
+		}
+
+		cpp += String::Format(R"(
+	inline void Initialize(AnimatorSkeletalArray* animator)
+	{
+{}
+		{}
+	}
+)", animationsInitializeStr, initStr);
+
+		cpp = cpp + "\n};\n";
 
 		FileUtils::WriteFile((m_exportCppPath + m_exportInputName + ".h").c_str(), cpp.c_str(), cpp.length());
 	}

@@ -19,9 +19,9 @@ NAMESPACE_BEGIN
 
 void TPPCameraScript::OnStart()
 {
-	controller = GetGameObject()->GetComponentRaw<CharacterController>();
+	m_controller = GetGameObject()->GetComponentRaw<CharacterController>();
 
-	controller->SetGravity(GetGameObject()->GetScene()->GetPhysicsSystem()->GetGravity());
+	m_controller->SetGravity(GetGameObject()->GetScene()->GetPhysicsSystem()->GetGravity());
 
 	//m_prevPosY1 = GetGameObject()->ReadGlobalTransformMat().Position().y;
 	//m_prevPosY2 = m_prevPosY1;
@@ -52,6 +52,11 @@ void TPPCameraScript::OnStart()
 
 void TPPCameraScript::OnUpdate(float dt)
 {
+	if (!m_camera)
+	{
+		return;
+	}
+
 	if (Input()->IsKeyUp('R'))
 	{
 		Runtime::Get()->HotReloadScripts();
@@ -69,7 +74,6 @@ void TPPCameraScript::OnUpdate(float dt)
 
 	if (m_camera && m_fppCamScript && Input()->IsKeyUp('V'))
 	{
-		std::cout << "1 pressed\n";
 		m_camera->SetTPPEnabled(!m_camera->IsTPPEnabled());
 		m_fppCamScript->SetFPPScriptEnable(!m_fppCamScript->IsFPPScriptEnabled());
 
@@ -115,6 +119,9 @@ void TPPCameraScript::OnUpdate(float dt)
 
 	Vec3 forward = right.Cross(Vec3::UP);
 
+	forward.Normalize();
+	right.Normalize();
+
 	Vec3 motion = { 0,0,0 };
 	auto d = 15 * dt;
 	if (Input()->IsKeyDown('W'))
@@ -138,10 +145,10 @@ void TPPCameraScript::OnUpdate(float dt)
 	}
 
 	static float cooldown = 0;
-	if (Input()->IsKeyDown(KEYBOARD::SPACE) && cooldown <= 0 && controller->CCTIsOnGround())
+	if (Input()->IsKeyDown(KEYBOARD::SPACE) && cooldown <= 0 && m_controller->CCTIsOnGround())
 	{
 		//controller->CCTApplyVelocity({ 0,7,0 });
-		controller->CCTApplyImpulse({ 0,120,0 });
+		m_controller->CCTApplyImpulse({ 0,120,0 });
 		cooldown = 1;
 
 		//std::cout << "Jumped\n";
@@ -186,7 +193,7 @@ void TPPCameraScript::OnUpdate(float dt)
 
 	if (motion.Length2() != 0)
 	{
-		controller->Move(motion);
+		m_controller->Move(motion);
 	}
 }
 
@@ -219,6 +226,13 @@ void TPPCameraScript::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	serializer->Deserialize(j["CameraTPP"], m_camera);
 	serializer->Deserialize(j["FPPCamScript"], m_fppCamScript);
+}
+
+Vec3 TPPCameraScript::GetForwardToCCT() const
+{
+	auto right = Vec3::UP.Cross(-m_viewPoint.Normal());
+	Vec3 forward = right.Cross(Vec3::UP).Normalize();
+	return forward;
 }
 
 //void TestScript2::OnUpdate(float dt)

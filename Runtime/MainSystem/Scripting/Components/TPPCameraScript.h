@@ -23,7 +23,7 @@ protected:
 		tracer->Trace(m_fppCamScript);
 	}
 
-	CharacterController* controller = nullptr;
+	CharacterController* m_controller = nullptr;
 
 	float m_motionY = 0;
 	float m_prevPosY1 = 0;
@@ -40,8 +40,6 @@ public:
 	float m_rotationSensi = 0.25f;
 	Vec3 m_viewPoint = Vec3(5, 5, 5);
 
-
-
 protected:
 	virtual void OnStart() override;
 
@@ -54,6 +52,9 @@ protected:
 	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
 	void SerializeToJson(Serializer* serializer, json& j) const override;
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+
+public:
+	Vec3 GetForwardToCCT() const;
 
 };
 

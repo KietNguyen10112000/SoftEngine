@@ -373,17 +373,22 @@ public:
 			{
 					return (buf + String::From(v));
 			}*/
+			auto head = it;
+
 			auto c = *it;
 			char* bracketBegin = 0;
 			char* bracketEnd = 0;
 			while (c != 0)
 			{
-				if (c == '{')
+				auto next = it + 1;
+				auto prev = it - 1;
+
+				if (c == '{' && *next == '}')
 				{
 					bracketBegin = it;
 				}
 
-				if (c == '}')
+				if (c == '}' && (it != head && *prev == '{'))
 				{
 					bracketEnd = it;
 					break;
