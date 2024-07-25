@@ -3,6 +3,8 @@
 #include "KeyFrame.h"
 #include "Resources/AnimMotion.h"
 
+#include "Common/Actions/ActionInterpolation.h"
+
 NAMESPACE_BEGIN
 
 class Animation
@@ -64,6 +66,11 @@ public:
 	{
 		return m_motion;
 	}
+
+	KeyFrames* GetRootMotionKeyFrames(AnimModel* model);
+	KeyFrames* GetKeyFrames(ID nodeId);
+
+	static std::vector<ActionInterpolation<Transform>::KeyFrame> ConvertToActionKeyFrames(KeyFrames* keyframes, float tickPerSecond);
 
 };
 

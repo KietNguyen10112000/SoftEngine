@@ -64,28 +64,33 @@ void AnimPlayerLayer::Run(float dt)
 	auto& channels = m_animation->GetChannels();
 	//auto& localTransforms = m_localTransforms;
 
+	auto rootBoneNodeId = m_model->m_rootBoneNodeId;
+
 	// root transform
 	{
 		auto& node = nodes[0];
 
-		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
-		//localTransforms[0] = node.localTransform;
-
-		auto& channelId = nodeToChannelId[0];
-		if (channelId != INVALID_ID)
+		if (!m_disableRootMotion || rootBoneNodeId != 0)
 		{
-			auto& channel = channels[channelId];
-			auto& index = m_keyFramesIndex[channelId];
+			globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
+			//localTransforms[0] = node.localTransform;
 
-			Mat4 scaling;
-			channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-			Mat4 rotation;
-			channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-			Mat4 translation;
-			channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+			auto& channelId = nodeToChannelId[0];
+			if (channelId != INVALID_ID)
+			{
+				auto& channel = channels[channelId];
+				auto& index = m_keyFramesIndex[channelId];
 
-			globalTransforms[0] = scaling * rotation * translation;
-			//localTransforms[0] = globalTransforms[0];
+				Mat4 scaling;
+				channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
+				Mat4 rotation;
+				channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
+				Mat4 translation;
+				channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+
+				globalTransforms[0] = scaling * rotation * translation;
+				//localTransforms[0] = globalTransforms[0];
+			}
 		}
 
 		assert(node.parentId == INVALID_ID);
@@ -99,28 +104,31 @@ void AnimPlayerLayer::Run(float dt)
 			auto& channelId = nodeToChannelId[i];
 			auto& globalTransform = globalTransforms[i];
 
-			globalTransform = node.localTransform;
-
-			//auto& localTransform = localTransforms[i];
-			//localTransform = node.localTransform;
-
-			if (channelId != INVALID_ID)
+			if (!m_disableRootMotion || rootBoneNodeId != i)
 			{
-				auto& channel = channels[channelId];
-				auto& index = m_keyFramesIndex[channelId];
+				globalTransform = node.localTransform;
 
-				Mat4 scaling;
-				channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-				Mat4 rotation;
-				channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-				Mat4 translation;
-				channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+				//auto& localTransform = localTransforms[i];
+				//localTransform = node.localTransform;
 
-				globalTransform = scaling * rotation * translation;
-				//localTransform = globalTransform;
+				if (channelId != INVALID_ID)
+				{
+					auto& channel = channels[channelId];
+					auto& index = m_keyFramesIndex[channelId];
+
+					Mat4 scaling;
+					channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
+					Mat4 rotation;
+					channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
+					Mat4 translation;
+					channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+
+					globalTransform = scaling * rotation * translation;
+					//localTransform = globalTransform;
+				}
+
+				globalTransform = globalTransform * globalTransforms[node.parentId];
 			}
-
-			globalTransform = globalTransform * globalTransforms[node.parentId];
 		}
 	}
 
@@ -441,6 +449,11 @@ void AnimPlayerLayer::RemoveListener(EventListener* listener)
 	}
 	
 	m_lock.unlock();
+}
+
+void AnimPlayerLayer::SetEnableRootMotion(bool enable)
+{
+	m_disableRootMotion = !enable;
 }
 
 void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)

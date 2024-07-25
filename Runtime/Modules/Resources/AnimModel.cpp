@@ -154,6 +154,16 @@ int AnimModel::Load(const String& path)
 
 		TaskSystem::SubmitAndWait(tasks.data(), tasks.size(), Task::CRITICAL);
 	}
+
+	for (auto& node : m_nodes)
+	{
+		if (node.boneId != INVALID_ID)
+		{
+			m_rootBoneNodeId = &node - m_nodes.data();
+			break;
+		}
+	}
+	assert(m_rootBoneNodeId != INVALID_ID);
 	
 	return 0;
 }

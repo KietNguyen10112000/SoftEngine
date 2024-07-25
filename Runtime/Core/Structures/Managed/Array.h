@@ -268,6 +268,24 @@ public:
 		Reserve(size);
 	}
 
+	inline void insert(T* it, const T& v)
+	{
+		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
+
+		Resize(m_size + 1);
+
+		size_t index = it - m_buffer.Get();
+		_MANAGED_ARRAY_CHECK_BOUND(index);
+
+		auto buf = m_buffer.Get();
+		for (size_t i = index; i < m_size; i++)
+		{
+			buf[i + 1] = buf[i];
+		}
+
+		buf[index] = v;
+	}
+
 	/*inline void erase(ID idx)
 	{
 		assert(idx >= 0 && idx < size());

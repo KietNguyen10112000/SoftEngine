@@ -61,6 +61,7 @@ protected:
 	float m_t = 0;
 
 	bool m_needResetKeyFrameIndex = false;
+	bool m_disableRootMotion = false;
 
 	spinlock m_lock;
 	Array<Handle<EventListener>> m_events = {};
@@ -139,6 +140,8 @@ public:
 	}
 
 	void RemoveListener(EventListener* listener);
+
+	void SetEnableRootMotion(bool enable);
 
 	static void MakeClipCut(std::vector<Mat4>& globalTransforms, std::vector<AABox>& bounds, AnimModel* model, Animation* animation, float tick);
 

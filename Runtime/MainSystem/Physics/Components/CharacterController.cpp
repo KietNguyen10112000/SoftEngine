@@ -568,6 +568,8 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 			self->m_rotation = rotation;
 		}
 	);
+
+	m_lastRotation = rotation;
 }
 
 NAMESPACE_END

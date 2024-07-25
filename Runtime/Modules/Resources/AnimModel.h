@@ -228,6 +228,8 @@ public:
 	// refer node for static mesh, INVALID_ID if animMesh
 	std::vector<ID> m_boundNodeIds;
 
+	ID m_rootBoneNodeId = INVALID_ID;
+
 	friend class AnimMotion;
 
 	~AnimModel();

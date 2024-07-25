@@ -14,6 +14,10 @@
 #include "Graphics/DebugGraphics.h"
 
 #include "ComponentInspector.h"
+#include "SceneEditorSaveData.h"
+
+#include "IconFontCppHeaders/IconsFontAwesome6.h"
+#include "EditorFont.h"
 
 SceneEditorTab::SceneEditorTab()
 {
@@ -21,20 +25,14 @@ SceneEditorTab::SceneEditorTab()
 
 void SceneEditorTab::OnObjectsAdded(std::vector<GameObject*>& objects)
 {
+	if (m_isHotDeserializingGameObjectFromFile)
+	{
+		return;
+	}
+
 	for (auto& obj : objects)
 	{
-		obj->PostTraversal([](GameObject* o)
-			{
-				if (!o->HasComponent<GameObjectEditorComponent>())
-				{
-					o->NewComponent<GameObjectEditorComponent>();
-				}
-			}
-		);
-
-		auto editorComp = obj->GetComponentRaw<GameObjectEditorComponent>();
-		editorComp->id = m_objects.size();
-		m_objects.push_back(obj);
+		AddObjectToEditor(obj);
 	}
 }
 
@@ -75,15 +73,23 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 {
 	auto preFunc = [&](GameObject* obj)
 		{
-			ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_SpanFullWidth;
+			ImGuiTreeNodeFlags nodeFlags = 
+				ImGuiTreeNodeFlags_OpenOnArrow 
+				| ImGuiTreeNodeFlags_OpenOnDoubleClick 
+				| ImGuiTreeNodeFlags_SpanAvailWidth 
+				| ImGuiTreeNodeFlags_AllowItemOverlap 
+				| ImGuiTreeNodeFlags_SpanFullWidth
+				| ImGuiTreeNodeFlags_FramePadding;
 
 			if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
 			{
 				nodeFlags |= ImGuiTreeNodeFlags_Selected;
 			}
-
+			
+			ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, { 0,2 });
 			auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj,
 				nodeFlags, obj->Name().empty() ? "<Unnamed>" : obj->Name().c_str());
+			ImGui::PopStyleVar();
 
 			if (obj->Parent().Get() == nullptr && m_searchNameIdx == obj->GetComponentRaw<GameObjectEditorComponent>()->id)
 			{
@@ -103,13 +109,23 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 
 				if (ImGui::Button("Delete"))
 				{
-					if (obj->Parent().Get() != nullptr)
+					bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+
+					if (allowDelete)
 					{
-						obj->RemoveFromParent();
+						if (obj->Parent().Get() != nullptr)
+						{
+							obj->RemoveFromParent();
+						}
+						else
+						{
+							m_scene->RemoveObject(obj);
+						}
+						OnObjectDelete(obj);
 					}
 					else
 					{
-						m_scene->RemoveObject(obj);
+						std::cerr << "[ERROR]: can not delete hot reloaded object's children!\n";
 					}
 				}
 
@@ -120,12 +136,18 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			src_flags |= ImGuiDragDropFlags_SourceNoDisableHover;     // Keep the source displayed as hovered
 			src_flags |= ImGuiDragDropFlags_SourceNoHoldToOpenOthers; // Because our dragging is local, we disable the feature of opening foreign treenodes/tabs while dragging
 			//src_flags |= ImGuiDragDropFlags_SourceNoPreviewTooltip; // Hide the tooltip
+			src_flags |= ImGuiDragDropFlags_SourceAllowNullID;
 			if (ImGui::BeginDragDropSource(src_flags))
 			{
-				m_dragingObject = obj;
-				if (!(src_flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
-					ImGui::Text("Moving");
-				ImGui::SetDragDropPayload("TREE_DND_PAYLOAD", &obj, sizeof(obj));
+				// don't allow drag and drop on hot reloaded object children
+				auto allowDragDrop = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+				if (allowDragDrop)
+				{
+					m_dragingObject = obj;
+					if (!(src_flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
+						ImGui::Text("Moving");
+					ImGui::SetDragDropPayload("TREE_DND_PAYLOAD", &obj, sizeof(obj));
+				}
 				ImGui::EndDragDropSource();
 			}
 
@@ -173,6 +195,24 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				ImGui::TreePop();
 			}*/
 
+			if (obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile)
+			{
+				bool enable = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+
+				ImGui::SameLine(ImGui::GetWindowWidth() - 35, -1.0f);
+				ImGui::BeginDisabled(!enable);
+				ImGui::PushFont(EditorFont::Get()->GetFont(22));
+
+				if (ImGui::Button(ICON_FA_FIRE))
+				{
+
+				}
+
+				ImGui::PopFont();
+				ImGui::EndDisabled();
+				ImGui::Dummy({ 0, 0 });
+			}
+
 			return open;
 		};
 
@@ -204,12 +244,12 @@ void SceneEditorTab::RenderHierarchyPanel()
 	ImGui::Begin("Hierarchy", 0, wflags);
 
 	ImGui::Checkbox("Pin Hierarchy Panel", &m_pinHierarchyPanel);
-	if (ImGui::Button("New object"))
+	if (ImGui::Button("New Object"))
 	{
 		ImGui::OpenPopup("Create GameObject##CreateGameObjectPopup");
 	}
 
-	if (ImGui::InputText("Search object", m_searchNameInputTxt, NAME_INPUT_MAX_LEN,
+	if (ImGui::InputText("Search Object", m_searchNameInputTxt, NAME_INPUT_MAX_LEN,
 		ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
 	{
 		/*if (m_searchNameIdx == INVALID_ID)
@@ -538,7 +578,11 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 		{
 			if (!m_loadObjectFileName.empty())
 			{
-				LoadGameObjectFromFile(m_loadObjectFileName);
+				auto obj = LoadGameObjectFromFile(m_loadObjectFileName);
+				if (obj)
+				{
+					m_scene->AddObject(obj);
+				}
 			}
 			else
 			{
@@ -564,13 +608,13 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 	}
 }
 
-void SceneEditorTab::LoadGameObjectFromFile(const String& path)
+Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
 {
 	auto ext = FileUtils::GetExtension(path);
 	if (ext != "json")
 	{
 		std::cerr << "[ERROR]: SceneEditorTab::LoadGameObjectFromFile() - invalid file!\n";
-		return;
+		return nullptr;
 	}
 
 	Serializer serializer = {};
@@ -581,10 +625,19 @@ void SceneEditorTab::LoadGameObjectFromFile(const String& path)
 	if (obj == nullptr)
 	{
 		std::cerr << "[ERROR]: SceneEditorTab::LoadGameObjectFromFile() - invalid file!\n";
-		return;
+		return nullptr;
 	}
 
-	m_scene->AddObject(obj);
+	//m_scene->AddObject(obj);
+
+	m_loadFromFileObject.insert({ obj->GetUUID(), { path } });
+	obj->PostTraversal([](GameObject* o)
+		{
+			o->NewComponent<GameObjectEditorComponent>()->hotReloadFromFile = true;
+		}
+	);
+
+	return obj;
 }
 
 void SceneEditorTab::OnRenderGUI()
@@ -794,10 +847,16 @@ void SceneEditorTab::OnShow()
 		{
 			auto self = (SceneEditorTab*)id;
 			auto path = GetSavePath(self->m_name);
+
+			SceneEditorSaveData data(self);
 			
 			Serializer serializer = {};
 			serializer.Serialize(self->m_scene);
-			serializer.SetRootUUID(self->m_scene->GetUUID());
+			serializer.SetRootUUID(self->m_scene->GetUUID(), 0);
+
+			serializer.Serialize(&data);
+			serializer.SetRootUUID(data.GetUUID(), 1);
+
 			serializer.WriteToFile(path);
 		},
 		ID(this)
@@ -856,4 +915,134 @@ String SceneEditorTab::GetSavePath(const String& name)
 String SceneEditorTab::GetSaveFilePath()
 {
 	return GetSavePath(m_name);
+}
+
+void SceneEditorTab::OnObjectDelete(GameObject* obj)
+{
+	obj->PostTraversal(
+		[&](GameObject* o) 
+		{
+			auto it = m_loadFromFileObject.find(o->GetUUID());
+			if (it != m_loadFromFileObject.end())
+			{
+				m_loadFromFileObject.erase(it);
+			}
+		}
+	);
+}
+
+void SceneEditorTab::AddObjectToEditor(GameObject* obj)
+{
+	if (obj->Parent().Get() != nullptr)
+	{
+		return;
+	}
+
+	obj->PostTraversal([](GameObject* o)
+		{
+			if (!o->HasComponent<GameObjectEditorComponent>())
+			{
+				o->NewComponent<GameObjectEditorComponent>();
+			}
+		}
+	);
+
+	auto editorComp = obj->GetComponentRaw<GameObjectEditorComponent>();
+	editorComp->id = m_objects.size();
+	m_objects.push_back(obj);
+}
+
+void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
+{
+	{
+		auto arr = json::array();
+		for (const auto& [uuid, data] : m_loadFromFileObject)
+		{
+			json temp;
+			temp["UUID"] = uuid;
+			temp["FilePath"] = data.filePath;
+			arr.push_back(temp);
+		}
+
+		j["LoadedFromFileObject"] = arr;
+	}
+}
+
+void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
+{
+	if (j.contains("LoadedFromFileObject"))
+	{
+		m_isHotDeserializingGameObjectFromFile = true;
+
+		auto& arr = j["LoadedFromFileObject"];
+		Handle<GameObject> object = nullptr;
+		for (size_t i = 0; i < arr.size(); i++)
+		{
+			auto& temp = arr[i];
+			UUID uuid = temp["UUID"];
+			String filePath = temp["FilePath"];
+
+			object = nullptr;
+			serializer->Deserialize(uuid, object);
+
+			if (object)
+			{
+				auto replaceObject = LoadGameObjectFromFile(filePath);
+				assert(replaceObject.Get() != nullptr);
+
+				std::vector<GameObject*> stack0;
+				std::vector<GameObject*> stack1;
+				
+				stack0.push_back(object);
+				stack1.push_back(replaceObject);
+				while (!stack0.empty())
+				{
+					assert(stack0.size() == stack1.size() && "GameObject structure modified. Invalid file!");
+
+					auto o0 = stack0.back();
+					auto o1 = stack1.back();
+					stack0.pop_back();
+					stack1.pop_back();
+
+					o1->CopyTransform(o0);
+
+					assert(o0->Children().size() == o1->Children().size() && "GameObject structure modified. Invalid file!");
+
+					for (size_t i = 0; i < o0->Children().size(); i++)
+					{
+						stack0.push_back(o0->Children()[i]);
+						stack1.push_back(o1->Children()[i]);
+					}
+				}
+
+				if (object->Parent().Get() == nullptr)
+				{
+					auto editorId = object->GetComponentRaw<GameObjectEditorComponent>()->id;
+					m_objects[editorId] = replaceObject.Get();
+					AddObjectToEditor(replaceObject);
+
+					m_scene->RemoveObject(object);
+					m_scene->AddObject(replaceObject);
+				}
+				else
+				{
+					replaceObject->PostTraversal([](GameObject* o)
+						{
+							if (!o->HasComponent<GameObjectEditorComponent>())
+							{
+								o->NewComponent<GameObjectEditorComponent>();
+							}
+						}
+					);
+
+					auto parent = object->Parent().Get();
+					auto idx = object->ParentIdx();
+					object->RemoveFromParent();
+					parent->AddChild(replaceObject, idx);
+				}
+			}
+		}
+
+		m_isHotDeserializingGameObjectFromFile = false;
+	}
 }

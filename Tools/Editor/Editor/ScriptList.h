@@ -8,6 +8,7 @@
 #include "Common/Base/SerializableDB.h"
 
 #include "AnimatorEditorTab.h"
+#include "SceneEditorSaveData.h"
 
 inline void InitializeScriptList()
 {
@@ -15,6 +16,7 @@ inline void InitializeScriptList()
 	SerializableDB::Get()->Register<RotateScript>();
 
 	SerializableDB::Get()->Register<AnimatorEditorSaveData>();
+	SerializableDB::Get()->Register<SceneEditorSaveData>();
 
 	AnimatorEditorTab::InitializeSerializableList();
 }

@@ -129,15 +129,31 @@ void GameObject::RecordAllComponetsAsModified()
 	);
 }
 
-void GameObject::AddChild(const Handle<GameObject>& obj)
+void GameObject::AddChild(const Handle<GameObject>& obj, ID index)
 {
 	assert(obj->m_parent == nullptr);
 
 	obj->m_parent = this;
 
 	m_lock.lock();
-	obj->m_parentIdx = m_children.size();
-	m_children.Push(obj);
+
+	if (index == INVALID_ID)
+	{
+		obj->m_parentIdx = m_children.size();
+		m_children.Push(obj);
+	}
+	else
+	{
+		assert(index <= m_children.size());
+		
+		m_children.insert(m_children.begin() + index, obj);
+		for (size_t i = 0; i < m_children.size(); i++)
+		{
+			auto& c = m_children[i];
+			c->m_parentIdx = i;
+		}
+	}
+
 	m_lock.unlock();
 
 	obj->RecalculateTransform(m_globalTransform);
@@ -204,6 +220,17 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, 
 	}
 
 	m_transformConstraint = transformConstraint;
+}
+
+void GameObject::CopyTransform(GameObject* obj)
+{
+	m_globalTransform = obj->m_globalTransform;
+	m_committedGlobalTransform = obj->m_committedGlobalTransform;
+
+	m_localTransform = obj->m_localTransform;
+	m_committedLocalTransform = obj->m_committedLocalTransform;
+
+	m_transformConstraint = obj->m_transformConstraint;
 }
 
 void GameObject::ForceRefreshTransform(ID SRC_COMPONENT_ID, bool recursive)

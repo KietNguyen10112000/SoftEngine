@@ -38,6 +38,9 @@
     <Filter Include="Resources\Fonts">
       <UniqueIdentifier>{df5d63c7-689f-49fe-a312-96f0ce25fdee}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\EditorTabs\SceneEditor">
+      <UniqueIdentifier>{ef8f7c12-35d7-4112-b952-54e4162138ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -57,9 +60,6 @@
     </ClCompile>
     <ClCompile Include="ComponentInspector.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SceneEditorTab.cpp">
-      <Filter>Source Files\EditorTabs</Filter>
     </ClCompile>
     <ClCompile Include="EditorTab.cpp">
       <Filter>Source Files\EditorTabs</Filter>
@@ -106,6 +106,12 @@
     <ClCompile Include="SceneEditorTabFactory.cpp">
       <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClCompile>
+    <ClCompile Include="SceneEditorTab.cpp">
+      <Filter>Source Files\EditorTabs\SceneEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="SceneEditorSaveData.cpp">
+      <Filter>Source Files\EditorTabs\SceneEditor</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -128,9 +134,6 @@
     </ClInclude>
     <ClInclude Include="ComponentInspector.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SceneEditorTab.h">
-      <Filter>Source Files\EditorTabs</Filter>
     </ClInclude>
     <ClInclude Include="EditorTab.h">
       <Filter>Source Files\EditorTabs</Filter>
@@ -182,6 +185,12 @@
     </ClInclude>
     <ClInclude Include="SceneEditorTabFactory.h">
       <Filter>Source Files\EditorTabs\Factories</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneEditorTab.h">
+      <Filter>Source Files\EditorTabs\SceneEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneEditorSaveData.h">
+      <Filter>Source Files\EditorTabs\SceneEditor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

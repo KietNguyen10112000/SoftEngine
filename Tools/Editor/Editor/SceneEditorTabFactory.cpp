@@ -6,6 +6,7 @@
 
 #include "SceneEditorTab.h"
 #include "DataInspector.h"
+#include "SceneEditorSaveData.h"
 
 SceneEditorTabFactory::SceneEditorTabFactory()
 {
@@ -93,7 +94,10 @@ LoadJson:
 		Handle<Scene> scene;
 		Serializer serializer = {};
 		serializer.ReadFromFile(m_filePath);
-		serializer.Deserialize(serializer.GetRootUUID(), scene);
+		serializer.Deserialize(serializer.GetRootUUID(0), scene);
+
+		Handle<SceneEditorSaveData> data;
+		serializer.Deserialize(serializer.GetRootUUID(1), data);
 
 		if (!scene)
 		{
@@ -104,6 +108,8 @@ LoadJson:
 		auto fileName = FileUtils::GetLastName(m_filePath.c_str());
 		tab->m_name = fileName.SubString(0, fileName.FindLastOf('.'));
 		tab->m_scene = scene;
+
+		tab->ReadSaveDataFromJson(&serializer, data->m_savedJson);
 
 		EditorContext::Get()->PlaceHolderTab(nullptr);
 

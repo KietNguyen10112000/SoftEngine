@@ -40,4 +40,15 @@ void EditorFont::InitializeFont(int size)
 	config.GlyphRanges = io.Fonts->GetGlyphRangesVietnamese();
 
 	font = io.Fonts->AddFontFromFileTTF("Resources/Default/segoeui.ttf", float(size), &config);
+
+	{
+		ImFontConfig config;
+		config.MergeMode = true;
+		config.GlyphOffset.y = 1.0f;
+		config.GlyphMinAdvanceX = float(size); // Use if you want to make the icon monospaced
+		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+
+		ImGuiIO& io = ImGui::GetIO(); (void)io;
+		io.Fonts->AddFontFromFileTTF("Editor/Fonts/FontAwesome6_900.otf", float(size), &config, icon_ranges);
+	}
 }

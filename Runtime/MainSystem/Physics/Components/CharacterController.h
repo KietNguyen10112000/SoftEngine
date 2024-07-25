@@ -37,6 +37,7 @@ protected:
 
 	physx::PxController* m_pxCharacterController = nullptr;
 	Quaternion m_rotation = {};
+	Quaternion m_lastRotation = {};
 
 	Vec3 m_gravity = Vec3::ZERO;
 	Vec3 m_velocity = Vec3::ZERO;
@@ -93,7 +94,7 @@ public:
 
 	inline const auto& CCTGetRotation() const
 	{
-		return m_rotation;
+		return m_lastRotation;
 	}
 
 };

@@ -396,7 +396,7 @@ public:
 	}
 
 public:
-	void AddChild(const Handle<GameObject>& obj);
+	void AddChild(const Handle<GameObject>& obj, ID index = INVALID_ID);
 	void RemoveFromParent();
 
 	template <typename Func>
@@ -461,6 +461,11 @@ public:
 		return m_parent;
 	}
 
+	inline const auto& ParentIdx() const
+	{
+		return m_parentIdx;
+	}
+
 	inline const auto& Children() const
 	{
 		return m_children;
@@ -513,6 +518,8 @@ public:
 
 	void SetLocalTransform(const Transform& transform,  ID SRC_COMPONENT_ID = INVALID_ID - 1);
 	void SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID = INVALID_ID - 1, TRANSFORM_CONSTRAINT::TYPE transformConstraint = TRANSFORM_CONSTRAINT::FREE);
+
+	void CopyTransform(GameObject* obj);
 
 	void ForceRefreshTransform(ID SRC_COMPONENT_ID = INVALID_ID - 1, bool recursive = false);
 

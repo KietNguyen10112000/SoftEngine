@@ -123,25 +123,29 @@ void TPPCameraScript::OnUpdate(float dt)
 	right.Normalize();
 
 	Vec3 motion = { 0,0,0 };
-	auto d = 15 * dt;
 	if (Input()->IsKeyDown('W'))
 	{
-		motion += d * forward;
+		motion += forward;
 	}
 
 	if (Input()->IsKeyDown('S'))
 	{
-		motion -= d * forward;
+		motion -= forward;
 	}
 
 	if (Input()->IsKeyDown('A'))
 	{
-		motion -= d * right;
+		motion -= right;
 	}
 
 	if (Input()->IsKeyDown('D'))
 	{
-		motion += d * right;
+		motion += right;
+	}
+
+	if (motion != Vec3::ZERO)
+	{
+		motion = m_movingSpeed * dt * motion.Normal();
 	}
 
 	static float cooldown = 0;
@@ -191,6 +195,7 @@ void TPPCameraScript::OnUpdate(float dt)
 
 	//motion.y = m_motionY;
 
+	m_lastMotion = motion;
 	if (motion.Length2() != 0)
 	{
 		m_controller->Move(motion);

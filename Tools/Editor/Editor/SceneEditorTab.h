@@ -14,6 +14,12 @@ public:
 	struct GameObjectEditorComponent
 	{
 		ID id = INVALID_ID;
+		bool hotReloadFromFile = false;
+	};
+
+	struct LoadedObjectFromFileData
+	{
+		String filePath;
 	};
 
 	constexpr static size_t NAME_INPUT_MAX_LEN = 2048;
@@ -60,6 +66,9 @@ public:
 
 	bool m_isDrawingDebug = true;
 
+	bool m_isHotDeserializingGameObjectFromFile = false;
+	std::map<UUID, LoadedObjectFromFileData> m_loadFromFileObject;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -77,7 +86,7 @@ private:
 	void ShowCreateComponentPopup();
 	void ShowCreateGameObjectPopup();
 
-	void LoadGameObjectFromFile(const String& path);
+	Handle<GameObject> LoadGameObjectFromFile(const String& path);
 
 public:
 	SceneEditorTab();
@@ -96,6 +105,9 @@ public:
 
 	String GetSaveFilePath() override;
 
+	void OnObjectDelete(GameObject* obj);
+	void AddObjectToEditor(GameObject* obj);
+
 public:
 	inline auto& Lock()
 	{
@@ -104,6 +116,8 @@ public:
 
 public:
 	void Inspect(ClassMetadata* metaData);
+	void WriteSaveDataToJson(Serializer* serializer, json& j);
+	void ReadSaveDataFromJson(Serializer* serializer, const json& j);
 
 	static String GetSavePath(const String& name);
 
