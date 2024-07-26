@@ -35,12 +35,16 @@ public:
 	virtual ~ActionBase() {};
 	virtual RETURN_CODE Update(float dt) = 0;
 
+	static bool HasLoop(ActionBase* action);
+
 };
 
 // action that contains others must be extended from class ActionCompound, don't use your approach which can lead to memory leak
 class API ActionCompound : public ActionBase
 {
 private:
+	friend class ActionBase;
+
 	ActionBase* m_head = nullptr;
 	ActionBase* m_tail = nullptr;
 	std::vector<SharedPtr<ActionBase>> m_storage;

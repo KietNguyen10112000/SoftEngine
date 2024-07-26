@@ -21,6 +21,8 @@ void ActionCompound::AddAction(const SharedPtr<ActionBase>& action)
 	m_tail = action.get();
 
 	assert((m_tail == nullptr && m_head == nullptr) || (m_tail != nullptr && m_head != nullptr));
+
+	assert(HasLoop(this) == false);
 }
 
 void ActionCompound::RemoveAction(ActionBase* action)
@@ -78,6 +80,40 @@ void ActionCompound::Clear()
 bool ActionCompound::Contains(ActionBase* action) const
 {
 	return action->m_storageId != INVALID_ID && m_storage[action->m_storageId].get() == action;
+}
+
+bool ActionBase::HasLoop(ActionBase* head)
+{
+	std::set<ActionBase*> visited;
+
+	std::vector<ActionBase*> stack;
+	stack.push_back(head);
+
+	while (!stack.empty())
+	{
+		auto it = stack.back();
+		stack.pop_back();
+
+		if (visited.find(it) != visited.end())
+		{
+			return true;
+		}
+
+		visited.insert(it);
+
+		{
+			auto compound = dynamic_cast<ActionCompound*>(it);
+			if (compound)
+			{
+				for (auto& a : compound->m_storage)
+				{
+					stack.push_back(a.get());
+				}
+			}
+		}
+	}
+
+	return false;
 }
 
 NAMESPACE_END

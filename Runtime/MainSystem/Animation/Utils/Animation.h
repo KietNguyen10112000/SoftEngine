@@ -7,8 +7,16 @@
 
 NAMESPACE_BEGIN
 
-class Animation
+class API Animation
 {
+public:
+	struct ActionInterpolationKeyFrames
+	{
+		std::vector<ActionInterpolation<Vec3>::KeyFrame> scaling;
+		std::vector<ActionInterpolation<Quaternion>::KeyFrame> rotation;
+		std::vector<ActionInterpolation<Vec3>::KeyFrame> translation;
+	};
+
 private:
 	friend class AnimMotion;
 	friend class AnimModel;
@@ -71,6 +79,38 @@ public:
 	KeyFrames* GetKeyFrames(ID nodeId);
 
 	static std::vector<ActionInterpolation<Transform>::KeyFrame> ConvertToActionKeyFrames(KeyFrames* keyframes, float tickPerSecond);
+
+	inline static std::vector<ActionInterpolation<Vec3>::KeyFrame> ExtractScaling(const std::vector<ActionInterpolation<Transform>::KeyFrame>& keyframes)
+	{
+		std::vector<ActionInterpolation<Vec3>::KeyFrame> ret;
+		for (auto& k : keyframes)
+		{
+			ret.push_back({ k.value.GetScale(),k.time });
+		}
+		return ret;
+	}
+
+	inline static std::vector<ActionInterpolation<Quaternion>::KeyFrame> ExtractRotation(const std::vector<ActionInterpolation<Transform>::KeyFrame>& keyframes)
+	{
+		std::vector<ActionInterpolation<Quaternion>::KeyFrame> ret;
+		for (auto& k : keyframes)
+		{
+			ret.push_back({ k.value.GetRotation(),k.time });
+		}
+		return ret;
+	}
+
+	inline static std::vector<ActionInterpolation<Vec3>::KeyFrame> ExtractTranslation(const std::vector<ActionInterpolation<Transform>::KeyFrame>& keyframes)
+	{
+		std::vector<ActionInterpolation<Vec3>::KeyFrame> ret;
+		for (auto& k : keyframes)
+		{
+			ret.push_back({ k.value.GetPosition(),k.time });
+		}
+		return ret;
+	}
+
+	static ActionInterpolationKeyFrames ConvertToActionKeyFramesPerChannel(KeyFrames* keyframes, float tickPerSecond);
 
 };
 

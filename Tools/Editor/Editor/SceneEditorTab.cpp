@@ -630,7 +630,7 @@ Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
 
 	//m_scene->AddObject(obj);
 
-	m_loadFromFileObject.insert({ obj->GetUUID(), { path } });
+	m_loadFromFileObject.insert({ obj->GetUUID(), { path,FileSystem::Get()->GetFileModifiedLastTime(path) }});
 	obj->PostTraversal([](GameObject* o)
 		{
 			o->NewComponent<GameObjectEditorComponent>()->hotReloadFromFile = true;
@@ -961,10 +961,15 @@ void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 			json temp;
 			temp["UUID"] = uuid;
 			temp["FilePath"] = data.filePath;
+			temp["LastModifiedTime"] = data.loadedLastModifiedTime;
 			arr.push_back(temp);
 		}
 
 		j["LoadedFromFileObject"] = arr;
+	}
+
+	{
+		j["DrawDebug"] = m_isDrawingDebug;
 	}
 }
 
@@ -981,13 +986,15 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 			auto& temp = arr[i];
 			UUID uuid = temp["UUID"];
 			String filePath = temp["FilePath"];
+			size_t lastModifiedTime = temp["LastModifiedTime"];
 
 			object = nullptr;
 			serializer->Deserialize(uuid, object);
 
-			if (object)
+			if (object && lastModifiedTime != FileSystem::Get()->GetFileModifiedLastTime(filePath))
 			{
 				auto replaceObject = LoadGameObjectFromFile(filePath);
+				m_loadFromFileObject[replaceObject->GetUUID()].loadedLastModifiedTime = lastModifiedTime;
 				assert(replaceObject.Get() != nullptr);
 
 				std::vector<GameObject*> stack0;
@@ -1041,8 +1048,31 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 					parent->AddChild(replaceObject, idx);
 				}
 			}
+			else
+			{
+				LoadedObjectFromFileData data;
+				data.filePath = filePath;
+				data.loadedLastModifiedTime = lastModifiedTime;
+				m_loadFromFileObject.insert({ object->GetUUID(),data });
+
+				object->PostTraversal([](GameObject* o)
+					{
+						if (!o->HasComponent<GameObjectEditorComponent>())
+						{
+							o->NewComponent<GameObjectEditorComponent>();
+						}
+
+						o->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile = true;
+					}
+				);
+			}
 		}
 
 		m_isHotDeserializingGameObjectFromFile = false;
+	}
+
+	if (j.contains("DrawDebug"))
+	{
+		m_isDrawingDebug = j["DrawDebug"];
 	}
 }

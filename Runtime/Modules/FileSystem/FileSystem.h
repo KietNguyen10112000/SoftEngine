@@ -66,6 +66,8 @@ public:
 
 	bool IsDirectoryExist(const char* path);
 
+	// in ms
+	size_t GetFileModifiedLastTime(const String& path) const;
 	bool IsFileChanged(const char* path, bool updateLastModifiedTime = true);
 	bool IsDirectoryChanged(const char* path, bool updateLastModifiedTime = true);
 

@@ -156,6 +156,43 @@ Handle<ClassMetadata> FPPCameraScript::GetMetadata(size_t sign)
 	return metadata;
 }
 
+void FPPCameraScript::CloneFrom(Serializer* serializer, Serializable* another)
+{
+}
+
+void FPPCameraScript::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void FPPCameraScript::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void FPPCameraScript::SerializeToJson(Serializer* serializer, json& j) const
+{
+	j["RotateX"] = m_rotateX;
+	j["RotateY"] = m_rotateY;
+	j["RotateY"] = m_rotateZ;
+	j["RotateSensi"] = m_rotationSensi;
+	j["Position"] = m_position;
+	j["Speed"] = m_speed;
+	j["EnableFPP"] = m_enableFPP;
+}
+
+void FPPCameraScript::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	if (j.contains("RotateX"))
+	{
+		m_rotateX = j["RotateX"];
+		m_rotateY = j["RotateY"];
+		m_rotateZ = j["RotateY"];
+		m_rotationSensi = j["RotateSensi"];
+		m_position = j["Position"];
+		m_speed = j["Speed"];
+		m_enableFPP = j["EnableFPP"];
+	}
+}
+
 void FPPCameraScript::FPPResetTransform(const Mat4& transform)
 {
 	m_position = transform.Position();

@@ -661,6 +661,19 @@ public:
 
     inline void SetFromMat4(const Mat4& mat);
 
+    inline Quaternion operator*(const Quaternion& quat) const
+    {
+        Quaternion ret;
+        ret.GLMQuat() = GLMQuatConst() * quat.GLMQuatConst();
+        return ret;
+    }
+
+    inline Quaternion& operator*=(const Quaternion& quat)
+    {
+        GLMQuat() *= quat.GLMQuatConst();
+        return *this;
+    }
+
     //return Quaternion that is shortest rotation {from->to}
     //source from https://github.com/toji/gl-matrix/blob/f0583ef53e94bc7e78b78c8a24f09ed5e2f7a20c/src/gl-matrix/quat.js#L54 line 54
     inline static Quaternion RotationFromTo(const Vec3& from, const Vec3& to);

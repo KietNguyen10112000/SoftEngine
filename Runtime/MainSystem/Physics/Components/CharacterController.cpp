@@ -449,6 +449,8 @@ void CharacterController::OnTransformChanged()
 		m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>(rotationMat.Up()));
 
 		//m_lastGlobalTransform = globalTransform;
+
+		m_lastRotation = m_rotation;
 	}
 }
 
@@ -566,6 +568,7 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 		PhysicsSystem, AsyncTaskRunnerST, rotation,
 		{
 			self->m_rotation = rotation;
+			self->OnPhysicsTransformChanged();
 		}
 	);
 

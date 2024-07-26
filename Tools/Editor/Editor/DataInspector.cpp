@@ -72,10 +72,23 @@ void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor
 	}
 }
 
+void DataInspector::InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+{
+	auto& v = variant.As<bool>();
+	auto name = "## " + String(propertyName);
+	if (ImGui::Checkbox(name.c_str(), &v))
+	{
+		auto input = Variant::Of<bool>();
+		input.As<bool>() = v;
+		accessor.Set(input);
+	}
+}
+
 void DataInspector::InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	auto& v = variant.As<float>();
-	if (ImGui::DragFloat(propertyName, &v, 0.01f, -INFINITY, INFINITY))
+	auto name = "## " + String(propertyName);
+	if (ImGui::DragFloat(name.c_str(), &v, 0.01f, -INFINITY, INFINITY))
 	{
 		auto input = Variant::Of<float>();
 		input.As<float>() = v;
@@ -87,7 +100,8 @@ void DataInspector::InspectUint64(ClassMetadata* metadata, Accessor& accessor, c
 {
 	auto& v = variant.As<uint64_t>();
 	int temp = (int)v;
-	if (ImGui::DragInt(propertyName, (int*)&temp, 0.1f, -INT_MAX, INT_MAX))
+	auto name = "## " + String(propertyName);
+	if (ImGui::DragInt(name.c_str(), (int*)&temp, 0.1f, -INT_MAX, INT_MAX))
 	{
 		auto input = Variant::Of<uint64_t>();
 		input.As<uint64_t>() = temp;
@@ -100,7 +114,8 @@ void DataInspector::InspectVec3(ClassMetadata* metadata, Accessor& accessor, con
 	//const static char* cacheNameFmt = "editor_InspectVec3_{}";
 
 	auto& vec = variant.As<Vec3>();
-	if (ImGui::DragFloat3(propertyName, &vec[0], 0.01f, -INFINITY, INFINITY))
+	auto name = "## " + String(propertyName);
+	if (ImGui::DragFloat3(name.c_str(), &vec[0], 0.01f, -INFINITY, INFINITY))
 	{
 		auto input = Variant::Of<Vec3>();
 		input.As<Vec3>() = vec;
@@ -466,6 +481,7 @@ void DataInspector::Inspect(ClassMetadata* metadata, Accessor& accessor, const c
 
 void DataInspector::Initialize()
 {
+	s_inspectFunc[VARIANT_TYPE::BOOL]						= InspectBool;
 	s_inspectFunc[VARIANT_TYPE::FLOAT]						= InspectFloat;
 	s_inspectFunc[VARIANT_TYPE::UINT64]						= InspectUint64;
 	s_inspectFunc[VARIANT_TYPE::VEC3]						= InspectVec3;

@@ -431,6 +431,11 @@ public:
 		return m_className.c_str();
 	}
 
+	inline void SetName(const String& name)
+	{
+		m_className = name;
+	}
+
 	inline auto GetInlinePropertiesCount()
 	{
 		return m_properties.size();

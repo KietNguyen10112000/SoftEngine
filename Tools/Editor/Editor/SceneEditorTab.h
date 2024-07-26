@@ -20,6 +20,7 @@ public:
 	struct LoadedObjectFromFileData
 	{
 		String filePath;
+		size_t loadedLastModifiedTime = 0;
 	};
 
 	constexpr static size_t NAME_INPUT_MAX_LEN = 2048;

@@ -111,6 +111,14 @@ bool FileSystem::IsDirectoryExist(const char* path)
 	return std::filesystem::is_directory(path) && std::filesystem::exists(path);
 }
 
+size_t FileSystem::GetFileModifiedLastTime(const String& path) const
+{
+	assert(fs::is_regular_file(path.c_str()));
+	return std::chrono::duration_cast<std::chrono::milliseconds>(
+		fs::last_write_time(path.c_str()).time_since_epoch()
+	).count();
+}
+
 bool FileSystem::IsFileChanged(const char* fullpath, bool updateLastModifiedTime)
 {
 	//auto fullpath = GetFullPath(path);

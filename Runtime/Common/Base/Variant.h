@@ -1,7 +1,11 @@
 #pragma once
 
 #include "Core/TypeDef.h"
+#include "Core/Structures/String.h"
+
 #include "Math/Math.h"
+
+#include <vector>
 
 NAMESPACE_BEGIN
 
@@ -11,6 +15,8 @@ public:
 	enum TYPE
 	{
 		UNKNOWN,
+
+		BOOL,
 
 		CHAR,
 		INT8 = CHAR,
@@ -128,6 +134,11 @@ public:
 	template <typename T>
 	inline static Variant Of()
 	{
+		if constexpr (std::is_same_v<T, bool>)
+		{
+			return Variant(VARIANT_TYPE::BOOL);
+		}
+
 		if constexpr (std::is_same_v<T, char>)
 		{
 			return Variant(VARIANT_TYPE::CHAR);
@@ -232,6 +243,12 @@ public:
 	template <typename T>
 	inline auto& As() const
 	{
+		if constexpr (std::is_same_v<T, bool>)
+		{
+			assert(Type() == VARIANT_TYPE::BOOL);
+			return Get<bool>();
+		}
+
 		if constexpr (std::is_same_v<T, char>)
 		{
 			assert(Type() == VARIANT_TYPE::CHAR || Type() == VARIANT_TYPE::INT8);
@@ -364,6 +381,7 @@ public:
 		case soft::VARIANT_TYPE::UNKNOWN:
 			//assert(0);
 			break;
+		case soft::VARIANT_TYPE::BOOL:
 		case soft::VARIANT_TYPE::CHAR:
 		//case soft::VARIANT_TYPE::INT8:
 		case soft::VARIANT_TYPE::UCHAR:

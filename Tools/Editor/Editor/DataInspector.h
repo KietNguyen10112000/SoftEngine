@@ -13,6 +13,8 @@ public:
 	static InspectFunc s_inspectFunc[MAX_TYPE];
 
 	// variant is the value from calling accessor.Get() so don't need to re-call accessor.Get() inside InspectFunc
+
+	static void InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectUint64(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 	static void InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);

@@ -70,27 +70,46 @@ void AnimPlayerLayer::Run(float dt)
 	{
 		auto& node = nodes[0];
 
-		if (!m_disableRootMotion || rootBoneNodeId != 0)
+		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
+		//localTransforms[0] = node.localTransform;
+
+		auto& channelId = nodeToChannelId[0];
+		if (channelId != INVALID_ID)
 		{
-			globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
-			//localTransforms[0] = node.localTransform;
+			auto& channel = channels[channelId];
+			auto& index = m_keyFramesIndex[channelId];
 
-			auto& channelId = nodeToChannelId[0];
-			if (channelId != INVALID_ID)
+			Mat4 scaling = {}, rotation = {}, translation = {};
+
+			if (rootBoneNodeId != 0)
 			{
-				auto& channel = channels[channelId];
-				auto& index = m_keyFramesIndex[channelId];
-
-				Mat4 scaling;
 				channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-				Mat4 rotation;
 				channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-				Mat4 translation;
 				channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
-
 				globalTransforms[0] = scaling * rotation * translation;
-				//localTransforms[0] = globalTransforms[0];
 			}
+			else
+			{
+				if (!m_disableRootMotionScaling)
+				{
+					channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
+				}
+				if (!m_disableRootMotionRotation)
+				{
+					channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
+				}
+				if (!m_disableRootMotionTranslation)
+				{
+					channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+				}
+
+				if (!m_disableRootMotionScaling || !m_disableRootMotionRotation || !m_disableRootMotionTranslation)
+				{
+					globalTransforms[0] = scaling * rotation * translation;
+				}
+			}
+
+			//localTransforms[0] = globalTransforms[0];
 		}
 
 		assert(node.parentId == INVALID_ID);
@@ -104,31 +123,45 @@ void AnimPlayerLayer::Run(float dt)
 			auto& channelId = nodeToChannelId[i];
 			auto& globalTransform = globalTransforms[i];
 
-			if (!m_disableRootMotion || rootBoneNodeId != i)
+			globalTransform = node.localTransform;
+			if (channelId != INVALID_ID)
 			{
-				globalTransform = node.localTransform;
+				auto& channel = channels[channelId];
+				auto& index = m_keyFramesIndex[channelId];
 
-				//auto& localTransform = localTransforms[i];
-				//localTransform = node.localTransform;
+				Mat4 scaling = {}, rotation = {}, translation = {};
 
-				if (channelId != INVALID_ID)
+				if (rootBoneNodeId != i)
 				{
-					auto& channel = channels[channelId];
-					auto& index = m_keyFramesIndex[channelId];
-
-					Mat4 scaling;
 					channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-					Mat4 rotation;
 					channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-					Mat4 translation;
 					channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
 
 					globalTransform = scaling * rotation * translation;
-					//localTransform = globalTransform;
 				}
+				else
+				{
+					if (!m_disableRootMotionScaling)
+					{
+						channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
+					}
+					if (!m_disableRootMotionRotation)
+					{
+						channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
+					}
+					if (!m_disableRootMotionTranslation)
+					{
+						channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+					}
 
-				globalTransform = globalTransform * globalTransforms[node.parentId];
+					if (!m_disableRootMotionScaling || !m_disableRootMotionRotation || !m_disableRootMotionTranslation)
+					{
+						globalTransform = scaling * rotation * translation;
+					}
+				}
 			}
+
+			globalTransform = globalTransform * globalTransforms[node.parentId];
 		}
 	}
 
@@ -451,9 +484,16 @@ void AnimPlayerLayer::RemoveListener(EventListener* listener)
 	m_lock.unlock();
 }
 
-void AnimPlayerLayer::SetEnableRootMotion(bool enable)
+void AnimPlayerLayer::SetEnableRootMotion(bool enableScaling, bool enableRotation, bool enableTranslation)
 {
-	m_disableRootMotion = !enable;
+	MAIN_SYSTEM_TASK_IMPL_COMMON_3(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, enableScaling, enableRotation, enableTranslation,
+		{
+			self->m_disableRootMotionScaling = !enableScaling;
+			self->m_disableRootMotionRotation = !enableRotation;
+			self->m_disableRootMotionTranslation = !enableTranslation;
+		}
+	);
 }
 
 void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)

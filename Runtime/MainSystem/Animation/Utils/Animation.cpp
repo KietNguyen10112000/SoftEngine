@@ -75,4 +75,26 @@ std::vector<ActionInterpolation<Transform>::KeyFrame> Animation::ConvertToAction
 	return ret;
 }
 
+Animation::ActionInterpolationKeyFrames Animation::ConvertToActionKeyFramesPerChannel(KeyFrames* keyframes, float tickPerSecond)
+{
+	ActionInterpolationKeyFrames ret;
+
+	for (auto& k : keyframes->scaling)
+	{
+		ret.scaling.push_back({ k.value,k.time / tickPerSecond });
+	}
+
+	for (auto& k : keyframes->rotation)
+	{
+		ret.rotation.push_back({ k.value,k.time / tickPerSecond });
+	}
+
+	for (auto& k : keyframes->translation)
+	{
+		ret.translation.push_back({ k.value,k.time / tickPerSecond });
+	}
+
+	return ret;
+}
+
 NAMESPACE_END
