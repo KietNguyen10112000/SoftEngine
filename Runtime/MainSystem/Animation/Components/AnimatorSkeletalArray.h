@@ -11,6 +11,7 @@ class API AnimatorSkeletalArray : public AnimationComponent
 {
 public:
 	friend class AnimLayer;
+	friend class AnimCCTBufferLayer;
 
 	Resource<AnimModel>	m_model3D;
 
@@ -25,6 +26,17 @@ public:
 	AnimLayer* m_lastOutput = nullptr;
 
 	bool m_isRunning = true;
+
+	CharacterController* m_cct = nullptr;
+	SharedPtr<AnimLayer> m_cctBufferLayer;
+	Vec3 m_cctPrevPosition;
+	Quaternion m_cctStartRotation;
+	Quaternion m_cctPrevRotation;
+	Vec3 m_cctStartForward;
+	Mat4 m_cctOffset;
+	Mat4 m_rootOffset;
+	Mat4 m_rootToCctOffset;
+	Mat4 m_offset;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -52,6 +64,12 @@ private:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
+	void UpdateDataToRenderer(Scene* _scene, const std::vector<Mat4>& globalTransform, const std::vector<AABox>& meshesAABB);
+
+	void ForwardCTTUpdateDataToRenderer(Scene* _scene, AnimLayer* last);
+	void CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* last);
+	void SetForwardCCTImpl(CharacterController* cct);
+
 public:
 
 	// Inherited via Animator
@@ -70,6 +88,9 @@ public:
 	void UpdateDataToRenderer(Scene* _scene, AnimLayer* last);
 
 	void SetRunning(bool running);
+
+	// forward root motion to cct
+	void SetForwardCCT(CharacterController* cct);
 
 public:
 	template <typename T, bool IS_EXTERN = false, typename... Args>

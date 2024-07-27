@@ -11,6 +11,9 @@
 #include "../Materials/PhysicsMaterial.h"
 #include "../FILTER_DATA.h"
 
+#include "Common/Actions/ActionInterpolation.h"
+#include "MainSystem/Animation/Utils/Animation.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -418,7 +421,9 @@ void CharacterController::OnPrevUpdate(float dt)
 {
 	auto& disp = m_lastDisp;
 
+	OnUpdate(dt);
 	disp += m_velocity * dt;
+
 	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
 
 	/*if (m_velocity.Length() != 0)
@@ -509,17 +514,23 @@ void CharacterController::SetGravity(const Vec3& g)
 	MAIN_SYSTEM_TASK_1(
 		PhysicsSystem, AsyncTaskRunner, g,
 		{
+			if (self->m_gravity == Vec3::ZERO)
+			{
+				if (self->m_countScheduleUpdate++ == 0)
+				{
+					//system->ScheduleUpdate(self);
+					system->SchedulePrevUpdate(self);
+				}
+			}
+
 			self->m_gravity = g;
 
-			if (g == Vec3::ZERO)
+			if (g == Vec3::ZERO && --(self->m_countScheduleUpdate) == 0)
 			{
-				system->UnscheduleUpdate(self);
+				//system->UnscheduleUpdate(self);
 				system->UnschedulePrevUpdate(self);
 				return;
 			}
-
-			system->ScheduleUpdate(self);
-			system->SchedulePrevUpdate(self);
 		}
 	);
 }
@@ -568,6 +579,7 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 		PhysicsSystem, AsyncTaskRunnerST, rotation,
 		{
 			self->m_rotation = rotation;
+			self->m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>((Mat4::Rotation(rotation).Up())));
 			self->OnPhysicsTransformChanged();
 		}
 	);

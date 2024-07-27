@@ -684,23 +684,27 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 	{
 		for (auto& obj : m_objects)
 		{
-			auto physicsComp = obj->GetComponentRaw<PhysicsComponent>();
-			if (physicsComp)
-			{
-				physicsComp->OnDrawDebug();
-			}
+			obj->PostTraversal([](GameObject* obj)
+				{
+					auto physicsComp = obj->GetComponentRaw<PhysicsComponent>();
+					if (physicsComp)
+					{
+						physicsComp->OnDrawDebug();
+					}
 
-			auto renderingComp = obj->GetComponentRaw<RenderingComponent>();
-			if (renderingComp)
-			{
-				renderingComp->OnDrawDebug();
-			}
+					auto renderingComp = obj->GetComponentRaw<RenderingComponent>();
+					if (renderingComp)
+					{
+						renderingComp->OnDrawDebug();
+					}
 
-			auto animationComp = obj->GetComponentRaw<AnimationComponent>();
-			if (animationComp)
-			{
-				animationComp->OnDrawDebug();
-			}
+					auto animationComp = obj->GetComponentRaw<AnimationComponent>();
+					if (animationComp)
+					{
+						animationComp->OnDrawDebug();
+					}
+				}
+			);
 		}
 	}
 	

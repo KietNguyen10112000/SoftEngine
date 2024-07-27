@@ -132,7 +132,6 @@ protected:
 
 		Local<T> buf = m_buffer;
 
-		m_size = newSize;
 		if (newSize > currentSize)
 		{
 			//for (size_t i = currentSize; i < newSize; i++)
@@ -149,6 +148,8 @@ protected:
 			//	(buf.Get() + i)->~T();
 			//}
 		}
+
+		m_size = newSize;
 	}
 
 public:

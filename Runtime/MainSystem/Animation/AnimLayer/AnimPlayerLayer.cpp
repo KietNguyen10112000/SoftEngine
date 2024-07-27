@@ -107,6 +107,10 @@ void AnimPlayerLayer::Run(float dt)
 				{
 					globalTransforms[0] = scaling * rotation * translation;
 				}
+				else
+				{
+					globalTransforms[0] = Mat4::Identity();
+				}
 			}
 
 			//localTransforms[0] = globalTransforms[0];
@@ -157,6 +161,10 @@ void AnimPlayerLayer::Run(float dt)
 					if (!m_disableRootMotionScaling || !m_disableRootMotionRotation || !m_disableRootMotionTranslation)
 					{
 						globalTransform = scaling * rotation * translation;
+					}
+					else
+					{
+						globalTransform = Mat4::Identity();
 					}
 				}
 			}

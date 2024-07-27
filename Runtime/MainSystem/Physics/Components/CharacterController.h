@@ -56,6 +56,8 @@ protected:
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
+	int m_countScheduleUpdate = 0;
+
 	inline CharacterController() {};
 	~CharacterController();
 
