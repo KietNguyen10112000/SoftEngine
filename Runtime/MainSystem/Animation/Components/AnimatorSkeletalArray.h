@@ -30,13 +30,10 @@ public:
 	CharacterController* m_cct = nullptr;
 	SharedPtr<AnimLayer> m_cctBufferLayer;
 	Vec3 m_cctPrevPosition;
-	Quaternion m_cctStartRotation;
 	Quaternion m_cctPrevRotation;
-	Vec3 m_cctStartForward;
 	Mat4 m_cctOffset;
 	Mat4 m_rootOffset;
-	Mat4 m_rootToCctOffset;
-	Mat4 m_offset;
+	Mat4 m_parentOffset;
 
 protected:
 	TRACEABLE_FRIEND();

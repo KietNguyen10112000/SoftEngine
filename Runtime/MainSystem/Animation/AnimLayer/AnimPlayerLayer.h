@@ -98,6 +98,12 @@ private:
 	void SetAnimationImpl(const SharedPtr<Animation>& animation, float startTime, float endTime);
 	void SetTimeImpl(float tick, float startTick, float tickDuration, float tickPerSecond);
 
+	void SetCurrentTimeImpl(float t);
+	void SetStartTimeImpl(float t);
+	void SetEndTimeImpl(float t);
+	void SetDurationImpl(float duration);
+	void SetTimeImpl_(float currentTime, float startTime, float endTime, float duration);
+
 public:
 	// time in sec
 	void SetAnimation(const SharedPtr<Animation>& animation, float startTime, float endTime);

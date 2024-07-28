@@ -12,6 +12,13 @@
 
 #include "glm/gtx/matrix_transform_2d.hpp"
 
+#ifdef _DEBUG
+#include <iostream>
+#include <cmath>
+#endif // _DEBUG
+
+#include "glm/ext/scalar_common.hpp"
+
 namespace math
 {
 
@@ -351,7 +358,7 @@ public:
 
     inline friend float AngleBetween(const Vec3& v1, const Vec3& v2)
     {
-        return std::acos(v1.Normal().Dot(v2.Normal()));
+        return std::acos(glm::clamp<float>(v1.Normal().Dot(v2.Normal()), -1.0f, 1.0f));
     }
 
 public:
@@ -367,12 +374,26 @@ public:
 
     inline Vec3& Normalize()
     {
+#ifdef _DEBUG
+        if (Length2() == 0)
+        {
+            std::cerr << "[WARN]: invalid Vec3::Normalize()\n";
+        }
+#endif // _DEBUG
+
         GLMVec() = glm::normalize(GLMVecConst());
         return *this;
     }
 
     inline Vec3 Normal() const
     {
+#ifdef _DEBUG
+        if (Length2() == 0)
+        {
+            std::cerr << "[WARN]: invalid Vec3::Normal()\n";
+        }
+#endif // _DEBUG
+
         Vec3 ret;
         ret.GLMVec() = glm::normalize(GLMVecConst());
         return ret;

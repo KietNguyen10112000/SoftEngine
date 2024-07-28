@@ -40,6 +40,7 @@ public:
 	float m_rotationSensi = 0.25f;
 	Vec3 m_viewPoint = Vec3(5, 5, 5);
 	Vec3 m_lastMotion = Vec3::ZERO;
+	Vec3 m_lastMotionDir = Vec3::ZERO;
 
 	float m_movingSpeed = 15.0f;
 

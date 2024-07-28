@@ -145,7 +145,12 @@ void TPPCameraScript::OnUpdate(float dt)
 
 	if (motion != Vec3::ZERO)
 	{
-		motion = m_movingSpeed * dt * motion.Normal();
+		m_lastMotionDir = motion.Normal();
+		motion = m_movingSpeed * dt * m_lastMotionDir;
+	}
+	else
+	{
+		m_lastMotionDir = Vec3::ZERO;
 	}
 
 	static float cooldown = 0;

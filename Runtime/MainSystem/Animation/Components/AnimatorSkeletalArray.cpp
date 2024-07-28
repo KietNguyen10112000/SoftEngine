@@ -219,7 +219,7 @@ MyData* g_data = nullptr;
 
 void AnimatorSkeletalArray::OnDrawDebug()
 {
-	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	/*auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 	if (!debugGraphics) return;
 
 	auto mat = m_lastOutput->m_globalTransforms[m_model3D->m_rootBoneNodeId];
@@ -227,7 +227,7 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 	debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
 	debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
-	debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
+	debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });*/
 
 	//test inverse kinematics
 	
@@ -675,20 +675,20 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct)
 	m_cctPrevRotation = rotation;
 
 	m_cctOffset = GetGameObject()->GetCommittedGlobalTransform();
-	m_cctStartRotation = m_cct->CCTGetRotation();
+	m_parentOffset = m_cctOffset * m_cct->GetGameObject()->GetCommittedGlobalTransform().GetInverse();
 
-	m_rootToCctOffset = mat.GetInverse() * m_cct->GetGameObject()->GetCommittedGlobalTransform();
-
+	auto cctStartForward = m_cct->GetGameObject()->GetCommittedGlobalTransform().Forward().Normal();
 	/*auto cctRootTransformGlobal = m_cct->GetGameObject()->GetCommittedGlobalTransform();
 	cctRootTransformGlobal = cctRootTransformGlobal * GetGameObject()->GetLocalTransform().ToTransformMatrix().GetInverse();
 	cctRootTransformGlobal = cctRootTransformGlobal * rootLocalTransform.GetInverse();*/
-	auto p = m_cct->GetGameObject()->GetCommittedGlobalTransform().Position();
-	auto p1 = GetGameObject()->GetCommittedGlobalTransform().Position();
+	auto& p = m_cct->GetGameObject()->GetCommittedGlobalTransform().Position();
 	m_rootOffset = Mat4::Translation(GetGameObject()->GetCommittedGlobalTransform().GetInverse().Transform(p));
 	m_rootOffset = Mat4::Translation(-rootLocalTransform.GetInverse().Transform(m_rootOffset.Position()));
+	m_rootOffset *= Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
+	m_rootOffset *= Mat4::Rotation(Quaternion::RotationFromTo(-Vec3::Z_AXIS, Vec3(cctStartForward.x, 0, cctStartForward.z).Normal()));
+
 	//m_offset = GetGameObject()->GetLocalTransform();
 
-	m_cctStartForward = m_cct->GetGameObject()->GetCommittedGlobalTransform().Forward().Normal();
 }
 
 void AnimatorSkeletalArray::SetForwardCCT(CharacterController* cct)
@@ -757,21 +757,30 @@ void AnimatorSkeletalArray::CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* 
 	std::memcpy(m_cctBufferLayer->m_globalTransforms.data(), last->NodeGlobalTransforms().data(), sizeof(Mat4) * last->NodeGlobalTransforms().size());
 	std::memcpy(m_cctBufferLayer->m_meshesAABB.data(), last->MeshesAABB().data(), sizeof(AABox) * last->MeshesAABB().size());
 
-	// because we forward root transform to cct, so need to discard root transfrom from node to prevent transformed twices
-	auto mat = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId].GetInverse();// *m_rootOffset;
-
-	auto rootLocalTransform = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId];
-	auto m = (GetGameObject()->GetLocalTransform().ToTransformMatrix() * Mat4::Rotation(m_cct->CCTGetRotation()));
-	rootLocalTransform.Position() = Vec3::ZERO;
-	//rootLocalTransform = {};
-	rootLocalTransform *= m_rootOffset;
-	rootLocalTransform *= Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
-	//auto f = Mat4::Rotation(m_cctStartRotation).Transform(Vec3::Z_AXIS).Normal();
-	rootLocalTransform *= Mat4::Rotation(Quaternion::RotationFromTo(-Vec3::Z_AXIS, Vec3(m_cctStartForward.x, 0, m_cctStartForward.z).Normal()));
-	rootLocalTransform *= m.GetInverse();
-	for (auto& transform : m_cctBufferLayer->m_globalTransforms)
 	{
-		transform *= (mat * rootLocalTransform);
+		// because we forward root transform to cct, so need to discard root transfrom from node to prevent transformed twices
+		auto mat = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId].GetInverse();// *m_rootOffset;
+
+		auto rootLocalTransform = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId];
+		auto m = (m_parentOffset * Mat4::Rotation(m_cct->CCTGetRotation()));
+		rootLocalTransform.Position() = Vec3::ZERO;
+		//rootLocalTransform = {};
+		rootLocalTransform *= m_rootOffset;
+		//rootLocalTransform *= Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
+		//auto f = Mat4::Rotation(m_cctStartRotation).Transform(Vec3::Z_AXIS).Normal();
+		//rootLocalTransform *= Mat4::Rotation(Quaternion::RotationFromTo(-Vec3::Z_AXIS, Vec3(m_cctStartForward.x, 0, m_cctStartForward.z).Normal()));
+		rootLocalTransform *= m.GetInverse();
+
+		auto temp = mat * rootLocalTransform;
+		for (auto& transform : m_cctBufferLayer->m_globalTransforms)
+		{
+			transform *= temp;
+		}
+
+		for (auto& aabb : m_cctBufferLayer->m_meshesAABB)
+		{
+			aabb.Transform(temp);
+		}
 	}
 }
 

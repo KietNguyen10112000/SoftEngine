@@ -374,19 +374,22 @@ void CharacterController::OnUpdate(float dt)
 		}
 
 		uint32_t numNotAppliedDynamicFriction = 0;
-		auto vN = m_velocity.Normal();
-		for (auto& plane : m_collisionPlanes)
+		if (m_velocity != Vec3::ZERO)
 		{
-			if (!plane.isGround || plane.isApplyedDynamicFriction)
+			auto vN = m_velocity.Normal();
+			for (auto& plane : m_collisionPlanes)
 			{
-				continue;
-			}
+				if (!plane.isGround || plane.isApplyedDynamicFriction)
+				{
+					continue;
+				}
 
-			if (vN.Dot(plane.normal) < -0.01f)
-			{
-				plane.isGroundForMotion = true;
+				if (vN.Dot(plane.normal) < -0.01f)
+				{
+					plane.isGroundForMotion = true;
 
-				numNotAppliedDynamicFriction++;
+					numNotAppliedDynamicFriction++;
+				}
 			}
 		}
 		
