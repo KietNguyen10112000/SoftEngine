@@ -654,9 +654,10 @@ void AnimatorSkeletalArray::SetRunning(bool running)
 	m_isRunning = running;
 }
 
-void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct)
+void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection)
 {
 	m_cct = cct;
+	m_cctLockedUpDirection = lockUpDirection;
 
 	if (cct == nullptr)
 	{
@@ -691,12 +692,12 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct)
 
 }
 
-void AnimatorSkeletalArray::SetForwardCCT(CharacterController* cct)
+void AnimatorSkeletalArray::SetForwardCCT(CharacterController* cct, const Vec3& lockUpDirection)
 {
-	MAIN_SYSTEM_TASK_COMMON_1(
-		AnimationSystem, AsyncTaskRunner, cct,
+	MAIN_SYSTEM_TASK_COMMON_2(
+		AnimationSystem, AsyncTaskRunner, cct, lockUpDirection,
 		{
-			self->SetForwardCCTImpl(cct);
+			self->SetForwardCCTImpl(cct, lockUpDirection);
 		}
 	);
 }
@@ -740,7 +741,20 @@ void AnimatorSkeletalArray::ForwardCTTUpdateDataToRenderer(Scene* _scene, AnimLa
 
 	Quaternion dRot = Mat4::Rotation(m_cctPrevRotation).GetInverse() * Mat4::Rotation(rotation);
 	m_cctPrevRotation = rotation;
-	m_cct->CCTSetRotation(m_cct->CCTGetRotation() * dRot);
+
+	auto cctRotation = m_cct->CCTGetRotation() * dRot;
+	if (m_cctLockedUpDirection != Vec3::ZERO)
+	{
+		auto cctRotMat = Mat4::Rotation(cctRotation);
+		auto up = cctRotMat.Up().Normal();
+		if (up != m_cctLockedUpDirection)
+		{
+			cctRotMat *= Mat4::Rotation(Quaternion::RotationFromTo(up, m_cctLockedUpDirection));
+			cctRotation = cctRotMat;
+		}
+	}
+
+	m_cct->CCTSetRotation(cctRotation);
 
 	/*mat = rootLocalTransform * GetGameObject()->GetLocalTransform().ToTransformMatrix() * m_cct->GetGameObject()->GetCommittedGlobalTransform();
 	mat.Decompose(scaling, rotation, translation);

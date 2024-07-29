@@ -28,6 +28,7 @@ public:
 	bool m_isRunning = true;
 
 	CharacterController* m_cct = nullptr;
+	Vec3 m_cctLockedUpDirection = Vec3::ZERO;
 	SharedPtr<AnimLayer> m_cctBufferLayer;
 	Vec3 m_cctPrevPosition;
 	Quaternion m_cctPrevRotation;
@@ -65,7 +66,7 @@ private:
 
 	void ForwardCTTUpdateDataToRenderer(Scene* _scene, AnimLayer* last);
 	void CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* last);
-	void SetForwardCCTImpl(CharacterController* cct);
+	void SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection);
 
 public:
 
@@ -87,7 +88,7 @@ public:
 	void SetRunning(bool running);
 
 	// forward root motion to cct
-	void SetForwardCCT(CharacterController* cct);
+	void SetForwardCCT(CharacterController* cct, const Vec3& lockUpDirection = Vec3::ZERO);
 
 public:
 	template <typename T, bool IS_EXTERN = false, typename... Args>

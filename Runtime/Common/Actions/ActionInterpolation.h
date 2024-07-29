@@ -77,7 +77,7 @@ private:
 	float m_timeEnd = 0;
 	ID m_index = 0;
 
-	std::function<void()> m_callback;
+	std::function<void(const T&)> m_callback;
 
 public:
 	inline virtual RETURN_CODE Update(float dt) override
@@ -103,7 +103,7 @@ public:
 				m_currentValue = m_keyFrames.back().value;
 				if (m_callback)
 				{
-					m_callback();
+					m_callback(GetCurrentValue());
 				}
 				return RETURN_CODE::FINISHED;
 			}
@@ -131,7 +131,7 @@ public:
 		m_currentValue = InterpolationFnStruct<T>::Fn(k1.value, k2.value, s);
 		if (m_callback)
 		{
-			m_callback();
+			m_callback(GetCurrentValue());
 		}
 		
 		return returnCode;
@@ -224,7 +224,7 @@ public:
 		return ret;
 	}
 
-	inline static auto New(const std::vector<KeyFrame>& keyframes, const std::function<void()>& callback)
+	inline static auto New(const std::vector<KeyFrame>& keyframes, const std::function<void(const T&)>& callback)
 	{
 		auto ret = std::make_shared<ActionInterpolation<T>>();
 		ret->AddKeyFrames(keyframes);
