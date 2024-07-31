@@ -165,6 +165,22 @@ public:
 };
 
 inline ClassMetadata::ClassMetadata(const char* className, Serializable* instance)
-	: m_className(className), m_instance(instance) {};
+	: m_className(className)
+{
+	auto memType = instance->GetMemoryType();
+	assert(memType != SERIALIZABLE_MEM_SHARED);
+
+	m_instanceHandle = instance;
+	m_instance = instance;
+};
+
+inline ClassMetadata::ClassMetadata(const char* className, const SharedPtr<Serializable>& instance) : m_className(className)
+{
+	auto memType = instance->GetMemoryType();
+	assert(memType == SERIALIZABLE_MEM_SHARED);
+
+	m_instanceShared = instance;
+	m_instance = instance.get();
+}
 
 NAMESPACE_END

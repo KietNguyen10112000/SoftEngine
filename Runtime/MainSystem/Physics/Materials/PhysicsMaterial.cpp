@@ -53,6 +53,15 @@ void PhysicsMaterial::SetRestitution(float restitution)
 
 void PhysicsMaterial::CloneFrom(Serializer* serializer, Serializable* another)
 {
+	this->~PhysicsMaterial();
+
+	auto src = (PhysicsMaterial*)another;
+
+	new (this) PhysicsMaterial(
+		src->m_pxMaterial->getStaticFriction(), 
+		src->m_pxMaterial->getDynamicFriction(), 
+		src->m_pxMaterial->getRestitution()
+	);
 }
 
 void PhysicsMaterial::SerializeToBinary(Serializer* serializer, ByteStream& stream) const

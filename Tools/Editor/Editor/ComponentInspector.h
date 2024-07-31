@@ -21,6 +21,7 @@ public:
 
 public:
 	static void InspectAnimatorSkeletalArray(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName);
+	static void InspectRigidBody(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName);
 
 public:
 	inline bool Inspect(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName)

@@ -17,12 +17,10 @@ RigidBodyStatic::RigidBodyStatic(const SharedPtr<PhysicsShape>& shape)
 	auto physics = PhysX::Get()->GetPxPhysics();
 
 	auto body = physics->createRigidStatic(PxTransform(PxIdentity));
-	body->attachShape(*shape->m_pxShape);
-
 	m_pxActor = body;
 	m_pxActor->userData = this;
 
-	m_shapes.push_back(shape);
+	AddShape(shape);
 }
 
 RigidBodyStatic::~RigidBodyStatic()
@@ -87,7 +85,10 @@ void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
 
 Handle<ClassMetadata> RigidBodyStatic::GetMetadata(size_t sign)
 {
-	return Handle<ClassMetadata>();
+	auto metadata = RigidBody::GetMetadata(sign + 1);
+	metadata->SetName(GetClassName());
+
+	return metadata;
 }
 
 void RigidBodyStatic::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)

@@ -17,7 +17,7 @@ class PhysicsMaterial : public Serializable
 {
 	SERIALIZABLE_CLASS(PhysicsMaterial, SERIALIZABLE_MEM_SHARED);
 protected:
-
+	friend class PhysicsShapeUtils;
 	PHYSICS_FRIEND_CLASSES();
 
 	physx::PxMaterial* m_pxMaterial = nullptr;

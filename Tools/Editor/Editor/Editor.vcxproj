@@ -159,6 +159,7 @@
     <ClCompile Include="NodeEditorUtils\builders.cpp" />
     <ClCompile Include="NodeEditorUtils\drawing.cpp" />
     <ClCompile Include="NodeEditorUtils\widgets.cpp" />
+    <ClCompile Include="RigidBodyInspector.cpp" />
     <ClCompile Include="RotateScript.cpp" />
     <ClCompile Include="SceneEditorSaveData.cpp" />
     <ClCompile Include="SceneEditorTab.cpp" />
@@ -186,6 +187,7 @@
     <ClInclude Include="NodeEditorUtils\builders.h" />
     <ClInclude Include="NodeEditorUtils\drawing.h" />
     <ClInclude Include="NodeEditorUtils\widgets.h" />
+    <ClInclude Include="RigidBodyInspector.h" />
     <ClInclude Include="RotateScript.h" />
     <ClInclude Include="SceneEditorSaveData.h" />
     <ClInclude Include="SceneEditorTab.h" />

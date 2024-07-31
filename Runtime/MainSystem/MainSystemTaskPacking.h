@@ -123,7 +123,7 @@ funcBody																			\
 
 #define _MAIN_SYSTEM_TASK_DIRECT_IMPL_(mainComponent, funcBody)														\
 auto self = this;																									\
-if (!mainComponent->GetCommittedObject() || !mainComponent->GetCommittedObject()->IsInAnyScene())					\
+if (!mainComponent || !mainComponent->GetCommittedObject() || !mainComponent->GetCommittedObject()->IsInAnyScene())	\
 {																													\
 	funcBody;																										\
 	return;																											\

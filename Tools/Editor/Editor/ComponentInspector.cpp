@@ -21,6 +21,9 @@ static void HelpMarker(const char* desc)
 ComponentInspector::ComponentInspector()
 {
 	m_map["AnimatorSkeletalArray"] = InspectAnimatorSkeletalArray;
+
+	m_map["RigidBodyDynamic"] = InspectRigidBody;
+	m_map["RigidBodyStatic"] = InspectRigidBody;
 }
 
 void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serializable* comp, ClassMetadata* metadata, const char* propertyName)
@@ -130,4 +133,8 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 	//{
 	//	animator->Play(cache->startTransitTime, cache->blendAnimId, 0, cache->blendAnimStartTime, cache->blendAnimEndTime, cache->blendTime);
 	//}
+}
+
+void ComponentInspector::InspectRigidBody(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName)
+{
 }

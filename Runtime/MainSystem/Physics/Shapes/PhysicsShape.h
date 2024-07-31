@@ -17,11 +17,14 @@ namespace physx
 NAMESPACE_BEGIN
 
 class PhysicsMaterial;
+class RigidBody;
 
 class PhysicsShape : public Serializable, public std::enable_shared_from_this<PhysicsShape>
 {
+	SERIALIZABLE_CLASS(PhysicsShape, SERIALIZABLE_MEM_SHARED);
 protected:
 	friend class PhysicsSystem;
+	friend class PhysicsShapeUtils;
 	PHYSICS_FRIEND_CLASSES();
 
 	physx::PxShape* m_pxShape = nullptr;
@@ -32,6 +35,9 @@ protected:
 	// 1: in frame
 	// 2: in frame but lost contact
 	byte m_inFrameType[8] = {};
+
+	RigidBody* m_attachedRigidBody = nullptr;
+	size_t m_attachedRigidBodyCount = 0;
 
 public:
 	virtual ~PhysicsShape();
@@ -54,6 +60,11 @@ public:
 	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
 	void SerializeToJson(Serializer* serializer, json& j) const override;
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+
+public:
+	void SetLocalTransform(const Transform& transform);
+	Transform GetLocalTransform() const;
 
 };
 

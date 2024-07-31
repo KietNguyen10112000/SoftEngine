@@ -78,9 +78,17 @@ protected:
 	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
 	void SerializeToJson(Serializer* serializer, json& j) const override;
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
+
+private:
+	void AddShapeImpl(const SharedPtr<PhysicsShape>& shape);
+	void RemoveShapeImpl(PhysicsShape* shape);
 
 public:
 	void SetContactFilterCallback(ContactReportFilterCallback callback);
+
+	void AddShape(const SharedPtr<PhysicsShape>& shape);
+	void RemoveShape(PhysicsShape* shape);
 
 };
 

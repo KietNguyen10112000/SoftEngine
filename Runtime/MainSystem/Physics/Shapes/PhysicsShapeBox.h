@@ -22,6 +22,7 @@ public:
 		return PHYSICS_SHAPE_TYPE_BOX;
 	};
 
+protected:
 	// Inherited via PhysicsShape
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
@@ -30,6 +31,11 @@ public:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+public:
+	void SetDimensions(const Vec3& dimensions);
+	Vec3 GetDimensions() const;
+
 };
 
 NAMESPACE_END

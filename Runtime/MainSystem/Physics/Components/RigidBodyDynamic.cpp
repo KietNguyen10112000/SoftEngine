@@ -22,13 +22,10 @@ RigidBodyDynamic::RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape)
 	auto physics = PhysX::Get()->GetPxPhysics();
 
 	auto body = physics->createRigidDynamic(PxTransform(PxIdentity));
-	body->attachShape(*shape->m_pxShape);
-
 	m_pxActor = body;
 	m_pxActor->userData = this;
-	//body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
 
-	m_shapes.push_back(shape);
+	AddShape(shape);
 }
 
 RigidBodyDynamic::~RigidBodyDynamic()
@@ -249,7 +246,10 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 
 Handle<ClassMetadata> RigidBodyDynamic::GetMetadata(size_t sign)
 {
-	return Handle<ClassMetadata>();
+	auto metadata = RigidBody::GetMetadata(sign + 1);
+	metadata->SetName(GetClassName());
+
+	return metadata;
 }
 
 void RigidBodyDynamic::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)

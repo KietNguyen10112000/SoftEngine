@@ -4,22 +4,25 @@
 
 #include "../Materials/PhysicsMaterial.h"
 
+#include "PhysicsShapeUtils.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
 
 PhysicsShapePlane::PhysicsShapePlane(const SharedPtr<PhysicsMaterial>& material)
 {
-	auto physics = PhysX::Get()->GetPxPhysics();
-	auto& m = *(material->m_pxMaterial);
-	m_pxShape = physics->createShape(PxPlaneGeometry(), m, false);
-
-	m_pxShape->userData = this;
-	m_meterial = material;
+	PhysicsShapeUtils::InitializeShape<PxPlaneGeometry>(this, material, false);
 }
 
 void PhysicsShapePlane::CloneFrom(Serializer* serializer, Serializable* another)
 {
+	auto src = (PhysicsShapePlane*)another;
+	assert(m_pxShape == nullptr);
+
+	auto material = serializer->Clone(src->m_meterial);
+	PhysicsShapeUtils::InitializeShape<PxPlaneGeometry>(this, material, false);
+	PhysicsShape::CloneFrom(serializer, another);
 }
 
 void PhysicsShapePlane::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
@@ -38,8 +41,7 @@ void PhysicsShapePlane::SerializeToJson(Serializer* serializer, json& j) const
 void PhysicsShapePlane::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	assert(m_pxShape == nullptr);
-	this->~PhysicsShapePlane();
-	new (this) PhysicsShapePlane(GetDeserializedMaterial(serializer, j));
+	PhysicsShapeUtils::InitializeShape<PxPlaneGeometry>(this, GetDeserializedMaterial(serializer, j), false);
 	PhysicsShape::DeserializeFromJson(serializer, j);
 }
 

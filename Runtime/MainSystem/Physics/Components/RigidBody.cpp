@@ -241,6 +241,54 @@ void RigidBody::DeserializeFromJson(Serializer* serializer, const json& j)
 	}
 }
 
+Handle<ClassMetadata> RigidBody::GetMetadata(size_t sign)
+{
+	auto metadata = mheap::New<ClassMetadata>("RigidBody", this);
+
+	auto shapesMetadata = mheap::New<ClassMetadata>("ShapesArray", this);
+	metadata->AddProperty("Shapes", shapesMetadata);
+	for (size_t i = 0; i < m_shapes.size(); i++)
+	{
+		auto& shape = m_shapes[i];
+		shapesMetadata->AddProperty(String::From(i).c_str(), shape->GetMetadata(sign + 1));
+	}
+
+	return metadata;
+}
+
+void RigidBody::AddShapeImpl(const SharedPtr<PhysicsShape>& shape)
+{
+	auto body = m_pxActor->is<PxRigidActor>();
+	body->attachShape(*shape->m_pxShape);
+	m_shapes.push_back(shape);
+
+	if (shape->m_attachedRigidBodyCount++ == 0)
+	{
+		shape->m_attachedRigidBody = this;
+	}
+	else
+	{
+		shape->m_attachedRigidBody = nullptr;
+	}
+}
+
+void RigidBody::RemoveShapeImpl(PhysicsShape* shape)
+{
+	auto body = m_pxActor->is<PxRigidActor>();
+	body->detachShape(*shape->m_pxShape);
+
+	if (--(shape->m_attachedRigidBodyCount) == 0)
+	{
+		shape->m_attachedRigidBody = nullptr;
+	}
+	std::remove_if(m_shapes.begin(), m_shapes.end(), 
+		[shape](const SharedPtr<PhysicsShape>& s)
+		{
+			return s.get() == shape;
+		}
+	);
+}
+
 void RigidBody::SetContactFilterCallback(ContactReportFilterCallback callback)
 {
 	m_contactFilterCallback = callback;
@@ -255,6 +303,24 @@ void RigidBody::SetContactFilterCallback(ContactReportFilterCallback callback)
 			{
 				shape->m_pxShape->setSimulationFilterData(data);
 			}
+		}
+	);
+}
+
+void RigidBody::AddShape(const SharedPtr<PhysicsShape>& shape)
+{
+	MAIN_SYSTEM_TASK_COMMON_1(PhysicsSystem, AsyncTaskRunnerST, shape,
+		{
+			self->AddShapeImpl(shape);
+		}
+	);
+}
+
+void RigidBody::RemoveShape(PhysicsShape* shape)
+{
+	MAIN_SYSTEM_TASK_COMMON_1(PhysicsSystem, AsyncTaskRunnerST, shape,
+		{
+			self->RemoveShapeImpl(shape);
 		}
 	);
 }

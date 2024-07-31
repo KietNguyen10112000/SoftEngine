@@ -41,6 +41,9 @@
     <Filter Include="Source Files\EditorTabs\SceneEditor">
       <UniqueIdentifier>{ef8f7c12-35d7-4112-b952-54e4162138ac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\ComponentInspectors">
+      <UniqueIdentifier>{c5406223-9bcb-463a-92f3-2c1e62b744a6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -57,9 +60,6 @@
     </ClCompile>
     <ClCompile Include="RotateScript.cpp">
       <Filter>Source Files\TestScript</Filter>
-    </ClCompile>
-    <ClCompile Include="ComponentInspector.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EditorTab.cpp">
       <Filter>Source Files\EditorTabs</Filter>
@@ -112,6 +112,12 @@
     <ClCompile Include="SceneEditorSaveData.cpp">
       <Filter>Source Files\EditorTabs\SceneEditor</Filter>
     </ClCompile>
+    <ClCompile Include="ComponentInspector.cpp">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
+    <ClCompile Include="RigidBodyInspector.cpp">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -131,9 +137,6 @@
     </ClInclude>
     <ClInclude Include="ScriptList.h">
       <Filter>Source Files\TestScript</Filter>
-    </ClInclude>
-    <ClInclude Include="ComponentInspector.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="EditorTab.h">
       <Filter>Source Files\EditorTabs</Filter>
@@ -191,6 +194,12 @@
     </ClInclude>
     <ClInclude Include="SceneEditorSaveData.h">
       <Filter>Source Files\EditorTabs\SceneEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentInspector.h">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClInclude>
+    <ClInclude Include="RigidBodyInspector.h">
+      <Filter>Source Files\ComponentInspectors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

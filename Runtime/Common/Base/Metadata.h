@@ -3,6 +3,7 @@
 #include "Core/TypeDef.h"
 #include "Core/Structures/String.h"
 #include "Core/Structures/Managed/Array.h"
+#include "Core/Memory/SmartPointers.h"
 
 #include "Math/Math.h"
 
@@ -118,6 +119,7 @@ using GetAccessor = Variant (*)(UnknownAddress& var, Serializable* instance);
 class API Accessor
 {
 private:
+	friend class ClassMetadata;
 	String m_name = nullptr;
 	UnknownAddress m_var = {};
 	SetAccessor m_setter = nullptr;
@@ -195,7 +197,7 @@ public:
 		return m_getter(m_var, m_instance);
 	}
 
-	inline auto GetName()
+	inline auto GetName() const
 	{
 		return m_name.c_str();
 	}
@@ -248,22 +250,27 @@ class ClassMetadata
 {
 private:
 	String m_className = nullptr;
-	Handle<Serializable> m_instance = nullptr;
+	Handle<Serializable> m_instanceHandle = nullptr;
+	SharedPtr<Serializable> m_instanceShared = nullptr;
+
+	Serializable* m_instance = nullptr;
 
 	std::vector<Accessor> m_properties;
+	std::map<String, ID> m_propertiesMap;
 
 	GenericDictionary m_dict;
 
 	// class contains class
 	Array<Handle<ClassMetadata>> m_subClasses;
 	std::vector<String> m_subClassesPropertyNames;
+	std::map<String, ID> m_subClassesMap;
 
 	size_t m_visited = 0;
 
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
-		tracer->Trace(m_instance);
+		tracer->Trace(m_instanceHandle);
 		tracer->Trace(m_dict);
 		tracer->Trace(m_subClasses);
 	}
@@ -272,6 +279,7 @@ private:
 	//ClassMetadata() {};
 public:
 	ClassMetadata(const char* className, Serializable* instance);
+	ClassMetadata(const char* className, const SharedPtr<Serializable>& instance);
 
 	// create placeholder
 	inline ClassMetadata(const char* className) : m_className(className) {};
@@ -374,6 +382,7 @@ public:
 	void AddProperty(const Accessor& accessor)
 	{
 		//assert(accessor.Var().Ptr() == (void*)m_instance);
+		m_propertiesMap.insert({ accessor.m_name, m_properties.size() });
 		m_properties.push_back(accessor);
 	}
 
@@ -382,6 +391,7 @@ public:
 	{
 		using _T = decltype(m_instance->*property);
 
+		m_propertiesMap.insert({ name, m_properties.size() });
 		if constexpr (std::is_fundamental_v<_T>)
 		{
 			m_properties.push_back(Accessor(name, &(m_instance->*property), m_instance));
@@ -396,6 +406,7 @@ public:
 	{
 		if (subClass.Get() == nullptr) return;
 
+		m_propertiesMap.insert({ name, m_subClasses.size() });
 		m_subClasses.Push(subClass);
 		m_subClassesPropertyNames.push_back(name);
 	}
@@ -443,12 +454,32 @@ public:
 
 	inline auto IsPlaceholder()
 	{
-		return m_instance.Get() == nullptr;
+		return m_instance == nullptr;
 	}
 
 	inline auto GetInstance()
 	{
-		return m_instance.Get();
+		return m_instance;
+	}
+
+	inline Accessor* GetProperty(const String& name)
+	{
+		auto it = m_propertiesMap.find(name);
+		if (it == m_propertiesMap.end())
+		{
+			return nullptr;
+		}
+		return &m_properties[it->second];
+	}
+
+	inline ClassMetadata* GetSubClassProperty(const String& name)
+	{
+		auto it = m_subClassesMap.find(name);
+		if (it == m_subClassesMap.end())
+		{
+			return nullptr;
+		}
+		return m_subClasses[it->second].Get();
 	}
 
 };

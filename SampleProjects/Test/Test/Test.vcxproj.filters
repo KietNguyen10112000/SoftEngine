@@ -28,10 +28,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Natvis Include="..\..\..\..\Runtime\Core\DebugView.natvis">
+    <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis">
       <Filter>Source Files</Filter>
     </Natvis>
-    <Natvis Include="..\..\..\..\Libraries\glm\util\glm.natvis">
+    <Natvis Include="..\..\..\Libraries\glm\util\glm.natvis">
       <Filter>Source Files</Filter>
     </Natvis>
   </ItemGroup>

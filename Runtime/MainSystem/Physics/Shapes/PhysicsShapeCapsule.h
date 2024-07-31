@@ -39,6 +39,7 @@ public:
 		return PHYSICS_SHAPE_TYPE_CAPSULE;
 	};
 
+protected:
 	// Inherited via PhysicsShape
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
@@ -47,6 +48,14 @@ public:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+public:
+	void SetHeight(float h);
+	float GetHeight() const;
+
+	void SetRadius(float r);
+	float GetRadius() const;
+
 };
 
 NAMESPACE_END
