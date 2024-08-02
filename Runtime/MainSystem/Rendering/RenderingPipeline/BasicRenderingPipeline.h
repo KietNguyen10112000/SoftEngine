@@ -2,6 +2,8 @@
 
 #include "RenderingPipeline.h"
 
+#include "../BuiltinConstantBuffers.h"
+
 NAMESPACE_BEGIN
 
 class BasicSkyRenderingPass : public RenderingPass
@@ -45,10 +47,7 @@ public:
 class BasicRenderingPass : public RenderingPass
 {
 public:
-	struct ObjectData
-	{
-		Mat4 transform;
-	};
+	using ObjectData = BuiltinConstantBuffers::ObjectData;
 
 	GraphicsDepthStencilBuffer*				m_depthBuffer;
 
@@ -66,10 +65,7 @@ public:
 class BasicRenderingPipeline : public RenderingPipeline
 {
 public:
-	struct ObjectData
-	{
-		Mat4 transform;
-	};
+	using ObjectData = BuiltinConstantBuffers::ObjectData;
 
 	RenderingComponent** m_input = nullptr;
 	size_t m_inputCount = 0;

@@ -19,7 +19,7 @@ NAMESPACE_BEGIN
 class PhysicsMaterial;
 class RigidBody;
 
-class PhysicsShape : public Serializable, public std::enable_shared_from_this<PhysicsShape>
+class API PhysicsShape : public Serializable, public std::enable_shared_from_this<PhysicsShape>
 {
 	SERIALIZABLE_CLASS(PhysicsShape, SERIALIZABLE_MEM_SHARED);
 protected:

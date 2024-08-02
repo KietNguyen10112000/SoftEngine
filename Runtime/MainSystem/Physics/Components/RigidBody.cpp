@@ -246,6 +246,17 @@ Handle<ClassMetadata> RigidBody::GetMetadata(size_t sign)
 	auto metadata = mheap::New<ClassMetadata>("RigidBody", this);
 
 	auto shapesMetadata = mheap::New<ClassMetadata>("ShapesArray", this);
+	shapesMetadata->AddProperty(
+		Accessor(
+			"count", this, nullptr,
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				auto* self = (RigidBody*)instance;
+				return Variant::Of(self->GetShapesCount());
+			},
+			this
+		)
+	);
 	metadata->AddProperty("Shapes", shapesMetadata);
 	for (size_t i = 0; i < m_shapes.size(); i++)
 	{

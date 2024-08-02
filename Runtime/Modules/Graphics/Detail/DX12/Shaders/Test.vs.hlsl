@@ -13,10 +13,10 @@ struct VS_INPUT
 
 struct VS_OUTPUT
 {
-	float4 svposition	: SV_POSITION;
-	float3 position		: POSITION;
-	float3x3 TBN		: TBN_MATRIX;
-	float2 textCoord	: TEXTCOORD;
+	float4 svposition			: SV_POSITION;
+	float3 position				: POSITION;
+	float3x3 TBN				: TBN_MATRIX;
+    float3 textCoordAndAlpha	: TEXTCOORD;
 };
 
 cbuffer CameraCBuffer : register(b0, space0)
@@ -44,7 +44,7 @@ VS_OUTPUT main(VS_INPUT input)
 
 	output.TBN = float3x3(t, b, n);
 
-	output.textCoord = input.textCoord;
+    output.textCoordAndAlpha = float3(input.textCoord, Object.alpha);
 
 	return output;
 }

@@ -3,10 +3,10 @@
 
 struct PS_INPUT
 {
-	float4 svposition	: SV_POSITION;
-	float3 position		: POSITION;
-	float3x3 TBN		: TBN_MATRIX;
-	float2 textCoord	: TEXTCOORD;
+	float4 svposition			: SV_POSITION;
+	float3 position				: POSITION;
+	float3x3 TBN				: TBN_MATRIX;
+    float3 textCoordAndAlpha	: TEXTCOORD;
 };
 
 SamplerState	defaultSampler			: register(s0);
@@ -71,8 +71,8 @@ float4 main(PS_INPUT input) : SV_TARGET
 
 	LightingResult lastResult = DoDirectionalLight(g_light, px, Camera.transform._m30_m31_m32);
 
-	float4 pixelColor = float4(color.Sample(defaultSampler, input.textCoord).rgb, 1.0f);
-	pixelColor *= float4(saturate((lastResult.diffuse + lastResult.specular)), 1.0f);
+    float4 pixelColor = float4(color.Sample(defaultSampler, input.textCoordAndAlpha.xy).rgb, 1.0f);
+    pixelColor *= float4(saturate((lastResult.diffuse + lastResult.specular)), 1.0f * input.textCoordAndAlpha.z);
 
 	return pixelColor;
 

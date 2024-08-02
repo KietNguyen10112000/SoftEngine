@@ -9,7 +9,7 @@ NAMESPACE_BEGIN
 
 class PhysicsShape;
 
-class RigidBodyDynamic : public RigidBody
+class API RigidBodyDynamic : public RigidBody
 {
 public:
 	byte m_isKinematic = 0;

@@ -574,6 +574,8 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 //	auto debugGraphics = graphics->GetDebugGraphics();
 //#endif // _DEBUG
 
+	ObjectData shaderData;
+
 	for (auto& comp : input)
 	{
 		auto model = (MeshBasicRenderer*)comp;
@@ -588,13 +590,14 @@ void BasicRenderingPass::Run(RenderingPipeline* pipeline)
 		if (comp->GetRenderType() == RENDER_TYPE_ANIM_MODEL_STATIC_MESH_RENDERER)
 		{
 			auto model2 = (AnimModelStaticMeshRenderer*)comp;
-			auto m = model2->GetGlobalTransform();
-			m_objectBuffer->UpdateBuffer(&m, sizeof(Mat4));
+			shaderData.transform = model2->GetGlobalTransform();
 		}
 		else
 		{
-			m_objectBuffer->UpdateBuffer(&model->GlobalTransform(), sizeof(Mat4));
+			shaderData.transform = model->GlobalTransform();
 		}
+		shaderData.alpha = comp->GetGlobalOpacity();
+		m_objectBuffer->UpdateBuffer(&shaderData, sizeof(shaderData));
 
 		auto params = m_pipeline->PrepareRenderParams();
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_cameraBuffer);

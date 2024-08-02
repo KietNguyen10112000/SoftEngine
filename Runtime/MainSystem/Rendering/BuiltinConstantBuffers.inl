@@ -40,4 +40,7 @@ struct CameraData
 struct ObjectData
 {
 	Mat4 transform;
+
+	float alpha;
+	float padding[3];
 };

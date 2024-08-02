@@ -796,7 +796,7 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 					ImGui::SetCursorPos(pos);
 				}
 
-				if (open && propertyName)
+				if (open)// && propertyName)
 				{
 					if (ComponentInspector::Get()->Inspect(0, metadata->GetInstance(), metadata, propertyName))
 					{

@@ -22,12 +22,22 @@ protected:
 	const RENDER_TYPE m_RENDER_TYPE;
 
 	//Mat4 m_globalTransform;
+private:
+	float m_localAlpha = 1.0f;
+	float m_globalAlpha = 1.0f;
+	bool m_cascadeAlpha = true;
+	bool m_padd[7];
 
 public:
 	RenderingComponent(const RENDER_TYPE type) : m_RENDER_TYPE(type) {};
 	virtual ~RenderingComponent() {};
 
 	virtual void OnTransformChanged() override;
+
+	void SetOpacity(float alpha);
+	void SetCascadeOpacityEnabled(float enable);
+	float GetOpacity() const;
+	float GetGlobalOpacity() const;
 
 	inline auto GetRenderType() const
 	{

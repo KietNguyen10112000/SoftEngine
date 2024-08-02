@@ -2,7 +2,10 @@
 
 #include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 
+#include "MainSystem/Physics/Components/RigidBody.h"
+
 #include "DataInspector.h"
+#include "RigidBodyInspector.h"
 
 #include "imgui/imgui.h"
 
@@ -137,4 +140,12 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 
 void ComponentInspector::InspectRigidBody(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName)
 {
+	auto inspector = meta->GenericDictionary()->Get<RigidBodyInspector>("RigidBodyInspector");
+	if (inspector == nullptr)
+	{
+		inspector = mheap::New<RigidBodyInspector>(dynamic_cast<RigidBody*>(comp), meta);
+		meta->GenericDictionary()->Store("RigidBodyInspector", inspector);
+	}
+
+	inspector->Inspect();
 }

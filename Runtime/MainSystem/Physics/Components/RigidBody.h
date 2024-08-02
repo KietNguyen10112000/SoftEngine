@@ -33,7 +33,7 @@ struct PhysicsCollisionPairFlag
 	};
 };
 
-class RigidBody : public PhysicsComponent
+class API RigidBody : public PhysicsComponent
 {
 public:
 	using ContactReportFilterCallback = void (*)(
@@ -89,6 +89,16 @@ public:
 
 	void AddShape(const SharedPtr<PhysicsShape>& shape);
 	void RemoveShape(PhysicsShape* shape);
+
+	inline PhysicsShape* GetShape(ID index) const
+	{
+		return m_shapes[index].get();
+	}
+
+	inline size_t GetShapesCount() const
+	{
+		return m_shapes.size();
+	}
 
 };
 

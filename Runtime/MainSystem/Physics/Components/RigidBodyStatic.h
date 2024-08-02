@@ -9,7 +9,7 @@ NAMESPACE_BEGIN
 
 class PhysicsShape;
 
-class RigidBodyStatic : public RigidBody
+class API RigidBodyStatic : public RigidBody
 {
 public:
 	COMPONENT_CLASS(RigidBodyStatic);
