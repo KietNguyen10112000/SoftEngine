@@ -279,9 +279,9 @@ public:
 		_MANAGED_ARRAY_CHECK_BOUND(index);
 
 		auto buf = m_buffer.Get();
-		for (size_t i = index; i < m_size; i++)
+		for (size_t i = m_size - 1; i != index; i--)
 		{
-			buf[i + 1] = buf[i];
+			buf[i] = buf[i - 1];
 		}
 
 		buf[index] = v;

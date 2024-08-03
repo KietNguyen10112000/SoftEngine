@@ -65,6 +65,16 @@ void SceneEditorTab::OnObjectsRemoved(std::vector<GameObject*>& objects)
 
 void SceneEditorTab::OnObjectSelected(GameObject* obj)
 {
+	if (m_inspectingObject == obj)
+	{
+		return;
+	}
+
+	if (m_inspectingObject)
+	{
+		ComponentInspector::EndInspectingFor(m_inspectingObject, m_inspectingObjectData, nullptr);
+	}
+
 	m_inspectingObject = obj;
 	m_inspectingObjectData = obj->GetMetadata(0);
 }
@@ -84,6 +94,86 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
 			{
 				nodeFlags |= ImGuiTreeNodeFlags_Selected;
+			}
+
+			bool selected = false;
+			ImGui::Selectable(String::Format("## {}", obj).c_str(), &selected, ImGuiSelectableFlags_Disabled, {0,5});
+			{
+				if (ImGui::BeginDragDropTarget())
+				{
+					ImGuiDragDropFlags target_flags = 0;
+					target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+					//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+					if (payload && ImGui::IsMouseReleased(0) &&
+						(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
+					{
+						auto dragObj = *(GameObject**)payload->Data;
+
+						if (dragObj != obj)
+						{
+						RetryAddDragObject:
+							if (dragObj->Parent().Get() == obj->Parent().Get())
+							{
+								if (dragObj->Parent().Get() == nullptr)
+								{
+									// move dragObj upper
+
+									auto upperObjIdx = dragObj->GetComponentRaw<GameObjectEditorComponent>()->id;
+									m_objects.erase(m_objects.begin() + upperObjIdx);
+									ReindexObjects();
+
+									auto lowerObjIdx = obj->GetComponentRaw<GameObjectEditorComponent>()->id;
+									m_objects.insert(m_objects.begin() + lowerObjIdx, dragObj);
+									ReindexObjects();
+								}
+								else
+								{
+									auto& children = *(Array<Handle<GameObject>>*)&dragObj->Parent()->Children();
+									dragObj->Lock()->lock();
+									obj->Lock()->lock();
+
+									auto upperObjIdx = dragObj->ParentIdx();
+									children.Remove(children.begin() + upperObjIdx);
+									ReindexChildren(children);
+
+									auto lowerObjIdx = obj->ParentIdx();
+									children.insert(children.begin() + lowerObjIdx, dragObj);
+									ReindexChildren(children);
+
+									obj->Lock()->unlock();
+									dragObj->Lock()->unlock();
+								}
+							}
+							else
+							{
+								if (dragObj->Parent().Get() == nullptr)
+								{
+									dragObj->GetScene()->RemoveObject(dragObj);
+								}
+								else
+								{
+									dragObj->RemoveFromParent();
+								}
+
+								if (obj->Parent().Get() == nullptr)
+								{
+									m_scene->AddObject(dragObj);
+								}
+								else
+								{
+									obj->Parent()->AddChild(dragObj);
+								}
+
+								goto RetryAddDragObject;
+							}
+						}
+
+						m_dragingObject = nullptr;
+					}
+
+					ImGui::EndDragDropTarget();
+				}
 			}
 			
 			ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, { 0,2 });
@@ -157,7 +247,8 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
 				//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
 				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
-				if (payload && ImGui::IsMouseReleased(0))
+				if (payload && ImGui::IsMouseReleased(0) && 
+					(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
 				{
 					auto dragObj = *(GameObject**)payload->Data;
 					if (dragObj->Parent().Get() == nullptr)
@@ -182,6 +273,11 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				}
 
 				ImGui::EndDragDropTarget();
+			}
+
+			if (m_dragingObject && ImGui::IsMouseReleased(0) && ImGui::IsItemHovered() && m_dragingObject == obj)
+			{
+				m_dragingObject = nullptr;
 			}
 
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
@@ -284,6 +380,8 @@ void SceneEditorTab::RenderHierarchyPanel()
 
 	ImGui::BeginChild("Child");
 
+	ImGui::Dummy({ 0,5 });
+
 	for (size_t i = 0; i < m_objects.size(); i++)
 	{
 		auto _obj = m_objects[i];
@@ -291,26 +389,6 @@ void SceneEditorTab::RenderHierarchyPanel()
 	}
 
 	ImGui::EndChild();
-
-	if (m_openInputNamePopup)
-	{
-		ImGui::OpenPopup("#rename");
-		m_openInputNamePopup = false;
-	}
-
-	if (ImGui::BeginPopup("#rename"))
-	{
-		if (m_renameObject && ImGui::InputText("Name", m_nameInputTxt, NAME_INPUT_MAX_LEN,
-			ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-		{
-			m_renameObject->Name() = m_nameInputTxt;
-
-			m_renameObject = nullptr;
-			ImGui::CloseCurrentPopup();
-		}
-
-		ImGui::EndPopup();
-	}
 
 	//if (ImGui::BeginDragDropTarget())
 	//{
@@ -361,6 +439,26 @@ void SceneEditorTab::RenderHierarchyPanel()
 		m_scene->AddObject(dragObj);
 
 		m_dragingObject = nullptr;
+	}
+
+	if (m_openInputNamePopup)
+	{
+		ImGui::OpenPopup("#rename");
+		m_openInputNamePopup = false;
+	}
+
+	if (ImGui::BeginPopup("#rename"))
+	{
+		if (m_renameObject && ImGui::InputText("Name", m_nameInputTxt, NAME_INPUT_MAX_LEN,
+			ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+		{
+			m_renameObject->Name() = m_nameInputTxt;
+
+			m_renameObject = nullptr;
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::EndPopup();
 	}
 
 	ShowCreateGameObjectPopup();
@@ -422,6 +520,11 @@ void SceneEditorTab::RenderInspectorPanel()
 		if (dynamic_cast<RenderingComponent*>(m_removeComp))
 		{
 			m_inspectingObject->RemoveComponentRaw(dynamic_cast<RenderingComponent*>(m_removeComp));
+		}
+
+		if (dynamic_cast<PhysicsComponent*>(m_removeComp))
+		{
+			m_inspectingObject->RemoveComponentRaw(dynamic_cast<PhysicsComponent*>(m_removeComp));
 		}
 
 		if (dynamic_cast<Script*>(m_removeComp))
@@ -640,6 +743,24 @@ Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
 	return obj;
 }
 
+void SceneEditorTab::ReindexObjects()
+{
+	size_t i = 0;
+	for (auto& o : m_objects)
+	{
+		o->GetComponentRaw<GameObjectEditorComponent>()->id = i++;
+	}
+}
+
+void SceneEditorTab::ReindexChildren(Array<Handle<GameObject>>& children)
+{
+	size_t i = 0;
+	for (auto& o : children)
+	{
+		*(ID*)&o->ParentIdx() = i++;
+	}
+}
+
 void SceneEditorTab::OnRenderGUI()
 {
 	RenderHierarchyPanel();
@@ -774,9 +895,35 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 			bool rawInspect = true;
 			if (currentDepth + 1 == depth)
 			{
+				Handle<SceneEditorComponentData> editorCompData = metadata->GenericDictionary()->Get<SceneEditorComponentData>("SceneEditorComponentData");
+				if (!editorCompData)
+				{
+					editorCompData = mheap::New<SceneEditorComponentData>();
+					metadata->GenericDictionary()->Store("SceneEditorComponentData", editorCompData);
+				}
+
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 5.f));
 				auto open = ImGui::TreeNodeEx(metadata->GetName(), ImGuiTreeNodeFlags_FramePadding);
 				ImGui::PopStyleVar();
+
+				if (editorCompData->lastOpen != open)
+				{
+					auto comp = dynamic_cast<MainComponent*>(metadata->GetInstance());
+					if (comp)
+					{
+						if (open)
+						{
+							// open collapsing header
+							ComponentInspector::BeginInspectingFor(comp->GetGameObject(), metadata, comp);
+						}
+						else
+						{
+							// close collapsing header
+							ComponentInspector::EndInspectingFor(comp->GetGameObject(), metadata, comp);
+						}
+					}
+				}
+				editorCompData->lastOpen = open;
 
 				m_inspectPropertiesIsOpenStack.push_back(open);
 				m_inspectInlinePropertiesCountStack.push_back(metadata->GetInlinePropertiesCount());
@@ -791,6 +938,7 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 					if (ImGui::Button(btnName.c_str(), ImVec2(30, 30)))
 					{
 						m_removeComp = dynamic_cast<MainComponent*>(metadata->GetInstance());
+						ComponentInspector::EndInspectingFor(m_removeComp->GetGameObject(), metadata, m_removeComp);
 					}
 
 					ImGui::SetCursorPos(pos);

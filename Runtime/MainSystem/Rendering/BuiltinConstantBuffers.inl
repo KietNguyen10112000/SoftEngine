@@ -34,7 +34,8 @@ struct CameraData
 	uint32_t directionLightsCount;
 	uint32_t spotLightsCount;
 	uint32_t pointLightsCount;
-	uint32_t x;
+	uint16_t renderTargetWidth;
+	uint16_t renderTargetHeight;
 };
 
 struct ObjectData

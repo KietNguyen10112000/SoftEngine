@@ -16,10 +16,12 @@ class PhysicsShapeUtils
 	{
 		auto physics = PhysX::Get()->GetPxPhysics();
 		auto& m = *(material->m_pxMaterial);
-		shape->m_pxShape = physics->createShape(PxGeo(std::forward<Args>(args)...), m, exclusive);
+		shape->m_pxShape = physics->createShape(PxGeo(std::forward<Args>(args)...), m, true);
 
 		shape->m_pxShape->userData = shape;
 		shape->m_meterial = material;
+
+		shape->m_pxShape->acquireReference();
 	}
 };
 

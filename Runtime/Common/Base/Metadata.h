@@ -366,6 +366,29 @@ private:
 		}
 	}
 
+	template<bool RECURSIVE, bool PREV_CALL, typename Fn1>
+	void ForEachSubClassPropertiesImpl(Fn1 fn1, const char* name, size_t depth)
+	{
+		SetVisited(true);
+
+		fn1(this, name);
+
+		bool recursive = true;
+
+		if constexpr (RECURSIVE)
+		{
+			size_t i = 0;
+			for (auto& c : m_subClasses)
+			{
+				if (!c->IsVisited())
+				{
+					c->ForEachSubClassPropertiesImpl<RECURSIVE, PREV_CALL>(fn1, m_subClassesPropertyNames[i].c_str(), depth + 1);
+				}
+				i++;
+			}
+		}
+	}
+
 	void UnsetVisited()
 	{
 		SetVisited(false);
@@ -425,6 +448,17 @@ public:
 	void ForEachProperties(Fn1 fnPrevCall, Fn2 fnPostCall, const char* currentIntanceName = "")
 	{
 		ForEachPropertiesImpl<RECURSIVE, !std::is_same_v<std::nullptr_t, Fn1>, !std::is_same_v<std::nullptr_t, Fn2>>(fnPrevCall, fnPostCall, currentIntanceName, 0);
+
+		if constexpr (RECURSIVE)
+		{
+			UnsetVisited();
+		}
+	}
+
+	template<typename Fn1, bool RECURSIVE = true>
+	void ForEachSubClassProperties(Fn1 fnPrevCall, const char* currentIntanceName = "")
+	{
+		ForEachSubClassPropertiesImpl<RECURSIVE, !std::is_same_v<std::nullptr_t, Fn1>>(fnPrevCall, currentIntanceName, 0);
 
 		if constexpr (RECURSIVE)
 		{

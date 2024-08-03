@@ -10,7 +10,7 @@ NAMESPACE_BEGIN
 
 class PhysicsMaterial;
 
-class PhysicsShapePlane : public PhysicsShape
+class API PhysicsShapePlane : public PhysicsShape
 {
 	SERIALIZABLE_CLASS(PhysicsShapePlane, SERIALIZABLE_MEM_SHARED);
 public:

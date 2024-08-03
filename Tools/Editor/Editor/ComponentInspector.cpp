@@ -29,6 +29,63 @@ ComponentInspector::ComponentInspector()
 	m_map["RigidBodyStatic"] = InspectRigidBody;
 }
 
+String ComponentInspector::GetName(const String& name, void* comp)
+{
+	return String::Format("ComponentInspector_{}[{}]", name, comp);
+}
+
+void ComponentInspector::BeginInspectingFor(GameObject* obj, ClassMetadata* meta, MainComponent* comp)
+{
+	auto fn = [comp](const String& name, void* p)
+	{
+		if (name.Find("ComponentInspector_") != 0)
+		{
+			return;
+		}
+
+		auto compInspector = (ComponentInspectorBase*)p;
+		if (comp == nullptr || comp == compInspector->m_boundComp)
+		{
+			compInspector->OnBeginInspecting();
+		}
+	};
+
+	meta->GenericDictionary()->ForEach(fn);
+
+	meta->ForEachSubClassProperties(
+		[&, comp](ClassMetadata* meta, const char* name)
+		{
+			meta->GenericDictionary()->ForEach(fn);
+		}
+	);
+}
+
+void ComponentInspector::EndInspectingFor(GameObject* obj, ClassMetadata* meta, MainComponent* comp)
+{
+	auto fn = [comp](const String& name, void* p)
+	{
+		if (name.Find("ComponentInspector_") != 0)
+		{
+			return;
+		}
+
+		auto compInspector = (ComponentInspectorBase*)p;
+		if (comp == nullptr || comp == compInspector->m_boundComp)
+		{
+			compInspector->OnEndInspecting();
+		}
+	};
+
+	meta->GenericDictionary()->ForEach(fn);
+
+	meta->ForEachSubClassProperties(
+		[&, comp](ClassMetadata* meta, const char* name)
+		{
+			meta->GenericDictionary()->ForEach(fn);
+		}
+	);
+}
+
 void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serializable* comp, ClassMetadata* metadata, const char* propertyName)
 {
 	//const static char* cacheNameFmt = "editor_InspectAnimatorSkeletalArray_{}";
@@ -140,11 +197,14 @@ void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serial
 
 void ComponentInspector::InspectRigidBody(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName)
 {
-	auto inspector = meta->GenericDictionary()->Get<RigidBodyInspector>("RigidBodyInspector");
+	auto name = GetName("RigidBodyInspector", comp);
+	auto inspector = meta->GenericDictionary()->Get<RigidBodyInspector>(name);
 	if (inspector == nullptr)
 	{
 		inspector = mheap::New<RigidBodyInspector>(dynamic_cast<RigidBody*>(comp), meta);
-		meta->GenericDictionary()->Store("RigidBodyInspector", inspector);
+		meta->GenericDictionary()->Store(name, inspector);
+
+		inspector->OnBeginInspecting();
 	}
 
 	inspector->Inspect();

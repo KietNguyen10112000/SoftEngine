@@ -4,18 +4,23 @@
 
 #include "MainSystem/Physics/Components/PHYSICS_TYPE.h"
 
+#include "Math/Math.h"
+
 #include <vector>
+
+#include "ComponentInspectorBase.h"
 
 namespace soft
 {
 	class RigidBody;
 	class ClassMetadata;
 	class PhysicsShape;
+	class GameObject;
 }
 
 using namespace soft;
 
-class RigidBodyInspector
+class RigidBodyInspector : public ComponentInspectorBase
 {
 public:
 	struct ShapeInspectorData
@@ -31,6 +36,8 @@ public:
 	std::vector<ShapeInspectorData> m_shapeDatas;
 	int m_choosingShapeIdx = 0;
 
+	float m_currentAlpha = 0.498f;
+
 public:
 	RigidBodyInspector(RigidBody* body, ClassMetadata* metadata);
 
@@ -44,8 +51,14 @@ private:
 	void InspectShapePlane(PhysicsShape* shape);
 	void InspectShapeSphere(PhysicsShape* shape);
 
+	void DrawDebug(PhysicsShape* shape, const Vec4& color);
+
+	static void SetOpacityForObject(GameObject* o, float alpha);
 public:
 	void Inspect();
+
+	virtual void OnBeginInspecting() override;
+	virtual void OnEndInspecting() override;
 
 };
 

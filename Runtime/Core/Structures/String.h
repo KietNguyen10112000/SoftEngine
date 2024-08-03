@@ -516,6 +516,30 @@ public:
 		std::string_view s = c_str();
 		return s.find_last_of(val, rOffset);
 	}
+
+	size_t Find(const String& val, size_t offset = 0) const
+	{
+		std::string_view s = c_str();
+		return s.find(val.c_str(), offset);
+	}
+
+	size_t Find(const char& val, size_t offset = 0) const
+	{
+		std::string_view s = c_str();
+		return s.find(val, offset);
+	}
+
+	size_t RFind(const String& val, size_t offset = std::string_view::npos) const
+	{
+		std::string_view s = c_str();
+		return s.rfind(val.c_str(), offset);
+	}
+
+	size_t RFind(const char& val, size_t offset = std::string_view::npos) const
+	{
+		std::string_view s = c_str();
+		return s.rfind(val, offset);
+	}
 };
 
 NAMESPACE_END

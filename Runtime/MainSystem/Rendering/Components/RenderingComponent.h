@@ -32,8 +32,17 @@ public:
 	RenderingComponent(const RENDER_TYPE type) : m_RENDER_TYPE(type) {};
 	virtual ~RenderingComponent() {};
 
+protected:
 	virtual void OnTransformChanged() override;
 
+	// Inherited via Serializable
+	void CloneFrom(Serializer* serializer, Serializable* another) override;
+	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
+	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;
+	void SerializeToJson(Serializer* serializer, json& j) const override;
+	void DeserializeFromJson(Serializer* serializer, const json& j) override;
+
+public:
 	void SetOpacity(float alpha);
 	void SetCascadeOpacityEnabled(float enable);
 	float GetOpacity() const;

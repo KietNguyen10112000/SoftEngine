@@ -17,6 +17,11 @@ public:
 		bool hotReloadFromFile = false;
 	};
 
+	struct SceneEditorComponentData
+	{
+		bool lastOpen = false;
+	};
+
 	struct LoadedObjectFromFileData
 	{
 		String filePath;
@@ -88,6 +93,9 @@ private:
 	void ShowCreateGameObjectPopup();
 
 	Handle<GameObject> LoadGameObjectFromFile(const String& path);
+
+	void ReindexObjects();
+	void ReindexChildren(Array<Handle<GameObject>>& children);
 
 public:
 	SceneEditorTab();

@@ -153,6 +153,11 @@ void RenderingSystem::SetBuiltinConstantBufferForCamera(BaseCamera* camera)
 	m_cameraData.vp = m_cameraData.view * m_cameraData.proj;
 	m_cameraData.inversedVp = m_cameraData.vp.GetInverse();//m_cameraData.proj.GetInverse() * camera->GlobalTransform();
 
+	GRAPHICS_SHADER_RESOURCE_DESC desc = {};
+	camera->m_renderTarget->GetShaderResource()->GetDesc(&desc);
+	m_cameraData.renderTargetWidth = desc.texture2D.width;
+	m_cameraData.renderTargetHeight = desc.texture2D.height;
+
 	/*ImGui::Begin("Debug info");
 	ImGui::DragFloat4("row1", &m_cameraData.transform[0][0]);
 	ImGui::DragFloat4("row2", &m_cameraData.transform[1][0]);

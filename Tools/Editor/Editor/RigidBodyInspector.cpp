@@ -10,13 +10,17 @@
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 
+#include "Graphics/Graphics.h"
+#include "Graphics/DebugGraphics.h"
+
 #include "Scene/GameObject.h"
 
 #include "imgui/imgui.h"
 
 #include "DataInspector.h"
+#include "IconFontCppHeaders/IconsFontAwesome6.h"
 
-RigidBodyInspector::RigidBodyInspector(RigidBody* body, ClassMetadata* metadata) : m_body(body), m_metadata(metadata)
+RigidBodyInspector::RigidBodyInspector(RigidBody* body, ClassMetadata* metadata) : ComponentInspectorBase(body), m_body(body), m_metadata(metadata)
 {
 	m_bodyType = m_body->GetPhysicsType();
 
@@ -60,12 +64,20 @@ void RigidBodyInspector::LoadShapeInspectorDatas()
 void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 {
 	auto transform = shape->GetLocalTransform();
-	auto accessor = Accessor::For("Transform", transform, m_body);
+	auto modified = transform;
+	auto accessor = Accessor::For("Transform", modified, m_body);
 	DataInspector::InspectTransform(m_metadata, accessor, accessor.Get(), String::Format("ShapeLocalTransform {}", shape).c_str());
+	if (!transform.Equals(modified))
+	{
+		shape->SetLocalTransform(modified);
+	}
 }
 
 void RigidBodyInspector::InspectShapeBox(PhysicsShape* shape)
 {
+	auto box = (PhysicsShapeBox*)shape;
+	
+	
 }
 
 void RigidBodyInspector::InspectShapeCapsule(PhysicsShape* shape)
@@ -80,32 +92,104 @@ void RigidBodyInspector::InspectShapeSphere(PhysicsShape* shape)
 {
 }
 
+void RigidBodyInspector::DrawDebug(PhysicsShape* shape, const Vec4& color)
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics)
+	{
+		return;
+	}
+
+	auto localPose = shape->GetLocalTransform();
+	auto globalMat = localPose.ToTransformMatrix() * m_body->GetGameObject()->GetCommittedGlobalTransform();
+
+	Transform transform = {};
+	globalMat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
+
+	auto type = shape->GetType();
+	switch (type)
+	{
+	case PHYSICS_SHAPE_TYPE_SPHERE:
+	{
+		auto sphere = (PhysicsShapeSphere*)shape;
+		debugGraphics->DrawSphere(Sphere(transform.Position(), sphere->GetRadius()), color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_CAPSULE:
+	{
+		auto capsule = (PhysicsShapeCapsule*)shape;
+		debugGraphics->DrawCapsule(Capsule(globalMat.Up().Normal(), transform.Position(), capsule->GetHeight(), capsule->GetRadius()), color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_BOX: 
+	{
+		auto box = (PhysicsShapeBox*)shape;
+		debugGraphics->DrawCube(globalMat, color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_PLANE:
+	{
+		auto plane = (PhysicsShapePlane*)shape;
+		//transform.Scale().x = 0.01f;
+		//transform.Scale().y = 100.0f;
+		//transform.Scale().z = 100.0f;
+		debugGraphics->DrawCube(transform.ToTransformMatrix(), color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_CONVEX_MESH:
+		break;
+	case PHYSICS_SHAPE_TYPE_TRIANGLE_MESH:
+		break;
+	default:
+		break;
+	}
+}
+
+void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
+{
+	if (o->GetComponentRaw<RenderingComponent>())
+	{
+		o->GetComponentRaw<RenderingComponent>()->SetOpacity(alpha);
+		return;
+	}
+
+	for (auto& c : o->Children())
+	{
+		SetOpacityForObject(c, alpha);
+	}
+}
+
 void RigidBodyInspector::Inspect()
 {
 	{
-		// adjust opacity to edit shapes
-		RenderingComponent* rootRenderingComp = nullptr;
-		auto it = m_body->GetGameObject();
-		while (it)
+		const char* switchStr = nullptr;
+		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
 		{
-			auto comp = it->GetComponentRaw<RenderingComponent>();
-			if (comp)
-			{
-				rootRenderingComp = comp;
-			}
-			it = it->Parent().Get();
+			switchStr = ICON_FA_REPEAT " To Static ";
+		}
+		else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
+		{
+			switchStr = ICON_FA_REPEAT " To Dynamic";
+		}
+		else
+		{
+			assert(0);
 		}
 
-		if (rootRenderingComp)
+		if (ImGui::Button(switchStr))
 		{
-			float opacity = rootRenderingComp->GetOpacity();
-			if (ImGui::SliderFloat("Opacity", &opacity, 0.0f, 1.0f))
-			{
-				rootRenderingComp->SetOpacity(opacity);
-			}
+
 		}
 	}
-	
+
+	{
+		// adjust opacity to edit shapes
+		if (ImGui::SliderFloat("Opacity", &m_currentAlpha, 0.0f, 1.0f))
+		{
+			auto root = m_body->GetGameObject()->GetRoot();
+			SetOpacityForObject(root, m_currentAlpha);
+		}
+	}
 
 	ImGui::BeginChild(ID(this), {ImGui::GetWindowWidth() * 0.85f, 500}, true);
 
@@ -140,23 +224,25 @@ void RigidBodyInspector::Inspect()
 		{
 			InspectShapeBase(shape);
 
+			DrawDebug(shape, Vec4(0, 1, 0, 1));
+
 			switch (type)
 			{
-			case soft::PHYSICS_SHAPE_TYPE_SPHERE:
+			case PHYSICS_SHAPE_TYPE_SPHERE:
 				InspectShapeSphere(shape);
 				break;
-			case soft::PHYSICS_SHAPE_TYPE_CAPSULE:
+			case PHYSICS_SHAPE_TYPE_CAPSULE:
 				InspectShapeCapsule(shape);
 				break;
-			case soft::PHYSICS_SHAPE_TYPE_BOX:
+			case PHYSICS_SHAPE_TYPE_BOX:
 				InspectShapeBox(shape);
 				break;
-			case soft::PHYSICS_SHAPE_TYPE_PLANE:
+			case PHYSICS_SHAPE_TYPE_PLANE:
 				InspectShapePlane(shape);
 				break;
-			case soft::PHYSICS_SHAPE_TYPE_CONVEX_MESH:
+			case PHYSICS_SHAPE_TYPE_CONVEX_MESH:
 				break;
-			case soft::PHYSICS_SHAPE_TYPE_TRIANGLE_MESH:
+			case PHYSICS_SHAPE_TYPE_TRIANGLE_MESH:
 				break;
 			default:
 				break;
@@ -167,4 +253,16 @@ void RigidBodyInspector::Inspect()
 	}
 
 	ImGui::EndChild();
+}
+
+void RigidBodyInspector::OnBeginInspecting()
+{
+	auto root = m_body->GetGameObject()->GetRoot();
+	SetOpacityForObject(root, m_currentAlpha);
+}
+
+void RigidBodyInspector::OnEndInspecting()
+{
+	auto root = m_body->GetGameObject()->GetRoot();
+	SetOpacityForObject(root, 1.0f);
 }

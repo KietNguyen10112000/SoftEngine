@@ -97,6 +97,22 @@ public:
 		m_lock.unlock();
 	}
 
+	// callback -> void (String name, T* value);
+	template <typename Fn, typename T = void>
+	inline void ForEach(Fn callback)
+	{
+		m_lock.lock();
+		for (auto it = m_dict.cbegin(), next_it = it; it != m_dict.cend(); it = next_it)
+		{
+			++next_it;
+
+			auto v = static_cast<T*>(m_storage.Get(it->second).Get());
+
+			callback(it->first, v);
+		}
+		m_lock.unlock();
+	}
+
 };
 
 NAMESPACE_END

@@ -63,6 +63,14 @@ public:
 		m_lock.unlock();
 	}
 
+	template <typename Fn>
+	inline void ForEach(Fn callback)
+	{
+		m_lock.lock();
+		m_storage.ForEach(callback);
+		m_lock.unlock();
+	}
+
 };
 
 NAMESPACE_END

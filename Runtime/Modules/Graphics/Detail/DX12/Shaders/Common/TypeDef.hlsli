@@ -3,6 +3,7 @@
 	#define Vec4 float4
 	#define Mat4 row_major float4x4
 	#define uint32_t uint
+	#define uint16_t min16uint
 #endif
 
 #include "Common.hlsli"

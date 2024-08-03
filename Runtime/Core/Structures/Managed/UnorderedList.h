@@ -214,8 +214,9 @@ public:
 		auto it = m_head.Get();
 		while (it)
 		{
+			auto next = it->next.Get();
 			callback(it->value);
-			it = it->next.Get();
+			it = next;
 		}
 	}
 

@@ -481,6 +481,11 @@ public:
 		return m_name;
 	}
 
+	inline auto* Lock()
+	{
+		return &m_lock;
+	}
+
 	inline auto GetCommittedScene()
 	{
 		return m_committedScene;

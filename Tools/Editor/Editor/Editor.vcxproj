@@ -177,6 +177,7 @@
     <ClInclude Include="AnimatorEditorTab.h" />
     <ClInclude Include="AnimatorEditorTabFactory.h" />
     <ClInclude Include="ComponentInspector.h" />
+    <ClInclude Include="ComponentInspectorBase.h" />
     <ClInclude Include="EditorContext.h" />
     <ClInclude Include="DataInspector.h" />
     <ClInclude Include="EditorFont.h" />

@@ -10,6 +10,39 @@ void RenderingComponent::OnTransformChanged()
 	//m_globalTransform = GetGameObject()->ReadGlobalTransform().ToTransformMatrix();
 }
 
+void RenderingComponent::CloneFrom(Serializer* serializer, Serializable* another)
+{
+	auto src = (RenderingComponent*)another;
+	m_localAlpha = src->m_localAlpha;
+	m_globalAlpha = src->m_globalAlpha;
+	m_cascadeAlpha = src->m_cascadeAlpha;
+}
+
+void RenderingComponent::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
+{
+}
+
+void RenderingComponent::DeserializeFromBinary(Serializer* serializer, const ByteStream& stream)
+{
+}
+
+void RenderingComponent::SerializeToJson(Serializer* serializer, json& j) const
+{
+	j["LocalAlpha"] = m_localAlpha;
+	j["GlobalAlpha"] = m_globalAlpha;
+	j["CascadeAlpha"] = m_cascadeAlpha;
+}
+
+void RenderingComponent::DeserializeFromJson(Serializer* serializer, const json& j)
+{
+	if (j.contains("LocalAlpha"))
+	{
+		m_localAlpha = j["LocalAlpha"];
+		m_globalAlpha = j["GlobalAlpha"];
+		m_cascadeAlpha = j["CascadeAlpha"];
+	}
+}
+
 void RenderingComponent::SetOpacity(float alpha)
 {
 	constexpr static void (*Impl)(RenderingComponent*, RenderingComponent*) = [](RenderingComponent* comp, RenderingComponent* last) -> void

@@ -17,6 +17,8 @@ void AnimMeshRenderer::OnPropertyChanged(const UnknownAddress& var, const Varian
 
 void AnimMeshRenderer::CloneFrom(Serializer* serializer, Serializable* another)
 {
+	RenderingComponent::CloneFrom(serializer, another);
+
 	auto src = (AnimMeshRenderer*)another;
 
 	m_model3D = src->m_model3D;
@@ -36,6 +38,8 @@ void AnimMeshRenderer::DeserializeFromBinary(Serializer* serializer, const ByteS
 
 void AnimMeshRenderer::SerializeToJson(Serializer* serializer, json& j) const
 {
+	RenderingComponent::SerializeToJson(serializer, j);
+
 	j["Model"]		= serializer->Serialize(m_model3D);
 	j["MeshId"]		= m_mesh->m_model3DIdx;
 	j["Texture2D"]	= serializer->Serialize(m_texture);
@@ -44,6 +48,8 @@ void AnimMeshRenderer::SerializeToJson(Serializer* serializer, json& j) const
 
 void AnimMeshRenderer::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	RenderingComponent::DeserializeFromJson(serializer, j);
+
 	serializer->Deserialize(j["Model"], m_model3D);
 	m_mesh = &m_model3D->m_animMeshes[uint32_t(j["MeshId"])];
 	serializer->Deserialize(j["Texture2D"], m_texture);

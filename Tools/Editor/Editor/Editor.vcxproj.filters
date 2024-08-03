@@ -201,6 +201,9 @@
     <ClInclude Include="RigidBodyInspector.h">
       <Filter>Source Files\ComponentInspectors</Filter>
     </ClInclude>
+    <ClInclude Include="ComponentInspectorBase.h">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis" />

@@ -20,6 +20,10 @@ public:
 	ComponentInspector();
 
 public:
+	static String GetName(const String& name, void* comp);
+	static void BeginInspectingFor(GameObject* obj, ClassMetadata* meta, MainComponent* comp);
+	static void EndInspectingFor(GameObject* obj, ClassMetadata* meta, MainComponent* comp);
+
 	static void InspectAnimatorSkeletalArray(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName);
 	static void InspectRigidBody(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName);
 
