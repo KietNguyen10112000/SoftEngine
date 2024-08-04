@@ -13,7 +13,7 @@ namespace physx
 
 NAMESPACE_BEGIN
 
-class PhysicsMaterial : public Serializable
+class API PhysicsMaterial : public Serializable
 {
 	SERIALIZABLE_CLASS(PhysicsMaterial, SERIALIZABLE_MEM_SHARED);
 protected:

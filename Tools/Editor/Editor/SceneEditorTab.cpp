@@ -91,11 +91,13 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				| ImGuiTreeNodeFlags_SpanFullWidth
 				| ImGuiTreeNodeFlags_FramePadding;
 
-			if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
+			//if (m_selectionId == (ID)obj->GetComponentRaw<GameObjectEditorComponent>())
+			if (obj == m_inspectingObject)
 			{
 				nodeFlags |= ImGuiTreeNodeFlags_Selected;
 			}
 
+			// place a small space to let one drag to
 			bool selected = false;
 			ImGui::Selectable(String::Format("## {}", obj).c_str(), &selected, ImGuiSelectableFlags_Disabled, {0,5});
 			{
@@ -282,7 +284,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 			{
-				m_selectionId = (ID)obj->GetComponentRaw<GameObjectEditorComponent>();
+				//m_selectionId = (ID)obj->GetComponentRaw<GameObjectEditorComponent>();
 				OnObjectSelected(obj);
 			}
 
@@ -290,6 +292,91 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			{
 				ImGui::TreePop();
 			}*/
+
+			// place a small space to let one drag to
+			if ((obj->Parent().Get() == nullptr && obj == m_objects.back())
+				|| (obj->Parent().Get() != nullptr && obj->Parent()->Children().back().Get() == obj))
+			{
+				bool selected = false;
+				ImGui::Selectable(String::Format("## {}", obj).c_str(), &selected, ImGuiSelectableFlags_Disabled, { 0,5 });
+				{
+					if (ImGui::BeginDragDropTarget())
+					{
+						ImGuiDragDropFlags target_flags = 0;
+						target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
+						//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+						if (payload && ImGui::IsMouseReleased(0) &&
+							(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
+						{
+							auto dragObj = *(GameObject**)payload->Data;
+
+							if (dragObj != obj)
+							{
+							RetryAddDragObject2:
+								if (dragObj->Parent().Get() == obj->Parent().Get())
+								{
+									if (dragObj->Parent().Get() == nullptr)
+									{
+										// move dragObj lower
+
+										auto upperObjIdx = dragObj->GetComponentRaw<GameObjectEditorComponent>()->id;
+										m_objects.erase(m_objects.begin() + upperObjIdx);
+										ReindexObjects();
+
+										auto lowerObjIdx = obj->GetComponentRaw<GameObjectEditorComponent>()->id;
+										m_objects.insert(m_objects.begin() + lowerObjIdx + 1, dragObj);
+										ReindexObjects();
+									}
+									else
+									{
+										auto& children = *(Array<Handle<GameObject>>*) & dragObj->Parent()->Children();
+										dragObj->Lock()->lock();
+										obj->Lock()->lock();
+
+										auto upperObjIdx = dragObj->ParentIdx();
+										children.Remove(children.begin() + upperObjIdx);
+										ReindexChildren(children);
+
+										auto lowerObjIdx = obj->ParentIdx();
+										children.insert(children.begin() + lowerObjIdx + 1, dragObj);
+										ReindexChildren(children);
+
+										obj->Lock()->unlock();
+										dragObj->Lock()->unlock();
+									}
+								}
+								else
+								{
+									if (dragObj->Parent().Get() == nullptr)
+									{
+										dragObj->GetScene()->RemoveObject(dragObj);
+									}
+									else
+									{
+										dragObj->RemoveFromParent();
+									}
+
+									if (obj->Parent().Get() == nullptr)
+									{
+										m_scene->AddObject(dragObj);
+									}
+									else
+									{
+										obj->Parent()->AddChild(dragObj);
+									}
+
+									goto RetryAddDragObject2;
+								}
+							}
+
+							m_dragingObject = nullptr;
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+				}
+			}
 
 			if (obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile)
 			{
@@ -378,14 +465,31 @@ void SceneEditorTab::RenderHierarchyPanel()
 
 	ImGui::Text("Total %d objects in scene", m_objects.size());
 
+	RenderHierarchyPanelGameObjectsTree(nullptr);
+
+	ShowCreateGameObjectPopup();
+
+Return:
+	ImGui::End();
+}
+
+void SceneEditorTab::RenderHierarchyPanelGameObjectsTree(GameObject* specified)
+{
 	ImGui::BeginChild("Child");
 
 	ImGui::Dummy({ 0,5 });
 
-	for (size_t i = 0; i < m_objects.size(); i++)
+	if (specified == nullptr)
 	{
-		auto _obj = m_objects[i];
-		RenderHierarchyPanelOf(_obj);
+		for (size_t i = 0; i < m_objects.size(); i++)
+		{
+			auto _obj = m_objects[i];
+			RenderHierarchyPanelOf(_obj);
+		}
+	}
+	else
+	{
+		RenderHierarchyPanelOf(specified);
 	}
 
 	ImGui::EndChild();
@@ -419,24 +523,31 @@ void SceneEditorTab::RenderHierarchyPanel()
 
 	if (m_dragingObject && ImGui::IsMouseReleased(0))
 	{
-		auto dragObj = m_dragingObject;
-		if (dragObj->Parent().Get() == nullptr)
+		if (specified == nullptr)
 		{
-			dragObj->GetScene()->RemoveObject(dragObj);
+			auto dragObj = m_dragingObject;
+			if (dragObj->Parent().Get() == nullptr)
+			{
+				//dragObj->GetScene()->RemoveObject(dragObj);
+				auto idx = dragObj->GetComponentRaw<GameObjectEditorComponent>()->id;
+				m_objects.erase(m_objects.begin() + idx);
+				m_objects.push_back(dragObj);
+				ReindexObjects();
+			}
+			else
+			{
+				dragObj->RemoveFromParent();
+
+				auto mat = dragObj->GetCommittedGlobalTransform();
+
+				Transform transform;
+				mat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
+
+				dragObj->SetLocalTransform(transform);
+
+				m_scene->AddObject(dragObj);
+			}
 		}
-		else
-		{
-			dragObj->RemoveFromParent();
-		}
-
-		auto mat = dragObj->GetCommittedGlobalTransform();
-
-		Transform transform;
-		mat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
-
-		dragObj->SetLocalTransform(transform);
-
-		m_scene->AddObject(dragObj);
 
 		m_dragingObject = nullptr;
 	}
@@ -460,11 +571,6 @@ void SceneEditorTab::RenderHierarchyPanel()
 
 		ImGui::EndPopup();
 	}
-
-	ShowCreateGameObjectPopup();
-
-Return:
-	ImGui::End();
 }
 
 void SceneEditorTab::RenderInspectorPanel()
@@ -473,6 +579,7 @@ void SceneEditorTab::RenderInspectorPanel()
 	{
 		if (m_inspectingObject)
 		{
+			ComponentInspector::EndInspectingFor(m_inspectingObject, m_inspectingObjectData, nullptr);
 			m_inspectingObjectData = m_inspectingObject->GetMetadata(0);
 		}
 		m_needReloadInspectingObject = false;
@@ -741,6 +848,28 @@ Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
 	);
 
 	return obj;
+}
+
+Handle<GameObject> SceneEditorTab::LoadStaticModelFromFile(const String& path)
+{
+	auto ext = FileUtils::GetExtension(path);
+	if (ext != "fbx" 
+		|| ext != "obj"
+		|| ext != "dae"
+		|| ext != "stl")
+	{
+		std::cerr << "[ERROR]: SceneEditorTab::LoadStaticModelFromFile() - invalid file!\n";
+		return nullptr;
+	}
+
+	auto model = resource::Load<Model3D>(path);
+	if (!model)
+	{
+		std::cerr << "[ERROR]: SceneEditorTab::LoadStaticModelFromFile() - invalid file!\n";
+		return nullptr;
+	}
+
+	return model->MakeGameObject();
 }
 
 void SceneEditorTab::ReindexObjects()
@@ -1104,6 +1233,11 @@ void SceneEditorTab::AddObjectToEditor(GameObject* obj)
 	m_objects.push_back(obj);
 }
 
+void SceneEditorTab::ReloadCurrentInspectingObject()
+{
+	m_needReloadInspectingObject = true;
+}
+
 void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 {
 	{
@@ -1121,6 +1255,17 @@ void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 	}
 
 	{
+		auto arr = json::array();
+		for (auto& o : m_objects)
+		{
+			arr.push_back(json(serializer->Serialize(o)));
+		}
+
+		j["Objects"] = arr;
+	}
+
+	{
+		j["InspectingObject"] = serializer->Serialize(m_inspectingObject);
 		j["DrawDebug"] = m_isDrawingDebug;
 	}
 }
@@ -1221,6 +1366,28 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 		}
 
 		m_isHotDeserializingGameObjectFromFile = false;
+	}
+
+	if (j.contains("Objects"))
+	{
+		m_objects.clear();
+
+		Handle<GameObject> obj;
+		auto& arr = j["Objects"];
+		for (size_t i = 0; i < arr.size(); i++)
+		{
+			serializer->Deserialize(arr[i], obj);
+			m_objects.push_back(obj);
+		}
+
+		ReindexObjects();
+	}
+
+	if (j.contains("InspectingObject"))
+	{
+		Handle<GameObject> inspectingObject;
+		serializer->Deserialize(j["InspectingObject"], inspectingObject);
+		OnObjectSelected(inspectingObject);
 	}
 
 	if (j.contains("DrawDebug"))

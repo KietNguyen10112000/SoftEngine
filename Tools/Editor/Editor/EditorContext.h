@@ -103,6 +103,7 @@ public:
 	bool m_padd[2];
 
 	bool m_needCloseTabCreationPopUp = false;
+	bool m_needOpennTabCreationPopUp = false;
 	EditorTabFactory* m_tabFactory = nullptr;
 
 	String m_savePath = "./Editor/";
@@ -156,6 +157,7 @@ public:
 	DialogData* OpenOkCancelDialog(const DialogDesc& desc, DialogBodyCallback bodyCallback, void* bodyUserPtr, DialogResultCallback resultCallback, void* resultUserPtr);
 	void CloseDialog(DialogData* dialog);
 
+	void OpenTabCreationPopUp();
 	void CloseTabCreationPopUp();
 
 	void PlaceHolderTab(EditorTab* tab);

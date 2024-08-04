@@ -17,8 +17,11 @@
 
 #include "imgui/imgui.h"
 
-#include "DataInspector.h"
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
+
+#include "DataInspector.h"
+#include "EditorContext.h"
+#include "SceneEditorTab.h"
 
 RigidBodyInspector::RigidBodyInspector(RigidBody* body, ClassMetadata* metadata) : ComponentInspectorBase(body), m_body(body), m_metadata(metadata)
 {
@@ -165,7 +168,7 @@ void RigidBodyInspector::Inspect()
 		const char* switchStr = nullptr;
 		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
 		{
-			switchStr = ICON_FA_REPEAT " To Static ";
+			switchStr = ICON_FA_REPEAT " To Static";
 		}
 		else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
 		{
@@ -176,9 +179,49 @@ void RigidBodyInspector::Inspect()
 			assert(0);
 		}
 
-		if (ImGui::Button(switchStr))
+		if (ImGui::Button(switchStr, { 150,0 }))
 		{
+			Handle<RigidBody> newBody;
+			Serializer serializer = {};
+			auto oriShape = serializer.Clone(m_body->GetShape(0)->shared_from_this());
 
+			if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+			{
+				newBody = mheap::New<RigidBodyStatic>(oriShape);
+			}
+			else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
+			{
+				newBody = mheap::New<RigidBodyDynamic>(oriShape);
+			}
+
+			auto count = m_body->GetShapesCount();
+			for (size_t i = 1; i < count; i++)
+			{
+				newBody->AddShape(serializer.Clone(m_body->GetShape(i)->shared_from_this()));
+			}
+
+			auto obj = m_body->GetGameObject();
+			obj->RemoveComponentRaw(m_body);
+			obj->AddComponent(newBody);
+			m_body = newBody;
+
+			auto currentTab = EditorContext::Get()->GetCurrentTab();
+			if (dynamic_cast<SceneEditorTab*>(currentTab))
+			{
+				dynamic_cast<SceneEditorTab*>(currentTab)->ReloadCurrentInspectingObject();
+			}
+
+			return;
+		}
+
+		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		{
+			bool isKinematic = ((RigidBodyDynamic*)m_body)->IsKinematic();
+			ImGui::SameLine(0, 10);
+			if (ImGui::Checkbox("Kinematic", &isKinematic))
+			{
+				((RigidBodyDynamic*)m_body)->SetKinematic(isKinematic);
+			}
 		}
 	}
 

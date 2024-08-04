@@ -8,8 +8,6 @@ public:
 
 	String m_filePath;
 
-	bool m_overwriteExist = false;
-
 	SceneEditorTabFactory();
 
 	// Inherited via EditorTabFactory

@@ -25,9 +25,48 @@ void RigidBody::SetupCollisionStruct()
 		return;
 	}
 
-	auto pxScene = GetGameObject()->GetScene()->GetPhysicsSystem()->m_pxScene;
+	auto collisionResult = new PhysicsCollisionResult();
+	auto collision = (Collision*)collisionResult->collision.Read();
 
-	//pxScene->overlap()
+	auto pxScene = GetGameObject()->GetScene()->GetPhysicsSystem()->m_pxScene;
+	auto body = m_pxActor->is<PxRigidActor>();
+	auto globalPose = body->getGlobalPose();
+	for (auto& shape : m_shapes)
+	{
+		auto& pxShape = shape->m_pxShape;
+
+		PxOverlapBuffer buffer;
+		auto& overlapShape = pxShape->getGeometry();
+		PxTransform shapePose = pxShape->getLocalPose().transform(globalPose);
+
+		if (pxScene->overlap(overlapShape, shapePose, buffer))
+		{
+			for (size_t i = 0; i < buffer.nbTouches; i++)
+			{
+				auto& hit = buffer.touches[i];
+				auto anotherPhysicsComp = (PhysicsComponent*)hit.actor->userData;
+
+				if (anotherPhysicsComp->m_collisionResult)
+				{
+					auto anotherCollision = anotherPhysicsComp->m_collisionResult->collision.Read();
+					for (auto& c : anotherCollision->contacts)
+					{
+						auto AComp = c->A->GetComponentRaw<PhysicsComponent>();
+						auto BComp = c->B->GetComponentRaw<PhysicsComponent>();
+						if ((AComp == anotherPhysicsComp || BComp == anotherPhysicsComp)
+							&& (AComp == this || BComp == this))
+						{
+							collision->contacts.push_back(c);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	collision->UpdateContactCount();
+
+	m_collisionResult = collisionResult;
 }
 
 void RigidBody::OnTransformChanged()

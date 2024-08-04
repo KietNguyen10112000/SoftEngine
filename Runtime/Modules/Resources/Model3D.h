@@ -10,7 +10,7 @@
 NAMESPACE_BEGIN
 
 // static model 3d
-class Model3D : public Model3DBasic
+class API Model3D : public Model3DBasic
 {
 public:
 	struct Node

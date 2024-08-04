@@ -129,6 +129,26 @@ struct Collision
 		contactPairsCount = 0;
 		contactPointsCount = 0;
 	}
+
+	inline void UpdateContactCount()
+	{
+		{
+			size_t count1 = 0;
+			size_t count2 = 0;
+			for (auto& contact : contacts)
+			{
+				for (auto& pair : contact->contactPairs)
+				{
+					count2 += pair->contactPoints.size();
+				}
+
+				count1 += contact->contactPairs.size();
+			}
+
+			contactPairsCount = count1;
+			contactPointsCount = count2;
+		}
+	}
 };
 
 NAMESPACE_END

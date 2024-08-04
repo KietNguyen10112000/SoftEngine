@@ -11,11 +11,12 @@ class PhysicsShape;
 
 class API RigidBodyDynamic : public RigidBody
 {
-public:
+protected:
 	byte m_isKinematic = 0;
 
 	COMPONENT_CLASS(RigidBodyDynamic);
 
+public:
 	inline RigidBodyDynamic() {};
 	RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape);
 	~RigidBodyDynamic();
@@ -57,6 +58,7 @@ public:
 	float GetMass();
 
 	void SetKinematic(bool enable);
+	bool IsKinematic() const;
 
 	void AddForce(const Vec3& f);
 	void AddForceAtLocalPos(const Vec3& f, const Vec3& pos);

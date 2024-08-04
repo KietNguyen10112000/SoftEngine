@@ -44,6 +44,9 @@
     <Filter Include="Source Files\ComponentInspectors">
       <UniqueIdentifier>{c5406223-9bcb-463a-92f3-2c1e62b744a6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\EditorTabs\GameObjectEditor">
+      <UniqueIdentifier>{9297112c-7dfb-4e63-a43a-bc66a0c921cf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -117,6 +120,15 @@
     </ClCompile>
     <ClCompile Include="RigidBodyInspector.cpp">
       <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObjectEditorTab.cpp">
+      <Filter>Source Files\EditorTabs\GameObjectEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObjectEditorSaveData.cpp">
+      <Filter>Source Files\EditorTabs\GameObjectEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="GameObjectEditorTabFactory.cpp">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -203,6 +215,15 @@
     </ClInclude>
     <ClInclude Include="ComponentInspectorBase.h">
       <Filter>Source Files\ComponentInspectors</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObjectEditorTab.h">
+      <Filter>Source Files\EditorTabs\GameObjectEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObjectEditorSaveData.h">
+      <Filter>Source Files\EditorTabs\GameObjectEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="GameObjectEditorTabFactory.h">
+      <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

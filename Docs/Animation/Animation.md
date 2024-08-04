@@ -66,7 +66,7 @@ This section will describe how to manually use animation system.
 
 #### 1.2. Animation layers
 
-+ `AnimatorSkeletalArray`: component to deal process animation (as it name, the hierarchy of animation model will be represented as an array), it contains many `AnimLayer` from that the animation will be passed through one by one layer and be played, mixed, jointed, faded,...
++ `AnimatorSkeletalArray`: component to process animations (as it name, the hierarchy of animation model will be represented as an array), it contains many `AnimLayer` from that the animation will be passed through one by one layer and be played, mixed, jointed, faded,...
   
   + Usage
     

@@ -6,6 +6,11 @@
 
 class EditorTabFactory
 {
+private:
+	friend class EditorContext;
+	bool m_overwriteExist = false;
+	String m_pathToCheckExist = "";
+
 public:
 	String m_tabKindName;
 
@@ -16,6 +21,8 @@ public:
 
 	virtual void ShowCreationInputGUI() = 0;
 	virtual Handle<EditorTab> CreateInstance() = 0;
+
+	bool AskIfExisted(const String& path);
 };
 
 class EditorTabFactoryManager : public Singleton<EditorTabFactoryManager>

@@ -17,7 +17,6 @@ void SceneEditorTabFactory::Begin()
 {
 	m_nameBuf[0] = 0;
 	m_filePath = "";
-	m_overwriteExist = false;
 }
 
 void SceneEditorTabFactory::End()
@@ -52,33 +51,9 @@ Handle<EditorTab> SceneEditorTabFactory::CreateInstance()
 		goto Failed;
 	}
 
-	if (tabName.empty() || (FileSystem::Get()->IsFileExist(SceneEditorTab::GetSavePath(tabName).c_str()) && !m_overwriteExist))
+	if (AskIfExisted(SceneEditorTab::GetSavePath(tabName)))
 	{
 		goto Failed;
-	}
-	else
-	{
-		// should I overwrite to the existed file
-		EditorContext::Get()->OpenOkCancelDialog({},
-			[](void* p)
-			{
-				auto self = (SceneEditorTabFactory*)p;
-				String tabName = self->m_nameBuf;
-				ImGui::TextUnformatted(String::Format("File \"{}\" existed!", SceneEditorTab::GetSavePath(tabName)).c_str());
-			}, this,
-			[](EditorContext::DIALOG_RESULT result, void* p) -> bool
-				{
-					auto self = (SceneEditorTabFactory*)p;
-
-					if (result == EditorContext::DIALOG_RESULT::OK)
-					{
-						self->m_overwriteExist = true;
-						EditorContext::Get()->CloseTabCreationPopUp();
-					}
-
-					return true;
-				}, this
-				);
 	}
 
 	goto Succeed;
@@ -99,7 +74,7 @@ LoadJson:
 		Handle<SceneEditorSaveData> data;
 		serializer.Deserialize(serializer.GetRootUUID(1), data);
 
-		if (!scene)
+		if (!scene || !data)
 		{
 			std::cerr << "[SceneEditorTabFactory] - ERROR: Invalid file!\n";
 			return nullptr;

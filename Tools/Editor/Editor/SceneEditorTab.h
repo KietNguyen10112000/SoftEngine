@@ -40,7 +40,7 @@ public:
 	std::vector<size_t> m_inspectInlinePropertiesCountStack;
 
 	//GameObjectEditorComponent
-	ID m_selectionId = INVALID_ID;
+	//ID m_selectionId = INVALID_ID;
 
 	bool m_pinInspectPanel = true;
 	bool m_pinHierarchyPanel = true;
@@ -75,7 +75,7 @@ public:
 	bool m_isHotDeserializingGameObjectFromFile = false;
 	std::map<UUID, LoadedObjectFromFileData> m_loadFromFileObject;
 
-private:
+protected:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
@@ -87,12 +87,15 @@ private:
 
 	void RenderHierarchyPanelOf(GameObject* obj);
 	void RenderHierarchyPanel();
+	void RenderHierarchyPanelGameObjectsTree(GameObject* specified);
 	void RenderInspectorPanel();
 
 	void ShowCreateComponentPopup();
 	void ShowCreateGameObjectPopup();
 
 	Handle<GameObject> LoadGameObjectFromFile(const String& path);
+
+	Handle<GameObject> LoadStaticModelFromFile(const String& path);
 
 	void ReindexObjects();
 	void ReindexChildren(Array<Handle<GameObject>>& children);
@@ -116,6 +119,8 @@ public:
 
 	void OnObjectDelete(GameObject* obj);
 	void AddObjectToEditor(GameObject* obj);
+
+	void ReloadCurrentInspectingObject();
 
 public:
 	inline auto& Lock()

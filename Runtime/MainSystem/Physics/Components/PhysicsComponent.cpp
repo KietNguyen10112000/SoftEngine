@@ -77,12 +77,11 @@ void PhysicsComponent::SetPhysicsFlag(PHYSICS_FLAG flag, bool value)
 					m_collisionResult->Clear();
 				}*/
 
-				if (self->HasPhysicsFlag(PHYSICS_FLAG_COLLISION_RESULT))
+				self->OnPhysicsFlagSetted(PHYSICS_FLAG_COLLISION_RESULT, value);
+				if (self->HasPhysicsFlag(PHYSICS_FLAG_COLLISION_RESULT) && !self->m_collisionResult)
 				{
 					self->m_collisionResult = new PhysicsCollisionResult();
 				}
-
-				self->OnPhysicsFlagSetted(PHYSICS_FLAG_COLLISION_RESULT, value);
 			}
 		);
 	}

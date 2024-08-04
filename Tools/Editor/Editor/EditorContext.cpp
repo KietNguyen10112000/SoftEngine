@@ -320,6 +320,7 @@ void EditorContext::RenderTabBar()
 						ImGui::CloseCurrentPopup();
 
 						openCreatePopUp = true;
+						m_tabFactory->m_overwriteExist = false;
 						m_tabFactory->Begin();
 					}
 				}
@@ -344,6 +345,12 @@ void EditorContext::RenderTabBar()
 
 void EditorContext::RenderTabCreationPopUp()
 {
+	if (m_needOpennTabCreationPopUp)
+	{
+		ImGui::OpenPopup("Create New Editor Tab");
+		m_needOpennTabCreationPopUp = false;
+	}
+
 	if (!m_tabFactory)
 	{
 		return;
@@ -358,28 +365,28 @@ void EditorContext::RenderTabCreationPopUp()
 		return;
 	}
 
-	if (m_needCloseTabCreationPopUp)
-	{
-		m_needCloseTabCreationPopUp = false;
+	//if (m_needCloseTabCreationPopUp)
+	//{
+	//	m_needCloseTabCreationPopUp = false;
 
-		m_tabHolder = nullptr;
-		auto tab = m_tabFactory->CreateInstance();
+	//	m_tabHolder = nullptr;
+	//	auto tab = m_tabFactory->CreateInstance();
 
-		if (!tab)
-		{
-			std::cerr << "TabCreation ERROR. \n";
-		}
-		else
-		{
-			RunTab(tab);
-			m_tabFactory = nullptr;
-			ImGui::CloseCurrentPopup();
-		}
+	//	if (!tab)
+	//	{
+	//		std::cerr << "TabCreation ERROR. \n";
+	//	}
+	//	else
+	//	{
+	//		RunTab(tab);
+	//		m_tabFactory = nullptr;
+	//		ImGui::CloseCurrentPopup();
+	//	}
 
-		//ImGui::CloseCurrentPopup();
-		ImGui::EndPopup();
-		return;
-	}
+	//	//ImGui::CloseCurrentPopup();
+	//	ImGui::EndPopup();
+	//	return;
+	//}
 
 	auto tabFactory = m_tabFactory;
 
@@ -780,6 +787,11 @@ EditorContext::DialogData* EditorContext::OpenOkCancelDialog(const DialogDesc& d
 void EditorContext::CloseDialog(DialogData* dialog)
 {
 	m_closeDialogs.push_back(dialog);
+}
+
+void EditorContext::OpenTabCreationPopUp()
+{
+	m_needOpennTabCreationPopUp = true;
 }
 
 void EditorContext::CloseTabCreationPopUp()

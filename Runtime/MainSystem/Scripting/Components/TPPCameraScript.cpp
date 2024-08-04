@@ -57,7 +57,7 @@ void TPPCameraScript::OnUpdate(float dt)
 		return;
 	}
 
-	if (Input()->IsKeyUp('R'))
+	/*if (Input()->IsKeyUp('R'))
 	{
 		Runtime::Get()->HotReloadScripts();
 	}
@@ -70,7 +70,7 @@ void TPPCameraScript::OnUpdate(float dt)
 	if (Input()->IsKeyUp('P') && m_testBody)
 	{
 		m_testBody->AddForceAtLocalPos({ 0,0,-10000 }, { 2.5f,0,0 });
-	}
+	}*/
 
 	if (m_camera && m_fppCamScript && Input()->IsKeyUp('V'))
 	{

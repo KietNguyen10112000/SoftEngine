@@ -20,7 +20,6 @@ void AnimatorEditorTabFactory::Begin()
 {
 	m_nameBuf[0] = 0;
 	m_modelPath = "";
-	m_overwriteExist = false;
 }
 
 void AnimatorEditorTabFactory::End()
@@ -29,14 +28,14 @@ void AnimatorEditorTabFactory::End()
 
 void AnimatorEditorTabFactory::ShowCreationInputGUI()
 {
+	ImGui::InputText("File name", m_nameBuf, IM_ARRAYSIZE(m_nameBuf));
+
 	{
 		Accessor temp = Accessor::ForString("Path", m_modelPath, nullptr);
 		Variant var = Variant(VARIANT_TYPE::STRING_PATH);
 		var.AsString() = m_modelPath;
 		DataInspector::InspectStringPathEx(nullptr, temp, var, "Model path", true);
 	}
-
-	ImGui::InputText("File name", m_nameBuf, IM_ARRAYSIZE(m_nameBuf));
 }
 
 Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
@@ -60,33 +59,9 @@ Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 		goto Failed;
 	}
 
-	if (tabName.empty() || (FileSystem::Get()->IsFileExist(AnimatorEditorTab::GetSavePath(tabName).c_str()) && !m_overwriteExist))
+	if (AskIfExisted(AnimatorEditorTab::GetSavePath(tabName)))
 	{
 		goto Failed;
-	}
-	else
-	{
-		// should I overwrite to the existed file
-		EditorContext::Get()->OpenOkCancelDialog({},
-			[](void* p) 
-			{
-				auto self = (AnimatorEditorTabFactory*)p;
-				String tabName = self->m_nameBuf;
-				ImGui::TextUnformatted(String::Format("File \"{}\" existed!", AnimatorEditorTab::GetSavePath(tabName)).c_str());
-			}, this,
-			[](EditorContext::DIALOG_RESULT result, void* p) -> bool
-			{
-				auto self = (AnimatorEditorTabFactory*)p;
-
-				if (result == EditorContext::DIALOG_RESULT::OK)
-				{
-					self->m_overwriteExist = true;
-					EditorContext::Get()->CloseTabCreationPopUp();
-				}
-
-				return true;
-			}, this
-		);
 	}
 
 	goto Succeed;
@@ -144,6 +119,11 @@ LoadJson:
 
 Succeed:
 	m_name = m_nameBuf;
+
+	if (m_modelPath.Find(StartupConfig::Get().resourcesPath) == 0)
+	{
+		m_modelPath = FileUtils::ShiftPath(m_modelPath);
+	}
 
 	auto scene = Runtime::Get()->CreateScene();
 	auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, scene, m_name);

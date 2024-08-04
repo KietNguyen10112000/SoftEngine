@@ -68,7 +68,11 @@ void RigidBodyDynamic::OnTransformChanged()
 				pxRigidBody->setGlobalPose(pxTransform);
 				m_isKinematic = 2;
 			}
-			pxRigidBody->setKinematicTarget(pxTransform);
+
+			if (pxRigidBody->getScene())
+			{
+				pxRigidBody->setKinematicTarget(pxTransform);
+			}
 		}
 		else
 		{
@@ -160,8 +164,17 @@ void RigidBodyDynamic::SetKinematic(bool enable)
 {
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
 	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
+	if (!enable && pxRigidBody->isSleeping())
+	{
+		pxRigidBody->wakeUp();
+	}
 
 	m_isKinematic = (byte)enable;
+}
+
+bool RigidBodyDynamic::IsKinematic() const
+{
+	return m_isKinematic != 0;
 }
 
 void RigidBodyDynamic::AddForce(const Vec3& f)
