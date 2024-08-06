@@ -484,7 +484,7 @@ void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Ve
 	DrawCube(cubeTransform, color, true);
 }
 
-void DebugGraphics::DrawDirection(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor)
+void DebugGraphics::DrawRay(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor)
 {
 	auto dir = direction.Normal();
 	Quaternion quat = Quaternion::RotationFromTo(Vec3::UP, dir);
@@ -569,6 +569,18 @@ void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color, bool soli
 	back.colors[idx] = color;
 
 	renderer.lock.unlock();
+}
+
+void DebugGraphics::DrawBox(const Box& box, const Vec4& color, bool solid)
+{
+	Mat4 mat = Mat4(
+		Vec4(box.m_d1 / 2.0f, 0.0f),
+		Vec4(box.m_d2 / 2.0f, 0.0f),
+		Vec4(box.m_d3 / 2.0f, 0.0f),
+		Vec4(box.m_position + (box.m_d1 + box.m_d2 + box.m_d3) / 2.0f, 1.0f)
+	);
+
+	DrawCube(mat, color, solid);
 }
 
 void DebugGraphics::DrawFrustum(const Frustum& frustum, const Vec4& color)

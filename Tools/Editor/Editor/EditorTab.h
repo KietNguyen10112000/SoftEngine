@@ -23,6 +23,8 @@ private:
 	bool m_isPlacedHolder = false;
 	bool m_padd[1];
 
+	String m_saveDirectory = "";
+
 public:
 	ID m_id = INVALID_ID;
 	String m_name = "<Unnamed>";
@@ -71,7 +73,19 @@ public:
 	virtual void OnOpen() = 0;
 	virtual void OnClose() = 0;
 
-	virtual String GetSaveFilePath() = 0;
+	virtual String GetTabClassName() const = 0;
+
+	void SetSaveFilePath(const String& dir);
+
+	inline String GetSaveFilePath() const
+	{
+		if (m_saveDirectory.empty())
+		{
+			return m_saveDirectory;
+		}
+
+		return m_saveDirectory + m_name + "." + GetTabClassName();
+	}
 
 	inline virtual bool IsCloseable() { return true; };
 

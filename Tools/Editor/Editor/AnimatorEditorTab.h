@@ -288,9 +288,9 @@ public:
 	void OnOpen() override;
 	void OnClose() override;
 
-	inline String GetSaveFilePath() override
+	inline virtual String GetTabClassName() const override
 	{
-		return GetSavePath(m_name);
+		return "AnimatorEditor";
 	}
 
 	bool IsCloseable() override;
@@ -346,7 +346,6 @@ private:
 
 public:
 	static void InitializeSerializableList();
-	static String GetSavePath(const String& name);
 
 };
 

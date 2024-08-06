@@ -44,7 +44,7 @@ Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 	auto ext = FileUtils::GetExtension(m_modelPath);
 	String tabName = m_nameBuf;
 
-	if (ext == "json")
+	if (ext == "json" || ext == "AnimatorEditor")
 	{
 		goto LoadJson;
 	}
@@ -59,10 +59,10 @@ Handle<EditorTab> AnimatorEditorTabFactory::CreateInstance()
 		goto Failed;
 	}
 
-	if (AskIfExisted(AnimatorEditorTab::GetSavePath(tabName)))
+	/*if (AskIfExisted(AnimatorEditorTab::GetSavePath(tabName)))
 	{
 		goto Failed;
-	}
+	}*/
 
 	goto Succeed;
 
@@ -84,6 +84,7 @@ LoadJson:
 
 		auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, nullptr, data->m_name);
 		tab->m_name = data->m_name;
+		tab->SetSaveFilePath(m_modelPath);
 
 		Handle<GameObject> obj;
 		serializer.Deserialize(data->m_objectUUID, obj);

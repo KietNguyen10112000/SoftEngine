@@ -993,10 +993,13 @@ private:
 public:
     using Base::Base;
 
-    Mat4()
+    inline Mat4()
     {
         SetIdentity();
     }
+
+    inline Mat4(const Vec4& row0, const Vec4& row1, const Vec4& row2, const Vec4& row3) 
+        : Base(row0, row1, row2, row3) {}
 
     inline Vec4& operator[](size_t rowId) const
     {

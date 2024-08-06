@@ -20,6 +20,7 @@
 #include "SceneEditorTab.h"
 #include "AnimatorEditorTab.h"
 #include "EditorTabFactory.h"
+#include "SystemDialog.h"
 
 #include "Resources/Resource.h"
 #include "Input/Input.h"
@@ -67,40 +68,55 @@ void EditorContext::RenderMenuBar()
 			auto currentTab = GetCurrentTab();
 			if (currentTab)
 			{
-				if (currentTab->m_name.empty() || !IsVariableNameValid(currentTab->m_name))
+				String savePath = currentTab->GetSaveFilePath();
+				if (savePath.empty() || !IsVariableNameValid(currentTab->m_name))
 				{
-					textBuf[0] = 0;
-					OpenOkCancelDialog({},
-						[](void* p)
+					if (savePath.empty())
+					{
+						savePath = EditorContext::Get()->GetSavePath() + currentTab->GetTabClassName() + "/" + currentTab->m_name + "." + currentTab->GetTabClassName();
+					}
+					
+					String ext = "*." + currentTab->GetTabClassName();
+
+					SystemDialog::SaveAsDialog otp;
+					otp.defaultPath = FileSystem::Get()->GetExecutablePath() + savePath;
+					otp.extensionGroups = { 
+						{ 
+							currentTab->GetTabClassName(), 
+							{ ext }
+						} 
+					};
+					if (SystemDialog::OpenSaveAsDialog(otp))
+					{
+						savePath = otp.outputFilePath;
+						m_savingPath = savePath;
+						if (FileSystem::Get()->IsFileExist(savePath.c_str()))
 						{
-							auto self = (EditorContext*)p;
-							auto currentTab = self->GetCurrentTab();
-
-							ImGui::TextUnformatted("File wasn't named!");
-							ImGui::InputText("File Name", textBuf, sizeof(textBuf));
-
-						}, this,
-						[](EditorContext::DIALOG_RESULT result, void* p) -> bool
-						{
-							auto self = (EditorContext*)p;
-							auto currentTab = self->GetCurrentTab();
-
-							if (result == DIALOG_RESULT::OK)
-							{
-								if (!self->IsVariableNameValid(textBuf))
+							OpenOkCancelDialog({},
+								[](void* p)
 								{
-									return false;
-								}
+									auto self = (EditorContext*)p;
+									ImGui::TextUnformatted(String::Format("File \"{}\" existed. Override it???", self->m_savingPath).c_str());
+								}, this,
+								[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+								{
+									auto self = (EditorContext*)p;
 
-								currentTab->m_name = textBuf;
+									if (result == EditorContext::DIALOG_RESULT::OK)
+									{
+										self->DoSave(self->m_savingPath);
+									}
 
-								String path("");
-								self->EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
-							}
-							
-							return true;
-						}, this
-					);
+									return true;
+								}, this
+							);
+						}
+						else
+						{
+							DoSave(savePath);
+						}
+						
+					}
 				}
 				else
 				{
@@ -543,6 +559,26 @@ void EditorContext::CloseDialogImpl(DialogData* dialog)
 	}
 }
 
+void EditorContext::DoSave(const String& path)
+{
+	auto currentTab = GetCurrentTab();
+
+	auto fileWithExtension = FileUtils::GetLastName(path.c_str());
+	auto fileName = fileWithExtension.SubString(0, fileWithExtension.RFind('.'));
+	if (!IsVariableNameValid(fileName))
+	{
+		std::cerr << "[ERROR]: invalid file name!";
+	}
+	else
+	{
+		currentTab->m_name = fileName;
+		currentTab->m_saveDirectory = FileUtils::PopPath(path);
+
+		String path("");
+		EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
+	}
+}
+
 void EditorContext::RenderOxyz(OxyzRenderConfig& config)
 {
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
@@ -550,17 +586,17 @@ void EditorContext::RenderOxyz(OxyzRenderConfig& config)
 
 	if (config.AxisXLength != 0.0f)
 	{
-		debugGraphics->DrawDirection(Vec3(-config.AxisXLength / 2.0f, 0, 0), Vec3(config.AxisXLength, 0, 0), config.AxisXColor, config.AxisXColor);
+		debugGraphics->DrawRay(Vec3(-config.AxisXLength / 2.0f, 0, 0), Vec3(config.AxisXLength, 0, 0), config.AxisXColor, config.AxisXColor);
 	}
 
 	if (config.AxisYLength != 0.0f)
 	{
-		debugGraphics->DrawDirection(Vec3(0, -config.AxisYLength / 2.0f, 0), Vec3(0, config.AxisYLength, 0), config.AxisYColor, config.AxisYColor);
+		debugGraphics->DrawRay(Vec3(0, -config.AxisYLength / 2.0f, 0), Vec3(0, config.AxisYLength, 0), config.AxisYColor, config.AxisYColor);
 	}
 
 	if (config.AxisZLength != 0.0f)
 	{
-		debugGraphics->DrawDirection(Vec3(0, 0, -config.AxisZLength / 2.0f), Vec3(0, 0, config.AxisZLength), config.AxisZColor, config.AxisZColor);
+		debugGraphics->DrawRay(Vec3(0, 0, -config.AxisZLength / 2.0f), Vec3(0, 0, config.AxisZLength), config.AxisZColor, config.AxisZColor);
 	}
 
 	if (config.RenderOxzGrid)

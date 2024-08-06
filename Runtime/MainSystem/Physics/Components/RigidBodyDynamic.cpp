@@ -145,6 +145,7 @@ AABox RigidBodyDynamic::GetGlobalAABB()
 
 void RigidBodyDynamic::SetDensity(float density)
 {
+	m_density = density;
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
 	//pxRigidBody->setMass(mass);
 	//pxRigidBody->setMassSpaceInertiaTensor(PxVec3(1.f));
@@ -154,7 +155,12 @@ void RigidBodyDynamic::SetDensity(float density)
 	PxRigidBodyExt::updateMassAndInertia(*pxRigidBody, density);
 }
 
-float RigidBodyDynamic::GetMass()
+float RigidBodyDynamic::GetDensity() const
+{
+	return m_density;
+}
+
+float RigidBodyDynamic::GetMass() const
 {
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
 	return pxRigidBody->getMass();

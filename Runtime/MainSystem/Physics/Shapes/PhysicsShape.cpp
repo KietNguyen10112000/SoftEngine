@@ -9,6 +9,7 @@
 #include "MainSystem/MainSystemTaskPacking.h"
 #include "MainSystem/Physics/Components/RigidBody.h"
 #include "MainSystem/Physics/PhysicsSystem.h"
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 
 #include "Scene/GameObject.h"
 #include "Scene/Scene.h"
@@ -95,6 +96,19 @@ void PhysicsShape::SetLocalTransform(const Transform& transform)
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, transform,
 		{
 			self->m_pxShape->setLocalPose(PhysXUtils::ToPxTransform(transform));
+
+			auto actor = self->m_pxShape->getActor();
+			if (actor)
+			{
+				auto dynamic = actor->is<PxRigidDynamic>();
+				if (dynamic)
+				{
+					auto comp = ((RigidBodyDynamic*)dynamic->userData);
+					PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
+
+					if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
+				}
+			}
 		}
 	);
 }

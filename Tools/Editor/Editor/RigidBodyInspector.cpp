@@ -3,6 +3,7 @@
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 #include "MainSystem/Physics/Components/RigidBodyStatic.h"
 
+#include "MainSystem/Physics/Materials/PhysicsMaterial.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeCapsule.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
@@ -66,13 +67,51 @@ void RigidBodyInspector::LoadShapeInspectorDatas()
 
 void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 {
-	auto transform = shape->GetLocalTransform();
-	auto modified = transform;
+	Vec3 rotationAxis = Vec3::ZERO;
+	auto modified = m_tempShapeLocalTransform;
 	auto accessor = Accessor::For("Transform", modified, m_body);
-	DataInspector::InspectTransform(m_metadata, accessor, accessor.Get(), String::Format("ShapeLocalTransform {}", shape).c_str());
-	if (!transform.Equals(modified))
+	DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("ShapeLocalTransform {}", shape).c_str(), true, &rotationAxis);
+	
+	auto dbGr = Graphics::Get()->GetDebugGraphics();
+	if (dbGr && rotationAxis != Vec3::ZERO)
+	{
+		Transform globalTransform = {};
+		m_body->GetGameObject()->GetCommittedGlobalTransform().Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());
+
+		// physics component doesn't use scale component
+		globalTransform.Scale() = { 1,1,1 };
+
+		auto localPose = shape->GetLocalTransform();
+		auto globalMat = localPose.ToTransformMatrix() * globalTransform.ToTransformMatrix();
+
+		auto localMat = localPose.ToTransformMatrix();
+		if (rotationAxis == localMat.Right().Normal())
+		{
+			rotationAxis = globalMat.Right().Normal();
+		}
+
+		if (rotationAxis == localMat.Up().Normal())
+		{
+			rotationAxis = globalMat.Up().Normal();
+		}
+
+		if (rotationAxis == localMat.Forward().Normal())
+		{
+			rotationAxis = globalMat.Forward().Normal();
+		}
+
+		dbGr->DrawLineSegment(
+			globalMat.Position() - rotationAxis * 10.0f,
+			globalMat.Position() + rotationAxis * 10.0f,
+			Vec4(rotationAxis, 1.0f),
+			0.02f
+		);
+	}
+	
+	if (!m_tempShapeLocalTransform.Equals(modified))
 	{
 		shape->SetLocalTransform(modified);
+		m_tempShapeLocalTransform = modified;
 	}
 }
 
@@ -95,6 +134,10 @@ void RigidBodyInspector::InspectShapeSphere(PhysicsShape* shape)
 {
 }
 
+void RigidBodyInspector::InspectMaterials(PhysicsShape* shape)
+{
+}
+
 void RigidBodyInspector::DrawDebug(PhysicsShape* shape, const Vec4& color)
 {
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
@@ -103,8 +146,14 @@ void RigidBodyInspector::DrawDebug(PhysicsShape* shape, const Vec4& color)
 		return;
 	}
 
+	Transform globalTransform = {};
+	m_body->GetGameObject()->GetCommittedGlobalTransform().Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());
+
+	// physics component doesn't use scale component
+	globalTransform.Scale() = { 1,1,1 };
+
 	auto localPose = shape->GetLocalTransform();
-	auto globalMat = localPose.ToTransformMatrix() * m_body->GetGameObject()->GetCommittedGlobalTransform();
+	auto globalMat = localPose.ToTransformMatrix() * globalTransform.ToTransformMatrix();
 
 	Transform transform = {};
 	globalMat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
@@ -120,14 +169,18 @@ void RigidBodyInspector::DrawDebug(PhysicsShape* shape, const Vec4& color)
 	}
 	case PHYSICS_SHAPE_TYPE_CAPSULE:
 	{
+		// physx capsule up direction forwards to x-axis
 		auto capsule = (PhysicsShapeCapsule*)shape;
-		debugGraphics->DrawCapsule(Capsule(globalMat.Up().Normal(), transform.Position(), capsule->GetHeight(), capsule->GetRadius()), color);
+		debugGraphics->DrawCapsule(Capsule(globalMat.Right().Normal(), transform.Position(), capsule->GetHeight(), capsule->GetRadius()), color);
 		break;
 	}
 	case PHYSICS_SHAPE_TYPE_BOX: 
 	{
 		auto box = (PhysicsShapeBox*)shape;
-		debugGraphics->DrawCube(globalMat, color);
+		auto tTransform = localPose;
+		tTransform.Scale() = box->GetDimensions() / 2.0f;
+		auto mat = tTransform.ToTransformMatrix() * globalTransform.ToTransformMatrix();
+		debugGraphics->DrawCube(mat, color);
 		break;
 	}
 	case PHYSICS_SHAPE_TYPE_PLANE:
@@ -148,6 +201,12 @@ void RigidBodyInspector::DrawDebug(PhysicsShape* shape, const Vec4& color)
 	}
 }
 
+void RigidBodyInspector::OnSelectShape(int idx)
+{
+	m_choosingShapeIdx = idx;
+	m_tempShapeLocalTransform = m_shapeDatas[idx].shape->GetLocalTransform();
+}
+
 void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
 {
 	if (o->GetComponentRaw<RenderingComponent>())
@@ -164,6 +223,21 @@ void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
 
 void RigidBodyInspector::Inspect()
 {
+	static const char* s_shapeList[] = {
+		"Sphere",
+		"Capsule",
+		"Box",
+		"Plane",
+	};
+
+	if (m_countReloadShapeInspectorData != 0)
+	{
+		if (--m_countReloadShapeInspectorData == 0)
+		{
+			LoadShapeInspectorDatas();
+		}
+	}
+
 	{
 		const char* switchStr = nullptr;
 		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
@@ -234,22 +308,105 @@ void RigidBodyInspector::Inspect()
 		}
 	}
 
-	ImGui::BeginChild(ID(this), {ImGui::GetWindowWidth() * 0.85f, 500}, true);
+	ImGui::BeginChild(ID(this), {ImGui::GetWindowWidth() * 0.88f, 500}, true);
 
-	if (ImGui::BeginCombo("Choose Shape", m_choosingShapeIdx >= 0 ? m_shapeDatas[m_choosingShapeIdx].shape->GetClassName() : nullptr))
+	if (ImGui::Button("+ Add Shape"))
+	{
+		m_choosingCreateShapeIdx = 0;
+
+		EditorContext::DialogDesc desc;
+		desc.title = "Add Physics Shape";
+		EditorContext::Get()->OpenOkCancelDialog(desc, 
+			[](void* p) 
+			{
+				auto self = (RigidBodyInspector*)p;
+
+				if (ImGui::BeginCombo("Choose Shape Type", s_shapeList[self->m_choosingCreateShapeIdx]))
+				{
+					for (size_t n = 0; n < IM_ARRAYSIZE(s_shapeList); n++)
+					{
+						ImGui::PushID(n);
+						if (ImGui::Selectable(s_shapeList[n]))
+						{
+							self->m_choosingCreateShapeIdx = int(n);
+						}
+						ImGui::PopID();
+					}
+
+					ImGui::EndCombo();
+				}
+
+			}, this, 
+			[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+			{
+				auto self = (RigidBodyInspector*)p;
+				if (result == EditorContext::OK)
+				{
+					auto& sampleMaterial = self->m_body->GetShape(0)->GetFirstMaterial();
+
+					SharedPtr<PhysicsShape> shape = nullptr;
+					SharedPtr<PhysicsMaterial> material = std::make_shared<PhysicsMaterial>(
+						sampleMaterial->GetStaticFriction(), 
+						sampleMaterial->GetDynamicFriction(),
+						sampleMaterial->GetRestitution()
+					);
+					switch (self->m_choosingCreateShapeIdx)
+					{
+					case 0:
+						shape = std::make_shared<PhysicsShapeSphere>(1.0f, material);
+						break;
+					case 1:
+						shape = std::make_shared<PhysicsShapeCapsule>(2.0f, 1.0f, material);
+						break;
+					case 2:
+						shape = std::make_shared<PhysicsShapeBox>(Vec3(1.0f, 1.0f, 1.0f), material);
+						break;
+					case 3:
+						shape = std::make_shared<PhysicsShapePlane>(material);
+						break;
+					default:
+						break;
+					}
+
+					if (shape)
+					{
+						self->m_body->AddShape(shape);
+						self->m_countReloadShapeInspectorData = 2;
+					}
+				}
+				return true;
+			}, this
+		);
+	}
+
+	if (ImGui::BeginCombo("Choose Shape", m_choosingShapeIdx >= 0 ? s_shapeList[m_shapeDatas[m_choosingShapeIdx].shape->GetType()] : nullptr))
 	{
 		for (size_t n = 0; n < m_shapeDatas.size(); n++)
 		{
 			ImGui::PushID(n);
-			if (ImGui::Selectable(m_shapeDatas[m_choosingShapeIdx].shape->GetClassName()))
+			if (ImGui::Selectable(s_shapeList[m_shapeDatas[n].shape->GetType()]))
 			{
 				m_choosingShapeIdx = int(n);
+				OnSelectShape(m_choosingShapeIdx);
 			}
 			ImGui::PopID();
 		}
 
 		ImGui::EndCombo();
 	}
+
+	if (ImGui::IsItemHovered())
+	{
+		if (ImGui::GetIO().MouseWheel)
+		{
+			int incre = ImGui::GetIO().MouseWheel > 0 ? 1 : int(m_shapeDatas.size() - 1);
+			m_choosingShapeIdx = (m_choosingShapeIdx + incre) % m_shapeDatas.size();
+			OnSelectShape(m_choosingShapeIdx);
+		}
+	}
+
+	ImGui::Separator();
+
 	auto shapesCount = m_body->GetShapesCount();
 	if (m_choosingShapeIdx >= 0)
 	{
@@ -257,6 +414,8 @@ void RigidBodyInspector::Inspect()
 		auto type = shape->GetType();
 
 		auto typeName = shape->GetClassName();
+
+		InspectMaterials(shape);
 
 		ImGui::SetNextItemOpen(true);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 5.f));
@@ -292,6 +451,14 @@ void RigidBodyInspector::Inspect()
 			}
 
 			ImGui::TreePop();
+		}
+	}
+
+	for (size_t i = 0; i < shapesCount; i++)
+	{
+		if (i != m_choosingShapeIdx)
+		{
+			DrawDebug(m_body->GetShape(i), Vec4(0.8f, 0, 0, 1));
 		}
 	}
 

@@ -8,28 +8,32 @@ class DataInspector
 public:
 	constexpr static size_t MAX_TYPE = 256;
 
-	using InspectFunc = void (*)(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	using InspectFunc = bool (*)(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
 	static InspectFunc s_inspectFunc[MAX_TYPE];
 
 	// variant is the value from calling accessor.Get() so don't need to re-call accessor.Get() inside InspectFunc
 
-	static void InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
-	static void InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
-	static void InspectUint64(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
-	static void InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
-	static void InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
-	static void InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static bool InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static bool InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static bool InspectUint64(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static bool InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
-	static void InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
-	static void InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
-		bool allowOutsideResources, float width = 0, bool directory = false);
-	static void InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static bool InspectTransformEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
+		bool hideScale = false, Vec3* outputRotateAxis = nullptr);
+	static bool InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+
+	static bool InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+
+	static bool InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
+	static bool InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName,
+		bool allowOutsideResources, float width = 0, bool directory = false, const String& startPath = {}, bool directOpenSystemDialog = false);
+	static bool InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
 
 public:
 	static void Initialize();
-	static void Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName);
+	static bool Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName);
 
 };
 

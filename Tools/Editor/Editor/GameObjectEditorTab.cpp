@@ -45,7 +45,7 @@ void GameObjectEditorTab::OnShow()
 		[](EditorContext* ctx, int argc, void** argv, ID id)
 		{
 			auto self = (GameObjectEditorTab*)id;
-			auto path = GetSavePath(self->m_name);
+			auto path = self->GetSaveFilePath();
 
 			GameObjectEditorSaveData data(self);
 
@@ -60,9 +60,4 @@ void GameObjectEditorTab::OnShow()
 		},
 		ID(this)
 	);
-}
-
-String GameObjectEditorTab::GetSavePath(const String& name)
-{
-	return EditorContext::Get()->GetSavePath() + "GameObjectEditor/" + name + ".json";
 }

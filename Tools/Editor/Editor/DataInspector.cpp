@@ -9,6 +9,8 @@
 #include "FileSystem/FileSystem.h"
 #include "FileSystem/FileUtils.h"
 
+#include "IconFontCppHeaders/IconsFontAwesome6.h"
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <shlobj_core.h>
@@ -16,15 +18,29 @@
 #undef far
 #endif
 
+#include "Graphics/Graphics.h"
+#include "Graphics/DebugGraphics.h"
+
 DataInspector::InspectFunc DataInspector::s_inspectFunc[MAX_TYPE] = {};
 
-void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
+	bool hideScale, Vec3* outputRotateAxis)
 {
 	const static char* cacheNameFmt = "editor_InspectTransform_{}";
 	struct TransformCache
 	{
 		Transform transform;
 		Vec3 euler;
+
+		// 0 - Euler
+		// 1 - around Right
+		// 2 - around Up
+		// 3 - around Forward
+		byte rotationInspectType = 0;
+		float rotationOffset = 0;
+		Vec3 rotationAxis;
+		ImVec4 rotationAxisColor;
+		Quaternion startQuat;
 	};
 
 	Transform transform = variant.As<Transform>();
@@ -46,6 +62,7 @@ void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor
 
 		cache->transform = transform;
 		cache->euler = euler;
+		cache->startQuat = transform.Rotation();
 	}
 	else
 	{
@@ -53,13 +70,87 @@ void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor
 	}
 
 	bool modified = false;
-	modified |= ImGui::DragFloat3("Scale", &transform.Scale()[0], 0.01f, -INFINITY, INFINITY);
-	modified |= ImGui::DragFloat3("Rotation", &euler[0], 0.01f, -INFINITY, INFINITY);
+
+	if (!hideScale)
+	{
+		modified |= ImGui::DragFloat3("Scale", &transform.Scale()[0], 0.01f, -INFINITY, INFINITY);
+	}
+
+	if (cache->rotationInspectType == 0)
+	{
+		modified |= ImGui::DragFloat3("Rotation    ", &euler[0], 0.01f, -INFINITY, INFINITY);
+	}
+	else
+	{
+		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 0.01f, -INFINITY, INFINITY);
+		ImGui::SameLine(); 
+		
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, cache->rotationAxisColor);
+		String text;
+		switch (cache->rotationInspectType)
+		{
+		case 1:
+			text = "Rotation X";
+			break;
+		case 2:
+			text = "Rotation Y";
+			break;
+		case 3:
+			text = "Rotation Z";
+			break;
+		default:
+			break;
+		}
+		ImGui::TextUnformatted(text.c_str());
+		ImGui::PopStyleColor();
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_ROTATE))
+	{
+		cache->rotationInspectType = (cache->rotationInspectType + 1) % 4;
+		cache->rotationOffset = 0;
+		cache->startQuat = transform.Rotation();
+		switch (cache->rotationInspectType)
+		{
+		case 0:
+			cache->euler = transform.Rotation().ToEulerAngles();
+			cache->rotationAxis = Vec3::ZERO;
+			break;
+		case 1:
+			cache->rotationAxis = transform.ToTransformMatrix().Right().Normal();
+			cache->rotationAxisColor = { 1,0,0,1 };
+			break;
+		case 2:
+			cache->rotationAxis = transform.ToTransformMatrix().Up().Normal();
+			cache->rotationAxisColor = { 0,1,0,1 };
+			break;
+		case 3:
+			cache->rotationAxis = transform.ToTransformMatrix().Forward().Normal();
+			cache->rotationAxisColor = { 0,0,1,1 };
+			break;
+		default:
+			break;
+		}
+	}
+
+	//Graphics::Get()->GetDebugGraphics()->DrawDirection(transform.GetPosition(), cache->rotationAxis * 20.0f);
+
 	modified |= ImGui::DragFloat3("Position", &transform.Position()[0], 0.01f, -INFINITY, INFINITY);
 
 	if (modified)
 	{
-		transform.Rotation() = Quaternion(euler);
+		switch (cache->rotationInspectType)
+		{
+		case 1:
+		case 2:
+		case 3:
+			transform.Rotation() = Mat4::Rotation(cache->startQuat) * Mat4::Rotation(cache->rotationAxis, cache->rotationOffset);
+			break;
+		default:
+			transform.Rotation() = Quaternion(euler);
+			break;
+		}
 
 		auto input = Variant::Of<Transform>();
 		input.As<Transform>() = transform;
@@ -70,9 +161,20 @@ void DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor
 
 		//std::cout << cache->euler.x << ", " << cache->euler.y << ", " << cache->euler.z << "\n";
 	}
+
+	if (outputRotateAxis)
+	{
+		*outputRotateAxis = cache->rotationAxis;
+	}
+	return modified;
 }
 
-void DataInspector::InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+{
+	return InspectTransformEx(metadata, accessor, variant, propertyName);
+}
+
+bool DataInspector::InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	auto& v = variant.As<bool>();
 	auto name = "## " + String(propertyName);
@@ -81,10 +183,14 @@ void DataInspector::InspectBool(ClassMetadata* metadata, Accessor& accessor, con
 		auto input = Variant::Of<bool>();
 		input.As<bool>() = v;
 		accessor.Set(input);
+
+		return true;
 	}
+
+	return false;
 }
 
-void DataInspector::InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectFloat(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	auto& v = variant.As<float>();
 	auto name = "## " + String(propertyName);
@@ -93,10 +199,14 @@ void DataInspector::InspectFloat(ClassMetadata* metadata, Accessor& accessor, co
 		auto input = Variant::Of<float>();
 		input.As<float>() = v;
 		accessor.Set(input);
+
+		return true;
 	}
+
+	return false;
 }
 
-void DataInspector::InspectUint64(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectUint64(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	auto& v = variant.As<uint64_t>();
 	int temp = (int)v;
@@ -106,10 +216,14 @@ void DataInspector::InspectUint64(ClassMetadata* metadata, Accessor& accessor, c
 		auto input = Variant::Of<uint64_t>();
 		input.As<uint64_t>() = temp;
 		accessor.Set(input);
+
+		return true;
 	}
+
+	return false;
 }
 
-void DataInspector::InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectVec3(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	//const static char* cacheNameFmt = "editor_InspectVec3_{}";
 
@@ -120,10 +234,14 @@ void DataInspector::InspectVec3(ClassMetadata* metadata, Accessor& accessor, con
 		auto input = Variant::Of<Vec3>();
 		input.As<Vec3>() = vec;
 		accessor.Set(input);
+
+		return true;
 	}
+
+	return false;
 }
 
-void DataInspector::InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	const static char* cacheNameFmt = "editor_InspectProjectionMat4_{}";
 	struct ProjectionMat4Cache
@@ -303,33 +421,56 @@ void DataInspector::InspectProjectionMat4(ClassMetadata* metadata, Accessor& acc
 		input.As<Mat4>() = mat;
 		accessor.Set(input);
 	}
+
+	return modified;
 }
 
-void DataInspector::InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	auto& path = variant.AsString();
 	ImGui::LabelText("##label", path.c_str());
+	return false;
 }
 
-void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
-	bool allowOutsideResources, float width, bool directory)
+bool DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName,
+	bool allowOutsideResources, float width, bool directory, const String& startPath, bool directOpenSystemDialog)
 {
-	auto path = variant.AsString();
-	ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-
-	auto labelName = path + "##" + propertyName;
-
-	bool clicked = ImGui::Button(labelName.c_str(), ImVec2(width <= 0 ? ImGui::GetWindowWidth() * 0.8f : width, 0));
-
-	ImGui::PopStyleVar();
-
-	ImGui::SameLine();
-
-	auto labelName2 = String("...") + "##" + propertyName;
-	clicked = ImGui::Button(labelName2.c_str(), ImVec2(30, 0)) || clicked;
-
-	if (clicked)
+	bool clicked = false;
+	if (!directOpenSystemDialog)
 	{
+		auto path = variant.AsString();
+		ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+
+		auto labelName = path + "##" + propertyName;
+
+		clicked = ImGui::Button(labelName.c_str(), ImVec2(width <= 0 ? ImGui::GetWindowWidth() * 0.8f : width, 0));
+
+		ImGui::PopStyleVar();
+
+		ImGui::SameLine();
+
+		auto labelName2 = String("...") + "##" + propertyName;
+		clicked = ImGui::Button(labelName2.c_str(), ImVec2(30, 0)) || clicked;
+	}
+
+	if (clicked || directOpenSystemDialog)
+	{
+		std::wstring initDir = L"";
+		std::wstring initFilename = L"";
+		if (!startPath.empty())
+		{
+			if (startPath[startPath.length() - 1] == '/')
+			{
+				initDir = StringUtils::StringToWString(startPath.c_str());
+			}
+			else
+			{
+				auto fileName = FileUtils::GetLastName(startPath.c_str());
+				initFilename = StringUtils::StringToWString(fileName.c_str());
+				initDir = StringUtils::StringToWString(FileUtils::PopPath(startPath).c_str());
+			}
+		}
+
 #ifdef _WIN32
 		if (!directory)
 		{
@@ -342,9 +483,9 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 			ofn.nMaxFile = sizeof(Filestring);
 			ofn.lpstrFilter = L"All\0*.*\0Text\0*.TXT\0";
 			ofn.nFilterIndex = 1;
-			ofn.lpstrFileTitle = NULL;
-			ofn.nMaxFileTitle = 0;
-			ofn.lpstrInitialDir = NULL;
+			ofn.lpstrFileTitle = initFilename.empty() ? NULL : initFilename.data();
+			ofn.nMaxFileTitle = initFilename.size();
+			ofn.lpstrInitialDir = initDir.empty() ? NULL : initDir.c_str();
 			ofn.Flags = OFN_NOCHANGEDIR;//OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
 			if (GetOpenFileName(&ofn) == TRUE)
@@ -367,13 +508,13 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 					{
 						input.As<String>() = fullPath.c_str();
 						accessor.Set(input);
-						return;
+						return true;
 					}
 
 					auto rpath = fullPath.substr(rcpath.length());
 					input.As<String>() = rpath.c_str();
 					accessor.Set(input);
-					return;
+					return true;
 				}
 
 				auto rcpath = FileSystem::Get()->GetResourcesRootPath();
@@ -381,12 +522,14 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 				if (fullPath.find(rcpath.c_str()) != 0)
 				{
 					std::cerr << "Resources must be placed under \"" << rcpath << "\"\n";
-					return;
+					return false;
 				}
 
 				auto rpath = fullPath.substr(rcpath.length());
 				input.As<String>() = rpath.c_str();
 				accessor.Set(input);
+
+				return true;
 			}
 		}
 		
@@ -458,24 +601,28 @@ void DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 				auto input = Variant(VARIANT_TYPE::STRING_PATH);
 				input.As<String>() = (std::filesystem::relative(p, base).generic_string() + "/").c_str();
 				accessor.Set(input);
+
+				return true;
 			}
 		}
 #endif // WIN32
 	}
+
+	return false;
 }
 
-void DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
+bool DataInspector::InspectStringPath(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
-	InspectStringPathEx(metadata, accessor, variant, propertyName, false);
+	return InspectStringPathEx(metadata, accessor, variant, propertyName, false);
 }
 
-void DataInspector::Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName)
+bool DataInspector::Inspect(ClassMetadata* metadata, Accessor& accessor, const char* propertyName)
 {
 	auto variant = accessor.Get();
 	auto func = s_inspectFunc[variant.Type()];
 	if (func)
 	{
-		func(metadata, accessor, variant, propertyName);
+		return func(metadata, accessor, variant, propertyName);
 	}
 }
 

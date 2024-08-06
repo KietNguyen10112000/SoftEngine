@@ -919,9 +919,9 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 	{
 		auto& mat = m_inspectingObject->GetCommittedGlobalTransform();
 
-		debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
-		debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
-		debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
+		debugGraphics->DrawRay(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
+		debugGraphics->DrawRay(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
+		debugGraphics->DrawRay(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
 
 		/*auto physicsComp = m_inspectingObject->GetComponentRaw<PhysicsComponent>();
 		if (physicsComp)
@@ -967,9 +967,9 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 	//debugGraphics->DrawSphere({ Vec3(0, 0, 0), 1 }, Vec4(1, 0, 0, 1));
 	//debugGraphics->DrawDirection(Vec3(0, 0, 0.5f), Vec3::X_AXIS, { 0,0,1,1 }, { 0,1,0,1 });
 
-	//debugGraphics->DrawCapsule(Capsule(Vec3(5, 0, 5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
-	//debugGraphics->DrawDirection(Vec3(5, 0, 5), Capsule::DEFAULT_UP_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
-	//debugGraphics->DrawDirection(Vec3(5, 2.5f, 5), Vec3::X_AXIS * 2.0f, { 0,0,1,1 }, { 0,1,0,1 });
+	//debugGraphics->DrawCapsule(Capsule(Vec3(0, 0, 0), 2.0f, 1.0f), Vec4(1, 0, 0, 1));
+	//debugGraphics->DrawRay(Vec3(0, 0, 0), Capsule::DEFAULT_UP_AXIS, { 0,0,1,1 }, { 0,1,0,1 });
+	//debugGraphics->DrawRay(Vec3(0, 1, 0), Vec3::X_AXIS, { 0,0,1,1 }, { 0,1,0,1 });
 
 	//debugGraphics->DrawCapsule(Capsule(Vec3(1, 1, 1), Vec3(5, 0, -5), 5.0f, 2.0f), Vec4(1, 0, 0, 1));
 	//debugGraphics->DrawDirection(Vec3(5, 0, -5), Vec3::X_AXIS * 2.5f, { 0,0,1,1 }, { 0,1,0,1 });
@@ -1127,7 +1127,7 @@ void SceneEditorTab::OnShow()
 		[](EditorContext* ctx, int argc, void** argv, ID id)
 		{
 			auto self = (SceneEditorTab*)id;
-			auto path = GetSavePath(self->m_name);
+			auto path = self->GetSaveFilePath();
 
 			SceneEditorSaveData data(self);
 			
@@ -1186,16 +1186,6 @@ void SceneEditorTab::OnClose()
 	Runtime::Get()->EventDispatcher()->RemoveListener(m_scriptsHotReloadListenerIdBegin);
 	Runtime::Get()->EventDispatcher()->RemoveListener(m_scriptsHotReloadListenerIdEnd);
 #endif // PLUGIN_ALLOW_HOT_RELOAD
-}
-
-String SceneEditorTab::GetSavePath(const String& name)
-{
-	return EditorContext::Get()->GetSavePath() + "SceneEditor/" + name + ".json";
-}
-
-String SceneEditorTab::GetSaveFilePath()
-{
-	return GetSavePath(m_name);
 }
 
 void SceneEditorTab::OnObjectDelete(GameObject* obj)

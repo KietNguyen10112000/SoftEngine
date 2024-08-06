@@ -130,6 +130,9 @@
     <ClCompile Include="GameObjectEditorTabFactory.cpp">
       <Filter>Source Files\EditorTabs\Factories</Filter>
     </ClCompile>
+    <ClCompile Include="SystemDialog.cpp">
+      <Filter>Source Files\EditorTabs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -224,6 +227,9 @@
     </ClInclude>
     <ClInclude Include="GameObjectEditorTabFactory.h">
       <Filter>Source Files\EditorTabs\Factories</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemDialog.h">
+      <Filter>Source Files\EditorTabs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

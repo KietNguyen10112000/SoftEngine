@@ -12,8 +12,10 @@ public:
 
 	void OnShow() override;
 
-	static String GetSavePath(const String& name);
-
+	inline virtual String GetTabClassName() const override
+	{
+		return "GameObjectEditor";
+	}
 
 	using SceneEditorTab::OnObjectSelected;
 

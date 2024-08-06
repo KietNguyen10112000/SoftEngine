@@ -116,6 +116,8 @@ public:
 
 	EditorTab* m_tabHolder = nullptr;
 
+	String m_savingPath = "";
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -137,6 +139,8 @@ private:
 	void RenderDialogs();
 
 	void CloseDialogImpl(DialogData* dialog);
+
+	void DoSave(const String& path);
 
 public:
 	void OnObjectsAdded(std::vector<GameObject*>& objects, Scene* scene);

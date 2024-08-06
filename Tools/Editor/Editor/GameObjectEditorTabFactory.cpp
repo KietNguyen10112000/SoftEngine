@@ -50,7 +50,7 @@ Handle<EditorTab> GameObjectEditorTabFactory::CreateInstance()
 	auto ext = FileUtils::GetExtension(m_filePath);
 	String tabName = m_nameBuf;
 
-	if (ext == "json")
+	if (ext == "json" || ext == "GameObjectEditor")
 	{
 		goto LoadJson;
 	}
@@ -60,10 +60,10 @@ Handle<EditorTab> GameObjectEditorTabFactory::CreateInstance()
 		goto Failed;
 	}
 
-	if (AskIfExisted(GameObjectEditorTab::GetSavePath(tabName)))
+	/*if (AskIfExisted(GameObjectEditorTab::GetSavePath(tabName)))
 	{
 		goto Failed;
-	}
+	}*/
 
 	goto Succeed;
 
@@ -92,6 +92,7 @@ LoadJson:
 		auto fileName = FileUtils::GetLastName(m_filePath.c_str());
 		tab->m_name = fileName.SubString(0, fileName.FindLastOf('.'));
 		tab->m_scene = scene;
+		tab->SetSaveFilePath(m_filePath);
 
 		tab->ReadSaveDataFromJson(&serializer, data->m_savedJson);
 

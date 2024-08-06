@@ -13,6 +13,7 @@ class API RigidBodyDynamic : public RigidBody
 {
 protected:
 	byte m_isKinematic = 0;
+	float m_density = 1.0f;
 
 	COMPONENT_CLASS(RigidBodyDynamic);
 
@@ -55,7 +56,8 @@ public:
 
 public:
 	void SetDensity(float density);
-	float GetMass();
+	float GetDensity() const;
+	float GetMass() const;
 
 	void SetKinematic(bool enable);
 	bool IsKinematic() const;

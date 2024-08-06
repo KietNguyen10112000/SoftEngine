@@ -38,6 +38,11 @@ public:
 
 	float m_currentAlpha = 0.498f;
 
+	int m_choosingCreateShapeIdx = 0;
+	int m_countReloadShapeInspectorData = 0;
+
+	Transform m_tempShapeLocalTransform = {};
+
 public:
 	RigidBodyInspector(RigidBody* body, ClassMetadata* metadata);
 
@@ -51,7 +56,11 @@ private:
 	void InspectShapePlane(PhysicsShape* shape);
 	void InspectShapeSphere(PhysicsShape* shape);
 
+	void InspectMaterials(PhysicsShape* shape);
+
 	void DrawDebug(PhysicsShape* shape, const Vec4& color);
+
+	void OnSelectShape(int idx);
 
 	static void SetOpacityForObject(GameObject* o, float alpha);
 public:

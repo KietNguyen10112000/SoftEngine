@@ -1964,7 +1964,7 @@ void AnimatorEditorTab::OnShow()
 			auto ext = FileUtils::GetExtension(path);
 			if (ext != "json")
 			{
-				path = GetSavePath(tab->m_name);
+				path = tab->GetSaveFilePath();
 			}
 
 			serializer.WriteToFile(path);
@@ -3602,9 +3602,4 @@ void AnimatorEditorTab::InitializeSerializableList()
 {
 	SerializableDB::Get()->Register<AnimBlendLayerNode::CustomFunction1D>();
 	SerializableDB::Get()->Register<AnimBlendLayerNode::FixedFunction1D>();
-}
-
-String AnimatorEditorTab::GetSavePath(const String& name)
-{
-	return EditorContext::Get()->GetSavePath() + "AnimatorEditor/" + name + ".json";
 }

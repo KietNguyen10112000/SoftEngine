@@ -115,7 +115,10 @@ public:
 	void OnOpen() override;
 	void OnClose() override;
 
-	String GetSaveFilePath() override;
+	inline virtual String GetTabClassName() const override
+	{
+		return "SceneEditor";
+	}
 
 	void OnObjectDelete(GameObject* obj);
 	void AddObjectToEditor(GameObject* obj);
@@ -132,8 +135,6 @@ public:
 	void Inspect(ClassMetadata* metaData);
 	void WriteSaveDataToJson(Serializer* serializer, json& j);
 	void ReadSaveDataFromJson(Serializer* serializer, const json& j);
-
-	static String GetSavePath(const String& name);
 
 };
 
