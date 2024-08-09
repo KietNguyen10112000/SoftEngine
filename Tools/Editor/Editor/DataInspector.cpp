@@ -73,19 +73,39 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 
 	if (!hideScale)
 	{
-		modified |= ImGui::DragFloat3("Scale", &transform.Scale()[0], 0.01f, -INFINITY, INFINITY);
+		modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 0.01f, -INFINITY, INFINITY);
 	}
 
+	ImVec2 cursorPos = { 0,0 };
 	if (cache->rotationInspectType == 0)
 	{
-		modified |= ImGui::DragFloat3("Rotation    ", &euler[0], 0.01f, -INFINITY, INFINITY);
+		modified |= ImGui::DragFloatN_Colored("Rotation    ", &euler[0], 3, 0.001f, -INFINITY, INFINITY);
 	}
 	else
 	{
-		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 0.01f, -INFINITY, INFINITY);
+		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 0.001f, -INFINITY, INFINITY);
+
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
+		ImGuiContext& g = *GImGui;
+		const ImVec2 min = ImGui::GetItemRectMin();
+		const ImVec2 max = ImGui::GetItemRectMax();
+		const float spacing = g.Style.FrameRounding;
+		const float halfSpacing = spacing / 2;
+
+		const ImU32 s_colors[] = {
+			0xBB0000FF, // red
+			0xBB00FF00, // green
+			0xBBFF0000, // blue
+			0xBBFFFFFF, // white for alpha?
+		};
+
+		window->DrawList->AddLine({ min.x + spacing, max.y - halfSpacing }, { max.x - spacing, max.y - halfSpacing }, s_colors[cache->rotationInspectType - 1], 4);
+
 		ImGui::SameLine(); 
+
+		cursorPos = ImGui::GetCursorPos();
 		
-		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, cache->rotationAxisColor);
+		//ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, cache->rotationAxisColor);
 		String text;
 		switch (cache->rotationInspectType)
 		{
@@ -101,11 +121,19 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		default:
 			break;
 		}
+
+		auto pos = ImGui::GetCursorPos();
+		ImGui::SetCursorPos(ImVec2(pos.x - 4, pos.y));
 		ImGui::TextUnformatted(text.c_str());
-		ImGui::PopStyleColor();
+		//ImGui::PopStyleColor();
 	}
 
 	ImGui::SameLine();
+	if (cursorPos.x != 0)
+	{
+		ImGui::SetCursorPos(ImVec2(cursorPos.x + ImGui::CalcTextSize("Rotation    ").x + 4, cursorPos.y));
+	}
+
 	if (ImGui::Button(ICON_FA_ROTATE))
 	{
 		cache->rotationInspectType = (cache->rotationInspectType + 1) % 4;
@@ -136,7 +164,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 
 	//Graphics::Get()->GetDebugGraphics()->DrawDirection(transform.GetPosition(), cache->rotationAxis * 20.0f);
 
-	modified |= ImGui::DragFloat3("Position", &transform.Position()[0], 0.01f, -INFINITY, INFINITY);
+	modified |= ImGui::DragFloatN_Colored("Position", &transform.Position()[0], 3, 0.01f, -INFINITY, INFINITY);
 
 	if (modified)
 	{

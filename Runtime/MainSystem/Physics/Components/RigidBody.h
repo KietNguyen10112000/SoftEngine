@@ -90,6 +90,8 @@ public:
 	void AddShape(const SharedPtr<PhysicsShape>& shape);
 	void RemoveShape(PhysicsShape* shape);
 
+	void ScaleBy(float scale);
+
 	inline PhysicsShape* GetShape(ID index) const
 	{
 		return m_shapes[index].get();

@@ -107,6 +107,14 @@ void PhysicsShapeCapsule::OnPropertyChanged(const UnknownAddress& var, const Var
 {
 }
 
+void PhysicsShapeCapsule::ScaleBy(float scale)
+{
+	auto r = GetRadius();
+	auto h = GetHeight();
+	SetRadius(r * scale);
+	SetHeight(h * scale);
+}
+
 void PhysicsShapeCapsule::SetHeight(float h)
 {
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, h,

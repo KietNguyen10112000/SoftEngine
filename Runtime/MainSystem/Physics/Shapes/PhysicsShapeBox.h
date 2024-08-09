@@ -33,6 +33,8 @@ protected:
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
+	virtual void ScaleBy(float scale) override;
+
 	void SetDimensions(const Vec3& dimensions);
 	Vec3 GetDimensions() const;
 

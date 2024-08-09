@@ -484,7 +484,7 @@ void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Ve
 	DrawCube(cubeTransform, color, true);
 }
 
-void DebugGraphics::DrawRay(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor)
+void DebugGraphics::DrawRay(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor, float thickness)
 {
 	auto dir = direction.Normal();
 	Quaternion quat = Quaternion::RotationFromTo(Vec3::UP, dir);
@@ -513,7 +513,7 @@ void DebugGraphics::DrawRay(const Vec3& origin, const Vec3& direction, const Vec
 
 	auto d = direction.Length() / 2.0f - 0.2f / 2.0f;
 	Mat4 cubeTransform = Mat4::Identity();
-	cubeTransform *= Mat4::Scaling(0.02f, d, 0.02f);
+	cubeTransform *= Mat4::Scaling(thickness, d, thickness);
 	cubeTransform *= Mat4::Translation(Vec3::UP * d);
 	cubeTransform *= rot;
 	cubeTransform *= Mat4::Translation(origin);

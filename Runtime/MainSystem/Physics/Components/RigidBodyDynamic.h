@@ -18,7 +18,7 @@ protected:
 	COMPONENT_CLASS(RigidBodyDynamic);
 
 public:
-	inline RigidBodyDynamic() {};
+	RigidBodyDynamic();
 	RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape);
 	~RigidBodyDynamic();
 

@@ -26,6 +26,9 @@ public:
 	struct ShapeInspectorData
 	{
 		SharedPtr<PhysicsShape> shape;
+
+		bool deleted = false;
+		bool locked = true;
 	};
 
 	ClassMetadata* m_metadata = nullptr;
@@ -34,7 +37,7 @@ public:
 	PHYSICS_TYPE m_bodyType = PHYSICS_TYPE::PHYSICS_TYPE_RIGID_BODY_DYNAMIC;
 
 	std::vector<ShapeInspectorData> m_shapeDatas;
-	int m_choosingShapeIdx = 0;
+	int m_choosingShapeIdx = -1;
 
 	float m_currentAlpha = 0.498f;
 
@@ -42,6 +45,8 @@ public:
 	int m_countReloadShapeInspectorData = 0;
 
 	Transform m_tempShapeLocalTransform = {};
+
+	bool m_hideAllOtherShapes = false;
 
 public:
 	RigidBodyInspector(RigidBody* body, ClassMetadata* metadata);
@@ -58,7 +63,7 @@ private:
 
 	void InspectMaterials(PhysicsShape* shape);
 
-	void DrawDebug(PhysicsShape* shape, const Vec4& color);
+	void DrawDebug(PhysicsShape* shape, const Vec4& color, bool showBasis);
 
 	void OnSelectShape(int idx);
 

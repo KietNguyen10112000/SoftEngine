@@ -153,7 +153,6 @@
     <ClCompile Include="EditorFont.cpp" />
     <ClCompile Include="EditorTab.cpp" />
     <ClCompile Include="EditorTabFactory.cpp" />
-    <ClCompile Include="FileChooser.cpp" />
     <ClCompile Include="GameObjectEditorSaveData.cpp" />
     <ClCompile Include="GameObjectEditorTab.cpp" />
     <ClCompile Include="GameObjectEditorTabFactory.cpp" />
@@ -187,7 +186,6 @@
     <ClInclude Include="EditorFont.h" />
     <ClInclude Include="EditorTab.h" />
     <ClInclude Include="EditorTabFactory.h" />
-    <ClInclude Include="FileChooser.h" />
     <ClInclude Include="GameObjectEditorSaveData.h" />
     <ClInclude Include="GameObjectEditorTab.h" />
     <ClInclude Include="GameObjectEditorTabFactory.h" />

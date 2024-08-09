@@ -425,6 +425,11 @@ public:
         return (dot * dot - Length2() * v.Length2()) == 0 && dot > 0;
     }
 
+    inline bool Equals(const Vec3& v, float eps = 0.0f)
+    {
+        return std::abs(x - v.x) <= eps && std::abs(y - v.y) <= eps && std::abs(z - v.z) <= eps;
+    }
+
     // take xy component as Vec2
     inline Vec2& xy() const
     {

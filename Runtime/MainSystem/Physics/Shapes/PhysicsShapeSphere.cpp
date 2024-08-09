@@ -82,6 +82,12 @@ void PhysicsShapeSphere::OnPropertyChanged(const UnknownAddress& var, const Vari
 {
 }
 
+void PhysicsShapeSphere::ScaleBy(float scale)
+{
+	auto r = GetRadius();
+	SetRadius(r * scale);
+}
+
 void PhysicsShapeSphere::SetRadius(float r)
 {
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, r,

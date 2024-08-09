@@ -54,4 +54,8 @@ void PhysicsShapePlane::OnPropertyChanged(const UnknownAddress& var, const Varia
 {
 }
 
+void PhysicsShapePlane::ScaleBy(float scale)
+{
+}
+
 NAMESPACE_END

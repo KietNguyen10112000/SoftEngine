@@ -66,6 +66,8 @@ public:
 	void SetLocalTransform(const Transform& transform);
 	Transform GetLocalTransform() const;
 
+	virtual void ScaleBy(float scale) = 0;
+
 };
 
 NAMESPACE_END

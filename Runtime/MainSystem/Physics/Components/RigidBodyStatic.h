@@ -14,7 +14,7 @@ class API RigidBodyStatic : public RigidBody
 public:
 	COMPONENT_CLASS(RigidBodyStatic);
 
-	inline RigidBodyStatic() {};
+	RigidBodyStatic();
 	RigidBodyStatic(const SharedPtr<PhysicsShape>& shape);
 	~RigidBodyStatic();
 

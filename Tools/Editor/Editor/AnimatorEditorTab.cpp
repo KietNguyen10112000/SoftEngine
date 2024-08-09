@@ -30,7 +30,9 @@
 
 #include "Graphics/DebugGraphics.h"
 
-#include "FileChooser.h"
+//#include "FileChooser.h"
+
+#include "SystemDialog.h"
 
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 
@@ -1728,10 +1730,18 @@ void AnimatorEditorTab::OnRenderGUI()
 		{
 			if (ImGui::Button(ICON_FA_FILE_IMPORT " Import Motion"))
 			{
-				auto path = FileChooser::OpenFileChooser("", false);
+				SystemDialog::FileChooserDialog otp;
+				otp.forceInsideResourcesPath = true;
+				otp.extensionGroups = {
+					{
+						"3D Annimated Model File (*.fbx, *.dae, *.stl)",
+						{ "fbx", "dae", "stl" }
+					}
+				};
+				bool success = SystemDialog::OpenFileChooser(otp);
 
 				std::vector<Resource<AnimMotion>> motions;
-				if (!path.empty() && ResourceUtils::LoadAnimMotion(path, motions) == 0)
+				if (success && ResourceUtils::LoadAnimMotion(otp.outputFilePath, motions) == 0)
 				{
 					for (auto& m : motions)
 					{

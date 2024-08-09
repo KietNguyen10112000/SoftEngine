@@ -9,6 +9,7 @@
 
 #include "AnimatorEditorTab.h"
 #include "SceneEditorSaveData.h"
+#include "GameObjectEditorSaveData.h"
 
 inline void InitializeScriptList()
 {
@@ -17,6 +18,7 @@ inline void InitializeScriptList()
 
 	SerializableDB::Get()->Register<AnimatorEditorSaveData>();
 	SerializableDB::Get()->Register<SceneEditorSaveData>();
+	SerializableDB::Get()->Register<GameObjectEditorSaveData>();
 
 	AnimatorEditorTab::InitializeSerializableList();
 }

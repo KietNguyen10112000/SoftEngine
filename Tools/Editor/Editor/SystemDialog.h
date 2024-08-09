@@ -22,5 +22,14 @@ struct SystemDialog
 		std::vector<ExtensionFilterGroup> extensionGroups;
 	};
 
+	struct FileChooserDialog
+	{
+		String outputFilePath;
+
+		std::vector<ExtensionFilterGroup> extensionGroups;
+		bool forceInsideResourcesPath = false;
+	};
+
 	static bool OpenSaveAsDialog(SaveAsDialog& opt);
+	static bool OpenFileChooser(FileChooserDialog& opt);
 };

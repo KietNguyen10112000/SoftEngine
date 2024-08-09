@@ -14,6 +14,8 @@
 #include "../FILTER_DATA.h"
 #include "../Joints/Joint.h"
 
+#include "RigidBodyDynamic.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -320,6 +322,14 @@ void RigidBody::AddShapeImpl(const SharedPtr<PhysicsShape>& shape)
 	{
 		shape->m_attachedRigidBody = nullptr;
 	}
+
+	auto dynamic = body->is<PxRigidDynamic>();
+	if (dynamic)
+	{
+		auto comp = (RigidBodyDynamic*)this;
+		PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
+		if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
+	}
 }
 
 void RigidBody::RemoveShapeImpl(PhysicsShape* shape)
@@ -331,12 +341,21 @@ void RigidBody::RemoveShapeImpl(PhysicsShape* shape)
 	{
 		shape->m_attachedRigidBody = nullptr;
 	}
-	std::remove_if(m_shapes.begin(), m_shapes.end(), 
+	m_shapes.erase(std::remove_if(m_shapes.begin(), m_shapes.end(),
 		[shape](const SharedPtr<PhysicsShape>& s)
 		{
-			return s.get() == shape;
+			auto v= s.get() == shape;
+			return v;
 		}
-	);
+	));
+
+	auto dynamic = body->is<PxRigidDynamic>();
+	if (dynamic)
+	{
+		auto comp = (RigidBodyDynamic*)this;
+		PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
+		if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
+	}
 }
 
 void RigidBody::SetContactFilterCallback(ContactReportFilterCallback callback)
@@ -373,6 +392,17 @@ void RigidBody::RemoveShape(PhysicsShape* shape)
 			self->RemoveShapeImpl(shape);
 		}
 	);
+}
+
+void RigidBody::ScaleBy(float scale)
+{
+	for (auto& shape : m_shapes)
+	{
+		shape->ScaleBy(scale);
+		auto transform = shape->GetLocalTransform();
+		transform.Position() *= scale;
+		shape->SetLocalTransform(transform);
+	}
 }
 
 NAMESPACE_END

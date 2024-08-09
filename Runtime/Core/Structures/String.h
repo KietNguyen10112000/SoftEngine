@@ -8,6 +8,7 @@
 #include <string>
 #include <cstdlib>
 #include <sstream>
+#include <algorithm>
 
 #include "Core/Memory/Memory.h"
 
@@ -539,6 +540,14 @@ public:
 	{
 		std::string_view s = c_str();
 		return s.rfind(val, offset);
+	}
+
+	// utf-8 may not work
+	String ToLower() const
+	{
+		std::string s = c_str();
+		std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+		return s.c_str();
 	}
 };
 

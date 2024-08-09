@@ -100,9 +100,6 @@
     <ClCompile Include="NodeEditorUtils\widgets.cpp">
       <Filter>Libraries\imgui-node-editor\utils</Filter>
     </ClCompile>
-    <ClCompile Include="FileChooser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="EditorFont.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -194,9 +191,6 @@
     </ClInclude>
     <ClInclude Include="NodeEditorUtils\widgets.h">
       <Filter>Libraries\imgui-node-editor\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="FileChooser.h">
-      <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="EditorFont.h">
       <Filter>Source Files</Filter>

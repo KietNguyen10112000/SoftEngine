@@ -17,14 +17,17 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
-RigidBodyDynamic::RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape)
+RigidBodyDynamic::RigidBodyDynamic()
 {
 	auto physics = PhysX::Get()->GetPxPhysics();
 
 	auto body = physics->createRigidDynamic(PxTransform(PxIdentity));
 	m_pxActor = body;
 	m_pxActor->userData = this;
+}
 
+RigidBodyDynamic::RigidBodyDynamic(const SharedPtr<PhysicsShape>& shape) : RigidBodyDynamic()
+{
 	AddShape(shape);
 }
 
@@ -237,10 +240,18 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 {
 	RigidBody::DeserializeFromJson(serializer, j);
 
-	auto physics = PhysX::Get()->GetPxPhysics();
-	auto body = physics->createRigidDynamic(PxTransform(PxIdentity));
-	m_pxActor = body;
-	m_pxActor->userData = this;
+	PxRigidDynamic* body;
+	if (m_pxActor == nullptr)
+	{
+		auto physics = PhysX::Get()->GetPxPhysics();
+		body = physics->createRigidDynamic(PxTransform(PxIdentity));
+		m_pxActor = body;
+		m_pxActor->userData = this;
+	}
+	else
+	{
+		body = m_pxActor->is<PxRigidDynamic>();
+	}
 
 	for (auto& shape : m_shapes)
 	{

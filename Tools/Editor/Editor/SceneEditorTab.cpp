@@ -191,7 +191,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			// right-click popup menu on object name
 			if (ImGui::BeginPopupContextItem())
 			{
-				if (ImGui::Button("Rename"))
+				if (ImGui::MenuItem("Rename"))
 				{
 					m_nameInputTxt[0] = 0;
 					m_renameObject = obj;
@@ -199,7 +199,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 					ImGui::CloseCurrentPopup();
 				}
 
-				if (ImGui::Button("Delete"))
+				if (ImGui::MenuItem("Delete"))
 				{
 					bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
 
@@ -293,9 +293,28 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				ImGui::TreePop();
 			}*/
 
+			if (obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile)
+			{
+				bool enable = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+
+				ImGui::SameLine(ImGui::GetWindowWidth() - 35, -1.0f);
+				ImGui::BeginDisabled(!enable);
+				ImGui::PushFont(EditorFont::Get()->GetFont(22));
+
+				if (ImGui::Button(ICON_FA_FIRE))
+				{
+
+				}
+
+				ImGui::PopFont();
+				ImGui::EndDisabled();
+				ImGui::Dummy({ 0, 0 });
+			}
+
 			// place a small space to let one drag to
-			if ((obj->Parent().Get() == nullptr && obj == m_objects.back())
+			if (((obj->Parent().Get() == nullptr && obj == m_objects.back())
 				|| (obj->Parent().Get() != nullptr && obj->Parent()->Children().back().Get() == obj))
+				&& !(open && obj->Children().size() != 0))
 			{
 				bool selected = false;
 				ImGui::Selectable(String::Format("## {}", obj).c_str(), &selected, ImGuiSelectableFlags_Disabled, { 0,5 });
@@ -376,24 +395,6 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 						ImGui::EndDragDropTarget();
 					}
 				}
-			}
-
-			if (obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile)
-			{
-				bool enable = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
-
-				ImGui::SameLine(ImGui::GetWindowWidth() - 35, -1.0f);
-				ImGui::BeginDisabled(!enable);
-				ImGui::PushFont(EditorFont::Get()->GetFont(22));
-
-				if (ImGui::Button(ICON_FA_FIRE))
-				{
-
-				}
-
-				ImGui::PopFont();
-				ImGui::EndDisabled();
-				ImGui::Dummy({ 0, 0 });
 			}
 
 			return open;
@@ -730,6 +731,7 @@ void SceneEditorTab::ShowCreateComponentPopup()
 					m_inspectingObject->AddComponent(DynamicCast<RenderingComponent>(comp));
 					break;
 				case MainSystemInfo::PHYSICS_ID:
+					m_inspectingObject->AddComponent(DynamicCast<PhysicsComponent>(comp));
 					break;
 				case MainSystemInfo::SCRIPTING_ID:
 					m_inspectingObject->AddComponent(DynamicCast<Script>(comp));
@@ -852,11 +854,11 @@ Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
 
 Handle<GameObject> SceneEditorTab::LoadStaticModelFromFile(const String& path)
 {
-	auto ext = FileUtils::GetExtension(path);
+	auto ext = FileUtils::GetExtension(path).ToLower();
 	if (ext != "fbx" 
-		|| ext != "obj"
-		|| ext != "dae"
-		|| ext != "stl")
+		&& ext != "obj"
+		&& ext != "dae"
+		&& ext != "stl")
 	{
 		std::cerr << "[ERROR]: SceneEditorTab::LoadStaticModelFromFile() - invalid file!\n";
 		return nullptr;
@@ -869,7 +871,9 @@ Handle<GameObject> SceneEditorTab::LoadStaticModelFromFile(const String& path)
 		return nullptr;
 	}
 
-	return model->MakeGameObject();
+	auto obj = model->MakeGameObject();
+	IndexObject(obj);
+	return obj;
 }
 
 void SceneEditorTab::ReindexObjects()
@@ -888,6 +892,18 @@ void SceneEditorTab::ReindexChildren(Array<Handle<GameObject>>& children)
 	{
 		*(ID*)&o->ParentIdx() = i++;
 	}
+}
+
+void SceneEditorTab::IndexObject(GameObject* obj)
+{
+	obj->PostTraversal([](GameObject* o)
+		{
+			if (!o->HasComponent<GameObjectEditorComponent>())
+			{
+				o->NewComponent<GameObjectEditorComponent>();
+			}
+		}
+	);
 }
 
 void SceneEditorTab::OnRenderGUI()
@@ -1063,7 +1079,7 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 					//ImGui::SameLine();
 					auto pos = ImGui::GetCursorPos();
 					ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 50, pos.y - 35));
-					String btnName = String("x") + "##" + metadata->GetName();
+					String btnName = String(ICON_FA_TRASH) + "##" + metadata->GetName();
 					if (ImGui::Button(btnName.c_str(), ImVec2(30, 30)))
 					{
 						m_removeComp = dynamic_cast<MainComponent*>(metadata->GetInstance());
@@ -1209,14 +1225,7 @@ void SceneEditorTab::AddObjectToEditor(GameObject* obj)
 		return;
 	}
 
-	obj->PostTraversal([](GameObject* o)
-		{
-			if (!o->HasComponent<GameObjectEditorComponent>())
-			{
-				o->NewComponent<GameObjectEditorComponent>();
-			}
-		}
-	);
+	IndexObject(obj);
 
 	auto editorComp = obj->GetComponentRaw<GameObjectEditorComponent>();
 	editorComp->id = m_objects.size();

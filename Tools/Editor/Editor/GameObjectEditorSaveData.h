@@ -8,6 +8,8 @@ class GameObjectEditorSaveData : public SceneEditorSaveData
 public:
 	using Base = SceneEditorSaveData;
 
+	SERIALIZABLE_CLASS(GameObjectEditorSaveData);
+
 	inline GameObjectEditorSaveData() {};
 	GameObjectEditorSaveData(GameObjectEditorTab* tab);
 

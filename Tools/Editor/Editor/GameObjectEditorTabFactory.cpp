@@ -19,7 +19,7 @@
 
 GameObjectEditorTabFactory::GameObjectEditorTabFactory()
 {
-	m_tabKindName = "GameObjectEditorTabFactory";
+	m_tabKindName = "GameObjectEditorTab";
 }
 
 void GameObjectEditorTabFactory::Begin()
@@ -86,6 +86,7 @@ LoadJson:
 		if (!scene || !data)
 		{
 			std::cerr << "[GameObjectEditorTabFactory] - ERROR: Invalid file!\n";
+			EditorContext::Get()->PlaceHolderTab((EditorTab*)INVALID_ID);
 			return nullptr;
 		}
 

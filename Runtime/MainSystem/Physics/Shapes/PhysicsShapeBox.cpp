@@ -95,6 +95,12 @@ void PhysicsShapeBox::OnPropertyChanged(const UnknownAddress& var, const Variant
 {
 }
 
+void PhysicsShapeBox::ScaleBy(float scale)
+{
+	auto dims = GetDimensions();
+	SetDimensions(dims * scale);
+}
+
 void PhysicsShapeBox::SetDimensions(const Vec3& dimensions)
 {
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, dimensions, 

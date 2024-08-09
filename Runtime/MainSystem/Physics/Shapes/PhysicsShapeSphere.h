@@ -32,6 +32,8 @@ public:
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
+	virtual void ScaleBy(float scale) override;
+
 	void SetRadius(float r);
 	float GetRadius() const;
 

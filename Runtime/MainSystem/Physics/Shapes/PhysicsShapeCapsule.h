@@ -50,6 +50,8 @@ protected:
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
 public:
+	virtual void ScaleBy(float scale) override;
+
 	void SetHeight(float h);
 	float GetHeight() const;
 

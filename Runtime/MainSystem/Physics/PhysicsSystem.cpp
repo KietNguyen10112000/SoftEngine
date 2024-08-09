@@ -59,6 +59,11 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 
 	auto filterDataWord0 = filterData0.word0 | filterData1.word0;
 
+	if (PxFilterObjectIsKinematic(attributes0) && PxFilterObjectIsKinematic(attributes1))
+	{
+		pairFlags &= ~PxPairFlag::eSOLVE_CONTACT;
+	}
+
 	return PxFilterFlag::eDEFAULT 
 		| ((filterDataWord0 & PHYSICS_FILTER_DATA_CALLBACK) ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT);
 }

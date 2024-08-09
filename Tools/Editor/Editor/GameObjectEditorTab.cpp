@@ -4,6 +4,11 @@
 
 #include "imgui/imgui.h"
 
+#include "IconFontCppHeaders/IconsFontAwesome6.h"
+
+#include "SystemDialog.h"
+#include "DataInspector.h"
+
 void GameObjectEditorTab::OnRenderGUI()
 {
 	RenderInspectorPanel();
@@ -17,6 +22,79 @@ void GameObjectEditorTab::OnRenderGUI()
 	ImGui::Begin("Hierarchy", 0, wflags);
 
 	ImGui::Checkbox("Pin Hierarchy Panel", &m_pinHierarchyPanel);
+
+	if (ImGui::Button(ICON_FA_FILE_IMPORT " Import Model"))
+	{
+		SystemDialog::FileChooserDialog otp;
+		otp.forceInsideResourcesPath = true;
+		otp.extensionGroups = {
+			{
+				"3D Static Model File (*.obj, *.fbx, *.dae, *.stl)",
+				{ "obj", "fbx", "dae", "stl" }
+			}
+		};
+
+		if (SystemDialog::OpenFileChooser(otp))
+		{
+			auto obj = LoadStaticModelFromFile(otp.outputFilePath);
+			if (obj)
+			{
+				m_rootObject->AddChild(obj);
+			}
+		}
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_GEAR " Setting"))
+	{
+		EditorContext::Get()->OpenOkCancelDialog({},
+			[](void* p)
+			{
+				auto self = (GameObjectEditorTab*)p;
+				if (ImGui::BeginTable("Exports", 2, ImGuiTableFlags_SizingFixedFit))
+				{
+					auto secondColumnWidth = 0.7f * ImGui::GetWindowWidth();
+					{
+						ImGui::TableNextColumn();
+						ImGui::TextUnformatted("Export Name"); ImGui::SameLine();
+
+						ImGui::TableNextColumn();
+						ImGui::SetNextItemWidth(secondColumnWidth);
+						ImGui::InputText("## Edit export name", self->m_exportInputName, sizeof(self->m_exportInputName));
+					}
+
+					{
+						ImGui::TableNextColumn();
+						ImGui::TextUnformatted("Export Resource Path"); ImGui::SameLine();
+
+						ImGui::TableNextColumn();
+						Accessor temp = Accessor::ForString("Path", self->m_exportResourcePath, nullptr);
+						Variant var = Variant(VARIANT_TYPE::STRING_PATH);
+						var.AsString() = self->m_exportResourcePath;
+						DataInspector::InspectStringPathEx(nullptr, temp, var, "Export Resource Path", true, secondColumnWidth, true);
+					}
+
+					ImGui::EndTable();
+				}
+			}, this,
+			[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+			{
+				auto self = (GameObjectEditorTab*)p;
+				if (!self->ValidateSetting())
+				{
+					return false;
+				}
+
+				return true;
+			}, this
+		);
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_FILE_EXPORT " Export"))
+	{
+		Export();
+	}
 
 	ImGui::Separator();
 
@@ -60,4 +138,36 @@ void GameObjectEditorTab::OnShow()
 		},
 		ID(this)
 	);
+}
+
+void GameObjectEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
+{
+	Base::WriteSaveDataToJson(serializer, j);
+	j["RootObject"] = serializer->Serialize(m_rootObject);
+}
+
+void GameObjectEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
+{
+	Base::ReadSaveDataFromJson(serializer, j);
+	serializer->Deserialize(j["RootObject"], m_rootObject);
+}
+
+bool GameObjectEditorTab::ValidateSetting()
+{
+	bool ret = EditorContext::Get()->IsVariableNameValid(m_exportInputName);
+	if (!ret)
+	{
+		std::cerr << "[ERROR]: Export Name illegal!\n";
+	}
+
+	return ret;
+}
+
+void GameObjectEditorTab::Export()
+{
+	auto exportPath = m_exportResourcePath + m_exportInputName + ".json";
+	Serializer s = {};
+	s.Serialize(m_rootObject);
+	s.SetRootUUID(m_rootObject->GetUUID());
+	s.WriteToFile(exportPath);
 }

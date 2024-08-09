@@ -99,6 +99,7 @@ protected:
 
 	void ReindexObjects();
 	void ReindexChildren(Array<Handle<GameObject>>& children);
+	void IndexObject(GameObject* obj);
 
 public:
 	SceneEditorTab();
@@ -133,8 +134,8 @@ public:
 
 public:
 	void Inspect(ClassMetadata* metaData);
-	void WriteSaveDataToJson(Serializer* serializer, json& j);
-	void ReadSaveDataFromJson(Serializer* serializer, const json& j);
+	virtual void WriteSaveDataToJson(Serializer* serializer, json& j);
+	virtual void ReadSaveDataFromJson(Serializer* serializer, const json& j);
 
 };
 

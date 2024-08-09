@@ -14,6 +14,7 @@
 #include "EditorTabFactory.h"
 #include "AnimatorEditorTabFactory.h"
 #include "SceneEditorTabFactory.h"
+#include "GameObjectEditorTabFactory.h"
 
 #include "ScriptList.h"
 
@@ -64,6 +65,16 @@ void Initialize(Runtime* runtime)
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
 				}
+
+				/*{
+					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();
+
+					factory->m_filePath = "Editor/GameObjectEditor/Chair.GameObjectEditor";
+					auto tab = factory->CreateInstance();
+					EditorContext::s_instance->RunTab(tab);
+
+					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
+				}*/
 			}
 
 			ID editorContextId = EditorContext::s_instance->m_runTimeId;

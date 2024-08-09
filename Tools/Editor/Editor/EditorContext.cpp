@@ -76,14 +76,12 @@ void EditorContext::RenderMenuBar()
 						savePath = EditorContext::Get()->GetSavePath() + currentTab->GetTabClassName() + "/" + currentTab->m_name + "." + currentTab->GetTabClassName();
 					}
 					
-					String ext = "*." + currentTab->GetTabClassName();
-
 					SystemDialog::SaveAsDialog otp;
 					otp.defaultPath = FileSystem::Get()->GetExecutablePath() + savePath;
 					otp.extensionGroups = { 
 						{ 
 							currentTab->GetTabClassName(), 
-							{ ext }
+							{ currentTab->GetTabClassName() }
 						} 
 					};
 					if (SystemDialog::OpenSaveAsDialog(otp))
@@ -445,10 +443,10 @@ void EditorContext::RenderTabCreationPopUp()
 			Runtime::Get()->SetRunningScene(scene);*/
 
 			RunTab(tab);
-
-			m_tabFactory = nullptr;
-			ImGui::CloseCurrentPopup();
 		}
+
+		m_tabFactory = nullptr;
+		ImGui::CloseCurrentPopup();
 	}
 
 	ImGui::SameLine(0, 20);
@@ -837,6 +835,13 @@ void EditorContext::CloseTabCreationPopUp()
 
 void EditorContext::PlaceHolderTab(EditorTab* tab)
 {
+	if (tab == (EditorTab*)INVALID_ID)
+	{
+		m_tabHolder = nullptr;
+		m_tabs.Pop();
+		return;
+	}
+
 	if (tab == nullptr)
 	{
 		m_tabHolder = nullptr;

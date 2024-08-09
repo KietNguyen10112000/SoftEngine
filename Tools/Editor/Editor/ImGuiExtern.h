@@ -114,4 +114,155 @@ inline bool Spinner(const char* label, float radius, int thickness, const ImU32&
     window->DrawList->PathStroke(color, false, thickness);
 }
 
+// Dupe of DragFloatN with a tweak to add colored lines
+inline bool DragFloatN_Colored(const char* label, float* v, int components, float v_speed, float v_min, float v_max, 
+    const char* display_format = "%.3f", float power = 0, const ImU32* colors = nullptr)
+{
+    //ImGuiWindow* window = GetCurrentWindow();
+    //if (window->SkipItems)
+    //    return false;
+
+    //ImGuiContext& g = *GImGui;
+    //bool value_changed = false;
+    //BeginGroup();
+    //PushID(label);
+    //PushMultiItemsWidths(components + 1, CalcItemWidth());
+
+    //static const ImU32 s_colors[] = {
+    //        0xBB0000FF, // red
+    //        0xBB00FF00, // green
+    //        0xBBFF0000, // blue
+    //        0xBBFFFFFF, // white for alpha?
+    //};
+
+    //if (colors == nullptr)
+    //{
+    //    colors = s_colors;
+    //}
+
+    //for (int i = 0; i < components; i++)
+    //{
+    //    PushID(i);
+    //    value_changed |= DragFloat("##v", &v[i], v_speed, v_min, v_max, display_format, power);
+
+    //    const ImVec2 min = GetItemRectMin();
+    //    const ImVec2 max = GetItemRectMax();
+    //    const float spacing = g.Style.FrameRounding;
+    //    const float halfSpacing = spacing / 2;
+
+    //    // This is the main change
+    //    window->DrawList->AddLine({ min.x + spacing, max.y - halfSpacing }, { max.x - spacing, max.y - halfSpacing }, colors[i], 4);
+
+    //    SameLine(0, g.Style.ItemInnerSpacing.x);
+    //    PopID();
+    //    PopItemWidth();
+    //}
+    //PopID();
+
+    //TextUnformatted(label, FindRenderedTextEnd(label));
+    //EndGroup();
+
+    //return value_changed;
+
+    static const ImU32 s_colors[] = {
+            0xBB0000FF, // red
+            0xBB00FF00, // green
+            0xBBFF0000, // blue
+            0xBBFFFFFF, // white for alpha?
+    };
+
+    if (colors == nullptr)
+    {
+        colors = s_colors;
+    }
+
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    bool value_changed = false;
+    BeginGroup();
+    PushID(label);
+    PushMultiItemsWidths(components, CalcItemWidth());
+
+    //sizeof(float),            "float", "%.3f","%f"
+    size_t type_size = sizeof(float);
+    for (int i = 0; i < components; i++)
+    {
+        PushID(i);
+        if (i > 0)
+            SameLine(0, g.Style.ItemInnerSpacing.x);
+        value_changed |= DragScalar("", ImGuiDataType_Float, v, v_speed, &v_min, &v_max, display_format, 0);
+
+        const ImVec2 min = GetItemRectMin();
+        const ImVec2 max = GetItemRectMax();
+        const float spacing = g.Style.FrameRounding;
+        const float halfSpacing = spacing / 2;
+
+        // This is the main change
+        window->DrawList->AddLine({ min.x + spacing, max.y - halfSpacing }, { max.x - spacing, max.y - halfSpacing }, colors[i], 4);
+
+        PopID();
+        PopItemWidth();
+        v = (float*)((char*)v + type_size);
+    }
+    PopID();
+
+    const char* label_end = FindRenderedTextEnd(label);
+    if (label != label_end)
+    {
+        SameLine(0, g.Style.ItemInnerSpacing.x);
+        TextEx(label, label_end);
+    }
+
+    EndGroup();
+    return value_changed;
+}
+
+inline void PushMultiItemsWidthsAndLabels(const char* labels[], int components, float w_full)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    const ImGuiStyle& style = GImGui->Style;
+    if (w_full <= 0.0f)
+        w_full = GetContentRegionAvail().x;
+
+    const float w_item_one =
+        ImMax(1.0f, (w_full - (style.ItemInnerSpacing.x * 2.0f) * (components - 1)) / (float)components) -
+        style.ItemInnerSpacing.x;
+    for (int i = 0; i < components; i++)
+        window->DC.ItemWidthStack.push_back(w_item_one - CalcTextSize(labels[i]).x);
+    window->DC.ItemWidth = window->DC.ItemWidthStack.back();
+}
+
+inline bool DragFloatNEx(const char* labels[], float* v, int components, float v_speed, float v_min, float v_max,
+    const char* display_format = "%.3f", float power = 0)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    if (window->SkipItems)
+        return false;
+
+    ImGuiContext& g = *GImGui;
+    bool value_changed = false;
+    BeginGroup();
+
+    PushMultiItemsWidthsAndLabels(labels, components, 0.0f);
+    for (int i = 0; i < components; i++)
+    {
+        PushID(labels[i]);
+        PushID(i);
+        TextUnformatted(labels[i], FindRenderedTextEnd(labels[i]));
+        SameLine();
+        value_changed |= DragFloat("", &v[i], v_speed, v_min, v_max, display_format, power);
+        SameLine(0, g.Style.ItemInnerSpacing.x);
+        PopID();
+        PopID();
+        PopItemWidth();
+    }
+
+    EndGroup();
+
+    return value_changed;
+}
+
 }

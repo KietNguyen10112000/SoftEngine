@@ -10,7 +10,7 @@
 
 SceneEditorTabFactory::SceneEditorTabFactory()
 {
-	m_tabKindName = "SceneEditorTabFactory";
+	m_tabKindName = "SceneEditorTab";
 }
 
 void SceneEditorTabFactory::Begin()
@@ -77,6 +77,7 @@ LoadJson:
 		if (!scene || !data)
 		{
 			std::cerr << "[SceneEditorTabFactory] - ERROR: Invalid file!\n";
+			EditorContext::Get()->PlaceHolderTab((EditorTab*)INVALID_ID);
 			return nullptr;
 		}
 

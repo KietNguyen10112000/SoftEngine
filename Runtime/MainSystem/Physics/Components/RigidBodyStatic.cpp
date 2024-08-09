@@ -12,14 +12,17 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
-RigidBodyStatic::RigidBodyStatic(const SharedPtr<PhysicsShape>& shape)
+RigidBodyStatic::RigidBodyStatic()
 {
 	auto physics = PhysX::Get()->GetPxPhysics();
 
 	auto body = physics->createRigidStatic(PxTransform(PxIdentity));
 	m_pxActor = body;
 	m_pxActor->userData = this;
+}
 
+RigidBodyStatic::RigidBodyStatic(const SharedPtr<PhysicsShape>& shape) : RigidBodyStatic()
+{
 	AddShape(shape);
 }
 
@@ -66,14 +69,22 @@ void RigidBodyStatic::SerializeToJson(Serializer* serializer, json& j) const
 
 void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
 {
-	assert(m_pxActor == nullptr);
+	//assert(m_pxActor == nullptr);
 
 	RigidBody::DeserializeFromJson(serializer, j);
 
-	auto physics = PhysX::Get()->GetPxPhysics();
-	auto body = physics->createRigidStatic(PxTransform(PxIdentity));
-	m_pxActor = body;
-	m_pxActor->userData = this;
+	PxRigidStatic* body;
+	if (m_pxActor == nullptr)
+	{
+		auto physics = PhysX::Get()->GetPxPhysics();
+		body = physics->createRigidStatic(PxTransform(PxIdentity));
+		m_pxActor = body;
+		m_pxActor->userData = this;
+	}
+	else
+	{
+		body = m_pxActor->is<PxRigidStatic>();
+	}
 
 	for (auto& shape : m_shapes)
 	{
