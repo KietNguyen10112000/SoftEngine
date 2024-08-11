@@ -4,12 +4,12 @@
 
 NAMESPACE_BEGIN
 
-class API RevoluteJoint : public Joint
+class API FixedJoint : public Joint
 {
-	SERIALIZABLE_CLASS(RevoluteJoint);
+	SERIALIZABLE_CLASS(FixedJoint);
 public:
-	inline RevoluteJoint() {};
-	RevoluteJoint(
+	inline FixedJoint() {};
+	FixedJoint(
 		const Handle<RigidBody>& body0, 
 		const Transform& localFrame0, 
 		const Handle<RigidBody>& body1, 

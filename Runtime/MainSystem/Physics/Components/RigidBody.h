@@ -92,6 +92,16 @@ public:
 
 	void ScaleBy(float scale);
 
+	void SetCollisionMaskForAllShapes(uint32_t mask);
+	void SetFamilyNoCollideForAllShapes(bool enable);
+
+	// set mask all rigid bodies belong to this object tree
+	static void SetCollisionMaskForGameObject(GameObject* obj, uint32_t mask);
+
+	// set FamilyNoCollide flag for all rigid bodies belong to this object tree
+	// enable -> all rigid bodies belong to this object tree will not collide each other
+	static void SetFamilyNoCollideForGameObject(GameObject* obj, bool enable);
+
 	inline PhysicsShape* GetShape(ID index) const
 	{
 		return m_shapes[index].get();
@@ -100,6 +110,16 @@ public:
 	inline size_t GetShapesCount() const
 	{
 		return m_shapes.size();
+	}
+
+	inline const Handle<Joint>& GetJoint(ID index) const
+	{
+		return m_joints[index];
+	}
+
+	inline size_t GetJointsCount() const
+	{
+		return m_joints.size();
 	}
 
 };

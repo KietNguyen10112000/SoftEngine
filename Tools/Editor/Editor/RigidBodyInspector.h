@@ -7,6 +7,7 @@
 #include "Math/Math.h"
 
 #include <vector>
+#include <map>
 
 #include "ComponentInspectorBase.h"
 
@@ -16,6 +17,7 @@ namespace soft
 	class ClassMetadata;
 	class PhysicsShape;
 	class GameObject;
+	class Joint;
 }
 
 using namespace soft;
@@ -29,6 +31,19 @@ public:
 
 		bool deleted = false;
 		bool locked = true;
+	};
+
+	struct JointInspectorData
+	{
+		Joint* joint = nullptr;
+	};
+
+	struct DrawShapeData
+	{
+		SharedPtr<PhysicsShape> shape = nullptr;
+		Mat4 globalTransformMat;
+		Vec4 color;
+		bool showBasis;
 	};
 
 	ClassMetadata* m_metadata = nullptr;
@@ -48,12 +63,34 @@ public:
 
 	bool m_hideAllOtherShapes = false;
 
+	std::vector<JointInspectorData> m_jointDatas;
+	int m_choosingJointIdx = -1;
+	int m_choosingCreateJointIdx = 0;
+	int m_countReloadJointInspectorData = 0;
+	RigidBody* m_jointCreateAnother = nullptr;
+	char m_jointCreateSearchName[256] = {};
+
+	uint32_t m_tempCollisionMask = 0;
+	bool m_tempIsEnableFamilyNoCollide = false;
+
+	std::map<PhysicsShape*, DrawShapeData> m_currentDrawData;
+	Handle<GameObject> m_debugJointAnotherObject = nullptr;
+
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_debugJointAnotherObject);
+	}
+
 public:
 	RigidBodyInspector(RigidBody* body, ClassMetadata* metadata);
 
 private:
 	void InitializeNewShapeInspectorDatas(ShapeInspectorData* data, PhysicsShape* shape);
 	void LoadShapeInspectorDatas();
+	void InitializeNewJointInspectorDatas(JointInspectorData* data, Joint* joint);
+	void LoadJointInspectorDatas();
+	void FindJointCreateAnother();
 
 	void InspectShapeBase(PhysicsShape* shape);
 	void InspectShapeBox(PhysicsShape* shape);
@@ -63,9 +100,18 @@ private:
 
 	void InspectMaterials(PhysicsShape* shape);
 
-	void DrawDebug(PhysicsShape* shape, const Vec4& color, bool showBasis);
+	void RenderInspectShape();
+
+	void InspectJointBase(Joint* joint);
+	void InspectJointFixed(Joint* joint);
+	void RenderInspectJoint();
+
+	void DrawDebugImpl(const Mat4& globalTransformMat, PhysicsShape* shape, const Vec4& color, bool showBasis);
+	void DrawDebug(RigidBody* body, PhysicsShape* shape, const Vec4& color, bool showBasis);
+	void FlushDrawDebug();
 
 	void OnSelectShape(int idx);
+	void OnSelectJoint(int idx);
 
 	static void SetOpacityForObject(GameObject* o, float alpha);
 public:

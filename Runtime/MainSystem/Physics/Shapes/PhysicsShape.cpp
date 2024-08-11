@@ -14,6 +14,8 @@
 #include "Scene/GameObject.h"
 #include "Scene/Scene.h"
 
+#include "../FILTER_FLAG.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -60,12 +62,24 @@ void PhysicsShape::SerializeToJson(Serializer* serializer, json& j) const
 {
 	j["Transform"] = PhysXUtils::ToTransform(m_pxShape->getLocalPose());
 	j["Meterial"] = serializer->Serialize(m_meterial);
+
+	auto filterData = m_pxShape->getSimulationFilterData();
+	j["FilterFlags"] = filterData.word0 & (~PHYSICS_FILTER_FLAG::CALLBACK);
+	j["CollisionMask"] = filterData.word1;
 }
 
 void PhysicsShape::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	serializer->Deserialize(j["Meterial"], m_meterial);
 	m_pxShape->setLocalPose(PhysXUtils::ToPxTransform(j["Transform"]));
+
+	if (j.contains("FilterFlags"))
+	{
+		PxFilterData filterData = {};
+		filterData.word0 = j["FilterFlags"];
+		filterData.word1 = j["CollisionMask"];
+		m_pxShape->setSimulationFilterData(filterData);
+	}
 }
 
 Handle<ClassMetadata> PhysicsShape::GetMetadata(size_t sign)
@@ -105,7 +119,6 @@ void PhysicsShape::SetLocalTransform(const Transform& transform)
 				{
 					auto comp = ((RigidBodyDynamic*)dynamic->userData);
 					PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
-
 					if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
 				}
 			}
@@ -116,6 +129,47 @@ void PhysicsShape::SetLocalTransform(const Transform& transform)
 Transform PhysicsShape::GetLocalTransform() const
 {
 	return PhysXUtils::ToTransform(m_pxShape->getLocalPose());
+}
+
+void PhysicsShape::SetCollisionMask(uint32_t mask)
+{
+	MAIN_SYSTEM_TASK_IMPL_COMMON_1(
+		m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, mask,
+		{
+			PxFilterData data = self->m_pxShape->getSimulationFilterData();
+			data.word1 = uint32_t(INVALID_ID);
+			self->m_pxShape->setSimulationFilterData(data);
+		}
+	);
+}
+
+uint32_t PhysicsShape::GetCollisionMask() const
+{
+	return m_pxShape->getSimulationFilterData().word1;
+}
+
+bool PhysicsShape::IsEnableFamilyNoCollide()
+{
+	return m_pxShape->getSimulationFilterData().word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE;
+}
+
+void PhysicsShape::SetFamilyNoCollide(bool enable)
+{
+	MAIN_SYSTEM_TASK_IMPL_COMMON_1(
+		m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, enable,
+		{
+			PxFilterData data = self->m_pxShape->getSimulationFilterData();
+			if (enable)
+			{
+				data.word0 |= PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE;
+			}
+			else
+			{
+				data.word0 &= ~PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE;
+			}
+			self->m_pxShape->setSimulationFilterData(data);
+		}
+	);
 }
 
 NAMESPACE_END

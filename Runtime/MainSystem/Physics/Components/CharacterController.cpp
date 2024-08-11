@@ -9,7 +9,7 @@
 #include "Scene/GameObject.h"
 
 #include "../Materials/PhysicsMaterial.h"
-#include "../FILTER_DATA.h"
+#include "../FILTER_FLAG.h"
 
 #include "Common/Actions/ActionInterpolation.h"
 #include "MainSystem/Animation/Utils/Animation.h"
@@ -565,12 +565,12 @@ void CharacterController::CCTSetContactFilterCallback(RigidBody::ContactReportFi
 	MAIN_SYSTEM_TASK_0(
 		PhysicsSystem, AsyncTaskRunnerST,
 		{
-			PxFilterData data = {};
-			data.word0 = PHYSICS_FILTER_DATA_CALLBACK | PHYSICS_FILTER_DATA_CCT;
-
 			PxShape* shape = nullptr;
 			auto pxActor = self->m_pxCharacterController->getActor();
 			pxActor->getShapes(&shape, 1);
+
+			PxFilterData data = shape->getSimulationFilterData();
+			data.word0 |= (PHYSICS_FILTER_FLAG::CALLBACK | PHYSICS_FILTER_FLAG::CCT);
 			shape->setSimulationFilterData(data);
 		}
 	);

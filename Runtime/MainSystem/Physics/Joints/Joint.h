@@ -18,10 +18,11 @@ NAMESPACE_BEGIN
 class PhysicsComponent;
 class RigidBody;
 
-class Joint : public Serializable
+class API Joint : public Serializable
 {
 protected:
 	MAIN_SYSTEM_FRIEND_CLASSES();
+	friend class PhysXSimulationCallback;
 
 	physx::PxJoint* m_pxJoint = nullptr;
 	Handle<RigidBody> m_body0 = nullptr;
@@ -38,6 +39,7 @@ protected:
 
 private:
 	void CommitJointToBodies();
+	void RemoveJointFromBodies();
 
 protected:
 	void InitJoint(void* pxInitFunc, const Handle<RigidBody>& body0, const Transform& localFrame0, const Handle<RigidBody>& body1, const Transform& localFrame1);
@@ -52,6 +54,26 @@ protected:
 public:
 	virtual ~Joint();
 
+public:
+	bool IsBroken() const;
+	void Break();
+
+	void SetBreakForce(float force, float torque);
+
+	inline RigidBody* GetBody0()
+	{
+		return m_body0;
+	}
+
+	inline RigidBody* GetBody1()
+	{
+		return m_body0;
+	}
+
+	inline RigidBody* GetAnotherBody(RigidBody* body)
+	{
+		return body == m_body0 ? m_body1 : m_body0;
+	}
 };
 
 NAMESPACE_END

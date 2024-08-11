@@ -8,6 +8,7 @@
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 #include "MainSystem/Scripting/Components/Script.h"
 #include "MainSystem/Physics/Components/PhysicsComponent.h"
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 #include "MainSystem/Animation/Components/AnimationComponent.h"
 
 #include "Graphics/Graphics.h"
@@ -73,10 +74,15 @@ void SceneEditorTab::OnObjectSelected(GameObject* obj)
 	if (m_inspectingObject)
 	{
 		ComponentInspector::EndInspectingFor(m_inspectingObject, m_inspectingObjectData, nullptr);
+		m_inspectingObject = nullptr;
+		m_inspectingObjectData = nullptr;
 	}
 
 	m_inspectingObject = obj;
-	m_inspectingObjectData = obj->GetMetadata(0);
+	if (m_inspectingObject)
+	{
+		m_inspectingObjectData = obj->GetMetadata(0);
+	}
 }
 
 void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
@@ -155,7 +161,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 								}
 								else
 								{
-									dragObj->RemoveFromParent();
+									dragObj->RemoveFromParent(true);
 								}
 
 								if (obj->Parent().Get() == nullptr)
@@ -188,9 +194,15 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				ImGui::SetScrollHereY();
 			}
 
+			auto rectMin = ImGui::GetItemRectMin();
+			auto rectMax = ImGui::GetItemRectMax();
+			auto drawList = ImGui::GetWindowDrawList();
+
 			// right-click popup menu on object name
 			if (ImGui::BeginPopupContextItem())
 			{
+				drawList->AddRect(rectMin, rectMax, IM_COL32(0, 255, 255, 255));
+
 				if (ImGui::MenuItem("Rename"))
 				{
 					m_nameInputTxt[0] = 0;
@@ -205,21 +217,54 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 
 					if (allowDelete)
 					{
-						if (obj->Parent().Get() != nullptr)
-						{
-							obj->RemoveFromParent();
-						}
-						else
-						{
-							m_scene->RemoveObject(obj);
-						}
-						OnObjectDelete(obj);
+						m_deleteObject = obj;
 					}
 					else
 					{
 						std::cerr << "[ERROR]: can not delete hot reloaded object's children!\n";
 					}
 				}
+
+				ImGui::Separator();
+				if (ImGui::MenuItem("Switch Kinematic All"))
+				{
+					bool allow = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+					if (allow)
+					{
+						obj->PostTraversal(
+							[](GameObject* o) 
+							{
+								if (o->HasComponent<RigidBodyDynamic>())
+								{
+									o->GetComponentRaw<RigidBodyDynamic>()->SetKinematic(!o->GetComponentRaw<RigidBodyDynamic>()->IsKinematic());
+								}
+							}
+						);
+					}
+				}
+
+				if (ImGui::MenuItem("Reset Physics Position All"))
+				{
+					bool allow = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+					if (allow)
+					{
+						obj->PostTraversal(
+							[](GameObject* o)
+							{
+								if (o->HasComponent<RigidBodyDynamic>())
+								{
+									auto local = o->GetLocalTransform();
+									auto local2 = local;
+									local2.Position().x -= 10.0f;
+									o->SetLocalTransform(local2);
+									o->SetLocalTransform(local);
+								}
+							}
+						);
+					}
+				}
+
+				OnRenderGameObjectContextMenu(obj);
 
 				ImGui::EndPopup();
 			}
@@ -259,7 +304,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 					}
 					else
 					{
-						dragObj->RemoveFromParent();
+						dragObj->RemoveFromParent(true);
 					}
 
 					auto mat = dragObj->GetCommittedGlobalTransform() * obj->GetCommittedGlobalTransform().GetInverse();
@@ -373,7 +418,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 									}
 									else
 									{
-										dragObj->RemoveFromParent();
+										dragObj->RemoveFromParent(true);
 									}
 
 									if (obj->Parent().Get() == nullptr)
@@ -495,6 +540,20 @@ void SceneEditorTab::RenderHierarchyPanelGameObjectsTree(GameObject* specified)
 
 	ImGui::EndChild();
 
+	if (m_deleteObject)
+	{
+		if (m_deleteObject->Parent().Get() != nullptr)
+		{
+			m_deleteObject->RemoveFromParent(true);
+		}
+		else
+		{
+			m_scene->RemoveObject(m_deleteObject);
+		}
+		OnObjectDelete(m_deleteObject);
+		m_deleteObject = nullptr;
+	}
+
 	//if (ImGui::BeginDragDropTarget())
 	//{
 	//	ImGuiDragDropFlags target_flags = 0;
@@ -537,7 +596,7 @@ void SceneEditorTab::RenderHierarchyPanelGameObjectsTree(GameObject* specified)
 			}
 			else
 			{
-				dragObj->RemoveFromParent();
+				dragObj->RemoveFromParent(true);
 
 				auto mat = dragObj->GetCommittedGlobalTransform();
 
@@ -1206,6 +1265,11 @@ void SceneEditorTab::OnClose()
 
 void SceneEditorTab::OnObjectDelete(GameObject* obj)
 {
+	if (obj == m_inspectingObject)
+	{
+		OnObjectSelected(nullptr);
+	}
+
 	obj->PostTraversal(
 		[&](GameObject* o) 
 		{
@@ -1340,7 +1404,7 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 
 					auto parent = object->Parent().Get();
 					auto idx = object->ParentIdx();
-					object->RemoveFromParent();
+					object->RemoveFromParent(true);
 					parent->AddChild(replaceObject, idx);
 				}
 			}
@@ -1393,4 +1457,8 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 	{
 		m_isDrawingDebug = j["DrawDebug"];
 	}
+}
+
+void SceneEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
+{
 }

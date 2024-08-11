@@ -86,6 +86,19 @@ void RigidBodyDynamic::OnTransformChanged()
 	}
 }
 
+void RigidBodyDynamic::InternalWake()
+{
+	if (!m_pxActor)
+	{
+		return;
+	}
+	auto dynamic = ((PxRigidDynamic*)m_pxActor);
+	if (!m_isKinematic && dynamic->isSleeping())
+	{
+		dynamic->wakeUp();
+	}
+}
+
 void RigidBodyDynamic::Wake()
 {
 	if (!m_pxActor || !(((PxRigidDynamic*)m_pxActor)->isSleeping()))
@@ -188,7 +201,7 @@ bool RigidBodyDynamic::IsKinematic() const
 
 void RigidBodyDynamic::AddForce(const Vec3& f)
 {
-	MAIN_SYSTEM_TASK_1(
+	MAIN_SYSTEM_TASK_COMMON_1(
 		PhysicsSystem, AsyncTaskRunnerST, f, 
 		{
 			auto pxRigidBody = (PxRigidDynamic*)self->m_pxActor;
@@ -197,15 +210,39 @@ void RigidBodyDynamic::AddForce(const Vec3& f)
 	);
 }
 
-void RigidBodyDynamic::AddForceAtLocalPos(const Vec3& f, const Vec3& pos)
+void RigidBodyDynamic::AddForceAtPos(const Vec3& f, const Vec3& pos)
 {
-	MAIN_SYSTEM_TASK_2(
+	MAIN_SYSTEM_TASK_COMMON_2(
 		PhysicsSystem, AsyncTaskRunnerST, f, pos,
 		{
 			auto pxRigidBody = (PxRigidDynamic*)self->m_pxActor;
-			PxRigidBodyExt::addForceAtLocalPos(*pxRigidBody, reinterpret_cast<const PxVec3&>(f), reinterpret_cast<const PxVec3&>(pos));
+			PxRigidBodyExt::addForceAtPos(*pxRigidBody, reinterpret_cast<const PxVec3&>(f), reinterpret_cast<const PxVec3&>(pos));
 		}
 	);
+}
+
+void RigidBodyDynamic::AddImpulse(const Vec3& impulse)
+{
+	auto scene = GetGameObject() ? GetGameObject()->GetScene() : nullptr;
+	if (scene)
+	{
+		AddForce(impulse / scene->Dt());
+		return;
+	}
+	
+	AddForce(impulse / 0.016f); // :D
+}
+
+void RigidBodyDynamic::AddImpulseAtPos(const Vec3& impulse, const Vec3& pos)
+{
+	auto scene = GetGameObject() ? GetGameObject()->GetScene() : nullptr;
+	if (scene)
+	{
+		AddForceAtPos(impulse / scene->Dt(), pos);
+		return;
+	}
+
+	AddForceAtPos(impulse / 0.016f, pos); // :D
 }
 
 void RigidBodyDynamic::CloneFrom(Serializer* serializer, Serializable* another)

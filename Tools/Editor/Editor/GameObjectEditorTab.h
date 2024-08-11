@@ -16,8 +16,9 @@ public:
 
 	void OnShow() override;
 
-	void WriteSaveDataToJson(Serializer* serializer, json& j);
-	void ReadSaveDataFromJson(Serializer* serializer, const json& j);
+	void WriteSaveDataToJson(Serializer* serializer, json& j) override;
+	void ReadSaveDataFromJson(Serializer* serializer, const json& j) override;
+	void OnRenderGameObjectContextMenu(GameObject* obj) override;
 
 	bool ValidateSetting();
 	void Export();

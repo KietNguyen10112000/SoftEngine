@@ -9,6 +9,9 @@
 #include "SystemDialog.h"
 #include "DataInspector.h"
 
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
+#include "MainSystem/Physics/Joints/FixedJoint.h"
+
 void GameObjectEditorTab::OnRenderGUI()
 {
 	RenderInspectorPanel();
@@ -23,6 +26,14 @@ void GameObjectEditorTab::OnRenderGUI()
 
 	ImGui::Checkbox("Pin Hierarchy Panel", &m_pinHierarchyPanel);
 
+	if (ImGui::Button(ICON_FA_CIRCLE_PLUS " Object"))
+	{
+		auto obj = mheap::New<GameObject>();
+		m_rootObject->AddChild(obj);
+		IndexObject(obj);
+	}
+
+	ImGui::SameLine();
 	if (ImGui::Button(ICON_FA_FILE_IMPORT " Import Model"))
 	{
 		SystemDialog::FileChooserDialog otp;
@@ -150,6 +161,19 @@ void GameObjectEditorTab::ReadSaveDataFromJson(Serializer* serializer, const jso
 {
 	Base::ReadSaveDataFromJson(serializer, j);
 	serializer->Deserialize(j["RootObject"], m_rootObject);
+}
+
+void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
+{
+	if (ImGui::MenuItem("Test"))
+	{
+		auto body = m_rootObject->Children()[0]->GetComponentRaw<RigidBodyDynamic>();
+		body->AddForce({ 0,10000,0 });
+
+		auto& joint = body->GetJoint(0);
+		joint->Break();
+		joint->GetAnotherBody(body)->SetFamilyNoCollideForAllShapes(false);
+	}
 }
 
 bool GameObjectEditorTab::ValidateSetting()

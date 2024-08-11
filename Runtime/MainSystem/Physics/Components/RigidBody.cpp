@@ -11,7 +11,7 @@
 #include "MainSystem/Physics/PhysicsSystem.h"
 
 #include "../Shapes/PhysicsShape.h"
-#include "../FILTER_DATA.h"
+#include "../FILTER_FLAG.h"
 #include "../Joints/Joint.h"
 
 #include "RigidBodyDynamic.h"
@@ -275,9 +275,9 @@ void RigidBody::DeserializeFromJson(Serializer* serializer, const json& j)
 		for (size_t i = 0; i < arr.size(); i++)
 		{
 			serializer->Deserialize(arr[i], joint);
-			auto& idx = joint->m_body0 == this ? joint->m_idx0 : joint->m_idx1;
+			/*auto& idx = joint->m_body0 == this ? joint->m_idx0 : joint->m_idx1;
 			idx = m_joints.size();
-			m_joints.Push(joint);
+			m_joints.Push(joint);*/
 		}
 	}
 }
@@ -365,11 +365,17 @@ void RigidBody::SetContactFilterCallback(ContactReportFilterCallback callback)
 	MAIN_SYSTEM_TASK_0(
 		PhysicsSystem, AsyncTaskRunnerST,
 		{
-			PxFilterData data = {};
-			data.word0 = PHYSICS_FILTER_DATA_CALLBACK;
-
 			for (auto& shape : self->m_shapes)
 			{
+				PxFilterData data = shape->m_pxShape->getSimulationFilterData();
+				if (self->m_contactFilterCallback)
+				{
+					data.word0 |= PHYSICS_FILTER_FLAG::CALLBACK;
+				}
+				else
+				{
+					data.word0 &= ~PHYSICS_FILTER_FLAG::CALLBACK;
+				}
 				shape->m_pxShape->setSimulationFilterData(data);
 			}
 		}
@@ -403,6 +409,48 @@ void RigidBody::ScaleBy(float scale)
 		transform.Position() *= scale;
 		shape->SetLocalTransform(transform);
 	}
+}
+
+void RigidBody::SetCollisionMaskForAllShapes(uint32_t mask)
+{
+	for (auto& shape : m_shapes)
+	{
+		shape->SetCollisionMask(mask);
+	}
+}
+
+void RigidBody::SetFamilyNoCollideForAllShapes(bool enable)
+{
+	for (auto& shape : m_shapes)
+	{
+		shape->SetFamilyNoCollide(enable);
+	}
+}
+
+void RigidBody::SetCollisionMaskForGameObject(GameObject* obj, uint32_t mask)
+{
+	obj->PostTraversal(
+		[mask](GameObject* o)
+		{
+			if (o->HasComponent<RigidBody>())
+			{
+				o->GetComponentRaw<RigidBody>()->SetCollisionMaskForAllShapes(mask);
+			}
+		}
+	);
+}
+
+void RigidBody::SetFamilyNoCollideForGameObject(GameObject* obj, bool enable)
+{
+	obj->PostTraversal(
+		[enable](GameObject* o)
+		{
+			if (o->HasComponent<RigidBody>())
+			{
+				o->GetComponentRaw<RigidBody>()->SetFamilyNoCollideForAllShapes(enable);
+			}
+		}
+	);
 }
 
 NAMESPACE_END

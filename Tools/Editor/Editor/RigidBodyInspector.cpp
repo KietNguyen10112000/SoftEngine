@@ -8,6 +8,8 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapeCapsule.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeSphere.h"
+#include "MainSystem/Physics/Joints/FixedJoint.h"
+#include "MainSystem/Physics/Joints/RevoluteJoint.h"
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 
@@ -64,6 +66,54 @@ void RigidBodyInspector::LoadShapeInspectorDatas()
 	}
 
 	m_shapeDatas.swap(newShapeDatas);
+}
+
+void RigidBodyInspector::InitializeNewJointInspectorDatas(JointInspectorData* data, Joint* joint)
+{
+}
+
+void RigidBodyInspector::LoadJointInspectorDatas()
+{
+	std::map<Joint*, JointInspectorData*> oldJoints;
+	for (auto& data : m_jointDatas)
+	{
+		oldJoints.insert({ data.joint,&data });
+	}
+
+	std::vector<JointInspectorData> newJointDatas;
+
+	auto count = m_body->GetJointsCount();
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& joint = m_body->GetJoint(i);
+
+		auto it = oldJoints.find(joint.Get());
+		if (it != oldJoints.end())
+		{
+			newJointDatas.push_back(*(it->second));
+		}
+		else
+		{
+			InitializeNewJointInspectorDatas(&newJointDatas.emplace_back(), joint.Get());
+		}
+	}
+
+	m_jointDatas.swap(newJointDatas);
+}
+
+void RigidBodyInspector::FindJointCreateAnother()
+{
+	m_jointCreateAnother = nullptr;
+	auto name = m_jointCreateSearchName;
+	m_body->GetGameObject()->GetRoot()->PostTraversal(
+		[&](GameObject* o)
+		{
+			if (o->Name() == name && o->HasComponent<RigidBody>() && m_jointCreateAnother == nullptr)
+			{
+				m_jointCreateAnother = o->GetComponentRaw<RigidBody>();
+			}
+		}
+	);
 }
 
 void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
@@ -189,97 +239,7 @@ void RigidBodyInspector::InspectMaterials(PhysicsShape* shape)
 	}
 }
 
-void RigidBodyInspector::DrawDebug(PhysicsShape* shape, const Vec4& color, bool showBasis)
-{
-	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
-	if (!debugGraphics)
-	{
-		return;
-	}
-
-	Transform globalTransform = {};
-	m_body->GetGameObject()->GetCommittedGlobalTransform().Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());
-
-	// physics component doesn't use scale component
-	globalTransform.Scale() = { 1,1,1 };
-
-	auto localPose = shape->GetLocalTransform();
-	auto globalMat = localPose.ToTransformMatrix() * globalTransform.ToTransformMatrix();
-
-	Transform transform = {};
-	globalMat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
-
-	if (showBasis)
-	{
-		debugGraphics->DrawRay(globalMat.Position(), globalMat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
-		debugGraphics->DrawRay(globalMat.Position(), globalMat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
-		debugGraphics->DrawRay(globalMat.Position(), globalMat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
-	}
-
-	auto type = shape->GetType();
-	switch (type)
-	{
-	case PHYSICS_SHAPE_TYPE_SPHERE:
-	{
-		auto sphere = (PhysicsShapeSphere*)shape;
-		debugGraphics->DrawSphere(Sphere(transform.Position(), sphere->GetRadius()), color);
-		break;
-	}
-	case PHYSICS_SHAPE_TYPE_CAPSULE:
-	{
-		// physx capsule up direction forwards to x-axis
-		auto capsule = (PhysicsShapeCapsule*)shape;
-		debugGraphics->DrawCapsule(Capsule(globalMat.Right().Normal(), transform.Position(), capsule->GetHeight(), capsule->GetRadius()), color);
-		break;
-	}
-	case PHYSICS_SHAPE_TYPE_BOX: 
-	{
-		auto box = (PhysicsShapeBox*)shape;
-		auto tTransform = localPose;
-		tTransform.Scale() = box->GetDimensions() / 2.0f;
-		auto mat = tTransform.ToTransformMatrix() * globalTransform.ToTransformMatrix();
-		debugGraphics->DrawCube(mat, color);
-		break;
-	}
-	case PHYSICS_SHAPE_TYPE_PLANE:
-	{
-		auto plane = (PhysicsShapePlane*)shape;
-		transform.Scale().x = 0.01f;
-		transform.Scale().y = 100.0f;
-		transform.Scale().z = 100.0f;
-		debugGraphics->DrawCube(transform.ToTransformMatrix(), color);
-		break;
-	}
-	case PHYSICS_SHAPE_TYPE_CONVEX_MESH:
-		break;
-	case PHYSICS_SHAPE_TYPE_TRIANGLE_MESH:
-		break;
-	default:
-		break;
-	}
-}
-
-void RigidBodyInspector::OnSelectShape(int idx)
-{
-	m_choosingShapeIdx = idx;
-	m_tempShapeLocalTransform = m_shapeDatas[idx].shape->GetLocalTransform();
-}
-
-void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
-{
-	if (o->GetComponentRaw<RenderingComponent>())
-	{
-		o->GetComponentRaw<RenderingComponent>()->SetOpacity(alpha);
-		return;
-	}
-
-	for (auto& c : o->Children())
-	{
-		SetOpacityForObject(c, alpha);
-	}
-}
-
-void RigidBodyInspector::Inspect()
+void RigidBodyInspector::RenderInspectShape()
 {
 	static const char* s_shapeList[] = {
 		"Sphere",
@@ -288,87 +248,7 @@ void RigidBodyInspector::Inspect()
 		"Plane",
 	};
 
-	if (m_countReloadShapeInspectorData != 0)
-	{
-		if (--m_countReloadShapeInspectorData == 0)
-		{
-			LoadShapeInspectorDatas();
-		}
-
-		return;
-	}
-
-	{
-		const char* switchStr = nullptr;
-		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
-		{
-			switchStr = ICON_FA_REPEAT " To Static";
-		}
-		else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
-		{
-			switchStr = ICON_FA_REPEAT " To Dynamic";
-		}
-		else
-		{
-			assert(0);
-		}
-
-		if (ImGui::Button(switchStr, { 150,0 }))
-		{
-			Handle<RigidBody> newBody;
-			Serializer serializer = {};
-			auto oriShape = serializer.Clone(m_body->GetShape(0)->shared_from_this());
-
-			if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
-			{
-				newBody = mheap::New<RigidBodyStatic>(oriShape);
-			}
-			else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
-			{
-				newBody = mheap::New<RigidBodyDynamic>(oriShape);
-			}
-
-			auto count = m_body->GetShapesCount();
-			for (size_t i = 1; i < count; i++)
-			{
-				newBody->AddShape(serializer.Clone(m_body->GetShape(i)->shared_from_this()));
-			}
-
-			auto obj = m_body->GetGameObject();
-			obj->RemoveComponentRaw(m_body);
-			obj->AddComponent(newBody);
-			m_body = newBody;
-
-			auto currentTab = EditorContext::Get()->GetCurrentTab();
-			if (dynamic_cast<SceneEditorTab*>(currentTab))
-			{
-				dynamic_cast<SceneEditorTab*>(currentTab)->ReloadCurrentInspectingObject();
-			}
-
-			return;
-		}
-
-		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
-		{
-			bool isKinematic = ((RigidBodyDynamic*)m_body)->IsKinematic();
-			ImGui::SameLine(0, 10);
-			if (ImGui::Checkbox("Kinematic", &isKinematic))
-			{
-				((RigidBodyDynamic*)m_body)->SetKinematic(isKinematic);
-			}
-		}
-	}
-
-	{
-		// adjust opacity to edit shapes
-		if (ImGui::SliderFloat("Opacity", &m_currentAlpha, 0.0f, 1.0f))
-		{
-			auto root = m_body->GetGameObject()->GetRoot();
-			SetOpacityForObject(root, m_currentAlpha);
-		}
-	}
-
-	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.88f, 500 }, true);
+	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.89f, 500 }, true);
 
 	if (ImGui::Button("+ Add Shape"))
 	{
@@ -441,7 +321,7 @@ void RigidBodyInspector::Inspect()
 
 	ImGui::SameLine();
 	float scaleOffset = 0;
-	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
+	ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 279);
 	if (ImGui::DragFloat("Unique Scale", &scaleOffset, 0.001f, -INFINITY, INFINITY, ""))
 	{
 		m_body->ScaleBy(1 + scaleOffset);
@@ -478,6 +358,7 @@ void RigidBodyInspector::Inspect()
 
 	if (ImGui::IsItemHovered())
 	{
+		ImGui::SetItemUsingMouseWheel();
 		if (ImGui::GetIO().MouseWheel)
 		{
 			int incre = ImGui::GetIO().MouseWheel < 0 ? 1 : int(m_shapeDatas.size() - 1);
@@ -543,7 +424,7 @@ void RigidBodyInspector::Inspect()
 			ImGui::Separator();
 			//ImGui::Dummy({ 7,7 });
 
-			DrawDebug(shape, Vec4(0, 1, 0, 1), true);
+			DrawDebug(m_body, shape, Vec4(0, 1, 0, 1), true);
 
 			switch (type)
 			{
@@ -578,7 +459,7 @@ void RigidBodyInspector::Inspect()
 		{
 			if (i != m_choosingShapeIdx)
 			{
-				DrawDebug(m_body->GetShape(i), Vec4(0.8f, 0, 0, 1), false);
+				DrawDebug(m_body, m_body->GetShape(i), Vec4(0.8f, 0, 0, 1), false);
 			}
 		}
 	}
@@ -594,14 +475,502 @@ void RigidBodyInspector::Inspect()
 	}
 }
 
+void RigidBodyInspector::InspectJointBase(Joint* joint)
+{
+}
+
+void RigidBodyInspector::InspectJointFixed(Joint* joint)
+{
+}
+
+void RigidBodyInspector::RenderInspectJoint()
+{
+	enum JOINT_TYPE {
+		FIXED,
+		REVOLUTE
+	};
+
+	const static char* s_jointList[] = {
+		"Fixed Joint",
+		"Revolute Joint",
+	};
+
+	ImGui::Dummy({ 5, 15 });
+	ImGui::BeginChild("## Joint Editor", { ImGui::GetWindowWidth() * 0.89f, 500 }, true);
+
+	if (ImGui::Button("+ Add Joint"))
+	{
+		m_choosingCreateJointIdx = 0;
+		m_jointCreateAnother = nullptr;
+
+		EditorContext::DialogDesc desc;
+		desc.title = "Add Joint";
+		EditorContext::Get()->OpenOkCancelDialog(desc,
+			[](void* p)
+			{
+				auto self = (RigidBodyInspector*)p;
+
+				if (ImGui::BeginCombo("Choose Joint Type", s_jointList[self->m_choosingCreateJointIdx]))
+				{
+					for (size_t n = 0; n < IM_ARRAYSIZE(s_jointList); n++)
+					{
+						ImGui::PushID(n);
+						if (ImGui::Selectable(s_jointList[n]))
+						{
+							self->m_choosingCreateJointIdx = int(n);
+						}
+						ImGui::PopID();
+					}
+
+					ImGui::EndCombo();
+				}
+
+				ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, self->m_jointCreateAnother ? ImVec4(0,1,0,1) : ImVec4(1,0,0,1));
+				ImGui::TextUnformatted(self->m_jointCreateAnother ? String::Format("Found At: [{}]", self->m_jointCreateAnother).c_str() : "Not Found");
+				ImGui::PopStyleColor();
+				if (ImGui::InputText("Object Name", self->m_jointCreateSearchName, sizeof(self->m_jointCreateSearchName),
+					ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+				{
+					self->FindJointCreateAnother();
+				}
+
+			}, this,
+			[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+				{
+					auto self = (RigidBodyInspector*)p;
+
+					if (result == EditorContext::CANCEL)
+					{
+						return true;
+					}
+
+					self->FindJointCreateAnother();
+					if (self->m_jointCreateAnother == nullptr)
+					{
+						std::cerr << "[ERROR]: no another object to create joint.\n";
+						return false;
+					}
+
+					if (result == EditorContext::OK)
+					{
+						auto a0GlobalTransform = self->m_body->GetGameObject()->GetCommittedGlobalTransform();
+						auto a1GlobalTransform = self->m_jointCreateAnother->GetGameObject()->GetCommittedGlobalTransform();
+
+						auto temp0 = Transform::FromTransformMatrix(a0GlobalTransform);
+						temp0.Scale() = { 1,1,1 };
+						auto temp1 = Transform::FromTransformMatrix(a1GlobalTransform);
+						temp1.Scale() = { 1,1,1 };
+
+						auto center = (temp0.Position() + temp1.Position()) / 2.0f;
+						auto jointGlobalTransform = Mat4::Translation(center);
+
+						auto localframe0 = Transform::FromTransformMatrix(temp0.ToTransformMatrix().GetInverse() * jointGlobalTransform);
+						auto localframe1 = Transform::FromTransformMatrix(temp1.ToTransformMatrix().GetInverse() * jointGlobalTransform);
+
+						switch (self->m_choosingCreateJointIdx)
+						{
+						case JOINT_TYPE::FIXED:
+							mheap::New<FixedJoint>(self->m_body, localframe0, self->m_jointCreateAnother, localframe1);
+							break;
+						case JOINT_TYPE::REVOLUTE:
+							//mheap::New<RevoluteJoint>();
+							assert(0);
+							break;
+						default:
+							break;
+						}
+					}
+					return true;
+				}, this
+		);
+	}
+
+	if (m_body->GetJointsCount() == 0 || m_choosingJointIdx < 0)
+	{
+		if (m_body->GetJointsCount() != 0)
+		{
+			m_choosingJointIdx = 0;
+		}
+
+		ImGui::EndChild();
+		return;
+	}
+
+	String previewText = String::Format("[{}] {}", m_choosingJointIdx, m_choosingJointIdx >= 0 ? m_jointDatas[m_choosingJointIdx].joint->GetClassName() : "");
+	if (ImGui::BeginCombo("Choose Joint", m_choosingJointIdx >= 0 ? previewText.c_str() : nullptr))
+	{
+		for (size_t n = 0; n < m_jointDatas.size(); n++)
+		{
+			String text = String::Format("[{}] {}", n, m_jointDatas[n].joint->GetClassName());
+			ImGui::PushID(n);
+			if (ImGui::Selectable(text.c_str()))
+			{
+				m_choosingJointIdx = int(n);
+				OnSelectJoint(m_choosingJointIdx);
+			}
+			ImGui::PopID();
+		}
+
+		ImGui::EndCombo();
+	}
+
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetItemUsingMouseWheel();
+		if (ImGui::GetIO().MouseWheel)
+		{
+			int incre = ImGui::GetIO().MouseWheel < 0 ? 1 : int(m_shapeDatas.size() - 1);
+			m_choosingJointIdx = (m_choosingJointIdx + incre) % m_shapeDatas.size();
+			OnSelectShape(m_choosingJointIdx);
+		}
+	}
+
+	ImGui::Separator();
+
+	Joint* deleteJoint = nullptr;
+	auto jointsCount = m_body->GetJointsCount();
+	if (m_choosingJointIdx >= 0)
+	{
+		auto& joint = m_body->GetJoint(m_choosingJointIdx);
+		auto& jointData = m_jointDatas[m_choosingJointIdx];
+		auto typeName = String(joint->GetClassName());
+
+		//ImGui::SetNextItemOpen(true);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 5.f));
+		auto open = ImGui::TreeNodeEx(typeName.c_str(), ImGuiTreeNodeFlags_FramePadding);
+		ImGui::PopStyleVar();
+
+		{
+			auto pos = ImGui::GetCursorPos();
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() - 36, pos.y - 35));
+			if (ImGui::Button(ICON_FA_TRASH " ## delete joint btn", ImVec2(30, 30)))
+			{
+				deleteJoint = joint.Get();
+			}
+
+			ImGui::SetCursorPos(pos);
+		}
+
+
+		if (open)
+		{
+			InspectJointBase(joint);
+
+			ImGui::Dummy({ 10,10 });
+			ImGui::Separator();
+			//ImGui::Dummy({ 7,7 });
+
+			auto count = m_body->GetShapesCount();
+			for (size_t i = 0; i < count; i++)
+			{
+				DrawDebug(m_body, m_body->GetShape(i), Vec4(0, 1, 0, 1), false);
+			}
+
+			auto another = joint->GetAnotherBody(m_body);
+			count = another->GetShapesCount();
+			for (size_t i = 0; i < count; i++)
+			{
+				DrawDebug(another, another->GetShape(i), Vec4(0, 1, 0, 1), false);
+			}
+
+			assert(m_debugJointAnotherObject != nullptr);
+
+			if (typeName == "FixedJoint")
+			{
+				InspectJointFixed(joint);
+			}
+			else if (typeName == "RevoluteJoint")
+			{
+				//InspectJointFixed(joint);
+			}
+
+			ImGui::TreePop();
+		}
+		else
+		{
+			if (m_debugJointAnotherObject)
+			{
+				SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+			}
+		}
+	}
+
+	ImGui::EndChild();
+
+	if (deleteJoint)
+	{
+		auto another = deleteJoint->GetAnotherBody(m_body);
+		if (m_debugJointAnotherObject)
+		{
+			assert(m_debugJointAnotherObject == another->GetGameObject());
+			SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+		}
+	}
+}
+
+void RigidBodyInspector::DrawDebugImpl(const Mat4& globalTransformMat, PhysicsShape* shape, const Vec4& color, bool showBasis)
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics)
+	{
+		return;
+	}
+
+	Transform globalTransform = {};
+	//m_body->GetGameObject()->GetCommittedGlobalTransform().Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());
+	globalTransformMat.Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());
+
+	// physics component doesn't use scale component
+	globalTransform.Scale() = { 1,1,1 };
+
+	auto localPose = shape->GetLocalTransform();
+	auto globalMat = localPose.ToTransformMatrix() * globalTransform.ToTransformMatrix();
+
+	Transform transform = {};
+	globalMat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
+
+	if (showBasis)
+	{
+		debugGraphics->DrawRay(globalMat.Position(), globalMat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
+		debugGraphics->DrawRay(globalMat.Position(), globalMat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
+		debugGraphics->DrawRay(globalMat.Position(), globalMat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });
+	}
+
+	auto type = shape->GetType();
+	switch (type)
+	{
+	case PHYSICS_SHAPE_TYPE_SPHERE:
+	{
+		auto sphere = (PhysicsShapeSphere*)shape;
+		debugGraphics->DrawSphere(Sphere(transform.Position(), sphere->GetRadius()), color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_CAPSULE:
+	{
+		// physx capsule up direction forwards to x-axis
+		auto capsule = (PhysicsShapeCapsule*)shape;
+		debugGraphics->DrawCapsule(Capsule(globalMat.Right().Normal(), transform.Position(), capsule->GetHeight(), capsule->GetRadius()), color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_BOX:
+	{
+		auto box = (PhysicsShapeBox*)shape;
+		auto tTransform = localPose;
+		tTransform.Scale() = box->GetDimensions() / 2.0f;
+		auto mat = tTransform.ToTransformMatrix() * globalTransform.ToTransformMatrix();
+		debugGraphics->DrawCube(mat, color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_PLANE:
+	{
+		auto plane = (PhysicsShapePlane*)shape;
+		transform.Scale().x = 0.01f;
+		transform.Scale().y = 100.0f;
+		transform.Scale().z = 100.0f;
+		debugGraphics->DrawCube(transform.ToTransformMatrix(), color);
+		break;
+	}
+	case PHYSICS_SHAPE_TYPE_CONVEX_MESH:
+		break;
+	case PHYSICS_SHAPE_TYPE_TRIANGLE_MESH:
+		break;
+	default:
+		break;
+	}
+}
+
+void RigidBodyInspector::DrawDebug(RigidBody* body, PhysicsShape* shape, const Vec4& color, bool showBasis)
+{
+	if (body && body != m_body)
+	{
+		m_debugJointAnotherObject = body->GetGameObject();
+	}
+
+	if (!body)
+	{
+		body = m_body;
+	}
+
+	auto& data = m_currentDrawData[shape];
+	if (!data.shape)
+	{
+		data.shape = shape->shared_from_this();
+	}
+
+	data.globalTransformMat = body->GetGameObject()->GetCommittedGlobalTransform();
+	data.color = color;
+	data.showBasis = showBasis;
+}
+
+void RigidBodyInspector::FlushDrawDebug()
+{
+	for (auto& d : m_currentDrawData)
+	{
+		DrawDebugImpl(d.second.globalTransformMat, d.second.shape.get(), d.second.color, d.second.showBasis);
+	}
+}
+
+void RigidBodyInspector::OnSelectShape(int idx)
+{
+	m_choosingShapeIdx = idx;
+	m_tempShapeLocalTransform = m_shapeDatas[idx].shape->GetLocalTransform();
+
+	m_tempIsEnableFamilyNoCollide = m_shapeDatas[idx].shape->IsEnableFamilyNoCollide();
+}
+
+void RigidBodyInspector::OnSelectJoint(int idx)
+{
+	m_choosingJointIdx = idx;
+}
+
+void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
+{
+	if (o->GetComponentRaw<RenderingComponent>())
+	{
+		o->GetComponentRaw<RenderingComponent>()->SetOpacity(alpha);
+		return;
+	}
+
+	for (auto& c : o->Children())
+	{
+		SetOpacityForObject(c, alpha);
+	}
+}
+
+void RigidBodyInspector::Inspect()
+{
+	m_currentDrawData.clear();
+
+	if (m_countReloadShapeInspectorData != 0)
+	{
+		if (--m_countReloadShapeInspectorData == 0)
+		{
+			LoadShapeInspectorDatas();
+		}
+
+		return;
+	}
+
+	if (m_countReloadJointInspectorData != 0)
+	{
+		if (--m_countReloadJointInspectorData == 0)
+		{
+			LoadJointInspectorDatas();
+		}
+
+		return;
+	}
+
+	{
+		const char* switchStr = nullptr;
+		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		{
+			switchStr = ICON_FA_REPEAT " To Static";
+		}
+		else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
+		{
+			switchStr = ICON_FA_REPEAT " To Dynamic";
+		}
+		else
+		{
+			assert(0);
+		}
+
+		if (ImGui::Button(switchStr, { 150,0 }))
+		{
+			Handle<RigidBody> newBody;
+			Serializer serializer = {};
+			auto oriShape = serializer.Clone(m_body->GetShape(0)->shared_from_this());
+
+			if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+			{
+				newBody = mheap::New<RigidBodyStatic>(oriShape);
+			}
+			else if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_STATIC)
+			{
+				newBody = mheap::New<RigidBodyDynamic>(oriShape);
+			}
+
+			auto count = m_body->GetShapesCount();
+			for (size_t i = 1; i < count; i++)
+			{
+				newBody->AddShape(serializer.Clone(m_body->GetShape(i)->shared_from_this()));
+			}
+
+			auto obj = m_body->GetGameObject();
+			obj->RemoveComponentRaw(m_body);
+			obj->AddComponent(newBody);
+			m_body = newBody;
+
+			auto currentTab = EditorContext::Get()->GetCurrentTab();
+			if (dynamic_cast<SceneEditorTab*>(currentTab))
+			{
+				dynamic_cast<SceneEditorTab*>(currentTab)->ReloadCurrentInspectingObject();
+			}
+
+			return;
+		}
+
+		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		{
+			bool isKinematic = ((RigidBodyDynamic*)m_body)->IsKinematic();
+			ImGui::SameLine(0, 10);
+			if (ImGui::Checkbox("Kinematic", &isKinematic))
+			{
+				((RigidBodyDynamic*)m_body)->SetKinematic(isKinematic);
+			}
+
+			ImGui::SameLine(0, 10);
+			if (ImGui::Checkbox("Famiily No Collide", &m_tempIsEnableFamilyNoCollide))
+			{
+				RigidBodyDynamic::SetFamilyNoCollideForGameObject(m_body->GetGameObject()->GetRoot(), m_tempIsEnableFamilyNoCollide);
+			}
+		}
+	}
+
+	{
+		// adjust opacity to edit shapes
+		if (ImGui::SliderFloat("Opacity", &m_currentAlpha, 0.0f, 1.0f))
+		{
+			auto root = m_body->GetGameObject()->GetRoot();
+			SetOpacityForObject(root, m_currentAlpha);
+		}
+	}
+
+	if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+	{
+		auto body = (RigidBodyDynamic*)m_body;
+		auto v = body->GetDensity();
+		auto mass = body->GetMass();
+		ImGui::Text("Current Mass: %.3f", mass);
+		if (ImGui::DragFloat("Body Density", &v, 0.01f, 0.01f, INFINITY))
+		{
+			body->SetDensity(v);
+		}
+	}
+
+	RenderInspectShape();
+	RenderInspectJoint();
+}
+
 void RigidBodyInspector::OnBeginInspecting()
 {
 	auto root = m_body->GetGameObject()->GetRoot();
 	SetOpacityForObject(root, m_currentAlpha);
+
+	if (m_choosingShapeIdx < 0 && m_body->GetShapesCount() != 0)
+	{
+		OnSelectShape(0);
+	}
 }
 
 void RigidBodyInspector::OnEndInspecting()
 {
 	auto root = m_body->GetGameObject()->GetRoot();
 	SetOpacityForObject(root, 1.0f);
+
+	if (m_debugJointAnotherObject)
+	{
+		SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+	}
 }

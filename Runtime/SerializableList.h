@@ -29,6 +29,7 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapeCapsule.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeSphere.h"
+#include "MainSystem/Physics/Joints/FixedJoint.h"
 #include "MainSystem/Physics/Joints/RevoluteJoint.h"
 
 #include "Scene/GameObject.h"
@@ -103,6 +104,8 @@ public:
 			SerializableDB::Get()->Register<PhysicsShapeCapsule>();
 			SerializableDB::Get()->Register<PhysicsShapePlane>();
 			SerializableDB::Get()->Register<PhysicsShapeSphere>();
+
+			SerializableDB::Get()->Register<FixedJoint>();
 			SerializableDB::Get()->Register<RevoluteJoint>();
 		}
 

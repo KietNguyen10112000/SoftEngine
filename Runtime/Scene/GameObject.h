@@ -65,6 +65,7 @@ private:
 	Array<ComponentSlot> m_components = {};
 
 	GameObject*					m_root = this;
+	GameObject*					m_committedRoot = this;
 	Handle<GameObject>			m_parent = nullptr;
 	Array<Handle<GameObject>>	m_children = {};
 
@@ -230,6 +231,7 @@ private:
 		
 		if (m_modifiedFlags & ModifiedFlag::HEIRARCHY)
 		{
+			m_committedRoot = m_root;
 			m_committedScene = m_scene;
 			m_committedSceneId = m_sceneId;
 		}
@@ -351,17 +353,27 @@ public:
 		}
 	}
 
-	template <typename Comp>
+	template <typename Comp, bool RESTRICTED = true>
 	Comp* GetCommittedComponentRaw() const
 	{
 		if constexpr (std::is_base_of_v<MainComponent, Comp>)
 		{
+			if constexpr (!RESTRICTED)
+			{
+				if (m_committedComponents[Comp::COMPONENT_ID].Get())
+				{
+					return dynamic_cast<Comp*>(m_committedComponents[Comp::COMPONENT_ID].Get());
+				}
+			}
+			else
+			{
 #ifdef _DEBUG
-			if (m_committedComponents[Comp::COMPONENT_ID].Get())
-				assert(dynamic_cast<Comp*>(m_committedComponents[Comp::COMPONENT_ID].Get()) != nullptr);
+				if (m_committedComponents[Comp::COMPONENT_ID].Get())
+					assert(dynamic_cast<Comp*>(m_committedComponents[Comp::COMPONENT_ID].Get()) != nullptr);
 #endif // _DEBUG
 
-			return (Comp*)(m_committedComponents[Comp::COMPONENT_ID].Get());
+				return (Comp*)(m_committedComponents[Comp::COMPONENT_ID].Get());
+			}
 		}
 		else
 		{
@@ -386,7 +398,7 @@ public:
 	template <typename Comp>
 	inline bool HasComponent()
 	{
-		return GetCommittedComponentRaw<Comp>() != nullptr;
+		return GetCommittedComponentRaw<Comp, false>() != nullptr;
 	}
 
 	// consistency check
@@ -397,7 +409,7 @@ public:
 
 public:
 	void AddChild(const Handle<GameObject>& obj, ID index = INVALID_ID);
-	void RemoveFromParent();
+	void RemoveFromParent(bool keepChildrenOrder = false);
 
 	template <typename Func>
 	void ForEachChildren(Func func)
@@ -474,6 +486,11 @@ public:
 	inline auto GetRoot()
 	{
 		return m_root;
+	}
+
+	inline auto GetCommittedRoot()
+	{
+		return m_committedRoot;
 	}
 
 	inline auto& Name()

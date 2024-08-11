@@ -22,6 +22,7 @@ class PhysicsShapeUtils
 		shape->m_meterial = material;
 
 		shape->m_pxShape->acquireReference();
+		shape->SetCollisionMask(uint32_t(INVALID_ID));
 	}
 };
 

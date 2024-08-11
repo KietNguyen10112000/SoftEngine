@@ -34,7 +34,7 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 //	std::cout << "GameObject::~GameObject()\n";
 //}
 
-void GameObject::RemoveFromParent()
+void GameObject::RemoveFromParent(bool keepChildrenOrder)
 {
 	if (m_scene == 0 && m_parent == 0)
 	{
@@ -49,7 +49,18 @@ void GameObject::RemoveFromParent()
 
 	m_parent->m_lock.lock();
 	auto& arr = m_parent->m_children;
-	MANAGED_ARRAY_ROLL_TO_FILL_BLANK(arr, this, m_parentIdx);
+	if (!keepChildrenOrder)
+	{
+		MANAGED_ARRAY_ROLL_TO_FILL_BLANK(arr, this, m_parentIdx);
+	}
+	else
+	{
+		arr.Remove(arr.begin() + m_parentIdx);
+		for (size_t i = 0; i < arr.size(); i++)
+		{
+			arr[i]->m_parentIdx = i;
+		}
+	}
 	m_parent->m_lock.unlock();
 
 	m_parentIdx = INVALID_ID;

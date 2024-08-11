@@ -66,6 +66,12 @@ public:
 	void SetLocalTransform(const Transform& transform);
 	Transform GetLocalTransform() const;
 
+	void SetCollisionMask(uint32_t mask);
+	uint32_t GetCollisionMask() const;
+
+	bool IsEnableFamilyNoCollide();
+	void SetFamilyNoCollide(bool enable);
+
 	virtual void ScaleBy(float scale) = 0;
 
 };

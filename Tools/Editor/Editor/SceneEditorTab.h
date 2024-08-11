@@ -55,6 +55,7 @@ public:
 	size_t m_searchNameIdx = -1;
 
 	MainComponent* m_removeComp = nullptr;
+	GameObject* m_deleteObject = nullptr;
 
 	spinlock m_lock;
 
@@ -136,6 +137,7 @@ public:
 	void Inspect(ClassMetadata* metaData);
 	virtual void WriteSaveDataToJson(Serializer* serializer, json& j);
 	virtual void ReadSaveDataFromJson(Serializer* serializer, const json& j);
+	virtual void OnRenderGameObjectContextMenu(GameObject* obj);
 
 };
 

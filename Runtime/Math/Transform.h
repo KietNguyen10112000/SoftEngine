@@ -13,6 +13,13 @@ private:
 	Vec4 m_translation = {};
 
 public:
+	inline static Transform FromTransformMatrix(const Mat4& mat)
+	{
+		Transform ret = {};
+		mat.Decompose(ret.m_scale.xyz(), ret.m_rotation, ret.m_translation.xyz());
+		return ret;
+	}
+
 	inline Mat4 ToTransformMatrix() const
 	{
 		assert(m_scale.w == 0);

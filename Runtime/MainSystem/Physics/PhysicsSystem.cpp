@@ -12,7 +12,7 @@
 
 #include "Scene/GameObject.h"
 
-#include "FILTER_DATA.h"
+#include "FILTER_FLAG.h"
 
 using namespace physx;
 
@@ -29,33 +29,19 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 	PX_UNUSED(constantBlockSize);
 	PX_UNUSED(constantBlock);
 
-	/*auto filterDataWord0 = filterData0.word0 != 0 ? filterData0.word0 : filterData1.word0;
-	switch (filterDataWord0)
-	{
-	case PHYSICS_FILTER_DATA_CCT:
-		pairFlags = PxPairFlag::eSOLVE_CONTACT
-			| PxPairFlag::eDETECT_DISCRETE_CONTACT
-			| PxPairFlag::eNOTIFY_TOUCH_FOUND
-			| PxPairFlag::eNOTIFY_TOUCH_LOST
-			| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
-			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
-		break;
-	default:
-		pairFlags = PxPairFlag::eSOLVE_CONTACT
-			| PxPairFlag::eDETECT_DISCRETE_CONTACT
-			| PxPairFlag::eNOTIFY_TOUCH_FOUND
-			| PxPairFlag::eNOTIFY_TOUCH_LOST
-			| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
-			| PxPairFlag::eNOTIFY_CONTACT_POINTS;
-		break;
-	}*/
-
 	pairFlags = PxPairFlag::eSOLVE_CONTACT
 		| PxPairFlag::eDETECT_DISCRETE_CONTACT
 		| PxPairFlag::eNOTIFY_TOUCH_FOUND
 		| PxPairFlag::eNOTIFY_TOUCH_LOST
 		| PxPairFlag::eNOTIFY_TOUCH_PERSISTS
 		| PxPairFlag::eNOTIFY_CONTACT_POINTS;
+
+	PxFilterFlags ret = PxFilterFlag::eDEFAULT;
+
+	if ((filterData0.word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE) && (filterData1.word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE))
+	{
+		ret |= PxFilterFlag::eCALLBACK;
+	}
 
 	auto filterDataWord0 = filterData0.word0 | filterData1.word0;
 
@@ -64,8 +50,8 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 		pairFlags &= ~PxPairFlag::eSOLVE_CONTACT;
 	}
 
-	return PxFilterFlag::eDEFAULT 
-		| ((filterDataWord0 & PHYSICS_FILTER_DATA_CALLBACK) ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT);
+	return ret
+		| ((filterDataWord0 & PHYSICS_FILTER_FLAG::CALLBACK) ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT);
 }
 
 class PhysXSimulationCallback : public PxSimulationEventCallback
@@ -77,7 +63,18 @@ class PhysXSimulationCallback : public PxSimulationEventCallback
 public:
 	PhysXSimulationCallback(PhysicsSystem* system) : m_system(system) {};
 
-	void onConstraintBreak(PxConstraintInfo* constraints, PxU32 count) { PX_UNUSED(constraints); PX_UNUSED(count); }
+	void onConstraintBreak(PxConstraintInfo* constraints, PxU32 count) 
+	{
+		for (PxU32 i = 0; i < count; i++)
+		{
+			if (PxConstraintExtIDs::eJOINT == constraints[i].type)
+			{
+				PxJoint* pxJoint = reinterpret_cast<PxJoint*>(constraints[i].externalReference);
+				Joint* joint = (Joint*)pxJoint->userData;
+				joint->RemoveJointFromBodies();
+			}
+		}
+	}
 
 	void onWake(PxActor** actors, PxU32 count) { PX_UNUSED(actors); PX_UNUSED(count); }
 	void onSleep(PxActor** actors, PxU32 count) { PX_UNUSED(actors); PX_UNUSED(count); }
@@ -254,6 +251,16 @@ class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
 		}
 
 		pairFlags = (PxPairFlags)myPairFlags;
+
+		if ((filterData0.word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE) && (filterData1.word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE))
+		{
+			if (AComp->GetGameObject()->GetCommittedRoot() == BComp->GetGameObject()->GetCommittedRoot())
+			{
+				pairFlags.clear(PxPairFlag::eSOLVE_CONTACT);
+				pairFlags &= ~PxPairFlag::eSOLVE_CONTACT;
+				return PxFilterFlag::eSUPPRESS;
+			}
+		}
 
 		if (PxFilterObjectIsKinematic(attributes0) && PxFilterObjectIsKinematic(attributes1)) 
 		{ 

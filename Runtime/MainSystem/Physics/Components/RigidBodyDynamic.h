@@ -12,10 +12,13 @@ class PhysicsShape;
 class API RigidBodyDynamic : public RigidBody
 {
 protected:
+	COMPONENT_CLASS(RigidBodyDynamic);
+
+	friend class RigidBody;
+	friend class Joint;
+
 	byte m_isKinematic = 0;
 	float m_density = 1.0f;
-
-	COMPONENT_CLASS(RigidBodyDynamic);
 
 public:
 	RigidBodyDynamic();
@@ -26,6 +29,7 @@ private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
 protected:
+	void InternalWake();
 	virtual void Wake() override;
 	virtual void OnPhysicsTransformChanged() override; 
 
@@ -63,7 +67,10 @@ public:
 	bool IsKinematic() const;
 
 	void AddForce(const Vec3& f);
-	void AddForceAtLocalPos(const Vec3& f, const Vec3& pos);
+	void AddForceAtPos(const Vec3& f, const Vec3& pos);
+
+	void AddImpulse(const Vec3& impulse);
+	void AddImpulseAtPos(const Vec3& impulse, const Vec3& pos);
 
 };
 

@@ -6,7 +6,7 @@
 #include "Graphics/DebugGraphics.h"
 #include "Graphics/Graphics.h"
 
-#include "../FILTER_DATA.h"
+#include "../FILTER_FLAG.h"
 
 #include "../Shapes/PhysicsShapeCapsule.h"
 #include "../Materials/PhysicsMaterial.h"
@@ -59,7 +59,7 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 	//if (shape)
 	{
 		PxFilterData data;
-		data.word0 = PHYSICS_FILTER_DATA_CCT;
+		data.word0 = PHYSICS_FILTER_FLAG::CCT;
 		shape->setSimulationFilterData(data);
 
 		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 2.0f * pxDesc.contactOffset + 0.05f, pxDesc.height / 2.0f + 2.0f * pxDesc.contactOffset + 0.05f));
