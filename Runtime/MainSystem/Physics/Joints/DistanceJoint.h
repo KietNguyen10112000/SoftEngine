@@ -4,25 +4,19 @@
 
 NAMESPACE_BEGIN
 
-class API RevoluteJoint : public Joint
+class API DistanceJoint : public Joint
 {
-	SERIALIZABLE_CLASS(RevoluteJoint);
+	SERIALIZABLE_CLASS(DistanceJoint);
 public:
-	struct Limit : public Joint::BaseLimit
-	{
-		float upperLimit = PI / 2.0f;
-		float lowerLimit = -PI / 2.0f;
-	};
-
-	inline RevoluteJoint() {};
-	RevoluteJoint(
+	inline DistanceJoint() {};
+	DistanceJoint(
 		const Handle<RigidBody>& body0, 
 		const Transform& localFrame0, 
 		const Handle<RigidBody>& body1, 
 		const Transform& localFrame1
 	);
 
-protected:
+
 	// Inherited via Joint
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 
@@ -37,10 +31,6 @@ protected:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
-
-public:
-	void SetLimit(const Limit& limit);
-	Limit GetLimit() const;
 
 };
 

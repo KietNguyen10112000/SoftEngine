@@ -196,4 +196,89 @@ void Joint::SetBreakForce(float force, float torque)
 	);
 }
 
+float Joint::GetBreakForce() const
+{
+	float f, t;
+	m_pxJoint->getBreakForce(f, t);
+	return f;
+}
+
+float Joint::GetBreakTorque() const
+{
+	float f, t;
+	m_pxJoint->getBreakForce(f, t);
+	return t;
+}
+
+Transform Joint::GetLocalFrame(RigidBody* body) const
+{
+	if (body == m_body0)
+	{
+		return PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR0));
+	}
+
+	if (body == m_body1)
+	{
+		return PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR1));
+	}
+
+	return {};
+}
+
+void Joint::SetLocalFrame(RigidBody* body, const Transform& transform)
+{
+	assert(!IsBroken());
+
+	MAIN_SYSTEM_TASK_IMPL_COMMON_2(m_body0.Get(),
+		PhysicsSystem, AsyncTaskRunnerST, body, transform,
+		{
+			if (body == self->m_body0)
+			{
+				self->m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR0, PhysXUtils::ToPxTransform(transform));
+			}
+
+			if (body == self->m_body1)
+			{
+				self->m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR1, PhysXUtils::ToPxTransform(transform));
+			}
+		}
+	);
+}
+
+Transform Joint::GetGlobalTransform() const
+{
+	auto l0 = PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR0));
+	auto t0 = Transform::FromTransformMatrix(m_body0->GetGameObject()->GetCommittedGlobalTransform());
+	t0.Scale() = { 1,1,1 };
+	auto p0 = Transform::FromTransformMatrix(t0.ToTransformMatrix() * l0.ToTransformMatrix());
+
+	auto l1 = PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR1));
+	auto t1 = Transform::FromTransformMatrix(m_body1->GetGameObject()->GetCommittedGlobalTransform());
+	t1.Scale() = { 1,1,1 };
+	auto p1 = Transform::FromTransformMatrix(t1.ToTransformMatrix() * l1.ToTransformMatrix());
+
+	if (p0.Equals(p1, 0.01f))
+	{
+		return p0;
+	}
+
+	return Transform::FromTransformMatrix(Mat4::Translation((p0.Position() + p1.Position()) / 2.0f));
+}
+
+void Joint::BaseLimit::SerializeToJson(json& j)
+{
+	j["Restitution"]		= restitution;
+	j["BounceThreshold"]	= bounceThreshold;
+	j["Stiffness"]			= stiffness;
+	j["Damping"]			= damping;
+}
+
+void Joint::BaseLimit::DeserializeFromJson(const json& j)
+{
+	restitution			= j["Restitution"];
+	bounceThreshold		= j["BounceThreshold"];
+	stiffness			= j["Stiffness"];
+	damping				= j["Damping"];
+}
+
 NAMESPACE_END

@@ -9,6 +9,7 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeSphere.h"
 #include "MainSystem/Physics/Joints/FixedJoint.h"
+#include "MainSystem/Physics/Joints/SphericalJoint.h"
 #include "MainSystem/Physics/Joints/RevoluteJoint.h"
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
@@ -32,6 +33,7 @@ RigidBodyInspector::RigidBodyInspector(RigidBody* body, ClassMetadata* metadata)
 	m_bodyType = m_body->GetPhysicsType();
 
 	LoadShapeInspectorDatas();
+	LoadJointInspectorDatas();
 }
 
 void RigidBodyInspector::InitializeNewShapeInspectorDatas(ShapeInspectorData* data, PhysicsShape* shape)
@@ -66,10 +68,16 @@ void RigidBodyInspector::LoadShapeInspectorDatas()
 	}
 
 	m_shapeDatas.swap(newShapeDatas);
+
+	if (m_shapeDatas.size() != 0 && m_choosingShapeIdx >= 0)
+	{
+		OnSelectShape(m_choosingShapeIdx);
+	}
 }
 
 void RigidBodyInspector::InitializeNewJointInspectorDatas(JointInspectorData* data, Joint* joint)
 {
+	data->joint = joint;
 }
 
 void RigidBodyInspector::LoadJointInspectorDatas()
@@ -99,6 +107,11 @@ void RigidBodyInspector::LoadJointInspectorDatas()
 	}
 
 	m_jointDatas.swap(newJointDatas);
+
+	if (m_jointDatas.size() != 0 && m_choosingJointIdx >= 0)
+	{
+		OnSelectJoint(m_choosingJointIdx);
+	}
 }
 
 void RigidBodyInspector::FindJointCreateAnother()
@@ -248,7 +261,7 @@ void RigidBodyInspector::RenderInspectShape()
 		"Plane",
 	};
 
-	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.89f, 500 }, true);
+	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.85f, 500 }, true);
 
 	if (ImGui::Button("+ Add Shape"))
 	{
@@ -329,9 +342,9 @@ void RigidBodyInspector::RenderInspectShape()
 
 	if (m_body->GetShapesCount() == 0 || m_choosingShapeIdx < 0)
 	{
-		if (m_body->GetShapesCount() != 0)
+		if (m_body->GetShapesCount() != 0 && m_shapeDatas.size() != 0)
 		{
-			m_choosingShapeIdx = 0;
+			OnSelectShape(0);
 		}
 
 		ImGui::EndChild();
@@ -359,6 +372,7 @@ void RigidBodyInspector::RenderInspectShape()
 	if (ImGui::IsItemHovered())
 	{
 		ImGui::SetItemUsingMouseWheel();
+
 		if (ImGui::GetIO().MouseWheel)
 		{
 			int incre = ImGui::GetIO().MouseWheel < 0 ? 1 : int(m_shapeDatas.size() - 1);
@@ -472,14 +486,99 @@ void RigidBodyInspector::RenderInspectShape()
 		m_countReloadShapeInspectorData = 2;
 
 		m_choosingShapeIdx = clamp(m_choosingShapeIdx, 0, int(shapesCount) - 2);
+		OnSelectShape(m_choosingShapeIdx);
 	}
 }
 
 void RigidBodyInspector::InspectJointBase(Joint* joint)
 {
+	if (m_tempJointTransformCount != 0)
+	{
+		m_tempJointTransformCount--;
+	}
+
+	auto jointGlobalTransform = m_tempJointTransform;// joint->GetGlobalTransform();
+	if (!jointGlobalTransform.Equals(m_tempJointTransform, 0.1f) && m_tempJointTransformCount == 0)
+	{
+		m_tempJointTransform = jointGlobalTransform;
+	}
+
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (debugGraphics)
+	{
+		auto temp = jointGlobalTransform;
+		temp.Scale() = { 0.01f,0.01f,0.01f };
+		debugGraphics->DrawCube(temp.ToTransformMatrix(), {1,1,0,1});
+	}
+
+	ImGui::TextUnformatted("Joint Transform");
+	auto modified = m_tempJointTransform;
+	auto accessor = Accessor::For("Transform", modified, m_body);
+	DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("JointGlobalTransform {}", joint).c_str(), true);
+
+	if (!m_tempJointTransform.Equals(modified))
+	{
+		auto a0GlobalTransform = joint->GetBody0()->GetGameObject()->GetCommittedGlobalTransform();
+		auto a1GlobalTransform = joint->GetBody1()->GetGameObject()->GetCommittedGlobalTransform();
+
+		auto temp0 = Transform::FromTransformMatrix(a0GlobalTransform);
+		temp0.Scale() = { 1,1,1 };
+		auto temp1 = Transform::FromTransformMatrix(a1GlobalTransform);
+		temp1.Scale() = { 1,1,1 };
+
+		modified.Scale() = { 1,1,1 };
+		auto jointGlobalTransform = modified.ToTransformMatrix();
+
+		auto localframe0 = Transform::FromTransformMatrix(temp0.ToTransformMatrix().GetInverse() * jointGlobalTransform);
+		auto localframe1 = Transform::FromTransformMatrix(temp1.ToTransformMatrix().GetInverse() * jointGlobalTransform);
+
+		joint->SetLocalFrame(joint->GetBody0(), localframe0);
+		joint->SetLocalFrame(joint->GetBody1(), localframe1);
+
+		m_tempJointTransform = modified;
+		m_tempJointTransformCount = 5;
+	}
+
+	{
+		ImGui::Dummy({ 5, 15 });
+		auto f = joint->GetBreakForce();
+		auto tq = joint->GetBreakTorque();
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
+		if (ImGui::DragFloat("Break Force Length", &f, 0.001f, 0.001f, INFINITY, f == FLT_MAX ? "Infinity" : "%.3f"))
+		{
+			joint->SetBreakForce(f, tq);
+		}
+
+		ImGui::SameLine(ImGui::GetWindowWidth() - 50);
+		if (ImGui::Button(ICON_FA_ROTATE " ## reset break force"))
+		{
+			joint->SetBreakForce(FLT_MAX, tq);
+		}
+
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
+		if (ImGui::DragFloat("Break Torque Length", &tq, 0.001f, 0.001f, INFINITY, tq == FLT_MAX ? "Infinity" : "%.3f"))
+		{
+			joint->SetBreakForce(f, tq);
+		}
+
+		ImGui::SameLine(ImGui::GetWindowWidth() - 50);
+		if (ImGui::Button(ICON_FA_ROTATE " ## reset break torque"))
+		{
+			joint->SetBreakForce(f, FLT_MAX);
+		}
+	}
+	
 }
 
 void RigidBodyInspector::InspectJointFixed(Joint* joint)
+{
+}
+
+void RigidBodyInspector::InspectJointSpherical(Joint* joint)
+{
+}
+
+void RigidBodyInspector::InspectJointRevolute(Joint* joint)
 {
 }
 
@@ -487,16 +586,18 @@ void RigidBodyInspector::RenderInspectJoint()
 {
 	enum JOINT_TYPE {
 		FIXED,
+		SPHERICAL,
 		REVOLUTE
 	};
 
 	const static char* s_jointList[] = {
 		"Fixed Joint",
+		"Spherical Joint",
 		"Revolute Joint",
 	};
 
 	ImGui::Dummy({ 5, 15 });
-	ImGui::BeginChild("## Joint Editor", { ImGui::GetWindowWidth() * 0.89f, 500 }, true);
+	ImGui::BeginChild("## Joint Editor", { ImGui::GetWindowWidth() * 0.85f, 500 }, true);
 
 	if (ImGui::Button("+ Add Joint"))
 	{
@@ -572,13 +673,17 @@ void RigidBodyInspector::RenderInspectJoint()
 						case JOINT_TYPE::FIXED:
 							mheap::New<FixedJoint>(self->m_body, localframe0, self->m_jointCreateAnother, localframe1);
 							break;
+						case JOINT_TYPE::SPHERICAL:
+							mheap::New<SphericalJoint>(self->m_body, localframe0, self->m_jointCreateAnother, localframe1);
+							break;
 						case JOINT_TYPE::REVOLUTE:
-							//mheap::New<RevoluteJoint>();
-							assert(0);
+							mheap::New<RevoluteJoint>(self->m_body, localframe0, self->m_jointCreateAnother, localframe1);
 							break;
 						default:
 							break;
 						}
+
+						self->m_countReloadJointInspectorData = 2;
 					}
 					return true;
 				}, this
@@ -587,9 +692,9 @@ void RigidBodyInspector::RenderInspectJoint()
 
 	if (m_body->GetJointsCount() == 0 || m_choosingJointIdx < 0)
 	{
-		if (m_body->GetJointsCount() != 0)
+		if (m_body->GetJointsCount() != 0 && m_jointDatas.size() != 0)
 		{
-			m_choosingJointIdx = 0;
+			OnSelectJoint(0);
 		}
 
 		ImGui::EndChild();
@@ -617,11 +722,11 @@ void RigidBodyInspector::RenderInspectJoint()
 	if (ImGui::IsItemHovered())
 	{
 		ImGui::SetItemUsingMouseWheel();
-		if (ImGui::GetIO().MouseWheel)
+		if (ImGui::GetIO().MouseWheel != 0)
 		{
-			int incre = ImGui::GetIO().MouseWheel < 0 ? 1 : int(m_shapeDatas.size() - 1);
-			m_choosingJointIdx = (m_choosingJointIdx + incre) % m_shapeDatas.size();
-			OnSelectShape(m_choosingJointIdx);
+			int incre = ImGui::GetIO().MouseWheel < 0 ? 1 : int(m_jointDatas.size() - 1);
+			m_choosingJointIdx = (m_choosingJointIdx + incre) % m_jointDatas.size();
+			OnSelectJoint(m_choosingJointIdx);
 		}
 	}
 
@@ -681,7 +786,7 @@ void RigidBodyInspector::RenderInspectJoint()
 			}
 			else if (typeName == "RevoluteJoint")
 			{
-				//InspectJointFixed(joint);
+				InspectJointRevolute(joint);
 			}
 
 			ImGui::TreePop();
@@ -690,7 +795,11 @@ void RigidBodyInspector::RenderInspectJoint()
 		{
 			if (m_debugJointAnotherObject)
 			{
-				SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+				if (m_debugJointAnotherObject->GetRoot() != m_body->GetGameObject()->GetRoot())
+				{
+					SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+				}
+				m_debugJointAnotherObject = nullptr;
 			}
 		}
 	}
@@ -703,8 +812,17 @@ void RigidBodyInspector::RenderInspectJoint()
 		if (m_debugJointAnotherObject)
 		{
 			assert(m_debugJointAnotherObject == another->GetGameObject());
-			SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+			if (m_debugJointAnotherObject->GetRoot() != m_body->GetGameObject()->GetRoot())
+			{
+				SetOpacityForObject(m_debugJointAnotherObject->GetRoot(), 1.0f);
+			}
 		}
+
+		m_choosingJointIdx = clamp(m_choosingJointIdx, 0, int(jointsCount) - 2);
+		OnSelectJoint(m_choosingJointIdx);
+
+		deleteJoint->Break();
+		m_countReloadJointInspectorData = 2;
 	}
 }
 
@@ -821,6 +939,10 @@ void RigidBodyInspector::OnSelectShape(int idx)
 void RigidBodyInspector::OnSelectJoint(int idx)
 {
 	m_choosingJointIdx = idx;
+
+	auto& joint = m_body->GetJoint(idx);
+	m_tempJointTransform = joint->GetGlobalTransform();
+	m_tempJointTransform.Scale() = { 1,1,1 };
 }
 
 void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
@@ -841,6 +963,8 @@ void RigidBodyInspector::Inspect()
 {
 	m_currentDrawData.clear();
 
+	bool disableAll = false;
+
 	if (m_countReloadShapeInspectorData != 0)
 	{
 		if (--m_countReloadShapeInspectorData == 0)
@@ -848,7 +972,8 @@ void RigidBodyInspector::Inspect()
 			LoadShapeInspectorDatas();
 		}
 
-		return;
+		//disableAll = true;
+		//return;
 	}
 
 	if (m_countReloadJointInspectorData != 0)
@@ -858,8 +983,11 @@ void RigidBodyInspector::Inspect()
 			LoadJointInspectorDatas();
 		}
 
-		return;
+		//disableAll = true;
+		//return;
 	}
+
+	ImGui::BeginDisabled(disableAll);
 
 	{
 		const char* switchStr = nullptr;
@@ -951,6 +1079,10 @@ void RigidBodyInspector::Inspect()
 
 	RenderInspectShape();
 	RenderInspectJoint();
+
+	ImGui::EndDisabled();
+
+	FlushDrawDebug();
 }
 
 void RigidBodyInspector::OnBeginInspecting()

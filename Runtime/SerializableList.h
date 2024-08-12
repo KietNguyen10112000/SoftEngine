@@ -30,7 +30,13 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeSphere.h"
 #include "MainSystem/Physics/Joints/FixedJoint.h"
+#include "MainSystem/Physics/Joints/SphericalJoint.h"
 #include "MainSystem/Physics/Joints/RevoluteJoint.h"
+#include "MainSystem/Physics/Joints/PrismaticJoint.h"
+#include "MainSystem/Physics/Joints/DistanceJoint.h"
+#include "MainSystem/Physics/Joints/GearJoint.h"
+#include "MainSystem/Physics/Joints/RackAndPinionJoint.h"
+#include "MainSystem/Physics/Joints/D6Joint.h"
 
 #include "Scene/GameObject.h"
 #include "Scene/Scene.h"
@@ -106,7 +112,13 @@ public:
 			SerializableDB::Get()->Register<PhysicsShapeSphere>();
 
 			SerializableDB::Get()->Register<FixedJoint>();
+			SerializableDB::Get()->Register<SphericalJoint>();
 			SerializableDB::Get()->Register<RevoluteJoint>();
+			SerializableDB::Get()->Register<PrismaticJoint>();
+			SerializableDB::Get()->Register<DistanceJoint>();
+			SerializableDB::Get()->Register<GearJoint>();
+			SerializableDB::Get()->Register<RackAndPinionJoint>();
+			SerializableDB::Get()->Register<D6Joint>();
 		}
 
 

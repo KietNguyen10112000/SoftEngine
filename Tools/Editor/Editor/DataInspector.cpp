@@ -73,7 +73,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 
 	if (!hideScale)
 	{
-		modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 0.01f, -INFINITY, INFINITY);
+		modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 0.001f, -INFINITY, INFINITY);
 	}
 
 	ImVec2 cursorPos = { 0,0 };
@@ -164,7 +164,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 
 	//Graphics::Get()->GetDebugGraphics()->DrawDirection(transform.GetPosition(), cache->rotationAxis * 20.0f);
 
-	modified |= ImGui::DragFloatN_Colored("Position", &transform.Position()[0], 3, 0.01f, -INFINITY, INFINITY);
+	modified |= ImGui::DragFloatN_Colored("Position", &transform.Position()[0], 3, 0.001f, -INFINITY, INFINITY);
 
 	if (modified)
 	{

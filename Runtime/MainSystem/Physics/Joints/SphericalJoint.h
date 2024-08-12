@@ -4,18 +4,18 @@
 
 NAMESPACE_BEGIN
 
-class API RevoluteJoint : public Joint
+class API SphericalJoint : public Joint
 {
-	SERIALIZABLE_CLASS(RevoluteJoint);
+	SERIALIZABLE_CLASS(SphericalJoint);
 public:
 	struct Limit : public Joint::BaseLimit
 	{
-		float upperLimit = PI / 2.0f;
-		float lowerLimit = -PI / 2.0f;
+		float yLimitAngle = PI / 2.0f;
+		float zLimitAngle = PI / 2.0f;
 	};
 
-	inline RevoluteJoint() {};
-	RevoluteJoint(
+	inline SphericalJoint() {};
+	SphericalJoint(
 		const Handle<RigidBody>& body0, 
 		const Transform& localFrame0, 
 		const Handle<RigidBody>& body1, 

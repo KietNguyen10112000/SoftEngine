@@ -685,6 +685,13 @@ public:
         return v1.x != v2.x || v1.y == v2.y || v1.z == v2.z || v1.w == v2.w;
     }
 
+    inline bool Equals(const Quaternion& q, float eps = 0.0f) const
+    {
+        auto v = glm::length2(GLMQuatConst() * q.GLMQuatConst());
+        auto v2 = 1 - eps;
+        return std::abs(v) >= v2 * v2;
+    }
+
     inline void SetFromMat4(const Mat4& mat);
 
     inline Quaternion operator*(const Quaternion& quat) const

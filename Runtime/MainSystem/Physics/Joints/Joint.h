@@ -37,6 +37,18 @@ protected:
 		tracer->Trace(m_body1);
 	}
 
+public:
+	struct BaseLimit
+	{
+		float restitution = 0.0f;
+		float bounceThreshold = 0.0f;
+		float stiffness = 0.0f;
+		float damping = 0.0f;
+
+		void SerializeToJson(json& j);
+		void DeserializeFromJson(const json& j);
+	};
+
 private:
 	void CommitJointToBodies();
 	void RemoveJointFromBodies();
@@ -59,6 +71,13 @@ public:
 	void Break();
 
 	void SetBreakForce(float force, float torque);
+	float GetBreakForce() const;
+	float GetBreakTorque() const;
+
+	Transform GetLocalFrame(RigidBody* body) const;
+	void SetLocalFrame(RigidBody* body, const Transform& transform);
+
+	Transform GetGlobalTransform() const;
 
 	inline RigidBody* GetBody0()
 	{
@@ -67,7 +86,7 @@ public:
 
 	inline RigidBody* GetBody1()
 	{
-		return m_body0;
+		return m_body1;
 	}
 
 	inline RigidBody* GetAnotherBody(RigidBody* body)

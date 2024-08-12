@@ -69,6 +69,8 @@ public:
 	int m_countReloadJointInspectorData = 0;
 	RigidBody* m_jointCreateAnother = nullptr;
 	char m_jointCreateSearchName[256] = {};
+	Transform m_tempJointTransform = {};
+	int m_tempJointTransformCount = 0;
 
 	uint32_t m_tempCollisionMask = 0;
 	bool m_tempIsEnableFamilyNoCollide = false;
@@ -104,6 +106,8 @@ private:
 
 	void InspectJointBase(Joint* joint);
 	void InspectJointFixed(Joint* joint);
+	void InspectJointSpherical(Joint* joint);
+	void InspectJointRevolute(Joint* joint);
 	void RenderInspectJoint();
 
 	void DrawDebugImpl(const Mat4& globalTransformMat, PhysicsShape* shape, const Vec4& color, bool showBasis);

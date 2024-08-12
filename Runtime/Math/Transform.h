@@ -27,11 +27,11 @@ public:
 		return Mat4::Scaling(m_scale.xyz()) * Mat4::Rotation(m_rotation) * Mat4::Translation(m_translation.xyz());
 	}
 
-	inline bool Equals(const Transform& transform) const
+	inline bool Equals(const Transform& transform, float eps = 0.0f) const
 	{
-		return m_scale			== transform.m_scale 
-			&& m_translation	== transform.m_translation
-			&& m_rotation		== transform.m_rotation;
+		return m_scale.xyz().Equals(transform.m_scale.xyz(), eps)
+			&& m_translation.xyz().Equals(transform.m_translation.xyz(), eps)
+			&& m_rotation.Equals(transform.m_rotation, eps);
 	}
 
 	inline bool operator==(const Transform& transform) const

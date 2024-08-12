@@ -45,4 +45,13 @@ void RevoluteJoint::OnPropertyChanged(const UnknownAddress& var, const Variant& 
 {
 }
 
+void RevoluteJoint::SetLimit(const RevoluteJoint::Limit& limit)
+{
+}
+
+RevoluteJoint::Limit RevoluteJoint::GetLimit() const
+{
+	return Limit();
+}
+
 NAMESPACE_END
