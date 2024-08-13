@@ -23,6 +23,7 @@ class PxControllerManager;
 NAMESPACE_BEGIN
 
 class PhysicsComponent;
+class Joint;
 
 class API PhysicsSystem : public MainSystem
 {
@@ -77,6 +78,8 @@ private:
 	size_t m_trashId = 0;
 
 	PhysicsSystemDependenciesResolver m_dependenciesResolver;
+
+	std::vector<Joint*> m_brokenJoints;
 
 private:
 	TRACEABLE_FRIEND();

@@ -65,13 +65,15 @@ public:
 
 	void onConstraintBreak(PxConstraintInfo* constraints, PxU32 count) 
 	{
+		auto& brokenJoints = m_system->m_brokenJoints;
 		for (PxU32 i = 0; i < count; i++)
 		{
 			if (PxConstraintExtIDs::eJOINT == constraints[i].type)
 			{
 				PxJoint* pxJoint = reinterpret_cast<PxJoint*>(constraints[i].externalReference);
 				Joint* joint = (Joint*)pxJoint->userData;
-				joint->RemoveJointFromBodies();
+				brokenJoints.push_back(joint);
+				//joint->RemoveJointFromBodies();
 			}
 		}
 	}
@@ -774,6 +776,12 @@ void PhysicsSystem::Iteration(float dt)
 	ProcessPrevUpdateList();
 
 	m_pxScene->simulate(dt);
+
+	for (auto& joint : m_brokenJoints)
+	{
+		joint->RemoveJointFromBodies();
+	}
+	m_brokenJoints.clear();
 
 	RebuildUpdateList();
 	ProcessUpdateList();

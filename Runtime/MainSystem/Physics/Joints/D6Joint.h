@@ -16,7 +16,7 @@ public:
 		const Transform& localFrame1
 	);
 
-
+protected:
 	// Inherited via Joint
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 
@@ -31,6 +31,9 @@ public:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+public:
+	void Test();
 
 };
 

@@ -41,7 +41,16 @@ protected:
 public:
 	void SetLimit(const Limit& limit);
 	Limit GetLimit() const;
+	void SetEnableLimit(bool enable);
+	bool IsEnableLimit() const;
 
+	void SetDriveVelocity(float v);
+	float GetDriveVelocity() const;
+	void SetEnableDriveVelocity(bool enable);
+	bool IsEnableDriveVelocity() const;
+
+	void SetDriveForceLimit(float v);
+	float GetDriveForceLimit() const;
 };
 
 NAMESPACE_END

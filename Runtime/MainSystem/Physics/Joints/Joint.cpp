@@ -28,11 +28,17 @@ Joint::~Joint()
 
 void Joint::CommitJointToBodies()
 {
-	m_idx0 = m_body0->m_joints.size();
-	m_body0->m_joints.Push(this);
+	if (m_body0)
+	{
+		m_idx0 = m_body0->m_joints.size();
+		m_body0->m_joints.Push(this);
+	}
 
-	m_idx1 = m_body1->m_joints.size();
-	m_body1->m_joints.Push(this);
+	if (m_body1)
+	{
+		m_idx1 = m_body1->m_joints.size();
+		m_body1->m_joints.Push(this);
+	}
 
 	m_pxJoint->userData = this;
 }
@@ -46,33 +52,40 @@ void Joint::RemoveJointFromBodies()
 	}
 
 	{
-		if (m_body0->GetPhysicsType() == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		if (m_body0 && m_body0->GetPhysicsType() == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
 		{
 			((RigidBodyDynamic*)m_body0.Get())->InternalWake();
 		}
 
-		if (m_body1->GetPhysicsType() == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		if (m_body1 && m_body1->GetPhysicsType() == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
 		{
 			((RigidBodyDynamic*)m_body1.Get())->InternalWake();
 		}
 	}
 
 	{
-		m_body0->m_joints.Remove(m_body0->m_joints.begin() + m_idx0);
-		m_body1->m_joints.Remove(m_body1->m_joints.begin() + m_idx1);
-
-		for (size_t i = 0; i < m_body0->m_joints.size(); i++)
+		if (m_body0)
 		{
-			auto& j = m_body0->m_joints[i];
-			auto& idx = j->m_body0.Get() == m_body0 ? j->m_idx0 : j->m_idx1;
-			idx = i;
+			m_body0->m_joints.Remove(m_body0->m_joints.begin() + m_idx0);
+
+			for (size_t i = 0; i < m_body0->m_joints.size(); i++)
+			{
+				auto& j = m_body0->m_joints[i];
+				auto& idx = j->m_body0.Get() == m_body0 ? j->m_idx0 : j->m_idx1;
+				idx = i;
+			}
 		}
 
-		for (size_t i = 0; i < m_body1->m_joints.size(); i++)
+		if (m_body1)
 		{
-			auto& j = m_body1->m_joints[i];
-			auto& idx = j->m_body1.Get() == m_body1 ? j->m_idx1 : j->m_idx0;
-			idx = i;
+			m_body1->m_joints.Remove(m_body1->m_joints.begin() + m_idx1);
+
+			for (size_t i = 0; i < m_body1->m_joints.size(); i++)
+			{
+				auto& j = m_body1->m_joints[i];
+				auto& idx = j->m_body1.Get() == m_body1 ? j->m_idx1 : j->m_idx0;
+				idx = i;
+			}
 		}
 	}
 
@@ -92,32 +105,48 @@ void Joint::RemoveJointFromBodies()
 
 void Joint::InitJoint(void* pxInitFunc, const Handle<RigidBody>& body0, const Transform& localFrame0, const Handle<RigidBody>& body1, const Transform& localFrame1)
 {
+	assert(body0.Get() != nullptr || body1.Get() != nullptr);
+
 	m_body0 = body0;
 	m_body1 = body1;
 
-	assert((body0->GetGameObject() == nullptr && body1->GetGameObject() == nullptr)
-		|| (body0->GetGameObject()->GetScene() == body1->GetGameObject()->GetScene() && "2 bodies must be in the same scene!"));
+	if (m_body0)
+	{
+		m_component = m_body0.Get();
+	}
+
+	if (!m_component)
+	{
+		m_component = m_body1.Get();
+	}
+
+	assert(
+		body0.Get() == nullptr
+		|| body1.Get() == nullptr
+		|| (body0.Get() && body0->GetGameObject() == nullptr && body1.Get() && body1->GetGameObject() == nullptr)
+		|| (body0->GetGameObject()->GetScene() == body1->GetGameObject()->GetScene() && "2 bodies must be in the same scene!")
+	);
 	
 	auto l0 = PhysXUtils::ToPxTransform(localFrame0);
 	auto l1 = PhysXUtils::ToPxTransform(localFrame1);
 
-	if (body0->GetGameObject() && body0->GetGameObject()->GetScene())
+	if (GetComponent()->GetGameObject() && GetComponent()->GetGameObject()->GetScene())
 	{
-		auto scene = body0->GetGameObject()->GetScene();
+		auto scene = GetComponent()->GetGameObject()->GetScene();
 		m_pxJoint = (PxJoint*)scene->GenericStorage()->Store<Joint>(this);
 	}
 
-	MAIN_SYSTEM_TASK_IMPL_COMMON_3(body0.Get(),
+	MAIN_SYSTEM_TASK_IMPL_COMMON_3(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST, l0, l1, pxInitFunc,
 		{
 			using InitFunc = PxJoint* (*)(PxPhysics&, PxRigidActor*, const PxTransform&, PxRigidActor*, const PxTransform&);
 			auto px = PhysX::Get()->GetPxPhysics();
-			auto a0 = self->m_body0->m_pxActor;
-			auto a1 = self->m_body1->m_pxActor;
+			auto a0 = self->m_body0.Get() ? self->m_body0->m_pxActor : nullptr;
+			auto a1 = self->m_body1.Get() ? self->m_body1->m_pxActor : nullptr;
 
 			if (self->m_pxJoint)
 			{
-				self->m_body0->GetGameObject()->GetScene()->GenericStorage()->Remove(ID(self->m_pxJoint));
+				self->GetComponent()->GetGameObject()->GetScene()->GenericStorage()->Remove(ID(self->m_pxJoint));
 			}
 
 			self->m_pxJoint = ((InitFunc)pxInitFunc)(*px,
@@ -168,6 +197,29 @@ void Joint::DeserializeFromJson(Serializer* serializer, const json& j)
 	assert(0 && "Call void Joint::InitJoint(void* pxInitFunc, Serializer* serializer, const json& j) instead!");
 }
 
+void Joint::WakeUpBodies()
+{
+	if (m_body0)
+	{
+		auto type = m_body0->GetPhysicsType();
+		if (type == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		{
+			auto dynamic = (RigidBodyDynamic*)m_body0.Get();
+			dynamic->InternalWake();
+		}
+	}
+
+	if (m_body1)
+	{
+		auto type = m_body1->GetPhysicsType();
+		if (type == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
+		{
+			auto dynamic = (RigidBodyDynamic*)m_body1.Get();
+			dynamic->InternalWake();
+		}
+	}
+}
+
 bool Joint::IsBroken() const
 {
 	return m_pxJoint == nullptr;
@@ -177,7 +229,7 @@ void Joint::Break()
 {
 	assert(!IsBroken());
 
-	MAIN_SYSTEM_TASK_IMPL_COMMON_0(m_body0.Get(),
+	MAIN_SYSTEM_TASK_IMPL_COMMON_0(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST,
 		{
 			self->RemoveJointFromBodies();
@@ -188,7 +240,7 @@ void Joint::Break()
 void Joint::SetBreakForce(float force, float torque)
 {
 	assert(!IsBroken());
-	MAIN_SYSTEM_TASK_IMPL_COMMON_2(m_body0.Get(),
+	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST, force, torque,
 		{
 			self->m_pxJoint->setBreakForce(force, torque);
@@ -229,7 +281,7 @@ void Joint::SetLocalFrame(RigidBody* body, const Transform& transform)
 {
 	assert(!IsBroken());
 
-	MAIN_SYSTEM_TASK_IMPL_COMMON_2(m_body0.Get(),
+	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST, body, transform,
 		{
 			if (body == self->m_body0)
@@ -248,14 +300,14 @@ void Joint::SetLocalFrame(RigidBody* body, const Transform& transform)
 Transform Joint::GetGlobalTransform() const
 {
 	auto l0 = PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR0));
-	auto t0 = Transform::FromTransformMatrix(m_body0->GetGameObject()->GetCommittedGlobalTransform());
+	auto t0 = m_body0.Get() ? Transform::FromTransformMatrix(m_body0->GetGameObject()->GetCommittedGlobalTransform()) : Transform();
 	t0.Scale() = { 1,1,1 };
-	auto p0 = Transform::FromTransformMatrix(t0.ToTransformMatrix() * l0.ToTransformMatrix());
+	auto p0 = Transform::FromTransformMatrix(l0.ToTransformMatrix() * t0.ToTransformMatrix());
 
 	auto l1 = PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR1));
-	auto t1 = Transform::FromTransformMatrix(m_body1->GetGameObject()->GetCommittedGlobalTransform());
+	auto t1 = m_body1.Get() ? Transform::FromTransformMatrix(m_body1->GetGameObject()->GetCommittedGlobalTransform()) : Transform();
 	t1.Scale() = { 1,1,1 };
-	auto p1 = Transform::FromTransformMatrix(t1.ToTransformMatrix() * l1.ToTransformMatrix());
+	auto p1 = Transform::FromTransformMatrix(l1.ToTransformMatrix() * t1.ToTransformMatrix());
 
 	if (p0.Equals(p1, 0.01f))
 	{

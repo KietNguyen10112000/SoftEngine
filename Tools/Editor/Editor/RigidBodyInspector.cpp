@@ -11,6 +11,7 @@
 #include "MainSystem/Physics/Joints/FixedJoint.h"
 #include "MainSystem/Physics/Joints/SphericalJoint.h"
 #include "MainSystem/Physics/Joints/RevoluteJoint.h"
+#include "MainSystem/Physics/Joints/D6Joint.h"
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
 
@@ -261,7 +262,7 @@ void RigidBodyInspector::RenderInspectShape()
 		"Plane",
 	};
 
-	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.85f, 500 }, true);
+	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.88f, 0 }, true);
 
 	if (ImGui::Button("+ Add Shape"))
 	{
@@ -340,7 +341,7 @@ void RigidBodyInspector::RenderInspectShape()
 		m_body->ScaleBy(1 + scaleOffset);
 	}
 
-	if (m_body->GetShapesCount() == 0 || m_choosingShapeIdx < 0)
+	if (m_body->GetShapesCount() == 0 || m_shapeDatas.size() != m_body->GetShapesCount() || m_choosingShapeIdx < 0)
 	{
 		if (m_body->GetShapesCount() != 0 && m_shapeDatas.size() != 0)
 		{
@@ -490,6 +491,32 @@ void RigidBodyInspector::RenderInspectShape()
 	}
 }
 
+bool RigidBodyInspector::InspectJointLimitBase(void* pLimit, Joint* joint)
+{
+	bool modified = false;
+	auto& limit = *(Joint::BaseLimit*)pLimit;
+	if (ImGui::DragFloat("Restitution", &limit.restitution, 0.001f, 0.0, 1.0f, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+	{
+		modified = true;
+	}
+
+	if (ImGui::DragFloat("BounceThreshold", &limit.bounceThreshold, 0.001f, 0.0, INFINITY, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+	{
+		modified = true;
+	}
+
+	if (ImGui::DragFloat("Stiffness", &limit.stiffness, 0.001f, 0.0, INFINITY))
+	{
+		modified = true;
+	}
+
+	if (ImGui::DragFloat("Damping", &limit.damping, 0.001f, 0.0, INFINITY))
+	{
+		modified = true;
+	}
+	return modified;
+}
+
 void RigidBodyInspector::InspectJointBase(Joint* joint)
 {
 	if (m_tempJointTransformCount != 0)
@@ -497,8 +524,8 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		m_tempJointTransformCount--;
 	}
 
-	auto jointGlobalTransform = m_tempJointTransform;// joint->GetGlobalTransform();
-	if (!jointGlobalTransform.Equals(m_tempJointTransform, 0.1f) && m_tempJointTransformCount == 0)
+	auto jointGlobalTransform = joint->GetGlobalTransform();
+	if (!jointGlobalTransform.Equals(m_tempJointTransform, 0.01f) && m_tempJointTransformCount == 0)
 	{
 		m_tempJointTransform = jointGlobalTransform;
 	}
@@ -509,14 +536,18 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		auto temp = jointGlobalTransform;
 		temp.Scale() = { 0.01f,0.01f,0.01f };
 		debugGraphics->DrawCube(temp.ToTransformMatrix(), {1,1,0,1});
+
+		auto mat = jointGlobalTransform.ToTransformMatrix();
+		debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Forward().Normal() * 0.2f, { 0,0,1,1 }, 0.01f);
+		debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Right().Normal() * 0.2f, { 1,0,0,1 }, 0.01f);
+		debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Up().Normal() * 0.2f, { 0,1,0,1 }, 0.01f);
 	}
 
 	ImGui::TextUnformatted("Joint Transform");
 	auto modified = m_tempJointTransform;
 	auto accessor = Accessor::For("Transform", modified, m_body);
-	DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("JointGlobalTransform {}", joint).c_str(), true);
-
-	if (!m_tempJointTransform.Equals(modified))
+	bool v = DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("JointGlobalTransform {}", joint).c_str(), true);
+	if (v)
 	{
 		auto a0GlobalTransform = joint->GetBody0()->GetGameObject()->GetCommittedGlobalTransform();
 		auto a1GlobalTransform = joint->GetBody1()->GetGameObject()->GetCommittedGlobalTransform();
@@ -529,8 +560,8 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		modified.Scale() = { 1,1,1 };
 		auto jointGlobalTransform = modified.ToTransformMatrix();
 
-		auto localframe0 = Transform::FromTransformMatrix(temp0.ToTransformMatrix().GetInverse() * jointGlobalTransform);
-		auto localframe1 = Transform::FromTransformMatrix(temp1.ToTransformMatrix().GetInverse() * jointGlobalTransform);
+		auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransform * temp0.ToTransformMatrix().GetInverse());
+		auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransform * temp1.ToTransformMatrix().GetInverse());
 
 		joint->SetLocalFrame(joint->GetBody0(), localframe0);
 		joint->SetLocalFrame(joint->GetBody1(), localframe1);
@@ -544,7 +575,7 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		auto f = joint->GetBreakForce();
 		auto tq = joint->GetBreakTorque();
 		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
-		if (ImGui::DragFloat("Break Force Length", &f, 0.001f, 0.001f, INFINITY, f == FLT_MAX ? "Infinity" : "%.3f"))
+		if (ImGui::DragFloat("Break Force Length", &f, 0.001f, 0.001f, INFINITY, f == FLT_MAX ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
 		{
 			joint->SetBreakForce(f, tq);
 		}
@@ -556,7 +587,7 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		}
 
 		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
-		if (ImGui::DragFloat("Break Torque Length", &tq, 0.001f, 0.001f, INFINITY, tq == FLT_MAX ? "Infinity" : "%.3f"))
+		if (ImGui::DragFloat("Break Torque Length", &tq, 0.001f, 0.001f, INFINITY, tq == FLT_MAX ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
 		{
 			joint->SetBreakForce(f, tq);
 		}
@@ -574,11 +605,116 @@ void RigidBodyInspector::InspectJointFixed(Joint* joint)
 {
 }
 
-void RigidBodyInspector::InspectJointSpherical(Joint* joint)
+void RigidBodyInspector::InspectJointSpherical(Joint* _joint)
 {
+	auto joint = (SphericalJoint*)_joint;
+
+	{
+		auto limit = joint->GetLimit();
+		auto enableLimit = joint->IsEnableLimit();
+		if (ImGui::Checkbox("Enable Limit", &enableLimit))
+		{
+			joint->SetEnableLimit(enableLimit);
+		}
+
+		ImGui::BeginDisabled(!enableLimit);
+
+		bool modified = InspectJointLimitBase(&limit, joint);
+
+		ImGui::Dummy({ 5,10 });
+		if (ImGui::DragFloat("Cone Angle Y", &limit.yLimitAngle, 0.001f, 0.0, PI, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+		if (ImGui::DragFloat("Cone Angle Z", &limit.zLimitAngle, 0.001f, 0.0, PI, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		if (modified)
+		{
+			joint->SetLimit(limit);
+		}
+		ImGui::EndDisabled();
+	}
 }
 
-void RigidBodyInspector::InspectJointRevolute(Joint* joint)
+void RigidBodyInspector::InspectJointRevolute(Joint* _joint)
+{
+	auto jointGlobalTransform = _joint->GetGlobalTransform();
+
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (debugGraphics)
+	{
+		auto mat = jointGlobalTransform.ToTransformMatrix();
+		debugGraphics->DrawLineSegment(mat.Position() - mat.Right().Normal(), mat.Position() + mat.Right().Normal(), { 1,0,0,1 }, 0.005f);
+	}
+
+	auto joint = (RevoluteJoint*)_joint;
+
+	{
+		auto limit = joint->GetLimit();
+		auto enableLimit = joint->IsEnableLimit();
+		if (ImGui::Checkbox("Enable Limit", &enableLimit))
+		{
+			joint->SetEnableLimit(enableLimit);
+		}
+
+		ImGui::BeginDisabled(!enableLimit);
+
+		bool modified = InspectJointLimitBase(&limit, joint);
+
+		ImGui::Dummy({ 5,10 });
+		if (ImGui::DragFloat("Upper", &limit.upperLimit, 0.001f, limit.lowerLimit, PI / 2.0f, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+		if (ImGui::DragFloat("Lower", &limit.lowerLimit, 0.001f, -PI / 2.0f, limit.upperLimit, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		if (modified)
+		{
+			joint->SetLimit(limit);
+		}
+		ImGui::EndDisabled();
+	}
+
+	{
+		ImGui::Separator();
+		auto enableDriveVelocity = joint->IsEnableDriveVelocity();
+		if (ImGui::Checkbox("Enable DriveVelocity", &enableDriveVelocity))
+		{
+			joint->SetEnableDriveVelocity(enableDriveVelocity);
+		}
+
+		ImGui::BeginDisabled(!enableDriveVelocity);
+
+		auto v = joint->GetDriveVelocity();
+		if (ImGui::DragFloat("Drive Velocity", &v, 0.001f, -FLT_MAX, FLT_MAX, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			joint->SetDriveVelocity(v);
+		}
+
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
+		v = joint->GetDriveForceLimit();
+		if (ImGui::DragFloat("Drive Force Limit", &v, 0.0001f, 0, FLT_MAX, v == FLT_MAX ? "Infinity" : "%.4f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			joint->SetDriveForceLimit(v);
+		}
+
+		ImGui::SameLine(ImGui::GetWindowWidth() - 50);
+		if (ImGui::Button(ICON_FA_ROTATE " ## reset break torque"))
+		{
+			joint->SetDriveForceLimit(FLT_MAX);
+		}
+
+		ImGui::EndDisabled();
+	}
+}
+
+void RigidBodyInspector::InspectJointD6(Joint* joint)
 {
 }
 
@@ -587,17 +723,41 @@ void RigidBodyInspector::RenderInspectJoint()
 	enum JOINT_TYPE {
 		FIXED,
 		SPHERICAL,
-		REVOLUTE
+		REVOLUTE,
+		D6
 	};
 
 	const static char* s_jointList[] = {
 		"Fixed Joint",
 		"Spherical Joint",
 		"Revolute Joint",
+		"D6 Joint",
 	};
 
+	float wHeight = 600;
+	if (m_choosingJointIdx >= 0 && m_choosingJointIdx < m_body->GetJointsCount())
+	{
+		String typeName = m_body->GetJoint(m_choosingJointIdx)->GetClassName();
+		if (typeName == "FixedJoint")
+		{
+			wHeight = 200;
+		}
+		else if (typeName == "SphericalJoint")
+		{
+			wHeight = 600;
+		}
+		else if (typeName == "RevoluteJoint")
+		{
+			wHeight = 700;
+		}
+		else if (typeName == "D6Joint")
+		{
+			wHeight = 800;
+		}
+	}
+
 	ImGui::Dummy({ 5, 15 });
-	ImGui::BeginChild("## Joint Editor", { ImGui::GetWindowWidth() * 0.85f, 500 }, true);
+	ImGui::BeginChild("## Joint Editor", { ImGui::GetWindowWidth() * 0.88f, wHeight }, true);
 
 	if (ImGui::Button("+ Add Joint"))
 	{
@@ -665,8 +825,8 @@ void RigidBodyInspector::RenderInspectJoint()
 						auto center = (temp0.Position() + temp1.Position()) / 2.0f;
 						auto jointGlobalTransform = Mat4::Translation(center);
 
-						auto localframe0 = Transform::FromTransformMatrix(temp0.ToTransformMatrix().GetInverse() * jointGlobalTransform);
-						auto localframe1 = Transform::FromTransformMatrix(temp1.ToTransformMatrix().GetInverse() * jointGlobalTransform);
+						auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransform * temp0.ToTransformMatrix().GetInverse());
+						auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransform * temp1.ToTransformMatrix().GetInverse());
 
 						switch (self->m_choosingCreateJointIdx)
 						{
@@ -679,6 +839,9 @@ void RigidBodyInspector::RenderInspectJoint()
 						case JOINT_TYPE::REVOLUTE:
 							mheap::New<RevoluteJoint>(self->m_body, localframe0, self->m_jointCreateAnother, localframe1);
 							break;
+						case JOINT_TYPE::D6:
+							mheap::New<D6Joint>(self->m_body, localframe0, self->m_jointCreateAnother, localframe1);
+							break;
 						default:
 							break;
 						}
@@ -690,7 +853,7 @@ void RigidBodyInspector::RenderInspectJoint()
 		);
 	}
 
-	if (m_body->GetJointsCount() == 0 || m_choosingJointIdx < 0)
+	if (m_body->GetJointsCount() == 0 || m_jointDatas.size() != m_body->GetJointsCount() || m_choosingJointIdx < 0)
 	{
 		if (m_body->GetJointsCount() != 0 && m_jointDatas.size() != 0)
 		{
@@ -765,17 +928,20 @@ void RigidBodyInspector::RenderInspectJoint()
 			ImGui::Separator();
 			//ImGui::Dummy({ 7,7 });
 
-			auto count = m_body->GetShapesCount();
-			for (size_t i = 0; i < count; i++)
 			{
-				DrawDebug(m_body, m_body->GetShape(i), Vec4(0, 1, 0, 1), false);
-			}
+				auto body = joint->GetBody0();
+				auto count = body->GetShapesCount();
+				for (size_t i = 0; i < count; i++)
+				{
+					DrawDebug(body, body->GetShape(i), Vec4(0, 1, 0, 1), false);
+				}
 
-			auto another = joint->GetAnotherBody(m_body);
-			count = another->GetShapesCount();
-			for (size_t i = 0; i < count; i++)
-			{
-				DrawDebug(another, another->GetShape(i), Vec4(0, 1, 0, 1), false);
+				body = joint->GetBody1();
+				count = body->GetShapesCount();
+				for (size_t i = 0; i < count; i++)
+				{
+					DrawDebug(body, body->GetShape(i), Vec4(1, 1, 0, 1), false);
+				}
 			}
 
 			assert(m_debugJointAnotherObject != nullptr);
@@ -784,9 +950,17 @@ void RigidBodyInspector::RenderInspectJoint()
 			{
 				InspectJointFixed(joint);
 			}
+			else if (typeName == "SphericalJoint")
+			{
+				InspectJointSpherical(joint);
+			}
 			else if (typeName == "RevoluteJoint")
 			{
 				InspectJointRevolute(joint);
+			}
+			else if (typeName == "D6Joint")
+			{
+				InspectJointD6(joint);
 			}
 
 			ImGui::TreePop();

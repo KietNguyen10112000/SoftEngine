@@ -40,6 +40,7 @@ void SphericalJoint::SerializeToJson(Serializer* serializer, json& j) const
 	p->SerializeToJson(j);
 	j["YAngleLimit"] = limit.yAngle;
 	j["ZAngleLimit"] = limit.zAngle;
+	j["EnableLimit"] = IsEnableLimit();
 }
 
 void SphericalJoint::DeserializeFromJson(Serializer* serializer, const json& j)
@@ -55,6 +56,12 @@ void SphericalJoint::DeserializeFromJson(Serializer* serializer, const json& j)
 		limit.yAngle = j["YAngleLimit"];
 		limit.zAngle = j["ZAngleLimit"];
 		joint->setLimitCone(limit);
+
+		bool enableLimit = j["EnableLimit"];
+		if (enableLimit)
+		{
+			SetEnableLimit(enableLimit);
+		}
 	}
 }
 
@@ -69,7 +76,8 @@ void SphericalJoint::OnPropertyChanged(const UnknownAddress& var, const Variant&
 
 void SphericalJoint::SetLimit(const SphericalJoint::Limit& limit)
 {
-	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_body0.Get(),
+	//auto joint = (PxSphericalJoint*)m_pxJoint;
+	MAIN_SYSTEM_TASK_IMPL_COMMON_1(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST, limit,
 		{
 			auto joint = (PxSphericalJoint*)self->m_pxJoint;
@@ -89,6 +97,23 @@ SphericalJoint::Limit SphericalJoint::GetLimit() const
 	ret.zLimitAngle = limit.zAngle;
 	*(PxJointLimitParameters*)&ret = reinterpret_cast<const PxJointLimitParameters&>(limit);
 	return ret;
+}
+
+void SphericalJoint::SetEnableLimit(bool enable)
+{
+	MAIN_SYSTEM_TASK_IMPL_COMMON_1(GetComponent(),
+		PhysicsSystem, AsyncTaskRunnerST, enable,
+		{
+			auto joint = (PxSphericalJoint*)self->m_pxJoint;
+			joint->setSphericalJointFlag(PxSphericalJointFlag::eLIMIT_ENABLED, enable);
+		}
+	);
+}
+
+bool SphericalJoint::IsEnableLimit() const
+{
+	auto joint = (PxSphericalJoint*)m_pxJoint;
+	return joint->getSphericalJointFlags() & PxSphericalJointFlag::eLIMIT_ENABLED;
 }
 
 NAMESPACE_END

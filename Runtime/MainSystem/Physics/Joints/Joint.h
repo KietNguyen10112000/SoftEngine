@@ -25,10 +25,13 @@ protected:
 	friend class PhysXSimulationCallback;
 
 	physx::PxJoint* m_pxJoint = nullptr;
+
+private:
 	Handle<RigidBody> m_body0 = nullptr;
 	Handle<RigidBody> m_body1 = nullptr;
 	uint32_t m_idx0 = uint32_t(INVALID_ID);
 	uint32_t m_idx1 = uint32_t(INVALID_ID);
+	RigidBody* m_component = nullptr;
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -65,6 +68,14 @@ protected:
 
 public:
 	virtual ~Joint();
+
+protected:
+	void WakeUpBodies();
+
+	inline auto* GetComponent()
+	{
+		return m_component;
+	}
 
 public:
 	bool IsBroken() const;

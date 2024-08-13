@@ -41,6 +41,8 @@ protected:
 public:
 	void SetLimit(const Limit& limit);
 	Limit GetLimit() const;
+	void SetEnableLimit(bool enable);
+	bool IsEnableLimit() const;
 
 };
 

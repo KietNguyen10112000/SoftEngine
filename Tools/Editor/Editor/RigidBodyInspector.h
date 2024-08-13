@@ -104,10 +104,13 @@ private:
 
 	void RenderInspectShape();
 
+	bool InspectJointLimitBase(void* limit, Joint* joint);
+
 	void InspectJointBase(Joint* joint);
 	void InspectJointFixed(Joint* joint);
 	void InspectJointSpherical(Joint* joint);
 	void InspectJointRevolute(Joint* joint);
+	void InspectJointD6(Joint* joint);
 	void RenderInspectJoint();
 
 	void DrawDebugImpl(const Mat4& globalTransformMat, PhysicsShape* shape, const Vec4& color, bool showBasis);

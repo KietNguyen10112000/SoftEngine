@@ -7,6 +7,7 @@
 #include "Runtime/Runtime.h"
 
 #include "Core/Thread/ReentrantLock.h"
+#include "Common/Utils/GenericDictionary.h"
 
 using namespace soft;
 
@@ -110,6 +111,7 @@ public:
 
 	EventDispatcher<EditorContext, EVENT::COUNT, EVENT, ID> m_eventDispatcher = { this };
 	GenericStorage m_genericStorage;
+	GenericDictionary m_genericDictionary;
 
 	std::vector<DialogData*> m_closeDialogs;
 	std::vector<UniquePtr<DialogData>> m_dialogs;
@@ -124,6 +126,7 @@ private:
 	{
 		tracer->Trace(m_tabs);
 		tracer->Trace(m_genericStorage);
+		tracer->Trace(m_genericDictionary);
 	}
 
 public:
@@ -200,6 +203,11 @@ public:
 	inline auto* GenericStorage()
 	{
 		return &m_genericStorage;
+	}
+
+	inline auto* GenericDictionary()
+	{
+		return &m_genericDictionary;
 	}
 
 	inline auto* GetTab(ID id)

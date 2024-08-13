@@ -21,11 +21,23 @@
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
 
+#ifdef min
+#undef min
+#undef max
+#endif // min
+
+#include "EditorContext.h"
+
 DataInspector::InspectFunc DataInspector::s_inspectFunc[MAX_TYPE] = {};
 
 bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
 	bool hideScale, Vec3* outputRotateAxis)
 {
+	struct TransformCopyData
+	{
+		Transform copiedTransform;
+	};
+
 	const static char* cacheNameFmt = "editor_InspectTransform_{}";
 	struct TransformCache
 	{
@@ -50,7 +62,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 	auto cacheName = String::Format(cacheNameFmt, propertyName);
 
 	auto cache = metadata->GenericDictionary()->Get<TransformCache>(cacheName);
-	if (!cache || !cache->transform.Equals(transform))
+	if (!cache || !cache->transform.Equals(transform, 0.01f))
 	{
 		euler = transform.Rotation().ToEulerAngles();
 
@@ -129,12 +141,15 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 	}
 
 	ImGui::SameLine();
+	float btnPosX = 0;
 	if (cursorPos.x != 0)
 	{
-		ImGui::SetCursorPos(ImVec2(cursorPos.x + ImGui::CalcTextSize("Rotation    ").x + 4, cursorPos.y));
+		btnPosX = cursorPos.x + ImGui::CalcTextSize("Rotation    ").x + 4;
+		ImGui::SetCursorPos(ImVec2(btnPosX, cursorPos.y));
 	}
 
-	if (ImGui::Button(ICON_FA_ROTATE))
+	btnPosX = ImGui::GetCursorPos().x;
+	if (ImGui::Button(ICON_FA_ROTATE "## switch rotation btn"))
 	{
 		cache->rotationInspectType = (cache->rotationInspectType + 1) % 4;
 		cache->rotationOffset = 0;
@@ -165,6 +180,32 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 	//Graphics::Get()->GetDebugGraphics()->DrawDirection(transform.GetPosition(), cache->rotationAxis * 20.0f);
 
 	modified |= ImGui::DragFloatN_Colored("Position", &transform.Position()[0], 3, 0.001f, -INFINITY, INFINITY);
+
+	ImGui::SameLine();
+	cursorPos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(btnPosX - 20, cursorPos.y));
+	if (ImGui::Button(ICON_FA_COPY "## copy transform btn"))
+	{
+		auto data = EditorContext::Get()->GenericDictionary()->Get<TransformCopyData>("TransformCopyData");
+		if (!data)
+		{
+			data = mheap::New<TransformCopyData>();
+			EditorContext::Get()->GenericDictionary()->Store("TransformCopyData", data);
+		}
+
+		data->copiedTransform = cache->transform;
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_FA_PASTE "## paste transform btn"))
+	{
+		auto data = EditorContext::Get()->GenericDictionary()->Get<TransformCopyData>("TransformCopyData");
+		if (data)
+		{
+			modified = true;
+			transform = data->copiedTransform;
+		}
+	}
 
 	if (modified)
 	{
