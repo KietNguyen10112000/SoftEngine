@@ -39,7 +39,7 @@ inline void ReadFile(String fileName, byte*& buffer, size_t& fileSize)
 	fseek(fp, 0L, SEEK_END);
 	size_t size = ftell(fp);
 	
-	auto buf = (byte*)rheap::malloc(std::max(64 * KB, size));
+	auto buf = (byte*)rheap::malloc(std::max(64 * KB, size + 1));
 
 	fseek(fp, 0L, SEEK_SET);
 	fread(buf, size, sizeof(byte), fp);

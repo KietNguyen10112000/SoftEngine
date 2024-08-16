@@ -155,12 +155,22 @@ void GameObjectEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 {
 	Base::WriteSaveDataToJson(serializer, j);
 	j["RootObject"] = serializer->Serialize(m_rootObject);
+
+	j["ExportInputName"] = String(m_exportInputName);
+	j["ExportResourcePath"] = m_exportResourcePath;
 }
 
 void GameObjectEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 {
 	Base::ReadSaveDataFromJson(serializer, j);
 	serializer->Deserialize(j["RootObject"], m_rootObject);
+
+	if (j.contains("ExportInputName"))
+	{
+		String exportInputName = j["ExportInputName"];
+		std::memcpy(m_exportInputName, exportInputName.c_str(), exportInputName.length() + 1);
+		m_exportResourcePath = j["ExportResourcePath"];
+	}
 }
 
 void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
@@ -189,6 +199,11 @@ bool GameObjectEditorTab::ValidateSetting()
 
 void GameObjectEditorTab::Export()
 {
+	if (!ValidateSetting())
+	{
+		return;
+	}
+
 	auto exportPath = m_exportResourcePath + m_exportInputName + ".json";
 	Serializer s = {};
 	s.Serialize(m_rootObject);

@@ -317,7 +317,7 @@ Transform Joint::GetGlobalTransform() const
 	return Transform::FromTransformMatrix(Mat4::Translation((p0.Position() + p1.Position()) / 2.0f));
 }
 
-void Joint::BaseLimit::SerializeToJson(json& j)
+void Joint::BaseLimit::SerializeToJson(json& j) const
 {
 	j["Restitution"]		= restitution;
 	j["BounceThreshold"]	= bounceThreshold;

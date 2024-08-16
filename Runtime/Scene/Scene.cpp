@@ -587,7 +587,7 @@ void Scene::DeserializeFromJson(Serializer* serializer, const json& j)
 			for (auto& j1 : arr)
 			{
 				serializer->Deserialize(j1, obj);
-				obj->Commit();
+				//obj->Commit();
 				AddObjectImpl(obj);
 			}
 
@@ -601,7 +601,7 @@ void Scene::DeserializeFromJson(Serializer* serializer, const json& j)
 		for (auto& j1 : arr)
 		{
 			serializer->Deserialize(j1, obj);
-			obj->Commit();
+			//obj->Commit();
 			AddObjectImpl(obj);
 		}
 	}

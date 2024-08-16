@@ -48,7 +48,7 @@ public:
 		float stiffness = 0.0f;
 		float damping = 0.0f;
 
-		void SerializeToJson(json& j);
+		void SerializeToJson(json& j) const;
 		void DeserializeFromJson(const json& j);
 	};
 

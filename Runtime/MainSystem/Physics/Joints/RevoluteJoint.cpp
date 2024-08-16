@@ -41,6 +41,12 @@ void RevoluteJoint::SerializeToJson(Serializer* serializer, json& j) const
 	j["LowerLimit"] = limit.lower;
 	j["UpperLimit"] = limit.upper;
 	j["EnableLimit"] = IsEnableLimit();
+
+	{
+		j["EnableDrive"] = IsEnableDriveVelocity();
+		j["DriveVelocity"] = GetDriveVelocity();
+		j["DriveForceLimit"] = GetDriveForceLimit();
+	}
 }
 
 void RevoluteJoint::DeserializeFromJson(Serializer* serializer, const json& j)
@@ -62,6 +68,13 @@ void RevoluteJoint::DeserializeFromJson(Serializer* serializer, const json& j)
 		{
 			SetEnableLimit(enableLimit);
 		}
+	}
+
+	if (j.contains("EnableDrive"))
+	{
+		SetEnableDriveVelocity(j["EnableDrive"]);
+		SetDriveVelocity(j["DriveVelocity"]);
+		SetDriveForceLimit(j["DriveForceLimit"]);
 	}
 }
 

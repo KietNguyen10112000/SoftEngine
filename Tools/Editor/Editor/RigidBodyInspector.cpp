@@ -540,6 +540,8 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		auto mat = jointGlobalTransform.ToTransformMatrix();
 		debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Forward().Normal() * 0.2f, { 0,0,1,1 }, 0.01f);
 		debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Right().Normal() * 0.2f, { 1,0,0,1 }, 0.01f);
+		// the oriention of joint follows X Axis
+		debugGraphics->DrawLineSegment(mat.Position() + mat.Right().Normal() * 0.2f, mat.Position() + mat.Right().Normal() * 0.26f, { 1,0,0,1 }, 0.03f);
 		debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Up().Normal() * 0.2f, { 0,1,0,1 }, 0.01f);
 	}
 
@@ -699,7 +701,7 @@ void RigidBodyInspector::InspectJointRevolute(Joint* _joint)
 
 		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
 		v = joint->GetDriveForceLimit();
-		if (ImGui::DragFloat("Drive Force Limit", &v, 0.0001f, 0, FLT_MAX, v == FLT_MAX ? "Infinity" : "%.4f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		if (ImGui::DragFloat("Drive Force Limit", &v, 0.000001f, 0, FLT_MAX, v == FLT_MAX ? "Infinity" : "%.6f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
 		{
 			joint->SetDriveForceLimit(v);
 		}
@@ -714,8 +716,302 @@ void RigidBodyInspector::InspectJointRevolute(Joint* _joint)
 	}
 }
 
-void RigidBodyInspector::InspectJointD6(Joint* joint)
+void RigidBodyInspector::InspectJointD6(Joint* _joint)
 {
+	static const char* MOTION_NAME[] = {
+		"LOCKED",
+		"LIMITED",
+		"FREE"
+	};
+
+	static const ImVec4 COLOR[] = {
+		ImVec4(1,0,0,1),
+		ImVec4(1,1,1,1),
+		ImVec4(0,1,0,1),
+	};
+
+	auto joint = (D6Joint*)_joint;
+
+	auto AxisMotionUI = [](D6Joint* joint, D6Joint::MOTION_AXIS::ENUM axis, RigidBodyInspector* inspector)
+	{
+		ImGui::TextUnformatted("Motion Limit");
+		auto motionType = joint->GetMotion(axis);
+
+		//ImGui::PushID(joint + 1);
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, COLOR[motionType]);
+		if (ImGui::Button(MOTION_NAME[motionType], { 150,0 }))
+		{
+			motionType = D6Joint::MOTION_TYPE::ENUM((motionType + 1) % 3);
+			joint->SetMotion(axis, motionType);
+		}
+		ImGui::PopStyleColor();
+		//ImGui::PopID();
+
+		ImGui::BeginDisabled(motionType != D6Joint::MOTION_TYPE::LIMITED);
+
+		auto limit = joint->GetLinearLimit(axis);
+		bool modified = inspector->InspectJointLimitBase(&limit, joint);
+
+		if (ImGui::DragFloat("Upper", &limit.upper, 0.001f, limit.lower, FLT_MAX,
+			limit.upper >= FLT_MAX / 3.0f ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		if (ImGui::DragFloat("Lower", &limit.lower, 0.001f, -FLT_MAX, limit.upper,
+			limit.lower <= -FLT_MAX / 3.0f ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		if (modified)
+		{
+			joint->SetLinearLimit(axis, limit);
+		}
+
+		ImGui::EndDisabled();
+		ImGui::Separator();
+	};
+
+	auto SwingMotionUI = [](D6Joint* joint, RigidBodyInspector* inspector)
+	{
+		static const char* MOTION_NAME_Y[] = {
+			"LOCKED Y",
+			"LIMITED Y",
+			"FREE Y"
+		};
+
+		static const char* MOTION_NAME_Z[] = {
+			"LOCKED Z",
+			"LIMITED Z",
+			"FREE Z"
+		};
+
+		ImGui::TextUnformatted("Swing Limit");
+		auto motionYType = joint->GetMotion(D6Joint::MOTION_AXIS::SWING_Y);
+		auto motionZType = joint->GetMotion(D6Joint::MOTION_AXIS::SWING_Z);
+
+		//ImGui::PushID(joint + 1);
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, COLOR[motionYType]);
+		if (ImGui::Button(MOTION_NAME_Y[motionYType], { 150,0 }))
+		{
+			motionYType = D6Joint::MOTION_TYPE::ENUM((motionYType + 1) % 3);
+			joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Y, motionYType);
+		}
+		ImGui::PopStyleColor();
+
+		ImGui::SameLine();
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, COLOR[motionZType]);
+		if (ImGui::Button(MOTION_NAME_Z[motionZType], { 150,0 }))
+		{
+			motionZType = D6Joint::MOTION_TYPE::ENUM((motionZType + 1) % 3);
+			joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Z, motionZType);
+		}
+		ImGui::PopStyleColor();
+		//ImGui::PopID();
+
+		ImGui::BeginDisabled(motionYType != D6Joint::MOTION_TYPE::LIMITED || motionZType != D6Joint::MOTION_TYPE::LIMITED);
+		auto limit = joint->GetSwingLimit();
+		bool modified = inspector->InspectJointLimitBase(&limit, joint);
+		ImGui::EndDisabled();
+
+		ImGui::BeginDisabled(motionYType != D6Joint::MOTION_TYPE::LIMITED);
+		if (ImGui::DragFloat("Cone Limit Y", &limit.yLimitAngle, 0.001f, 0.0f, PI,
+			limit.yLimitAngle == FLT_MAX ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+		ImGui::EndDisabled();
+
+		ImGui::BeginDisabled(motionZType != D6Joint::MOTION_TYPE::LIMITED);
+		if (ImGui::DragFloat("Cone Limit Z", &limit.zLimitAngle, 0.001f, 0.0f, PI,
+			limit.zLimitAngle == FLT_MAX ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+		ImGui::EndDisabled();
+
+		if (modified)
+		{
+			joint->SetSwingLimit(limit);
+		}
+		
+		ImGui::Separator();
+	};
+
+	auto TwistMotionUI = [](D6Joint* joint, RigidBodyInspector* inspector)
+	{
+		ImGui::TextUnformatted("Twist Limit");
+		auto motionType = joint->GetMotion(D6Joint::MOTION_AXIS::TWIST_X);
+
+		//ImGui::PushID(joint + 1);
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, COLOR[motionType]);
+		if (ImGui::Button(MOTION_NAME[motionType], { 150,0 }))
+		{
+			motionType = D6Joint::MOTION_TYPE::ENUM((motionType + 1) % 3);
+			joint->SetMotion(D6Joint::MOTION_AXIS::TWIST_X, motionType);
+		}
+		ImGui::PopStyleColor();
+		//ImGui::PopID();
+
+		ImGui::BeginDisabled(motionType != D6Joint::MOTION_TYPE::LIMITED);
+
+		auto limit = joint->GetTwistLimit();
+		bool modified = inspector->InspectJointLimitBase(&limit, joint);
+
+		if (ImGui::DragFloat("Upper X Angle", &limit.upperLimit, 0.001f, limit.lowerLimit, PI / 2.0f,
+			limit.lowerLimit == FLT_MAX ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		if (ImGui::DragFloat("Lower X Angle", &limit.lowerLimit, 0.001f, -PI / 2.0f, limit.upperLimit,
+			limit.lowerLimit == FLT_MAX ? "Infinity" : "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		ImGui::EndDisabled();
+
+		if (modified)
+		{
+			joint->SetTwistLimit(limit);
+		}
+		
+		ImGui::Separator();
+	};
+
+	auto DriveMotionUI = [](D6Joint* joint, RigidBodyInspector* inspector, D6Joint::DRIVE_TYPE::ENUM type)
+	{
+		bool modified = false;
+
+		auto drive = joint->GetDrive(type);
+
+		if (ImGui::DragFloat("Stiffness", &drive.stiffness, 0.001f, 0.0f, FLT_MAX))
+		{
+			modified = true;
+		}
+
+		if (ImGui::DragFloat("Damping", &drive.damping, 0.001f, 0.0f, FLT_MAX))
+		{
+			modified = true;
+		}
+
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() - 250);
+		if (ImGui::DragFloat("Force Limit", &drive.forceLimit, 0.000001f, 0, FLT_MAX, 
+			drive.forceLimit == FLT_MAX ? "Infinity" : "%.6f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
+		{
+			modified = true;
+		}
+
+		ImGui::SameLine(ImGui::GetWindowWidth() - 50);
+		if (ImGui::Button(ICON_FA_ROTATE " ## reset force limit"))
+		{
+			modified = true;
+			drive.forceLimit = FLT_MAX;
+		}
+
+		if (modified)
+		{
+			joint->SetDrive(type, drive);
+		}
+	};
+	
+	if (ImGui::CollapsingHeader("X Axis Motion"))
+	{
+		AxisMotionUI(joint, D6Joint::MOTION_AXIS::X, this);
+	}
+
+	if (ImGui::CollapsingHeader("Y Axis Motion"))
+	{
+		AxisMotionUI(joint, D6Joint::MOTION_AXIS::Y, this);
+	}
+
+	if (ImGui::CollapsingHeader("Z Axis Motion"))
+	{
+		AxisMotionUI(joint, D6Joint::MOTION_AXIS::Z, this);
+	}
+
+	if (ImGui::CollapsingHeader("Swing Y,Z Motion"))
+	{
+		SwingMotionUI(joint, this);
+	}
+
+	if (ImGui::CollapsingHeader("Twist X Motion"))
+	{
+		TwistMotionUI(joint, this);
+	}
+
+	{
+		ImGuiTreeNodeFlags nodeFlags =
+			ImGuiTreeNodeFlags_OpenOnArrow
+			| ImGuiTreeNodeFlags_OpenOnDoubleClick
+			| ImGuiTreeNodeFlags_AllowItemOverlap
+			| ImGuiTreeNodeFlags_FramePadding
+			| ImGuiTreeNodeFlags_Framed;
+		auto open = ImGui::TreeNodeEx("Drive", nodeFlags);
+
+		if (open)
+		{
+			if (ImGui::CollapsingHeader("Drive Limit X"))
+			{
+				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::X);
+			}
+
+			if (ImGui::CollapsingHeader("Drive Limit Y"))
+			{
+				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::Y);
+			}
+
+			if (ImGui::CollapsingHeader("Drive Limit Z"))
+			{
+				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::Z);
+			}
+
+			if (ImGui::CollapsingHeader("Drive Swing"))
+			{
+				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::SWING);
+			}
+
+			if (ImGui::CollapsingHeader("Drive Twist"))
+			{
+				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::TWIST);
+			}
+
+			{
+				bool modified = false;
+
+				Vec3 linear, angular;
+				joint->GetDriveVelocity(linear, angular);
+				const char* labels[] = { "X", "Y", "Z" };
+
+				ImGui::TextUnformatted("Linear Velocity");
+				ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.88f);
+				ImGui::PushID(1);
+				if (ImGui::DragFloatNEx(labels, &linear[0], 3, 0.001f, -FLT_MAX, FLT_MAX))
+				{
+					modified = true;
+				}
+				ImGui::PopID();
+
+				ImGui::TextUnformatted("Angular Velocity");
+				ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.88f);
+				ImGui::PushID(2);
+				if (ImGui::DragFloatNEx(labels, &angular[0], 3, 0.001f, -FLT_MAX, FLT_MAX))
+				{
+					modified = true;
+				}
+				ImGui::PopID();
+
+				if (modified)
+				{
+					joint->SetDriveVelocity(linear, angular);
+				}
+			}
+
+			ImGui::TreePop();
+		}
+	}
 }
 
 void RigidBodyInspector::RenderInspectJoint()
@@ -734,7 +1030,7 @@ void RigidBodyInspector::RenderInspectJoint()
 		"D6 Joint",
 	};
 
-	float wHeight = 600;
+	float wHeight = 50;
 	if (m_choosingJointIdx >= 0 && m_choosingJointIdx < m_body->GetJointsCount())
 	{
 		String typeName = m_body->GetJoint(m_choosingJointIdx)->GetClassName();

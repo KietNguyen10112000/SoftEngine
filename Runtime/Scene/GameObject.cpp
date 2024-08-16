@@ -353,6 +353,7 @@ void GameObject::SerializeToJson(Serializer* serializer, json& j) const
 	j["Name"] = ((GameObject*)this)->Name();
 	j["LocalTransform"] = m_localTransform;
 	j["GlobalTransformMat"] = m_globalTransform;
+	j["TransformConstraint"] = m_transformConstraint;
 
 	{
 		auto arr = json::array();
@@ -392,6 +393,11 @@ void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 	auto localTransMat = localTransform.ToTransformMatrix();
 	m_localTransform = localTransform;
 	m_globalTransform = globalTransform;
+
+	if (j.contains("TransformConstraint"))
+	{
+		m_transformConstraint = j["TransformConstraint"];
+	}
 
 	{
 		auto& arr = j["MainComponents"];
