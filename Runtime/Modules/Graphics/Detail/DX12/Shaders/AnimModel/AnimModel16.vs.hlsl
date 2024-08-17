@@ -34,14 +34,14 @@ cbuffer CameraCBuffer : register(b0, SPACE_VS)
 	CameraData Camera;
 };
 
-//cbuffer ObjectCBuffer : register(b1, SPACE_VS)
-//{
-//	ObjectData Object;
-//};
-
 cbuffer Bones : register(b1, SPACE_VS)
 {
 	row_major float4x4 bones[MAX_BONE];
+};
+
+cbuffer ObjectCBuffer : register(b2, SPACE_VS)
+{
+    ObjectData Object;
 };
 
 VS_OUTPUT main(VS_INPUT input)
@@ -80,7 +80,7 @@ VS_OUTPUT main(VS_INPUT input)
 	output.position = position.xyz;
 
 	output.svposition = mul(position, Camera.vp);
-    output.textCoordAndAlpha = float3(input.textCoord, 1.0f);
+    output.textCoordAndAlpha = float3(input.textCoord, Object.alpha);
 
 
 	float3 t = normalize(mul(float4(input.tangent, 0.0), temp).xyz);

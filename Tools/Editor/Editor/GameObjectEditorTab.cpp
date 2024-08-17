@@ -168,14 +168,18 @@ void GameObjectEditorTab::ReadSaveDataFromJson(Serializer* serializer, const jso
 	if (j.contains("ExportInputName"))
 	{
 		String exportInputName = j["ExportInputName"];
-		std::memcpy(m_exportInputName, exportInputName.c_str(), exportInputName.length() + 1);
+		if (!exportInputName.empty())
+		{
+			std::memcpy(m_exportInputName, exportInputName.c_str(), exportInputName.length() + 1);
+		}
+
 		m_exportResourcePath = j["ExportResourcePath"];
 	}
 }
 
 void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 {
-	if (ImGui::MenuItem("Test"))
+	/*if (ImGui::MenuItem("Test"))
 	{
 		auto body = m_rootObject->Children()[0]->GetComponentRaw<RigidBodyDynamic>();
 		body->AddForce({ 0,10000,0 });
@@ -183,7 +187,7 @@ void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 		auto& joint = body->GetJoint(0);
 		joint->Break();
 		joint->GetAnotherBody(body)->SetFamilyNoCollideForAllShapes(false);
-	}
+	}*/
 }
 
 bool GameObjectEditorTab::ValidateSetting()

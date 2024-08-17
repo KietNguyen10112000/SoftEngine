@@ -130,6 +130,12 @@
     <ClCompile Include="SystemDialog.cpp">
       <Filter>Source Files\EditorTabs</Filter>
     </ClCompile>
+    <ClCompile Include="AnimatorInspector.cpp">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
+    <ClCompile Include="ComponentInspectorBase.cpp">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -224,6 +230,9 @@
     </ClInclude>
     <ClInclude Include="SystemDialog.h">
       <Filter>Source Files\EditorTabs</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimatorInspector.h">
+      <Filter>Source Files\ComponentInspectors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -267,6 +267,7 @@ void RigidBodyDynamic::SerializeToJson(Serializer* serializer, json& j) const
 	j["AngularVelocity"]			= PhysXUtils::ToVec3(body->getAngularVelocity());
 	j["MassSpaceInertiaTensor"]		= PhysXUtils::ToVec3(body->getMassSpaceInertiaTensor());
 	j["Mass"]						= body->getMass();
+	j["Density"]					= m_density;
 	//j["ContactReportThreshold"]		= body->getContactReportThreshold();
 	//j["ContactSlopCoefficient"]		= body->getContactSlopCoefficient();
 	//j["DominanceGroup"]				= body->getDominanceGroup();
@@ -305,6 +306,11 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 		if (m_isKinematic)
 		{
 			body->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
+		}
+
+		if (j.contains("Density"))
+		{
+			m_density = j["Density"];
 		}
 	}
 

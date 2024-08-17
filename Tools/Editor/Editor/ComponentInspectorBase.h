@@ -3,7 +3,10 @@
 namespace soft
 {
 	class MainComponent;
+	class GameObject;
 }
+
+using namespace soft;
 
 class ComponentInspectorBase
 {
@@ -18,5 +21,8 @@ public:
 public:
 	virtual void OnBeginInspecting() = 0;
 	virtual void OnEndInspecting() = 0;
+
+public:
+	static void SetOpacityForObject(GameObject* o, float alpha);
 
 };

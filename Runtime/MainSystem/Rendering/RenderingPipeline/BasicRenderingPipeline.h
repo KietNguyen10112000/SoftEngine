@@ -26,6 +26,8 @@ class BasicAnimModelRenderingPass : public RenderingPass
 public:
 	constexpr static size_t MAX_BONES = 512;
 
+	using ObjectData = BuiltinConstantBuffers::ObjectData;
+
 	SharedPtr<GraphicsPipeline>	m_animModel4Pipeline;
 	SharedPtr<GraphicsPipeline>	m_animModel8Pipeline;
 	SharedPtr<GraphicsPipeline>	m_animModel16Pipeline;

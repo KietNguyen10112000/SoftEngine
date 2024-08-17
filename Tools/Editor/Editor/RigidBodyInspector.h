@@ -78,6 +78,8 @@ public:
 	std::map<PhysicsShape*, DrawShapeData> m_currentDrawData;
 	Handle<GameObject> m_debugJointAnotherObject = nullptr;
 
+	bool m_isDrawDebugAllBodiesFromRoot = false;
+
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
@@ -114,13 +116,15 @@ private:
 	void RenderInspectJoint();
 
 	void DrawDebugImpl(const Mat4& globalTransformMat, PhysicsShape* shape, const Vec4& color, bool showBasis);
-	void DrawDebug(RigidBody* body, PhysicsShape* shape, const Vec4& color, bool showBasis);
+	void DrawDebug(RigidBody* body, PhysicsShape* shape, const Vec4& color, bool showBasis, bool isDebugJointAnotherObject);
 	void FlushDrawDebug();
 
 	void OnSelectShape(int idx);
 	void OnSelectJoint(int idx);
 
-	static void SetOpacityForObject(GameObject* o, float alpha);
+	void ScaleBodyFromRootObject(float scaleFactor);
+	void DrawDebugShapeFromRoot();
+
 public:
 	void Inspect();
 

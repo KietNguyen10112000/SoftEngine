@@ -539,7 +539,8 @@ public:
 	}
 
 	void SetLocalTransform(const Transform& transform,  ID SRC_COMPONENT_ID = INVALID_ID - 1);
-	void SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID = INVALID_ID - 1, TRANSFORM_CONSTRAINT::TYPE transformConstraint = TRANSFORM_CONSTRAINT::FREE);
+	void SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID = INVALID_ID - 1, 
+		TRANSFORM_CONSTRAINT::TYPE transformConstraint = TRANSFORM_CONSTRAINT::FREE, bool ignoreSameTransform = false);
 
 	void CopyTransform(GameObject* obj);
 

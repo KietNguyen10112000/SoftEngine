@@ -207,9 +207,9 @@ void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_
 	RecalculateTransform(m_parent ? m_parent->m_globalTransform : Mat4::Identity());
 }
 
-void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE transformConstraint)
+void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, TRANSFORM_CONSTRAINT::TYPE transformConstraint, bool ignoreSameTransform)
 {
-	if (transform == m_globalTransform)
+	if (!ignoreSameTransform && transform == m_globalTransform)
 	{
 		return;
 	}
@@ -220,17 +220,19 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, 
 
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 
-	//if (transformConstraint != TRANSFORM_CONSTRAINT::FREE)
-	{
-		m_lock.lock();
-		for (auto& c : m_children)
-		{
-			c->RecalculateTransform(m_globalTransform);
-		}
-		m_lock.unlock();
-	}
+	////if (transformConstraint != TRANSFORM_CONSTRAINT::FREE)
+	//{
+	//	m_lock.lock();
+	//	for (auto& c : m_children)
+	//	{
+	//		c->RecalculateTransform(m_globalTransform);
+	//	}
+	//	m_lock.unlock();
+	//}
 
 	m_transformConstraint = transformConstraint;
+
+	RecalculateTransform(m_parent ? m_parent->m_globalTransform : Mat4::Identity());
 }
 
 void GameObject::CopyTransform(GameObject* obj)

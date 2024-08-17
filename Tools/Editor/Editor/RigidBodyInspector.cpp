@@ -439,7 +439,7 @@ void RigidBodyInspector::RenderInspectShape()
 			ImGui::Separator();
 			//ImGui::Dummy({ 7,7 });
 
-			DrawDebug(m_body, shape, Vec4(0, 1, 0, 1), true);
+			DrawDebug(m_body, shape, Vec4(0, 1, 0, 1), true, false);
 
 			switch (type)
 			{
@@ -474,7 +474,7 @@ void RigidBodyInspector::RenderInspectShape()
 		{
 			if (i != m_choosingShapeIdx)
 			{
-				DrawDebug(m_body, m_body->GetShape(i), Vec4(0.8f, 0, 0, 1), false);
+				DrawDebug(m_body, m_body->GetShape(i), Vec4(0.8f, 0, 0, 1), false, false);
 			}
 		}
 	}
@@ -1229,14 +1229,14 @@ void RigidBodyInspector::RenderInspectJoint()
 				auto count = body->GetShapesCount();
 				for (size_t i = 0; i < count; i++)
 				{
-					DrawDebug(body, body->GetShape(i), Vec4(0, 1, 0, 1), false);
+					DrawDebug(body, body->GetShape(i), Vec4(0, 1, 0, 1), false, true);
 				}
 
 				body = joint->GetBody1();
 				count = body->GetShapesCount();
 				for (size_t i = 0; i < count; i++)
 				{
-					DrawDebug(body, body->GetShape(i), Vec4(1, 1, 0, 1), false);
+					DrawDebug(body, body->GetShape(i), Vec4(1, 1, 0, 1), false, true);
 				}
 			}
 
@@ -1367,9 +1367,9 @@ void RigidBodyInspector::DrawDebugImpl(const Mat4& globalTransformMat, PhysicsSh
 	}
 }
 
-void RigidBodyInspector::DrawDebug(RigidBody* body, PhysicsShape* shape, const Vec4& color, bool showBasis)
+void RigidBodyInspector::DrawDebug(RigidBody* body, PhysicsShape* shape, const Vec4& color, bool showBasis, bool isDebugJointAnotherObject)
 {
-	if (body && body != m_body)
+	if (body && body != m_body && isDebugJointAnotherObject)
 	{
 		m_debugJointAnotherObject = body->GetGameObject();
 	}
@@ -1415,18 +1415,74 @@ void RigidBodyInspector::OnSelectJoint(int idx)
 	m_tempJointTransform.Scale() = { 1,1,1 };
 }
 
-void RigidBodyInspector::SetOpacityForObject(GameObject* o, float alpha)
+void RigidBodyInspector::ScaleBodyFromRootObject(float scaleFactor)
 {
-	if (o->GetComponentRaw<RenderingComponent>())
-	{
-		o->GetComponentRaw<RenderingComponent>()->SetOpacity(alpha);
-		return;
-	}
+	std::set<Joint*> processedJoints;
+	std::set<RigidBody*> processedBodies;
 
-	for (auto& c : o->Children())
-	{
-		SetOpacityForObject(c, alpha);
-	}
+	static bool (*ProcessGameObject)(GameObject*, float, std::set<Joint*>&, std::set<RigidBody*>&) = [](GameObject* obj, float scaleFactor,
+		std::set<Joint*>& processedJoints, std::set<RigidBody*>& processedBodies) -> bool
+		{
+			if (obj->HasComponent<RigidBody>() && processedBodies.find(obj->GetComponentRaw<RigidBody>()) == processedBodies.end())
+			{
+				auto body = obj->GetComponentRaw<RigidBody>();
+				processedBodies.insert(body);
+
+				body->ScaleBy(scaleFactor);
+				obj->SetGlobalTransform(obj->GetCommittedGlobalTransform() * Mat4::Scaling(scaleFactor, scaleFactor, scaleFactor));
+
+				auto count = body->GetJointsCount();
+				for (size_t i = 0; i < count; i++)
+				{
+					auto& joint = body->GetJoint(i);
+					if (processedJoints.find(joint.Get()) == processedJoints.end())
+					{
+						processedJoints.insert(joint.Get());
+
+						auto l0 = joint->GetLocalFrame(joint->GetBody0());
+						auto l1 = joint->GetLocalFrame(joint->GetBody1());
+
+						joint->SetLocalFrame(joint->GetBody0(), Transform::FromTransformMatrix(l0.ToTransformMatrix() * Mat4::Scaling(Vec3(scaleFactor))));
+						joint->SetLocalFrame(joint->GetBody1(), Transform::FromTransformMatrix(l1.ToTransformMatrix() * Mat4::Scaling(Vec3(scaleFactor))));
+
+						ProcessGameObject(joint->GetAnotherBody(body)->GetGameObject(), scaleFactor, processedJoints, processedBodies);
+					}
+				}
+			}
+
+			return false;
+		};
+
+	auto root = m_body->GetGameObject()->GetRoot();
+	root->PreTraversal(
+		[&](GameObject* o) 
+		{
+			ProcessGameObject(o, scaleFactor, processedJoints, processedBodies);
+			return false;
+		}
+	);
+}
+
+void RigidBodyInspector::DrawDebugShapeFromRoot()
+{
+	auto root = m_body->GetGameObject()->GetRoot();
+	root->PreTraversal(
+		[&](GameObject* obj)
+		{
+			if (obj->HasComponent<RigidBody>())
+			{
+				auto body = obj->GetComponentRaw<RigidBody>();
+				auto count = body->GetShapesCount();
+				for (size_t i = 0; i < count; i++)
+				{
+					auto shape = body->GetShape(i);
+					DrawDebug(body, shape, { 1,0,0,1 }, false, false);
+				}
+			}
+
+			return false;
+		}
+	);
 }
 
 void RigidBodyInspector::Inspect()
@@ -1532,6 +1588,28 @@ void RigidBodyInspector::Inspect()
 		{
 			auto root = m_body->GetGameObject()->GetRoot();
 			SetOpacityForObject(root, m_currentAlpha);
+		}
+	}
+
+	if (m_isDrawDebugAllBodiesFromRoot)
+	{
+		DrawDebugShapeFromRoot();
+	}
+
+	{
+		float scaleOffset = 0.0f;
+		if (ImGui::DragFloat("Family Scale", &scaleOffset, 0.001f, -INFINITY, INFINITY, ""))
+		{
+			ScaleBodyFromRootObject(1 + scaleOffset);
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			m_isDrawDebugAllBodiesFromRoot = true;
+		}
+		else
+		{
+			m_isDrawDebugAllBodiesFromRoot = false;
 		}
 	}
 

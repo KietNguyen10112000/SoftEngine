@@ -102,6 +102,8 @@ protected:
 	void ReindexChildren(Array<Handle<GameObject>>& children);
 	void IndexObject(GameObject* obj);
 
+	void RenderObjectContextPopup(GameObject* obj);
+
 public:
 	SceneEditorTab();
 

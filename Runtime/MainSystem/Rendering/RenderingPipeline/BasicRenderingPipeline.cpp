@@ -429,6 +429,8 @@ void BasicAnimModelRenderingPass::Render(RenderingSystem* sys, std::vector<AnimM
 
 	graphics->SetGraphicsPipeline(pipeline.get());
 
+	ObjectData shaderData = {};
+
 	void* prevBuffer = nullptr;
 	for (auto& comp : input)
 	{
@@ -454,10 +456,13 @@ void BasicAnimModelRenderingPass::Render(RenderingSystem* sys, std::vector<AnimM
 			prevBuffer = shaderBuffer;
 		}
 
+		shaderData.alpha = comp->GetGlobalOpacity();
+		m_objectBuffer->UpdateBuffer(&shaderData, sizeof(shaderData));
+
 		auto params = pipeline->PrepareRenderParams();
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_cameraBuffer);
-		//params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_objectBuffer);
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 1, 1, &m_bonesBuffer);
+		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 2, 1, &m_objectBuffer);
 		params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &m_cameraBuffer);
 		params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &comp->GetTexture2D()->GetGraphicsShaderResource());
 

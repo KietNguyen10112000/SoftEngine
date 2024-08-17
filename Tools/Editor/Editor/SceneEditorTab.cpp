@@ -20,6 +20,8 @@
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 #include "EditorFont.h"
 
+#include "SystemDialog.h"
+
 SceneEditorTab::SceneEditorTab()
 {
 }
@@ -202,70 +204,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			if (ImGui::BeginPopupContextItem())
 			{
 				drawList->AddRect(rectMin, rectMax, IM_COL32(0, 255, 255, 255));
-
-				if (ImGui::MenuItem("Rename"))
-				{
-					m_nameInputTxt[0] = 0;
-					m_renameObject = obj;
-					m_openInputNamePopup = true;
-					ImGui::CloseCurrentPopup();
-				}
-
-				if (ImGui::MenuItem("Delete"))
-				{
-					bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
-
-					if (allowDelete)
-					{
-						m_deleteObject = obj;
-					}
-					else
-					{
-						std::cerr << "[ERROR]: can not delete hot reloaded object's children!\n";
-					}
-				}
-
-				ImGui::Separator();
-				if (ImGui::MenuItem("Switch Kinematic All"))
-				{
-					bool allow = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
-					if (allow)
-					{
-						obj->PostTraversal(
-							[](GameObject* o) 
-							{
-								if (o->HasComponent<RigidBodyDynamic>())
-								{
-									o->GetComponentRaw<RigidBodyDynamic>()->SetKinematic(!o->GetComponentRaw<RigidBodyDynamic>()->IsKinematic());
-								}
-							}
-						);
-					}
-				}
-
-				if (ImGui::MenuItem("Reset Physics Position All"))
-				{
-					bool allow = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
-					if (allow)
-					{
-						obj->PostTraversal(
-							[](GameObject* o)
-							{
-								if (o->HasComponent<RigidBodyDynamic>())
-								{
-									auto local = o->GetLocalTransform();
-									auto local2 = local;
-									local2.Position().x -= 10.0f;
-									o->SetLocalTransform(local2);
-									o->SetLocalTransform(local);
-								}
-							}
-						);
-					}
-				}
-
-				OnRenderGameObjectContextMenu(obj);
-
+				RenderObjectContextPopup(obj);
 				ImGui::EndPopup();
 			}
 
@@ -965,6 +904,121 @@ void SceneEditorTab::IndexObject(GameObject* obj)
 	);
 }
 
+void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
+{
+	if (ImGui::MenuItem(ICON_FA_FILE_IMPORT "  Import GameObject"))
+	{
+		SystemDialog::FileChooserDialog otp;
+		otp.forceInsideResourcesPath = false;
+		otp.extensionGroups = {
+			{
+				"Json files (*.json)",
+				{ "json" }
+			}
+		};
+
+		if (SystemDialog::OpenFileChooser(otp))
+		{
+			auto newObj = LoadGameObjectFromFile(otp.outputFilePath);
+			if (newObj)
+			{
+				obj->AddChild(newObj);
+			}
+		}
+	}
+
+	if (ImGui::MenuItem(ICON_FA_FILE_IMPORT "  Import Static Model"))
+	{
+		SystemDialog::FileChooserDialog otp;
+		otp.forceInsideResourcesPath = true;
+		otp.extensionGroups = {
+			{
+				"3D Static Model File (*.obj, *.fbx, *.dae, *.stl)",
+				{ "obj", "fbx", "dae", "stl" }
+			}
+		};
+
+		if (SystemDialog::OpenFileChooser(otp))
+		{
+			auto newObj = LoadStaticModelFromFile(otp.outputFilePath);
+			if (newObj)
+			{
+				obj->AddChild(newObj);
+			}
+		}
+	}
+
+	if (ImGui::MenuItem(ICON_FA_CIRCLE_PLUS "  Add Empty GameObject"))
+	{
+		obj->AddChild(mheap::New<GameObject>());
+	}
+
+	ImGui::Separator();
+
+	if (ImGui::MenuItem("Rename"))
+	{
+		m_nameInputTxt[0] = 0;
+		m_renameObject = obj;
+		m_openInputNamePopup = true;
+		ImGui::CloseCurrentPopup();
+	}
+
+	if (ImGui::MenuItem("Delete"))
+	{
+		bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+
+		if (allowDelete)
+		{
+			m_deleteObject = obj;
+		}
+		else
+		{
+			std::cerr << "[ERROR]: can not delete hot reloaded object's children!\n";
+		}
+	}
+
+	ImGui::Separator();
+	if (ImGui::MenuItem("Switch Kinematic All"))
+	{
+		bool allow = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+		if (allow)
+		{
+			obj->PostTraversal(
+				[](GameObject* o)
+				{
+					if (o->HasComponent<RigidBodyDynamic>())
+					{
+						o->GetComponentRaw<RigidBodyDynamic>()->SetKinematic(!o->GetComponentRaw<RigidBodyDynamic>()->IsKinematic());
+					}
+				}
+			);
+		}
+	}
+
+	if (ImGui::MenuItem("Reset Physics Position All"))
+	{
+		bool allow = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+		if (allow)
+		{
+			obj->PostTraversal(
+				[](GameObject* o)
+				{
+					if (o->HasComponent<RigidBodyDynamic>())
+					{
+						auto local = o->GetLocalTransform();
+						auto local2 = local;
+						local2.Position().x -= 10.0f;
+						o->SetLocalTransform(local2);
+						o->SetLocalTransform(local);
+					}
+				}
+			);
+		}
+	}
+
+	OnRenderGameObjectContextMenu(obj);
+}
+
 void SceneEditorTab::OnRenderGUI()
 {
 	RenderHierarchyPanel();
@@ -1093,7 +1147,23 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 		{
 			if (depth == 0)
 			{
+				if (ImGui::Button(ICON_FA_ROTATE " Synch Transform"))
+				{
+					auto& globalTransform = m_inspectingObject->GetCommittedGlobalTransform();
+					m_inspectingObject->SetGlobalTransform(globalTransform, INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL, true);
+					//auto parentTransform = m_inspectingObject->Parent().Get() ? m_inspectingObject->Parent()->GetCommittedGlobalTransform() : Mat4::Identity();
+					//auto local = globalTransform * parentTransform.GetInverse();
+					//m_inspectingObject->SetLocalTransform(Transform::FromTransformMatrix(local),)
+				}
+
+				/*ImGui::SameLine();
+				if (ImGui::Button(ICON_FA_ROTATE " Synch Transform Recursive"))
+				{
+					
+				}*/
+
 				ImGui::SetNextItemOpen(true);
+
 			}
 
 			bool rawInspect = true;

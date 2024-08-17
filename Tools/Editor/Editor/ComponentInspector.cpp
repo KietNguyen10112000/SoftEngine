@@ -6,6 +6,7 @@
 
 #include "DataInspector.h"
 #include "RigidBodyInspector.h"
+#include "AnimatorInspector.h"
 
 #include "imgui/imgui.h"
 
@@ -88,111 +89,17 @@ void ComponentInspector::EndInspectingFor(GameObject* obj, ClassMetadata* meta, 
 
 void ComponentInspector::InspectAnimatorSkeletalArray(EditorContext* ctx, Serializable* comp, ClassMetadata* metadata, const char* propertyName)
 {
-	//const static char* cacheNameFmt = "editor_InspectAnimatorSkeletalArray_{}";
-	//struct Cache
-	//{
-	//	/*ID curAnimId = 0;
-	//	float curAnimStartTime = 0;
-	//	float curAnimEndTime = 0;*/
+	auto name = GetName("AnimatorInspector", comp);
+	auto inspector = metadata->GenericDictionary()->Get<AnimatorInspector>(name);
+	if (inspector == nullptr)
+	{
+		inspector = mheap::New<AnimatorInspector>(dynamic_cast<AnimatorSkeletalArray*>(comp), metadata);
+		metadata->GenericDictionary()->Store(name, inspector);
 
-	//	ID blendAnimId = 0;
-	//	float blendAnimStartTime = 0;
-	//	float blendAnimEndTime = 0;
-	//	float blendTime = 0;
-	//	float startTransitTime = -1;
+		inspector->OnBeginInspecting();
+	}
 
-	//	float curT = 0;
-
-	//	bool isPaused = false;
-	//	bool needRepause = false;
-	//};
-
-	//auto cacheName = String::Format(cacheNameFmt, propertyName);
-
-	//auto cache = metadata->GenericDictionary()->Get<Cache>(cacheName);
-
-	//if (!cache)
-	//{
-	//	cache = mheap::New<Cache>();
-	//	metadata->GenericDictionary()->Store(cacheName, cache);
-	//}
-
-	//metadata->ForEachProperties(
-	//	[](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
-	//	{
-	//		DataInspector::Inspect(metadata, accessor, propertyName);
-	//	},
-	//	nullptr
-	//);
-
-	//auto animator = (AnimatorSkeletalArray*)comp;
-
-	//auto& curAnimationTrack = animator->m_currentAnimTrack;
-
-	//if (ImGui::Button("Stop"))
-	//{
-	//	animator->SetPause(true);
-	//	cache->isPaused = true;
-	//}
-
-	//if (ImGui::Button("Continue"))
-	//{
-	//	animator->SetPause(false);
-	//	cache->isPaused = false;
-	//}
-
-	///*if (cache->needRepause)
-	//{
-	//	animator->SetPause(true);
-	//	cache->isPaused = true;
-	//	cache->needRepause = false;
-	//}*/
-
-	//auto curAnimBeginSec = curAnimationTrack->startTick / curAnimationTrack->ticksPerSecond;
-	//auto curAnimEndSec = curAnimBeginSec + curAnimationTrack->tickDuration / curAnimationTrack->ticksPerSecond;
-	//auto tempT = animator->m_t / curAnimationTrack->ticksPerSecond;
-	//if (ImGui::SliderFloat("Animation Time", &tempT, curAnimBeginSec, curAnimEndSec) && cache->isPaused)
-	//{
-	//	//animator->SetPause(false);
-	//	//cache->needRepause = true;
-	//	animator->SetTime(tempT);
-	//}
-
-	//ImGui::SeparatorText("Blend Animation");
-
-	//HelpMarker("Blend to the current animation");
-
-	//bool modified = false;
-
-	//ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.5);
-
-	//auto& animation = animator->m_model3D->m_animations[cache->blendAnimId];
-	//auto duration = animation.tickDuration / animation.ticksPerSecond;
-
-	//int temp = (int)cache->blendAnimId;
-	//modified |= ImGui::DragInt("Blend Animation Id", (int*)&temp, 0.1f, 0, animator->m_model3D->m_animations.size() - 1);
-	//modified |= ImGui::DragFloat("Begin Time", &cache->blendAnimStartTime, 0.01f, -INFINITY, duration);
-	//modified |= ImGui::DragFloat("End Time", &cache->blendAnimEndTime, 0.01f, -INFINITY, INFINITY);
-	//modified |= ImGui::DragFloat("Blend Duration", &cache->blendTime, 0.01f, 0, INFINITY);
-
-	//modified |= ImGui::DragFloat("Start transit time", &cache->startTransitTime, 0.01f, 0, INFINITY);
-
-	//ImGui::Text("Animation name: %s", animation.name.c_str());
-	//ImGui::Text("Animation duration: %f sec", duration);
-
-	//ImGui::PopItemWidth();
-
-	//if (modified)
-	//{
-	//	cache->blendAnimId = temp;
-
-	//	cache->blendAnimEndTime = std::max(cache->blendAnimStartTime + 0.1f, cache->blendAnimEndTime);
-	//}
-	//
-	//if (ImGui::Button("Play"))
-	//{
-	//	animator->Play(cache->startTransitTime, cache->blendAnimId, 0, cache->blendAnimStartTime, cache->blendAnimEndTime, cache->blendTime);
-	//}
+	inspector->Inspect();
 }
 
 void ComponentInspector::InspectRigidBody(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName)

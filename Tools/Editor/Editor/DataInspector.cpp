@@ -53,6 +53,8 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		Vec3 rotationAxis;
 		ImVec4 rotationAxisColor;
 		Quaternion startQuat;
+
+		bool uniqueScale = true;
 	};
 
 	Transform transform = variant.As<Transform>();
@@ -85,17 +87,39 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 
 	if (!hideScale)
 	{
-		modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 0.001f, -INFINITY, INFINITY);
+		if (cache->uniqueScale)
+		{
+			auto v = transform.Scale();
+			modified |= ImGui::DragFloatN_Colored("Scale", &v[0], 3, 0.001f, -INFINITY, INFINITY);
+			if (v != transform.Scale())
+			{
+				auto dx = v.x - transform.Scale().x;
+				auto dy = v.y - transform.Scale().y;
+				auto dz = v.z - transform.Scale().z;
+				auto dv = dx + dy + dz;
+				transform.Scale() = transform.Scale() + Vec3(dv);
+			}
+		}
+		else
+		{
+			modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 0.001f, -INFINITY, INFINITY);
+		}
+
+		ImGui::SameLine(0, 55);
+		if (ImGui::Button(cache->uniqueScale ? ICON_FA_LOCK "## lock scale btn" : ICON_FA_UNLOCK "## lock scale btn"))
+		{
+			cache->uniqueScale = !cache->uniqueScale;
+		}
 	}
 
 	ImVec2 cursorPos = { 0,0 };
 	if (cache->rotationInspectType == 0)
 	{
-		modified |= ImGui::DragFloatN_Colored("Rotation    ", &euler[0], 3, 0.001f, -INFINITY, INFINITY);
+		modified |= ImGui::DragFloatN_Colored("Rotation    ", &euler[0], 3, 0.0001f, -INFINITY, INFINITY, "%.4f");
 	}
 	else
 	{
-		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 0.001f, -INFINITY, INFINITY);
+		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 0.0001f, -INFINITY, INFINITY, "%.4f");
 
 		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		ImGuiContext& g = *GImGui;
@@ -204,6 +228,29 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		{
 			modified = true;
 			transform = data->copiedTransform;
+
+			cache->startQuat = transform.Rotation();
+			switch (cache->rotationInspectType)
+			{
+			case 0:
+				cache->euler = transform.Rotation().ToEulerAngles();
+				cache->rotationAxis = Vec3::ZERO;
+				break;
+			case 1:
+				cache->rotationAxis = transform.ToTransformMatrix().Right().Normal();
+				cache->rotationAxisColor = { 1,0,0,1 };
+				break;
+			case 2:
+				cache->rotationAxis = transform.ToTransformMatrix().Up().Normal();
+				cache->rotationAxisColor = { 0,1,0,1 };
+				break;
+			case 3:
+				cache->rotationAxis = transform.ToTransformMatrix().Forward().Normal();
+				cache->rotationAxisColor = { 0,0,1,1 };
+				break;
+			default:
+				break;
+			}
 		}
 	}
 

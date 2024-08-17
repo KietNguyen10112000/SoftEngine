@@ -76,10 +76,20 @@ void Initialize(Runtime* runtime)
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
 				}*/
 
-				{
+				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();
 
 					factory->m_filePath = "Editor/GameObjectEditor/Table_0.GameObjectEditor";
+					auto tab = factory->CreateInstance();
+					EditorContext::s_instance->RunTab(tab);
+
+					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
+				}*/
+
+				{
+					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();
+
+					factory->m_filePath = "Editor/GameObjectEditor/Character.GameObjectEditor";
 					auto tab = factory->CreateInstance();
 					EditorContext::s_instance->RunTab(tab);
 

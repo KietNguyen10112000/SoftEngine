@@ -148,7 +148,9 @@
     <ClCompile Include="AnimatorEditorSaveData.cpp" />
     <ClCompile Include="AnimatorEditorTab.cpp" />
     <ClCompile Include="AnimatorEditorTabFactory.cpp" />
+    <ClCompile Include="AnimatorInspector.cpp" />
     <ClCompile Include="ComponentInspector.cpp" />
+    <ClCompile Include="ComponentInspectorBase.cpp" />
     <ClCompile Include="EditorContext.cpp" />
     <ClCompile Include="EditorFont.cpp" />
     <ClCompile Include="EditorTab.cpp" />
@@ -179,6 +181,7 @@
     <ClInclude Include="AnimatorEditorSaveData.h" />
     <ClInclude Include="AnimatorEditorTab.h" />
     <ClInclude Include="AnimatorEditorTabFactory.h" />
+    <ClInclude Include="AnimatorInspector.h" />
     <ClInclude Include="ComponentInspector.h" />
     <ClInclude Include="ComponentInspectorBase.h" />
     <ClInclude Include="EditorContext.h" />
