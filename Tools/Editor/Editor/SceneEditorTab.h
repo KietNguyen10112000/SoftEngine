@@ -45,6 +45,7 @@ public:
 	bool m_pinInspectPanel = true;
 	bool m_pinHierarchyPanel = true;
 	GameObject* m_dragingObject = nullptr;
+	GameObject* m_willbeSelectedObject = nullptr;
 
 	bool m_openInputNamePopup = false;
 	GameObject* m_renameObject = nullptr;
@@ -75,6 +76,8 @@ public:
 
 	bool m_isHotDeserializingGameObjectFromFile = false;
 	std::map<UUID, LoadedObjectFromFileData> m_loadFromFileObject;
+
+	std::set<GameObject*> m_highlightingObjects;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -140,6 +143,10 @@ public:
 	virtual void WriteSaveDataToJson(Serializer* serializer, json& j);
 	virtual void ReadSaveDataFromJson(Serializer* serializer, const json& j);
 	virtual void OnRenderGameObjectContextMenu(GameObject* obj);
+
+public:
+	void HighlightObject(GameObject* obj);
+	void UnhighlightObject(GameObject* obj);
 
 };
 

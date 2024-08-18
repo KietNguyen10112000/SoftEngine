@@ -590,6 +590,7 @@ Handle<GameObject> AnimModel::MakeGameObject()
 	}
 	animator->m_animMeshRenderingBuffer = buffer;
 	animator->m_model3D = model;
+	//animator->m_rigidBodyProxy.Resize(model->m_nodeIds.size());
 
 	auto count = m_meshes.size();
 	for (size_t i = 0; i < count; i++)

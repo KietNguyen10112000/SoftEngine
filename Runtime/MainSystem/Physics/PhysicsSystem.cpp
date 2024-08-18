@@ -50,6 +50,12 @@ static PxFilterFlags PhysicsContactReportFilterShader(PxFilterObjectAttributes a
 		pairFlags &= ~PxPairFlag::eSOLVE_CONTACT;
 	}
 
+	if ((filterData0.word1 & filterData1.word1) == 0)
+	{
+		//pairFlags.clear(PxPairFlag::eSOLVE_CONTACT);
+		ret |= PxFilterFlag::eSUPPRESS;
+	}
+
 	return ret
 		| ((filterDataWord0 & PHYSICS_FILTER_FLAG::CALLBACK) ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT);
 }
@@ -258,9 +264,13 @@ class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
 		{
 			if (AComp->GetGameObject()->GetCommittedRoot() == BComp->GetGameObject()->GetCommittedRoot())
 			{
-				pairFlags.clear(PxPairFlag::eSOLVE_CONTACT);
-				pairFlags &= ~PxPairFlag::eSOLVE_CONTACT;
+				//pairFlags.clear(PxPairFlag::eSOLVE_CONTACT);
+				//pairFlags &= ~PxPairFlag::eSOLVE_CONTACT;
 				return PxFilterFlag::eSUPPRESS;
+			}
+			else if (uint32_t(pairFlags) == 0)
+			{
+				return PhysicsContactReportFilterShader(attributes0, filterData0, attributes1, filterData1, pairFlags, 0, 0);
 			}
 		}
 

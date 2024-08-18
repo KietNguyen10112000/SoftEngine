@@ -19,6 +19,7 @@ EditorFont::EditorFont()
 
 	{
 		InitializeFont(22);
+		InitializeFont(18);
 	}
 }
 

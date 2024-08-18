@@ -683,16 +683,24 @@ void Runtime::Iteration()
 		Task gcTask;
 		gcTask.Entry() = [](void* e)
 		{
+			constexpr static float PERIODIC_GC_TIME = 900; // sec ~ 15min for each
+
+			static size_t lastGCTime = Clock::ms::Now();
+
+			auto now = Clock::ms::Now();
+
 			Runtime* engine = (Runtime*)e;
 			auto rheap = rheap::internal::Get();
 			auto sheap = mheap::internal::GetHeap(mheap::internal::HEAP_ID::STABLE_HEAP);
 			auto heap = mheap::internal::GetHeap(mheap::internal::HEAP_ID::GC_HEAP);
-			if (heap->IsNeedGC())
+			if (heap->IsNeedGC() || (now - lastGCTime) / 1000.0f > PERIODIC_GC_TIME)
 			{
 				std::cout << "GC started...\n";
 				gc::Run(-1);
 				std::cout << "GC end...\n";
 				heap->EndGC();
+
+				lastGCTime = now;
 			}
 			engine->m_gcIsRunning.exchange(false, std::memory_order_release);
 		};

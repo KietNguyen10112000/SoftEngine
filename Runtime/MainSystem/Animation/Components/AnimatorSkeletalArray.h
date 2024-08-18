@@ -13,6 +13,16 @@ public:
 	friend class AnimLayer;
 	friend class AnimCCTBufferLayer;
 
+	struct RIGID_BODY_PROXY_CONTROL_MODE
+	{
+		enum MODE
+		{
+			DISABLED,
+			ANIMATOR_TO_RIGID_BODY,
+			RIGID_BODY_TO_ANIMATOR
+		};
+	};
+
 	Resource<AnimModel>	m_model3D;
 
 	ID m_animationSystemId = 0;
@@ -27,14 +37,21 @@ public:
 
 	bool m_isRunning = true;
 
+	// to defer public results to RenderingSystem
+	bool m_isEnableDeferPublicResults = false;
+	bool m_padd[6];
+	SharedPtr<AnimLayer> m_deferBufferLayer;
+
 	CharacterController* m_cct = nullptr;
 	Vec3 m_cctLockedUpDirection = Vec3::ZERO;
-	SharedPtr<AnimLayer> m_cctBufferLayer;
 	Vec3 m_cctPrevPosition;
 	Quaternion m_cctPrevRotation;
 	Mat4 m_cctOffset;
 	Mat4 m_rootOffset;
 	Mat4 m_parentOffset;
+
+	Array<Handle<GameObject>> m_rigidBodyProxy;
+	RIGID_BODY_PROXY_CONTROL_MODE::MODE m_rigidBodyProxyControlMode = RIGID_BODY_PROXY_CONTROL_MODE::DISABLED;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -42,6 +59,7 @@ protected:
 	{
 		tracer->Trace(m_meshRendererObjs);
 		tracer->Trace(m_animLayers);
+		tracer->Trace(m_rigidBodyProxy);
 	}
 
 public:
@@ -68,6 +86,13 @@ private:
 	void CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* last);
 	void SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection);
 
+	void PublicResultToRigidBodies(Scene* _scene, AnimLayer* last);
+
+	void SetEnableDeferPublicResult(bool enable);
+	void ResetDeferBufferLayer();
+
+	void SetRigidBodiesControlModeImpl(RIGID_BODY_PROXY_CONTROL_MODE::MODE mode);
+
 public:
 
 	// Inherited via Animator
@@ -89,6 +114,8 @@ public:
 
 	// forward root motion to cct
 	void SetForwardCCT(CharacterController* cct, const Vec3& lockUpDirection = Vec3::ZERO);
+
+	void SetRigidBodiesControlMode(RIGID_BODY_PROXY_CONTROL_MODE::MODE mode);
 
 public:
 	template <typename T, bool IS_EXTERN = false, typename... Args>

@@ -1435,7 +1435,7 @@ public:
 	SERIALIZABLE_CLASS(AnimatorEditorTPoseLayer);
 
 	bool m_once = true;
-	float m_coeff = 0.0f;
+	float m_coeff = 1.0f;
 
 	// Inherited via AnimLayer
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
@@ -3612,4 +3612,9 @@ void AnimatorEditorTab::InitializeSerializableList()
 {
 	SerializableDB::Get()->Register<AnimBlendLayerNode::CustomFunction1D>();
 	SerializableDB::Get()->Register<AnimBlendLayerNode::FixedFunction1D>();
+}
+
+Handle<AnimLayer> AnimatorEditorTab::MakeTPoseLayer(AnimatorSkeletalArray* animator)
+{
+	return animator->NewAnimLayer<AnimatorEditorTPoseLayer, true>();
 }

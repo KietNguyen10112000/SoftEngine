@@ -2,6 +2,9 @@
 
 #include "ComponentInspectorBase.h"
 
+#include "Core/Memory/Memory.h"
+#include "Core/Structures/Managed/Array.h"
+
 namespace soft
 {
 	class RigidBody;
@@ -10,6 +13,7 @@ namespace soft
 	class GameObject;
 	class Joint;
 	class AnimatorSkeletalArray;
+	class AnimLayer;
 }
 
 using namespace soft;
@@ -17,16 +21,68 @@ using namespace soft;
 class AnimatorInspector : public ComponentInspectorBase
 {
 public:
+	struct ModelNode
+	{
+		ModelNode* parent = nullptr;
+		std::vector<ModelNode*> children;
+
+		ID nodeIdx = INVALID_ID;
+		bool isSelected = false;
+		bool isTryingExpand = true;
+		bool isOpen = false;
+		bool isHovering = false;
+
+		template <typename Fn>
+		inline void ForEach(Fn fn)
+		{
+			fn(this);
+
+			for (auto& child : children)
+			{
+				child->ForEach(fn);
+			}
+		}
+
+		inline auto& Children()
+		{
+			return children;
+		}
+	};
+
 	ClassMetadata* m_metadata = nullptr;
 	AnimatorSkeletalArray* m_animator = nullptr;
 
 	float m_currentAlpha = 0.498f;
 
+	byte m_isEnableTPose = 0;
+
+	Handle<AnimLayer> m_tposeLayer;
+
+	ModelNode* m_root = nullptr;
+	std::vector<ModelNode*> m_modelNodes;
+
+	// each modelNode can be bound to a game object
+	Array<Handle<GameObject>> m_boundObjects;
+
+	TRACEABLE_FRIEND();
+	inline void Trace(Tracer* tracer)
+	{
+		tracer->Trace(m_tposeLayer);
+		tracer->Trace(m_boundObjects);
+	}
+
+public:
 	AnimatorInspector(AnimatorSkeletalArray* animator, ClassMetadata* meta);
+	~AnimatorInspector();
 
 	// Inherited via ComponentInspectorBase
 	void OnBeginInspecting() override;
 	void OnEndInspecting() override;
 	void Inspect();
+
+private:
+	void BuildModelHierarchy();
+	void RenderModelNodeHierarchy(void (*)(ModelNode*, void*), void* userPtr);
+	void RenderModelNodeHierarchyImpl(void (*)(ModelNode*, void*), void* userPtr, ModelNode*, void* outRect);
 
 };

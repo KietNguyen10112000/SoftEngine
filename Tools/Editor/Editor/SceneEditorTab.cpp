@@ -114,7 +114,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 					ImGuiDragDropFlags target_flags = 0;
 					target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
 					//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_DND_PAYLOAD", target_flags);
 					if (payload && ImGui::IsMouseReleased(0) &&
 						(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
 					{
@@ -200,6 +200,11 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			auto rectMax = ImGui::GetItemRectMax();
 			auto drawList = ImGui::GetWindowDrawList();
 
+			if (m_highlightingObjects.find(obj) != m_highlightingObjects.end())
+			{
+				drawList->AddRect(rectMin, rectMax, IM_COL32(255, 255, 0, 255));
+			}
+
 			// right-click popup menu on object name
 			if (ImGui::BeginPopupContextItem())
 			{
@@ -222,7 +227,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 					m_dragingObject = obj;
 					if (!(src_flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
 						ImGui::Text("Moving");
-					ImGui::SetDragDropPayload("TREE_DND_PAYLOAD", &obj, sizeof(obj));
+					ImGui::SetDragDropPayload("GAMEOBJECT_DND_PAYLOAD", &obj, sizeof(obj));
 				}
 				ImGui::EndDragDropSource();
 			}
@@ -232,7 +237,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				ImGuiDragDropFlags target_flags = 0;
 				target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
 				//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_DND_PAYLOAD", target_flags);
 				if (payload && ImGui::IsMouseReleased(0) && 
 					(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
 				{
@@ -261,6 +266,12 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 				ImGui::EndDragDropTarget();
 			}
 
+			if (m_dragingObject == nullptr && ImGui::IsItemHovered() && ImGui::IsMouseReleased(0) && m_willbeSelectedObject == obj)
+			{
+				//std::cout << "Released\n";
+				OnObjectSelected(obj);
+			}
+
 			if (m_dragingObject && ImGui::IsMouseReleased(0) && ImGui::IsItemHovered() && m_dragingObject == obj)
 			{
 				m_dragingObject = nullptr;
@@ -269,7 +280,9 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 			if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
 			{
 				//m_selectionId = (ID)obj->GetComponentRaw<GameObjectEditorComponent>();
-				OnObjectSelected(obj);
+				//OnObjectSelected(obj);
+				//std::cout << "Clicked\n";
+				m_willbeSelectedObject = obj;
 			}
 
 			/*if (open)
@@ -308,7 +321,7 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 						ImGuiDragDropFlags target_flags = 0;
 						target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
 						//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_DND_PAYLOAD", target_flags);
 						if (payload && ImGui::IsMouseReleased(0) &&
 							(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
 						{
@@ -498,7 +511,7 @@ void SceneEditorTab::RenderHierarchyPanelGameObjectsTree(GameObject* specified)
 	//	ImGuiDragDropFlags target_flags = 0;
 	//	target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
 	//	target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
-	//	const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TREE_DND_PAYLOAD", target_flags);
+	//	const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_DND_PAYLOAD", target_flags);
 	//	std::cout << "Drop----\n";
 	//	if (payload && ImGui::IsMouseReleased(0))
 	//	{
@@ -1531,4 +1544,26 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 
 void SceneEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 {
+}
+
+void SceneEditorTab::HighlightObject(GameObject* obj)
+{
+	auto it = m_highlightingObjects.find(obj);
+	if (it != m_highlightingObjects.end())
+	{
+		return;
+	}
+
+	m_highlightingObjects.insert(obj);
+}
+
+void SceneEditorTab::UnhighlightObject(GameObject* obj)
+{
+	auto it = m_highlightingObjects.find(obj);
+	if (it == m_highlightingObjects.end())
+	{
+		return;
+	}
+
+	m_highlightingObjects.erase(it);
 }

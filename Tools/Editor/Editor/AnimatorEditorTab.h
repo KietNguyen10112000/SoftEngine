@@ -347,5 +347,8 @@ private:
 public:
 	static void InitializeSerializableList();
 
+public:
+	static Handle<AnimLayer> MakeTPoseLayer(AnimatorSkeletalArray* animator);
+
 };
 
