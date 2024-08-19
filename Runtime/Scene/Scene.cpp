@@ -11,7 +11,7 @@
 
 #include "DeferredBuffer.h"
 #include "ModifiedRecorder.h"
-#include "GameObjectDependenciesRecorder.h"
+#include "GameObjectDependenciesResolver.h"
 
 
 NAMESPACE_BEGIN
@@ -263,31 +263,7 @@ void Scene::AddLongLifeObject(const Handle<GameObject>& obj, bool indexedName)
 
 void Scene::ResolveDependencies(GameObject* obj, GameObjectDependenciesRecorder* output)
 {
-	GameObjectDependenciesResolver* resolvers[MainSystemInfo::COUNT] = {};
-	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
-	{
-		if (m_mainSystems[i])
-		{
-			resolvers[i] = m_mainSystems[i]->GetDependenciesResolver();
-		}
-	}
-
-	GameObjectDependenciesRecorder& recorder = *output;
-	recorder.Record(obj);
-	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
-	{
-		auto resolver = resolvers[i];
-		if (resolver)
-		{
-			for (auto& o : recorder.m_objects)
-			{
-				if (o->m_mainComponents[i])
-				{
-					resolver->Resolve(&recorder, o);
-				}
-			}
-		}
-	}
+	GameObjectDependencies::Get()->Collect(this, obj, output);
 }
 
 void Scene::AddObjectImpl(GameObject* obj, bool indexedName)

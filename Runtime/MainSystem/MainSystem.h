@@ -49,12 +49,6 @@ protected:
 	virtual void BeginModification() = 0;
 
 	// direct implementation
-
-	inline virtual GameObjectDependenciesResolver* GetDependenciesResolver()
-	{
-		return nullptr;
-	}
-
 	virtual void AddComponent(MainComponent* comp) = 0;
 	virtual void RemoveComponent(MainComponent* comp) = 0;
 	virtual void OnObjectTransformChanged(MainComponent* comp) = 0;

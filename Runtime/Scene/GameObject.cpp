@@ -5,6 +5,8 @@
 #include "Runtime/Runtime.h"
 #include "Scene/ModifiedRecorder.h"
 
+#include "GameObjectDependenciesResolver.h"
+
 NAMESPACE_BEGIN
 
 GameObject* GameObject::AddMainComponentDefer(ID COMPONENT_ID, const Handle<MainComponent>& component)
@@ -34,7 +36,7 @@ GameObject* GameObject::RemoveMainComponentDefer(ID COMPONENT_ID, MainComponent*
 //	std::cout << "GameObject::~GameObject()\n";
 //}
 
-void GameObject::RemoveFromParent(bool keepChildrenOrder)
+void GameObject::_RemoveFromParent(bool keepChildrenOrder)
 {
 	if (m_scene == 0 && m_parent == 0)
 	{
@@ -67,7 +69,7 @@ void GameObject::RemoveFromParent(bool keepChildrenOrder)
 	m_parent = nullptr;
 
 	RecalculateTransform(Mat4::Identity());
-	
+
 	auto root = this;
 	m_root = root;
 	{
@@ -92,6 +94,16 @@ void GameObject::RemoveFromParent(bool keepChildrenOrder)
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::HEIRARCHY);
 }
 
+void GameObject::RemoveFromParent(bool keepChildrenOrder)
+{
+	GameObjectDependenciesRecorder recorder = m_scene;
+	GameObjectDependencies::Get()->Collect(m_scene, this, &recorder);
+	for (auto& o : recorder.GetRootObjects())
+	{
+		o->_RemoveFromParent(keepChildrenOrder);
+	}
+}
+
 void GameObject::RecalculateTransform(const Mat4& parentTransform)
 {
 	/*if (m_transformConstraint == TRANSFORM_CONSTRAINT::FREE)
@@ -113,6 +125,22 @@ void GameObject::RecalculateTransform(const Mat4& parentTransform)
 	if (m_globalTransform != m_committedGlobalTransform)
 	{
 		Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
+	}
+
+	if (!IsInAnyScene())
+	{
+		m_committedGlobalTransform = m_globalTransform;
+		m_committedLocalTransform = m_localTransform;
+		for (auto& comp : m_mainComponents)
+		{
+			if (comp)
+			{
+				auto old = comp->m_committedObject;
+				comp->m_committedObject = this;
+				comp->OnTransformChanged();
+				comp->m_committedObject = old;
+			}
+		}
 	}
 
 	m_lock.lock();
@@ -140,7 +168,7 @@ void GameObject::RecordAllComponetsAsModified()
 	);
 }
 
-void GameObject::AddChild(const Handle<GameObject>& obj, ID index)
+void GameObject::_AddChild(const Handle<GameObject>& obj, ID index)
 {
 	assert(obj->m_parent == nullptr);
 
@@ -156,7 +184,7 @@ void GameObject::AddChild(const Handle<GameObject>& obj, ID index)
 	else
 	{
 		assert(index <= m_children.size());
-		
+
 		m_children.insert(m_children.begin() + index, obj);
 		for (size_t i = 0; i < m_children.size(); i++)
 		{
@@ -191,6 +219,16 @@ void GameObject::AddChild(const Handle<GameObject>& obj, ID index)
 	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(obj, ModifiedFlag::HEIRARCHY);
 }
 
+void GameObject::AddChild(const Handle<GameObject>& obj, ID index)
+{
+	GameObjectDependenciesRecorder recorder = m_scene;
+	GameObjectDependencies::Get()->Collect(m_scene, obj, &recorder);
+	for (auto& o : recorder.GetRootObjects())
+	{
+		_AddChild(o, index);
+	}
+}
+
 void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_ID)
 {
 	if (m_localTransform == transform)
@@ -200,10 +238,10 @@ void GameObject::SetLocalTransform(const Transform& transform, ID SRC_COMPONENT_
 
 	m_modifiedFlags |= ModifiedFlag::TRANSFORM;
 	m_componentIdModifyTransform = SRC_COMPONENT_ID;
+	m_transformConstraint = TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL;
 
 	m_localTransform = transform;
 
-	m_transformConstraint = TRANSFORM_CONSTRAINT::LOCAL_TO_GLOBAL;
 	RecalculateTransform(m_parent ? m_parent->m_globalTransform : Mat4::Identity());
 }
 
@@ -214,11 +252,13 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, 
 		return;
 	}
 
+	m_modifiedFlags |= ModifiedFlag::TRANSFORM;
 	m_componentIdModifyTransform = SRC_COMPONENT_ID;
+	m_transformConstraint = transformConstraint;
 
 	m_globalTransform = transform;
 
-	Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
+	//Runtime::Get()->GetModifiedRecorder()->RecordGameObject(this, ModifiedFlag::TRANSFORM);
 
 	////if (transformConstraint != TRANSFORM_CONSTRAINT::FREE)
 	//{
@@ -229,8 +269,6 @@ void GameObject::SetGlobalTransform(const Mat4& transform, ID SRC_COMPONENT_ID, 
 	//	}
 	//	m_lock.unlock();
 	//}
-
-	m_transformConstraint = transformConstraint;
 
 	RecalculateTransform(m_parent ? m_parent->m_globalTransform : Mat4::Identity());
 }

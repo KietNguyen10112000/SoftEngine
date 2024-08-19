@@ -85,4 +85,7 @@ private:
 	void RenderModelNodeHierarchy(void (*)(ModelNode*, void*), void* userPtr);
 	void RenderModelNodeHierarchyImpl(void (*)(ModelNode*, void*), void* userPtr, ModelNode*, void* outRect);
 
+	void MakeRigidBodySkeleton();
+	void DrawDebugSkeleton();
+
 };

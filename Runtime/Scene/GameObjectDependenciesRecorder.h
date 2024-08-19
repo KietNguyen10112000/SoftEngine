@@ -14,6 +14,8 @@ class GameObjectDependenciesRecorder
 {
 private:
 	friend class Scene;
+	friend class GameObjectDependencies;
+
 	std::vector<GameObject*> m_objects;
 	std::vector<GameObject*> m_rootObjects;
 
@@ -28,14 +30,15 @@ public:
 	void Record(GameObject* obj);
 	bool IsRecorded(GameObject* obj);
 
-};
+	inline auto& GetObjects()
+	{
+		return m_objects;
+	}
 
-class GameObjectDependenciesResolver
-{
-public:
-	inline virtual ~GameObjectDependenciesResolver() {};
-
-	virtual void Resolve(GameObjectDependenciesRecorder* recorder, GameObject* input) = 0;
+	inline auto& GetRootObjects()
+	{
+		return m_rootObjects;
+	}
 
 };
 

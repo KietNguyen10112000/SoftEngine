@@ -11,6 +11,8 @@ using namespace soft;
 class SceneEditorTab : public EditorTab
 {
 public:
+	friend class AnimatorInspector;
+
 	struct GameObjectEditorComponent
 	{
 		ID id = INVALID_ID;

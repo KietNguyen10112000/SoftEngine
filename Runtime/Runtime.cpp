@@ -71,6 +71,7 @@
 
 #include "Scene/GameObjectCache.h"
 #include "Scene/ModifiedRecorder.h"
+#include "Scene/GameObjectDependenciesResolver.h"
 
 NAMESPACE_BEGIN
 
@@ -158,10 +159,14 @@ void Runtime::InitializeModules()
 	{
 		v = mheap::New<ModifiedRecorder>();
 	}
+
+	GameObjectDependencies::SingletonInitialize();
 }
 
 void Runtime::FinalizeModules()
 {
+	GameObjectDependencies::SingletonFinalize();
+
 	FinalPlugins();
 
 	m_genericStorage.Clear();

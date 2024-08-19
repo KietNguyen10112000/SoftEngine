@@ -52,6 +52,7 @@ public:
 
 	Array<Handle<GameObject>> m_rigidBodyProxy;
 	RIGID_BODY_PROXY_CONTROL_MODE::MODE m_rigidBodyProxyControlMode = RIGID_BODY_PROXY_CONTROL_MODE::DISABLED;
+	GameObject* m_pivotRigidBody = nullptr;
 
 protected:
 	TRACEABLE_FRIEND();

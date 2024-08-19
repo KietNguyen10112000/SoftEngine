@@ -6,11 +6,15 @@
 #include "MainSystem/Animation/AnimLayer/AnimLayer.h"
 
 #include "MainSystem/Physics/Components/CharacterController.h"
+#include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 
 #include "MainSystem/Rendering/Components/AnimModelStaticMeshRenderer.h"
 #include "MainSystem/MainSystemTaskPacking.h"
 
 #include "Graphics/DebugGraphics.h"
+
+#include "PhysX/Utils.h"
+#include "PhysX/PhysX.h"
 
 #include "imgui/imgui.h"
 
@@ -561,7 +565,49 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 void AnimatorSkeletalArray::PublicResultToRigidBodies(Scene* _scene, AnimLayer* last)
 {
+	if (m_pivotRigidBody == nullptr)
+	{
+		for (auto& b : m_rigidBodyProxy)
+		{
+			if (b)
+			{
+				m_pivotRigidBody = b;
+				break;
+			}
+		}
+	}
 
+	if (m_pivotRigidBody)
+	{
+		assert(m_pivotRigidBody->HasComponent<RigidBodyDynamic>());
+		m_pivotRigidBody->GetComponentRaw<RigidBodyDynamic>()->RunAnimatorMotionMatchingCallback(
+			[](AnimatorSkeletalArray* self, ID param)
+			{
+				auto last = (AnimLayer*)param;
+				auto& globalTransform = self->GetGameObject()->GetCommittedGlobalTransform();
+				auto& globals = last->NodeGlobalTransforms();
+
+				auto& proxies = self->m_rigidBodyProxy;
+
+				auto count = globals.size();
+				for (size_t i = 0; i < count; i++)
+				{
+					auto& global = globals[i];
+					auto& proxy = proxies[i];
+					if (proxy)
+					{
+						auto m = global * globalTransform;
+						assert(proxy->HasComponent<RigidBodyDynamic>());
+
+						auto comp = proxy->GetComponentRaw<RigidBodyDynamic>();
+						auto pxBody = comp->m_pxActor->is<physx::PxRigidDynamic>();
+						pxBody->setKinematicTarget(PhysXUtils::ToPxTransform(Transform::FromTransformMatrix(m)));
+					}
+				}
+			},
+			this, ID(last)
+		);
+	}
 }
 
 void AnimatorSkeletalArray::SetEnableDeferPublicResult(bool enable)
@@ -605,6 +651,7 @@ void AnimatorSkeletalArray::SetRigidBodiesControlModeImpl(RIGID_BODY_PROXY_CONTR
 	}
 
 	m_rigidBodyProxyControlMode = mode;
+	m_pivotRigidBody = nullptr;
 }
 
 void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, const std::vector<Mat4>& globalTransforms, const std::vector<AABox>& meshesAABB)
@@ -833,11 +880,11 @@ void AnimatorSkeletalArray::ForwardCTTUpdateDataToRenderer(Scene* _scene, AnimLa
 	{
 		CopyDataToForwardCTTUpdateDataToRenderer(last);
 
-		assert(m_rigidBodyProxyControlMode != RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR);
+		/*assert(m_rigidBodyProxyControlMode != RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR);
 		if (m_rigidBodyProxyControlMode == RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY)
 		{
 			PublicResultToRigidBodies(_scene, m_deferBufferLayer.get());
-		}
+		}*/
 	}
 }
 
@@ -931,12 +978,21 @@ void AnimatorSkeletalArray::SerializeToJson(Serializer* serializer, json& j) con
 	}
 
 	{
+		size_t countNotNull = 0;
 		auto arr = json::array();
 		for (auto& body : m_rigidBodyProxy)
 		{
+			if (body)
+			{
+				countNotNull++;
+			}
 			arr.push_back(serializer->Serialize(body));
 		}
-		j["RigidBodyProxy"] = arr;
+
+		if (countNotNull != 0)
+		{
+			j["RigidBodyProxy"] = arr;
+		}
 	}
 }
 

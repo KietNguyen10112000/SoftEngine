@@ -1606,11 +1606,15 @@ void RigidBodyInspector::Inspect()
 		if (ImGui::IsItemHovered())
 		{
 			m_isDrawDebugAllBodiesFromRoot = true;
+			m_isHoveringFamilyScale = true;
 		}
-		else
+		else if (m_isHoveringFamilyScale)
 		{
 			m_isDrawDebugAllBodiesFromRoot = false;
+			m_isHoveringFamilyScale = false;
 		}
+
+		ImGui::Checkbox("Display All", &m_isDrawDebugAllBodiesFromRoot);
 	}
 
 	if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)

@@ -10,7 +10,7 @@
 #include "Runtime/Config.h"
 
 #include "Scene/Scene.h"
-#include "Scene/GameObjectDependenciesRecorder.h"
+#include "Scene/GameObjectDependenciesResolver.h"
 
 #include "PhysicsClasses.h"
 
@@ -76,8 +76,6 @@ private:
 
 	Array<Handle<void>> m_trashComps[NUM_TRASH_ARRAY];
 	size_t m_trashId = 0;
-
-	PhysicsSystemDependenciesResolver m_dependenciesResolver;
 
 	std::vector<Joint*> m_brokenJoints;
 
@@ -170,11 +168,6 @@ public:
 
 	virtual void PostIteration() override;
 
-	inline virtual GameObjectDependenciesResolver* GetDependenciesResolver() override
-	{
-		return &m_dependenciesResolver;
-	}
-
 	inline auto* AsyncTaskRunnerST()
 	{
 		return GetCurrentAsyncTaskRunnerST();
@@ -221,6 +214,11 @@ public:
 	inline auto& GetGravity() const
 	{
 		return m_gravity;
+	}
+
+	inline static SharedPtr<GameObjectDependenciesResolver> GetDependenciesResolver()
+	{
+		return std::make_shared<PhysicsSystemDependenciesResolver>();
 	}
 };
 

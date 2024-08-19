@@ -47,6 +47,7 @@ private:
 	ContactReportFilterCallback m_contactFilterCallback = nullptr;
 
 	friend class Joint;
+	friend class AnimatorSkeletalArray;
 	MAIN_SYSTEM_FRIEND_CLASSES();
 
 protected:

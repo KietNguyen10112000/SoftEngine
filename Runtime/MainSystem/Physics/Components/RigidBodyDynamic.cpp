@@ -329,4 +329,14 @@ void RigidBodyDynamic::OnPropertyChanged(const UnknownAddress& var, const Varian
 {
 }
 
+void RigidBodyDynamic::RunAnimatorMotionMatchingCallback(void(*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID _param)
+{
+	MAIN_SYSTEM_TASK_COMMON_3(
+		PhysicsSystem, AsyncTaskRunnerST, callback, animator, _param,
+		{
+			callback(animator, _param);
+		}
+	);
+}
+
 NAMESPACE_END

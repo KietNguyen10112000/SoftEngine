@@ -78,6 +78,7 @@ public:
 	std::map<PhysicsShape*, DrawShapeData> m_currentDrawData;
 	Handle<GameObject> m_debugJointAnotherObject = nullptr;
 
+	bool m_isHoveringFamilyScale = false;
 	bool m_isDrawDebugAllBodiesFromRoot = false;
 
 	TRACEABLE_FRIEND();

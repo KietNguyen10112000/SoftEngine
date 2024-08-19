@@ -47,6 +47,7 @@ public:
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
 	friend class ModifiedRecorder;
+	friend class GameObjectDependencies;
 
 	struct ModifiedFlag
 	{
@@ -406,6 +407,10 @@ public:
 	{
 		return m_committedComponents[COMPONENT_ID].Get() != nullptr;
 	}
+
+private:
+	void _AddChild(const Handle<GameObject>& obj, ID index);
+	void _RemoveFromParent(bool keepChildrenOrder);
 
 public:
 	void AddChild(const Handle<GameObject>& obj, ID index = INVALID_ID);

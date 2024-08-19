@@ -16,6 +16,7 @@ protected:
 
 	friend class RigidBody;
 	friend class Joint;
+	friend class AnimatorSkeletalArray;
 
 	byte m_isKinematic = 0;
 	float m_density = 1.0f;
@@ -41,6 +42,8 @@ protected:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+	void RunAnimatorMotionMatchingCallback(void (*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID param);
 
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 
