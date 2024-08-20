@@ -79,7 +79,8 @@ public:
 	Handle<GameObject> m_debugJointAnotherObject = nullptr;
 
 	bool m_isHoveringFamilyScale = false;
-	bool m_isDrawDebugAllBodiesFromRoot = false;
+	bool m_prevDrawDebugAllBodiesFromRoot = true;
+	bool m_isDrawDebugAllBodiesFromRoot = true;
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)

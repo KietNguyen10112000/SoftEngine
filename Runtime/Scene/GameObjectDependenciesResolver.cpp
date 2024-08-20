@@ -33,7 +33,7 @@ void GameObjectDependencies::Collect(Scene* scene, GameObject* obj, GameObjectDe
 		{
 			for (size_t j = 0; j < recorder.m_objects.size(); j++)
 			{
-				auto o = recorder.m_objects[j];
+				auto o = recorder.m_objects[j].obj;
 				if (o->m_mainComponents[i])
 				{
 					resolver->Resolve(&recorder, o);
@@ -41,6 +41,7 @@ void GameObjectDependencies::Collect(Scene* scene, GameObject* obj, GameObjectDe
 			}
 		}
 	}
+	recorder.UnRecordAll(scene);
 }
 
 NAMESPACE_END

@@ -12,13 +12,13 @@ void GameObjectDependenciesRecorder::UnRecordAll(Scene* scene)
 {
 	for (auto& o : m_objects)
 	{
-		o->m_scene = scene;
+		o.obj->m_scene = o.originalScene;
 	}
 }
 
 void GameObjectDependenciesRecorder::Record(GameObject* obj)
 {
-	auto root = obj->GetRoot();
+	auto root = obj->m_root;
 	assert(root->m_scene == nullptr || root->m_scene == m_scene || IsRecorded(root)); // Reaching this assertion means you are adding objects having dependency-game-objects which is in difference scenes
 
 	if (IsRecorded(root))
@@ -36,8 +36,8 @@ void GameObjectDependenciesRecorder::Record(GameObject* obj)
 				return;
 			}
 
+			m_objects.push_back({ o,o->m_scene });
 			o->m_scene = (Scene*)INVALID_ID;
-			m_objects.push_back(o);
 		}
 	);
 

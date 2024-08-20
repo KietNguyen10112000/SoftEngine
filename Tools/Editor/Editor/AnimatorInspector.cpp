@@ -160,143 +160,284 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 	auto& offsets = m_animator->m_model3D->m_boneOffsetMatrixs;
 	auto& objGlobal = m_animator->GetGameObject()->GetCommittedGlobalTransform();
 
-	std::vector<Mat4> nodeGlobals;
-	nodeGlobals.resize(nodes.size());
+	std::vector<Vec3> nodePositions;
+	nodePositions.resize(nodes.size());
 
 	for (size_t i = 0; i < nodes.size(); i++)
 	{
 		auto& node = nodes[i];
 		if (node.boneId != INVALID_ID)
 		{
-			nodeGlobals[i] = offsets[node.boneId].GetInverse() * objGlobal;
+			nodePositions[i] = (offsets[node.boneId].GetInverse() * objGlobal).Position();
 		}
 		else
 		{
-			nodeGlobals[i] = objGlobal;
+			nodePositions[i] = objGlobal.Position();
 		}
 	}
 
-	constexpr float SPHERE_RADIUS = 0.04f; // 
-	constexpr float CAPSULE_RADIUS = 0.05f; // 
+	constexpr float SPHERE_RADIUS = 0.002f; // 
+	constexpr float CAPSULE_RADIUS = 0.01f; // 
 
 	auto material = std::make_shared<PhysicsMaterial>(0.5f, 0.5f, 0.5f);
 	Array<Handle<GameObject>> boneRigidBodies;
 	boneRigidBodies.Resize(nodes.size());
-	GameObject* rootObj = nullptr;
-	for (size_t i = 0; i < nodes.size(); i++)
+
+	static void (*fn)(RigidBodyDynamic*, ModelNode*, Array<Handle<GameObject>>&,
+		const SharedPtr<PhysicsMaterial>&, std::vector<Vec3>&, AnimModel*)
+		= [](RigidBodyDynamic* parent, ModelNode* modelNode, Array<Handle<GameObject>>& objects,
+			const SharedPtr<PhysicsMaterial>& material, std::vector<Vec3>& nodePositions, AnimModel* model) -> void
 	{
-		auto& node = nodes[i];
-		auto& nodeGlobal = nodeGlobals[i];
-		if (node.boneId != INVALID_ID)
+		if (modelNode->children.size() == 0)
 		{
-			auto obj = mheap::New<GameObject>();
-			auto sphere = std::make_shared<PhysicsShapeSphere>(SPHERE_RADIUS, material);
-			auto dynamic = obj->NewComponent<RigidBodyDynamic>(sphere);
-			dynamic->SetKinematic(true);
-			obj->SetGlobalTransform(nodeGlobal);
+			return;
+		}
 
-			boneRigidBodies[i] = obj;
-
-			if (rootObj == nullptr)
+		{
+			size_t count = 0;
+			for (auto& child : modelNode->children)
 			{
-				rootObj = obj;
+				if (model->m_nodes[child->nodeIdx].boneId == INVALID_ID)
+				{
+					count++;
+				}
 			}
-
-			if (node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
+			if (count == modelNode->children.size())
 			{
-				auto& parentNodeGlobal = nodeGlobals[node.parentId];
-				auto& parentObj = boneRigidBodies[node.parentId];
-				assert(parentObj != nullptr);
-
-				auto forward = (nodeGlobal.Position() - parentNodeGlobal.Position()).Normal();
-				auto right = forward.Cross(Vec3::UP).Normal();
-				auto up = forward.Cross(right).Normal();
-
-				obj->SetGlobalTransform(Mat4(
-					Vec4(forward, 0.0f),
-					Vec4(up, 0.0f),
-					Vec4(right, 0.0f),
-					Vec4(nodeGlobal.Position(), 1.0f)
-				));
-
-				auto length = (parentNodeGlobal.Position() - nodeGlobal.Position()).Length();
-				if (length > SPHERE_RADIUS * 2.0f + CAPSULE_RADIUS * 2.0f + 0.01f)
-				{
-					auto boneLength = length - SPHERE_RADIUS * 2.0f - 0.005f;
-
-					auto bone = mheap::New<GameObject>();
-					auto capsule = std::make_shared<PhysicsShapeCapsule>(boneLength - CAPSULE_RADIUS * 2.0f, CAPSULE_RADIUS, material);
-					auto boneDynamic = bone->NewComponent<RigidBodyDynamic>(capsule);
-					boneDynamic->SetKinematic(true);
-					auto bonePosition = (parentNodeGlobal.Position() + nodeGlobal.Position()) / 2.0f;
-
-					auto boneGlobalTransformMat = Mat4(
-						Vec4(forward, 0.0f),
-						Vec4(up, 0.0f),
-						Vec4(right, 0.0f),
-						Vec4(bonePosition, 1.0f)
-					);
-
-					// set joint to parent
-					{
-						auto& jointPosition = parentNodeGlobal.Position();
-						auto jointGlobalTransformMat = Mat4(
-							Vec4(forward, 0.0f),
-							Vec4(up, 0.0f),
-							Vec4(right, 0.0f),
-							Vec4(jointPosition, 1.0f)
-						);
-
-						auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * parentNodeGlobal.GetInverse());
-						auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransformMat * boneGlobalTransformMat.GetInverse());
-
-						bone->SetGlobalTransform(boneGlobalTransformMat);
-
-						mheap::New<D6Joint>(parentObj->GetComponent<RigidBodyDynamic>(), localframe0, boneDynamic, localframe1);
-					}
-
-					// set up joint to current
-					{
-						auto& jointPosition = nodeGlobal.Position();
-						auto jointGlobalTransformMat = Mat4(
-							Vec4(forward, 0.0f),
-							Vec4(up, 0.0f),
-							Vec4(right, 0.0f),
-							Vec4(jointPosition, 1.0f)
-						);
-
-						auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * nodeGlobal.GetInverse());
-						auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransformMat * boneGlobalTransformMat.GetInverse());
-
-						mheap::New<FixedJoint>(dynamic, localframe0, boneDynamic, localframe1);
-					}
-				}
-				else
-				{
-					auto boneGlobalTransformMat = Mat4(
-						Vec4(forward, 0.0f),
-						Vec4(up, 0.0f),
-						Vec4(right, 0.0f),
-						Vec4(nodeGlobal.Position(), 1.0f)
-					);
-
-					auto& jointPosition = parentNodeGlobal.Position();
-					auto jointGlobalTransformMat = Mat4(
-						Vec4(forward, 0.0f),
-						Vec4(up, 0.0f),
-						Vec4(right, 0.0f),
-						Vec4(jointPosition, 1.0f)
-					);
-					auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * parentNodeGlobal.GetInverse());
-					auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransformMat * boneGlobalTransformMat.GetInverse());
-					mheap::New<D6Joint>(parentObj->GetComponent<RigidBodyDynamic>(), localframe0, dynamic, localframe1);
-				}
+				return;
 			}
 		}
-	}
 
+		auto& jointPos = nodePositions[modelNode->nodeIdx];
+		Mat4 objGLobalTransform;
+		if (parent)
+		{
+			auto& parentTransform = parent->GetCurrentObject()->GetCommittedGlobalTransform();
+			auto X = (jointPos - parentTransform.Position()).Normal();
+			auto u = Vec3::X_AXIS;
+			if (std::abs(X.Dot(u)) < 0.0001f)
+			{
+				u = Vec3::UP;
+			}
+			auto Y = X.Cross(u).Normal();
+			auto Z = X.Cross(Y).Normal();
+			objGLobalTransform = Mat4(
+				Vec4(X, 0.0f),
+				Vec4(Y, 0.0f),
+				Vec4(Z, 0.0f),
+				Vec4(jointPos, 1.0f)
+			);
+		}
+		else
+		{
+			objGLobalTransform = Mat4(
+				Vec4(Vec3::X_AXIS, 0.0f),
+				Vec4(Vec3::Y_AXIS, 0.0f),
+				Vec4(Vec3::Z_AXIS, 0.0f),
+				Vec4(jointPos, 1.0f)
+			);
+		}
+
+		auto obj = mheap::New<GameObject>();
+		obj->Name() = model->m_boneNames[model->m_nodes[modelNode->nodeIdx].boneId];
+		objects[modelNode->nodeIdx] = obj;
+
+		auto dynamic = obj->NewComponent<RigidBodyDynamic>();
+		obj->SetGlobalTransform(objGLobalTransform, INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL);
+
+		for (auto& child : modelNode->children)
+		{
+			if (model->m_nodes[child->nodeIdx].boneId == INVALID_ID)
+			{
+				continue;
+			}
+
+			auto length = (obj->GetCommittedGlobalTransform().Position() - nodePositions[child->nodeIdx]).Length();
+			auto capsule = std::make_shared<PhysicsShapeCapsule>(std::max(length - CAPSULE_RADIUS * 2.0f, 0.001f), CAPSULE_RADIUS, material);
+
+			auto X = (nodePositions[child->nodeIdx] - obj->GetCommittedGlobalTransform().Position()).Normal();
+			auto u = Vec3::X_AXIS;
+			if (std::abs(X.Dot(u)) < 0.0001f)
+			{
+				u = Vec3::UP;
+			}
+			auto Y = X.Cross(u).Normal();
+			auto Z = X.Cross(Y).Normal();
+
+			capsule->SetLocalTransform(Transform::FromTransformMatrix(Mat4(
+				Vec4(X, 0.0f),
+				Vec4(Y, 0.0f),
+				Vec4(Z, 0.0f),
+				Vec4((nodePositions[child->nodeIdx] + obj->GetCommittedGlobalTransform().Position()) / 2.0f, 1.0f)
+			) * obj->GetCommittedGlobalTransform().GetInverse()));
+			dynamic->AddShape(capsule);
+
+			fn(dynamic, child, objects, material, nodePositions, model);
+
+			auto& childObj = objects[child->nodeIdx];
+			if (childObj)
+			{
+				obj->AddChild(childObj);
+			}
+		}
+
+		dynamic->SetKinematic(true);
+		dynamic->SetDensity(1000);
+
+		if (parent)
+		{
+			auto& parentTransform = parent->GetCurrentObject()->GetCommittedGlobalTransform();
+			auto& jointGlobalTransformMat = objGLobalTransform;
+			Transform localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * parentTransform.GetInverse());
+			Transform localframe1 = {};
+			auto d6Joint = mheap::New<D6Joint>(parent, localframe0, dynamic, localframe1);
+			d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Y, D6Joint::MOTION_TYPE::FREE);
+			d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Z, D6Joint::MOTION_TYPE::FREE);
+		}
+	};
+
+	fn(nullptr, rootBone, boneRigidBodies, material, nodePositions, model);
 	auto newObj = mheap::New<GameObject>();
-	newObj->AddChild(rootObj);
+	newObj->AddChild(boneRigidBodies[rootBone->nodeIdx]);
+
+	//for (size_t i = 0; i < nodes.size(); i++)
+	//{
+	//	auto& node = nodes[i];
+	//	auto& nodeGlobal = nodeGlobals[i];
+	//	auto& modelNode = m_modelNodes[i];
+
+	//	if (node.boneId != INVALID_ID)
+	//	{
+	//		auto obj = mheap::New<GameObject>();
+	//		auto dynamic = obj->NewComponent<RigidBodyDynamic>();
+
+	//		for (auto& child : modelNode->children)
+	//		{
+	//			auto capsule = std::make_shared<PhysicsShapeSphere>(, CAPSULE_RADIUS, material);
+
+	//		}
+
+	//		dynamic->SetKinematic(true);
+	//		dynamic->SetDensity(1000);
+	//		obj->SetGlobalTransform(Mat4::Translation(nodeGlobal.Position()));
+	//		obj->Name() = model->m_boneNames[node.boneId];
+
+	//		boneRigidBodies[i] = obj;
+
+	//		if (newObj->Children().Size() == 0 && node.parentId != INVALID_ID)
+	//		{
+	//			newObj->AddChild(obj);
+	//		}
+
+	//		if (node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID)
+	//		{
+	//			auto& parentObj = boneRigidBodies[node.parentId];
+	//			auto& parentNodeGlobal = parentObj->GetCommittedGlobalTransform();
+	//			assert(parentObj != nullptr);
+
+	//			parentObj->AddChild(obj);
+
+	//			auto X = (nodeGlobal.Position() - parentNodeGlobal.Position()).Normal();
+	//			auto u = Vec3::X_AXIS;
+	//			if (std::abs(X.Dot(u)) < 0.0001f)
+	//			{
+	//				u = Vec3::UP;
+	//			}
+	//			auto Y = X.Cross(u).Normal();
+	//			auto Z = X.Cross(Y).Normal();
+
+	//			obj->SetGlobalTransform(Mat4(
+	//				Vec4(X, 0.0f),
+	//				Vec4(Y, 0.0f),
+	//				Vec4(Z, 0.0f),
+	//				Vec4(nodeGlobal.Position(), 1.0f)
+	//			), INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL);
+
+	//			auto length = (parentNodeGlobal.Position() - nodeGlobal.Position()).Length();
+	//			if (length > SPHERE_RADIUS * 2.0f + CAPSULE_RADIUS * 2.0f + 0.01f)
+	//			{
+	//				auto boneLength = length - SPHERE_RADIUS * 2.0f - 0.005f;
+
+	//				auto bone = mheap::New<GameObject>();
+	//				auto capsule = std::make_shared<PhysicsShapeCapsule>(boneLength - CAPSULE_RADIUS * 2.0f, CAPSULE_RADIUS, material);
+	//				auto boneDynamic = bone->NewComponent<RigidBodyDynamic>(capsule);
+	//				boneDynamic->SetKinematic(true);
+	//				boneDynamic->SetDensity(1000);
+
+	//				parentObj->AddChild(bone);
+
+	//				auto bonePosition = (parentNodeGlobal.Position() + nodeGlobal.Position()) / 2.0f;
+
+	//				auto boneGlobalTransformMat = Mat4(
+	//					Vec4(X, 0.0f),
+	//					Vec4(Y, 0.0f),
+	//					Vec4(Z, 0.0f),
+	//					Vec4(bonePosition, 1.0f)
+	//				);
+
+	//				// set joint to parent
+	//				{
+	//					auto& jointPosition = parentNodeGlobal.Position();
+	//					auto jointGlobalTransformMat = Mat4(
+	//						Vec4(X, 0.0f),
+	//						Vec4(Y, 0.0f),
+	//						Vec4(Z, 0.0f),
+	//						Vec4(jointPosition, 1.0f)
+	//					);
+
+	//					auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * parentNodeGlobal.GetInverse());
+	//					auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransformMat * boneGlobalTransformMat.GetInverse());
+
+	//					bone->SetGlobalTransform(boneGlobalTransformMat, INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL);
+
+	//					auto d6Joint = mheap::New<D6Joint>(parentObj->GetComponent<RigidBodyDynamic>(), localframe0, boneDynamic, localframe1);
+	//					d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Y, D6Joint::MOTION_TYPE::FREE);
+	//					d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Z, D6Joint::MOTION_TYPE::FREE);
+	//				}
+
+	//				// set up joint to current
+	//				{
+	//					auto& jointPosition = nodeGlobal.Position();
+	//					auto jointGlobalTransformMat = Mat4(
+	//						Vec4(X, 0.0f),
+	//						Vec4(Y, 0.0f),
+	//						Vec4(Z, 0.0f),
+	//						Vec4(jointPosition, 1.0f)
+	//					);
+
+	//					auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * obj->GetCommittedGlobalTransform().GetInverse());
+	//					auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransformMat * boneGlobalTransformMat.GetInverse());
+
+	//					mheap::New<FixedJoint>(dynamic, localframe0, boneDynamic, localframe1);
+	//				}
+	//			}
+	//			else
+	//			{
+	//				auto boneGlobalTransformMat = Mat4(
+	//					Vec4(X, 0.0f),
+	//					Vec4(Y, 0.0f),
+	//					Vec4(Z, 0.0f),
+	//					Vec4(nodeGlobal.Position(), 1.0f)
+	//				);
+
+	//				auto& jointPosition = parentNodeGlobal.Position();
+	//				auto jointGlobalTransformMat = Mat4(
+	//					Vec4(X, 0.0f),
+	//					Vec4(Y, 0.0f),
+	//					Vec4(Z, 0.0f),
+	//					Vec4(jointPosition, 1.0f)
+	//				);
+	//				auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * parentNodeGlobal.GetInverse());
+	//				auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransformMat * boneGlobalTransformMat.GetInverse());
+	//				auto d6Joint = mheap::New<D6Joint>(parentObj->GetComponent<RigidBodyDynamic>(), localframe0, dynamic, localframe1);
+	//				d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Y, D6Joint::MOTION_TYPE::FREE);
+	//				d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Z, D6Joint::MOTION_TYPE::FREE);
+	//			}
+	//		}
+	//	}
+	//}
+
+	newObj->Name() = "Skeleton";
 
 	auto currentSceneEditorTab = dynamic_cast<SceneEditorTab*>(EditorContext::Get()->GetCurrentTab());
 	if (currentSceneEditorTab)

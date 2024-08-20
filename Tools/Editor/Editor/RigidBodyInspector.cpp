@@ -1036,7 +1036,7 @@ void RigidBodyInspector::RenderInspectJoint()
 		String typeName = m_body->GetJoint(m_choosingJointIdx)->GetClassName();
 		if (typeName == "FixedJoint")
 		{
-			wHeight = 200;
+			wHeight = 500;
 		}
 		else if (typeName == "SphericalJoint")
 		{
@@ -1428,8 +1428,14 @@ void RigidBodyInspector::ScaleBodyFromRootObject(float scaleFactor)
 				auto body = obj->GetComponentRaw<RigidBody>();
 				processedBodies.insert(body);
 
+				auto v = Transform::FromTransformMatrix(obj->GetCommittedGlobalTransform() * Mat4::Scaling(scaleFactor, scaleFactor, scaleFactor));
+				v.Scale() = { 1,1,1 };
+
 				body->ScaleBy(scaleFactor);
-				obj->SetGlobalTransform(obj->GetCommittedGlobalTransform() * Mat4::Scaling(scaleFactor, scaleFactor, scaleFactor));
+				obj->SetGlobalTransform(
+					v.ToTransformMatrix(),
+					INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL
+				);
 
 				auto count = body->GetJointsCount();
 				for (size_t i = 0; i < count; i++)
@@ -1600,17 +1606,22 @@ void RigidBodyInspector::Inspect()
 		float scaleOffset = 0.0f;
 		if (ImGui::DragFloat("Family Scale", &scaleOffset, 0.001f, -INFINITY, INFINITY, ""))
 		{
-			ScaleBodyFromRootObject(1 + scaleOffset);
+			ScaleBodyFromRootObject(std::clamp(1 + scaleOffset, 0.5f, 1.5f));
 		}
 
 		if (ImGui::IsItemHovered())
 		{
+			if (!m_isHoveringFamilyScale)
+			{
+				m_prevDrawDebugAllBodiesFromRoot = m_isDrawDebugAllBodiesFromRoot;
+			}
+
 			m_isDrawDebugAllBodiesFromRoot = true;
 			m_isHoveringFamilyScale = true;
 		}
 		else if (m_isHoveringFamilyScale)
 		{
-			m_isDrawDebugAllBodiesFromRoot = false;
+			m_isDrawDebugAllBodiesFromRoot = m_prevDrawDebugAllBodiesFromRoot;
 			m_isHoveringFamilyScale = false;
 		}
 

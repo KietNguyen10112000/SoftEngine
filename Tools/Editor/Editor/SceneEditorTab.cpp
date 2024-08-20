@@ -185,6 +185,12 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 					ImGui::EndDragDropTarget();
 				}
 			}
+
+			if (obj->GetComponentRaw<GameObjectEditorComponent>()->expandAll)
+			{
+				ImGui::SetNextItemOpen(true);
+				obj->GetComponentRaw<GameObjectEditorComponent>()->expandAll = false;
+			}
 			
 			ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_FramePadding, { 0,2 });
 			auto open = ImGui::TreeNodeEx((void*)(intptr_t)obj,
@@ -919,6 +925,18 @@ void SceneEditorTab::IndexObject(GameObject* obj)
 
 void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 {
+	if (ImGui::MenuItem("Expand All"))
+	{
+		obj->PostTraversal(
+			[](GameObject* o)
+			{
+				o->GetComponentRaw<GameObjectEditorComponent>()->expandAll = true;
+			}
+		);
+	}
+
+	ImGui::Separator();
+
 	if (ImGui::MenuItem(ICON_FA_FILE_IMPORT "  Import GameObject"))
 	{
 		SystemDialog::FileChooserDialog otp;

@@ -17,6 +17,7 @@ public:
 	{
 		ID id = INVALID_ID;
 		bool hotReloadFromFile = false;
+		bool expandAll = false;
 	};
 
 	struct SceneEditorComponentData

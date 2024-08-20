@@ -98,9 +98,21 @@ void GameObject::RemoveFromParent(bool keepChildrenOrder)
 {
 	GameObjectDependenciesRecorder recorder = m_scene;
 	GameObjectDependencies::Get()->Collect(m_scene, this, &recorder);
+
+	bool removed = false;
 	for (auto& o : recorder.GetRootObjects())
 	{
 		o->_RemoveFromParent(keepChildrenOrder);
+
+		if (o == this)
+		{
+			removed = true;
+		}
+	}
+
+	if (!removed)
+	{
+		_RemoveFromParent(keepChildrenOrder);
 	}
 }
 
@@ -170,7 +182,8 @@ void GameObject::RecordAllComponetsAsModified()
 
 void GameObject::_AddChild(const Handle<GameObject>& obj, ID index)
 {
-	assert(obj->m_parent == nullptr);
+	assert(obj->m_parent == nullptr); 
+	assert(obj != this);
 
 	obj->m_parent = this;
 
@@ -225,7 +238,10 @@ void GameObject::AddChild(const Handle<GameObject>& obj, ID index)
 	GameObjectDependencies::Get()->Collect(m_scene, obj, &recorder);
 	for (auto& o : recorder.GetRootObjects())
 	{
-		_AddChild(o, index);
+		if (o != this)
+		{
+			_AddChild(o, index);
+		}
 	}
 }
 
