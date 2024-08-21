@@ -26,14 +26,14 @@ void GameObjectDependencies::Collect(Scene* scene, GameObject* obj, GameObjectDe
 	}
 
 	recorder.Record(obj);
-	for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
+	for (size_t j = 0; j < recorder.m_recordedObjects.size(); j++)
 	{
-		auto& resolver = m_solvers[i];
-		if (resolver)
+		auto o = recorder.m_recordedObjects[j];
+		for (size_t i = 0; i < MainSystemInfo::COUNT; i++)
 		{
-			for (size_t j = 0; j < recorder.m_objects.size(); j++)
+			auto& resolver = m_solvers[i];
+			if (resolver)
 			{
-				auto o = recorder.m_objects[j].obj;
 				if (o->m_mainComponents[i])
 				{
 					resolver->Resolve(&recorder, o);
@@ -41,7 +41,10 @@ void GameObjectDependencies::Collect(Scene* scene, GameObject* obj, GameObjectDe
 			}
 		}
 	}
+
 	recorder.UnRecordAll(scene);
+	recorder.FindCommonRoot();
+
 }
 
 NAMESPACE_END

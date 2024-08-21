@@ -328,7 +328,7 @@ void RigidBody::AddShapeImpl(const SharedPtr<PhysicsShape>& shape)
 	{
 		auto comp = (RigidBodyDynamic*)this;
 		PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
-		if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
+		if (!comp->IsKinematic() && dynamic->getScene() && dynamic->isSleeping()) dynamic->wakeUp();
 	}
 }
 
@@ -354,7 +354,7 @@ void RigidBody::RemoveShapeImpl(PhysicsShape* shape)
 	{
 		auto comp = (RigidBodyDynamic*)this;
 		PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
-		if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
+		if (!comp->IsKinematic() && dynamic->getScene() && dynamic->isSleeping()) dynamic->wakeUp();
 	}
 }
 

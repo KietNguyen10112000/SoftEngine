@@ -119,7 +119,7 @@ void PhysicsShape::SetLocalTransform(const Transform& transform)
 				{
 					auto comp = ((RigidBodyDynamic*)dynamic->userData);
 					PxRigidBodyExt::updateMassAndInertia(*dynamic, comp->GetDensity());
-					if (!comp->IsKinematic() && dynamic->isSleeping()) dynamic->wakeUp();
+					comp->InternalWake();
 				}
 			}
 		}

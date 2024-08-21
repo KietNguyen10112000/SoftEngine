@@ -17,6 +17,7 @@ protected:
 	friend class RigidBody;
 	friend class Joint;
 	friend class AnimatorSkeletalArray;
+	friend class PhysicsShape;
 
 	byte m_isKinematic = 0;
 	float m_density = 1.0f;

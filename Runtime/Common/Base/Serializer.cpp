@@ -109,6 +109,18 @@ void Serializer::TrySerializeRC(ResourceBase* rc)
 
 		if (classNameIt == m_classNameIds.end())
 		{
+			/*if (className == "class soft::AnimMotion")
+			{
+				String s = "class soft::AnimMotion";
+				String s2 = rc->GetClassName();
+
+				std::map<String, ID> testMap;
+				testMap.insert({ "class soft::AnimMotion", 0 });
+				auto testIt = testMap.find(className);
+
+				int x = 3;
+			}*/
+
 			record.classNameIdx = m_classNames.size();
 			m_classNames.push_back(className);
 			m_classNameIds.insert({ className,record.classNameIdx });

@@ -60,6 +60,7 @@ public:
 
 	MainComponent* m_removeComp = nullptr;
 	GameObject* m_deleteObject = nullptr;
+	GameObject* m_deleteObjectAfterBreakDependencies = nullptr;
 
 	spinlock m_lock;
 
@@ -76,6 +77,7 @@ public:
 	ID m_onSaveListenerId = INVALID_ID;
 
 	bool m_isDrawingDebug = true;
+	bool m_isDrawingInspectingObjectBasis = true;
 
 	bool m_isHotDeserializingGameObjectFromFile = false;
 	std::map<UUID, LoadedObjectFromFileData> m_loadFromFileObject;
@@ -109,6 +111,7 @@ protected:
 	void IndexObject(GameObject* obj);
 
 	void RenderObjectContextPopup(GameObject* obj);
+	void BreakDependencies(GameObject* obj);
 
 public:
 	SceneEditorTab();

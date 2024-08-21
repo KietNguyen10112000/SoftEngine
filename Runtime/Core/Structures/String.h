@@ -114,7 +114,7 @@ protected:
 		::memcpy(buf + lLen, r, rLen);
 		buf[len] = 0;
 
-		m_header->m_hash = Hash(c_str());
+		m_header->m_hash = Hash(c_str(), c_str() + len);
 	};
 
 	inline void Construct(const char_type* r, size_t len = -1)
@@ -127,23 +127,23 @@ protected:
 
 		m_header->m_length = length;
 		m_header->m_refCount = 1;
-		m_header->m_hash = Hash(r);
+		m_header->m_hash = Hash(r, r + length);
 
 		memcpy(m_header + 1, r, nBytes - sizeof(char_type));
 		((char_type*)(m_header + 1))[length] = (char_type)'\0';
 	};
 
 public:
-	static size_t Hash(const char_type* str)
+	static size_t Hash(const char_type* begin, const char_type* end)
 	{
 		constexpr size_t p = 31; // or 53
 		constexpr size_t m = 1e9 + 9;
 		size_t hash_value = 0;
 		size_t p_pow = 1;
 
-		char_type* s = (char_type*)str;
+		char_type* s = (char_type*)begin;
 		char_type c = *s;
-		while (c)
+		while (s != end)
 		{
 			hash_value = (hash_value + (c - 'a' + 1) * p_pow) % m;
 			p_pow = (p_pow * p) % m;

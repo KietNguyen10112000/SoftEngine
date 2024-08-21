@@ -101,6 +101,9 @@ private:
 
 	uint32_t m_modifiedFlags = 0;
 
+	int m_dependenciesRecordedValue = 0;
+	byte m_padd[4];
+
 private:
 	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
@@ -415,6 +418,9 @@ private:
 public:
 	void AddChild(const Handle<GameObject>& obj, ID index = INVALID_ID);
 	void RemoveFromParent(bool keepChildrenOrder = false);
+
+	// if this object is in scene => remove from scene, else remove from parent
+	void RemoveSelf(bool keepChildrenOrder = false);
 
 	template <typename Func>
 	void ForEachChildren(Func func)

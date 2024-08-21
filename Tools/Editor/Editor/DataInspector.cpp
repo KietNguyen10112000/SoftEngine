@@ -11,6 +11,8 @@
 
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 
+#include "EditorSettings.h"
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <shlobj_core.h>
@@ -90,7 +92,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		if (cache->uniqueScale)
 		{
 			auto v = transform.Scale();
-			modified |= ImGui::DragFloatN_Colored("Scale", &v[0], 3, 0.001f, -INFINITY, INFINITY);
+			modified |= ImGui::DragFloatN_Colored("Scale", &v[0], 3, EditorSettings::Get()->GeneralSetting.scalingAdjustmentPrecision, -INFINITY, INFINITY);
 			if (v != transform.Scale())
 			{
 				auto dx = v.x - transform.Scale().x;
@@ -102,7 +104,9 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		}
 		else
 		{
-			modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 0.001f, -INFINITY, INFINITY);
+			modified |= ImGui::DragFloatN_Colored("Scale", &transform.Scale()[0], 3, 
+				EditorSettings::Get()->GeneralSetting.scalingAdjustmentPrecision, -INFINITY, INFINITY, 
+				EditorSettings::Get()->GetPrecisionCFormatStr(EditorSettings::Get()->GeneralSetting.scalingAdjustmentPrecision));
 		}
 
 		ImGui::SameLine(0, 55);
@@ -115,11 +119,15 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 	ImVec2 cursorPos = { 0,0 };
 	if (cache->rotationInspectType == 0)
 	{
-		modified |= ImGui::DragFloatN_Colored("Rotation    ", &euler[0], 3, 0.0001f, -INFINITY, INFINITY, "%.4f");
+		modified |= ImGui::DragFloatN_Colored("Rotation    ", &euler[0], 3, 
+			EditorSettings::Get()->GeneralSetting.rotationAdjustmentPrecision, -INFINITY, INFINITY, 
+			EditorSettings::Get()->GetPrecisionCFormatStr(EditorSettings::Get()->GeneralSetting.rotationAdjustmentPrecision));
 	}
 	else
 	{
-		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 0.0001f, -INFINITY, INFINITY, "%.4f");
+		modified |= ImGui::DragFloat("## Rotation", &cache->rotationOffset, 
+			EditorSettings::Get()->GeneralSetting.rotationAdjustmentPrecision, -INFINITY, INFINITY, 
+			EditorSettings::Get()->GetPrecisionCFormatStr(EditorSettings::Get()->GeneralSetting.rotationAdjustmentPrecision));
 
 		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		ImGuiContext& g = *GImGui;
@@ -203,7 +211,9 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 
 	//Graphics::Get()->GetDebugGraphics()->DrawDirection(transform.GetPosition(), cache->rotationAxis * 20.0f);
 
-	modified |= ImGui::DragFloatN_Colored("Position", &transform.Position()[0], 3, 0.001f, -INFINITY, INFINITY);
+	modified |= ImGui::DragFloatN_Colored("Position", &transform.Position()[0], 3, 
+		EditorSettings::Get()->GeneralSetting.positionAdjustmentPrecision, -INFINITY, INFINITY,
+		EditorSettings::Get()->GetPrecisionCFormatStr(EditorSettings::Get()->GeneralSetting.positionAdjustmentPrecision));
 
 	ImGui::SameLine();
 	cursorPos = ImGui::GetCursorPos();

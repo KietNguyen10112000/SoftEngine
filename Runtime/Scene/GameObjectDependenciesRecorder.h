@@ -4,6 +4,7 @@
 #include "Core/Memory/Memory.h"
 
 #include <vector>
+#include <map>
 
 NAMESPACE_BEGIN
 
@@ -13,26 +14,33 @@ class Scene;
 class GameObjectDependenciesRecorder
 {
 private:
-	friend class Scene;
+	//friend class Scene;
 	friend class GameObjectDependencies;
 
-	struct RecordedObject
+	struct RecordedTree
 	{
-		GameObject* obj;
+		GameObject* root;
 		Scene* originalScene;
+		std::vector<GameObject*> descendants;
+
+		inline RecordedTree(GameObject* root, Scene* originalScene) : root(root), originalScene(originalScene) {}
 	};
 
-	std::vector<RecordedObject> m_objects;
+	std::map<GameObject*, RecordedTree> m_recordedTrees;
+	std::vector<GameObject*> m_recordedObjects;
 	std::vector<GameObject*> m_rootObjects;
 
 	Scene* m_scene = nullptr;
 
-private:
-	void UnRecordAll(Scene* scene);
-
 public:
 	GameObjectDependenciesRecorder(Scene* scene);
 
+private:
+	void UnRecordAll(Scene* scene);
+	void FindCommonRoot(RecordedTree* tree);
+	void FindCommonRoot();
+
+public:
 	void Record(GameObject* obj);
 	bool IsRecorded(GameObject* obj);
 

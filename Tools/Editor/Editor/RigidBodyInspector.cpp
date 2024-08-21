@@ -132,12 +132,16 @@ void RigidBodyInspector::FindJointCreateAnother()
 
 void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 {
-	ImGui::TextUnformatted("Shape Local Transform");
+	ImGui::TextUnformatted("Shape Global Transform");
 
 	Vec3 rotationAxis = Vec3::ZERO;
-	auto modified = m_tempShapeLocalTransform;
+	auto t = Transform::FromTransformMatrix(m_body->GetGameObject()->GetCommittedGlobalTransform());
+	t.Scale() = { 1,1,1 };
+	auto globalTransform = Transform::FromTransformMatrix(m_tempShapeLocalTransform.ToTransformMatrix() * t.ToTransformMatrix());
+	globalTransform.Scale() = { 1,1,1 };
+	auto modified = globalTransform;
 	auto accessor = Accessor::For("Transform", modified, m_body);
-	DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("ShapeLocalTransform {}", shape).c_str(), true, &rotationAxis);
+	DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("ShapeGlobalTransform {}", shape).c_str(), true, &rotationAxis);
 	
 	auto dbGr = Graphics::Get()->GetDebugGraphics();
 	if (dbGr && rotationAxis != Vec3::ZERO)
@@ -178,11 +182,21 @@ void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 			0.02f
 		);
 	}
-	
-	if (!m_tempShapeLocalTransform.Equals(modified))
+
+	if (dbGr)
 	{
-		shape->SetLocalTransform(modified);
-		m_tempShapeLocalTransform = modified;
+		dbGr->DrawLineSegment(globalTransform.Position() - 0.5f * Vec3::Z_AXIS, globalTransform.Position() + 0.5f * Vec3::Z_AXIS, { 0,0,1,1 }, 0.003f);
+		dbGr->DrawLineSegment(globalTransform.Position() - 0.5f * Vec3::X_AXIS, globalTransform.Position() + 0.5f * Vec3::X_AXIS, { 1,0,0,1 }, 0.003f);
+		dbGr->DrawLineSegment(globalTransform.Position() - 0.5f * Vec3::Y_AXIS, globalTransform.Position() + 0.5f * Vec3::Y_AXIS, { 0,1,0,1 }, 0.003f);
+	}
+	
+	if (!globalTransform.Equals(modified))
+	{
+		auto t = Transform::FromTransformMatrix(m_body->GetGameObject()->GetCommittedGlobalTransform());
+		t.Scale() = { 1,1,1 };
+		auto local = Transform::FromTransformMatrix(modified.ToTransformMatrix() * t.ToTransformMatrix().GetInverse());
+		shape->SetLocalTransform(local);
+		m_tempShapeLocalTransform = local;
 	}
 }
 
@@ -262,7 +276,7 @@ void RigidBodyInspector::RenderInspectShape()
 		"Plane",
 	};
 
-	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.88f, 0 }, true);
+	ImGui::BeginChild(ID(this), { ImGui::GetWindowWidth() * 0.88f, 600 }, true);
 
 	if (ImGui::Button("+ Add Shape"))
 	{
@@ -1317,7 +1331,7 @@ void RigidBodyInspector::DrawDebugImpl(const Mat4& globalTransformMat, PhysicsSh
 	Transform transform = {};
 	globalMat.Decompose(transform.Scale(), transform.Rotation(), transform.Position());
 
-	if (showBasis)
+	if (showBasis && m_isDrawBasis)
 	{
 		debugGraphics->DrawRay(globalMat.Position(), globalMat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
 		debugGraphics->DrawRay(globalMat.Position(), globalMat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
@@ -1626,6 +1640,7 @@ void RigidBodyInspector::Inspect()
 		}
 
 		ImGui::Checkbox("Display All", &m_isDrawDebugAllBodiesFromRoot);
+		ImGui::SameLine(); ImGui::Checkbox("Display Shape Basis", &m_isDrawBasis);
 	}
 
 	if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)

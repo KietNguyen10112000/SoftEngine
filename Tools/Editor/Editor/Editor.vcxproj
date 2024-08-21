@@ -153,6 +153,7 @@
     <ClCompile Include="ComponentInspectorBase.cpp" />
     <ClCompile Include="EditorContext.cpp" />
     <ClCompile Include="EditorFont.cpp" />
+    <ClCompile Include="EditorSettings.cpp" />
     <ClCompile Include="EditorTab.cpp" />
     <ClCompile Include="EditorTabFactory.cpp" />
     <ClCompile Include="GameObjectEditorSaveData.cpp" />
@@ -187,6 +188,7 @@
     <ClInclude Include="EditorContext.h" />
     <ClInclude Include="DataInspector.h" />
     <ClInclude Include="EditorFont.h" />
+    <ClInclude Include="EditorSettings.h" />
     <ClInclude Include="EditorTab.h" />
     <ClInclude Include="EditorTabFactory.h" />
     <ClInclude Include="GameObjectEditorSaveData.h" />

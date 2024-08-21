@@ -81,6 +81,7 @@ public:
 	bool m_isHoveringFamilyScale = false;
 	bool m_prevDrawDebugAllBodiesFromRoot = true;
 	bool m_isDrawDebugAllBodiesFromRoot = true;
+	bool m_isDrawBasis = false;
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)

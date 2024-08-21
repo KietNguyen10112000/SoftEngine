@@ -308,9 +308,13 @@ void Scene::AddObject(const Handle<GameObject>& obj, bool indexedName)
 	GameObjectDependenciesRecorder recorder = this;
 	ResolveDependencies(obj, &recorder);
 
-	for (auto& root : recorder.m_rootObjects)
+	for (auto& root : recorder.GetRootObjects())
 	{
-		AddObjectImpl(root, indexedName);
+		assert(root->m_scene == nullptr || root->m_scene == this);
+		if (root->m_scene != this)
+		{
+			AddObjectImpl(root, indexedName);
+		}
 	}
 }
 
@@ -354,12 +358,18 @@ void Scene::RemoveObject(const Handle<GameObject>& obj)
 
 	GameObjectDependenciesRecorder recorder = this;
 	ResolveDependencies(obj, &recorder);
-	recorder.UnRecordAll(this);
 
-	for (auto& root : recorder.m_rootObjects)
+	for (auto& root : recorder.GetRootObjects())
 	{
 		assert(root->m_scene == this);
-		RemoveObjectImpl(root);
+		if (root->Parent().Get() == nullptr)
+		{
+			RemoveObjectImpl(root);
+		}
+		else
+		{
+			root->RemoveFromParent();
+		}
 	}
 }
 

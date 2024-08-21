@@ -9,6 +9,7 @@
 #include "MainSystem/Scripting/Components/Script.h"
 #include "MainSystem/Physics/Components/PhysicsComponent.h"
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
+#include "MainSystem/Physics/Joints/Joint.h"
 #include "MainSystem/Animation/Components/AnimationComponent.h"
 
 #include "Graphics/Graphics.h"
@@ -80,7 +81,11 @@ void SceneEditorTab::OnObjectSelected(GameObject* obj)
 		m_inspectingObjectData = nullptr;
 	}
 
-	m_inspectingObject = obj;
+	if (obj)
+	{
+		m_inspectingObject = obj;
+	}
+
 	if (m_inspectingObject)
 	{
 		m_inspectingObjectData = obj->GetMetadata(0);
@@ -510,6 +515,22 @@ void SceneEditorTab::RenderHierarchyPanelGameObjectsTree(GameObject* specified)
 		}
 		OnObjectDelete(m_deleteObject);
 		m_deleteObject = nullptr;
+	}
+
+	if (m_deleteObjectAfterBreakDependencies)
+	{
+		BreakDependencies(m_deleteObjectAfterBreakDependencies);
+		
+		if (m_deleteObjectAfterBreakDependencies->Parent().Get() != nullptr)
+		{
+			m_deleteObjectAfterBreakDependencies->RemoveFromParent(true);
+		}
+		else
+		{
+			m_scene->RemoveObject(m_deleteObjectAfterBreakDependencies);
+		}
+		OnObjectDelete(m_deleteObjectAfterBreakDependencies);
+		m_deleteObjectAfterBreakDependencies = nullptr;
 	}
 
 	//if (ImGui::BeginDragDropTarget())
@@ -1008,6 +1029,20 @@ void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 		}
 	}
 
+	if (ImGui::MenuItem("Delete (Break All Dependencies)"))
+	{
+		bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+
+		if (allowDelete)
+		{
+			m_deleteObjectAfterBreakDependencies = obj;
+		}
+		else
+		{
+			std::cerr << "[ERROR]: can not delete hot reloaded object's children!\n";
+		}
+	}
+
 	ImGui::Separator();
 	if (ImGui::MenuItem("Switch Kinematic All"))
 	{
@@ -1050,6 +1085,27 @@ void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 	OnRenderGameObjectContextMenu(obj);
 }
 
+void SceneEditorTab::BreakDependencies(GameObject* obj)
+{
+	obj->PostTraversal(
+		[](GameObject* o)
+		{
+			if (o->HasComponent<RigidBody>())
+			{
+				auto body = o->GetComponentRaw<RigidBody>();
+				auto count = body->GetJointsCount();
+				for (size_t i = 0; i < count; i++)
+				{
+					if (!body->GetJoint(i)->IsBroken())
+					{
+						body->GetJoint(i)->Break();
+					}
+				}
+			}
+		}
+	);
+}
+
 void SceneEditorTab::OnRenderGUI()
 {
 	RenderHierarchyPanel();
@@ -1066,6 +1122,11 @@ void SceneEditorTab::OnRenderMenuBar(const String& menuName)
 		{
 			m_isDrawingDebug = !m_isDrawingDebug;
 		}
+
+		if (ImGui::MenuItem("Draw Selected Object Basis", NULL, m_isDrawingInspectingObjectBasis))
+		{
+			m_isDrawingInspectingObjectBasis = !m_isDrawingInspectingObjectBasis;
+		}
 	}
 }
 
@@ -1075,7 +1136,7 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 	if (!debugGraphics) return;
 
-	if (m_inspectingObject)
+	if (m_isDrawingInspectingObjectBasis && m_inspectingObject)
 	{
 		auto& mat = m_inspectingObject->GetCommittedGlobalTransform();
 
@@ -1178,15 +1239,6 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 		{
 			if (depth == 0)
 			{
-				if (ImGui::Button(ICON_FA_ROTATE " Synch Transform"))
-				{
-					auto& globalTransform = m_inspectingObject->GetCommittedGlobalTransform();
-					m_inspectingObject->SetGlobalTransform(globalTransform, INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL, true);
-					//auto parentTransform = m_inspectingObject->Parent().Get() ? m_inspectingObject->Parent()->GetCommittedGlobalTransform() : Mat4::Identity();
-					//auto local = globalTransform * parentTransform.GetInverse();
-					//m_inspectingObject->SetLocalTransform(Transform::FromTransformMatrix(local),)
-				}
-
 				/*ImGui::SameLine();
 				if (ImGui::Button(ICON_FA_ROTATE " Synch Transform Recursive"))
 				{
@@ -1210,6 +1262,18 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.f, 5.f));
 				auto open = ImGui::TreeNodeEx(metadata->GetName(), ImGuiTreeNodeFlags_FramePadding);
 				ImGui::PopStyleVar();
+
+				if (depth == 0)
+				{
+					if (ImGui::Button(ICON_FA_ROTATE " Synch Transform"))
+					{
+						auto& globalTransform = m_inspectingObject->GetCommittedGlobalTransform();
+						m_inspectingObject->SetGlobalTransform(globalTransform, INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL, true);
+						//auto parentTransform = m_inspectingObject->Parent().Get() ? m_inspectingObject->Parent()->GetCommittedGlobalTransform() : Mat4::Identity();
+						//auto local = globalTransform * parentTransform.GetInverse();
+						//m_inspectingObject->SetLocalTransform(Transform::FromTransformMatrix(local),)
+					}
+				}
 
 				if (editorCompData->lastOpen != open)
 				{
@@ -1431,6 +1495,7 @@ void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 	{
 		j["InspectingObject"] = serializer->Serialize(m_inspectingObject);
 		j["DrawDebug"] = m_isDrawingDebug;
+		j["DrawingInspectingObjectBasis"] = m_isDrawingInspectingObjectBasis;
 	}
 }
 
@@ -1557,6 +1622,11 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 	if (j.contains("DrawDebug"))
 	{
 		m_isDrawingDebug = j["DrawDebug"];
+	}
+
+	if (j.contains("DrawingInspectingObjectBasis"))
+	{
+		m_isDrawingInspectingObjectBasis = j["DrawingInspectingObjectBasis"];
 	}
 }
 

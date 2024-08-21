@@ -33,6 +33,9 @@ private:
 	uint32_t m_idx1 = uint32_t(INVALID_ID);
 	RigidBody* m_component = nullptr;
 
+	bool m_isBroken = false;
+	bool m_padd[7];
+
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{

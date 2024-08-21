@@ -309,6 +309,11 @@ void PhysicsSystem::PhysicsSystemDependenciesResolver::Resolve(GameObjectDepende
 		auto rigidBody = (RigidBody*)comp;
 		for (auto& joint : rigidBody->m_joints)
 		{
+			if (joint->IsBroken())
+			{
+				continue;
+			}
+
 			auto another = joint->m_body0.Get() == rigidBody ? joint->m_body1.Get() : joint->m_body0.Get();
 			if (another->m_object == nullptr)
 			{

@@ -24,6 +24,7 @@
 
 #include "Resources/Resource.h"
 #include "Input/Input.h"
+#include "EditorSettings.h"
 
 EditorContext* EditorContext::s_instance = nullptr;
 
@@ -147,6 +148,30 @@ void EditorContext::RenderMenuBar()
 		if (currentTab)
 		{
 			currentTab->OnRenderMenuBar("Runtime");
+		}
+
+		ImGui::EndMenu();
+	}
+
+	if (ImGui::BeginMenu("Editor"))
+	{
+		if (ImGui::MenuItem("Settings"))
+		{
+			OpenOkCancelDialog({ "Editor Settings" },
+				[](void* p)
+				{
+					EditorSettings::Get()->Render();
+				}, this,
+				[](EditorContext::DIALOG_RESULT result, void* p) -> bool
+				{
+					if (result == EditorContext::DIALOG_RESULT::OK)
+					{
+						EditorSettings::Get()->OnApplySetting();
+					}
+
+					return true;
+				}, this
+			);
 		}
 
 		ImGui::EndMenu();

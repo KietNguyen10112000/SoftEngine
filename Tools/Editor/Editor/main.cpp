@@ -19,6 +19,7 @@
 #include "ScriptList.h"
 
 #include "EditorFont.h"
+#include "EditorSettings.h"
 
 
 void RegisterSerializables()
@@ -28,6 +29,7 @@ void RegisterSerializables()
 
 void Initialize(Runtime* runtime)
 {
+	EditorSettings::SingletonInitialize();
 	EditorFont::SingletonInitialize();
 
 	DataInspector::Initialize();
@@ -180,4 +182,5 @@ void Finalize(Runtime* runtime)
 	EditorTabFactoryManager::SingletonFinalize();
 
 	EditorFont::SingletonFinalize();
+	EditorSettings::SingletonFinalize();
 }

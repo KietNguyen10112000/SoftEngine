@@ -222,12 +222,14 @@ void Joint::WakeUpBodies()
 
 bool Joint::IsBroken() const
 {
-	return m_pxJoint == nullptr;
+	return m_pxJoint == nullptr || m_isBroken == true;
 }
 
 void Joint::Break()
 {
 	assert(!IsBroken());
+
+	m_isBroken = true;
 
 	MAIN_SYSTEM_TASK_IMPL_COMMON_0(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST,

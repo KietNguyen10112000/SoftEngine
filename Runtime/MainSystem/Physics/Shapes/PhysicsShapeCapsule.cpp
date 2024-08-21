@@ -59,7 +59,7 @@ void PhysicsShapeCapsule::SerializeToJson(Serializer* serializer, json& j) const
 void PhysicsShapeCapsule::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	assert(m_pxShape == nullptr);
-	PhysicsShapeUtils::InitializeShape<PxCapsuleGeometry>(this, GetDeserializedMaterial(serializer, j), false, float(j["Radius"]), j["Height"] / 2.0f);
+	PhysicsShapeUtils::InitializeShape<PxCapsuleGeometry>(this, GetDeserializedMaterial(serializer, j), false, float(j["Radius"]), float(j["Height"]) / 2.0f);
 	PhysicsShape::DeserializeFromJson(serializer, j);
 }
 

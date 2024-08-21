@@ -178,6 +178,7 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 
 	constexpr float SPHERE_RADIUS = 0.002f; // 
 	constexpr float CAPSULE_RADIUS = 0.01f; // 
+	constexpr float USE_OVERLAP_BONE = 0; // allow bone head and tail to be overlapped with its parent and children
 
 	auto material = std::make_shared<PhysicsMaterial>(0.5f, 0.5f, 0.5f);
 	Array<Handle<GameObject>> boneRigidBodies;
@@ -253,7 +254,8 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 			}
 
 			auto length = (obj->GetCommittedGlobalTransform().Position() - nodePositions[child->nodeIdx]).Length();
-			auto capsule = std::make_shared<PhysicsShapeCapsule>(std::max(length - CAPSULE_RADIUS * 2.0f, 0.001f), CAPSULE_RADIUS, material);
+			auto capsule = std::make_shared<PhysicsShapeCapsule>(
+				std::max(length - CAPSULE_RADIUS * 2.0f * (1.0f - USE_OVERLAP_BONE), 0.001f), CAPSULE_RADIUS, material);
 
 			auto X = (nodePositions[child->nodeIdx] - obj->GetCommittedGlobalTransform().Position()).Normal();
 			auto u = Vec3::X_AXIS;

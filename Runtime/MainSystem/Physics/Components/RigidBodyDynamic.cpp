@@ -93,7 +93,7 @@ void RigidBodyDynamic::InternalWake()
 		return;
 	}
 	auto dynamic = ((PxRigidDynamic*)m_pxActor);
-	if (!m_isKinematic && dynamic->isSleeping())
+	if (!m_isKinematic && dynamic->getScene() && dynamic->isSleeping())
 	{
 		dynamic->wakeUp();
 	}
@@ -186,7 +186,7 @@ void RigidBodyDynamic::SetKinematic(bool enable)
 {
 	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
 	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
-	if (!enable && pxRigidBody->isSleeping())
+	if (!enable && pxRigidBody->getScene() && pxRigidBody->isSleeping())
 	{
 		pxRigidBody->wakeUp();
 	}

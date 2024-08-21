@@ -99,20 +99,34 @@ void GameObject::RemoveFromParent(bool keepChildrenOrder)
 	GameObjectDependenciesRecorder recorder = m_scene;
 	GameObjectDependencies::Get()->Collect(m_scene, this, &recorder);
 
-	bool removed = false;
+	//bool removed = false;
 	for (auto& o : recorder.GetRootObjects())
 	{
 		o->_RemoveFromParent(keepChildrenOrder);
 
-		if (o == this)
+		/*if (o == this)
 		{
 			removed = true;
-		}
+		}*/
 	}
 
-	if (!removed)
+	/*if (!removed)
 	{
 		_RemoveFromParent(keepChildrenOrder);
+	}*/
+}
+
+void GameObject::RemoveSelf(bool keepChildrenOrder)
+{
+	if (m_parent == nullptr && m_scene)
+	{
+		m_scene->RemoveObject(this);
+		return;
+	}
+
+	if (m_parent)
+	{
+		RemoveFromParent();
 	}
 }
 
@@ -323,8 +337,8 @@ Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 	auto metadata = mheap::New<ClassMetadata>("GameObject", this);
 
 	auto accessor = Accessor(
-		"Local Transform",
-		this,
+		"Global Transform",
+		1,
 		[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
 		{
 
@@ -332,13 +346,30 @@ Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 
 		[](UnknownAddress& var, Serializable* instance) -> Variant
 		{
-			auto& obj = var.As<GameObject>();
-			return Variant::Of(obj.GetLocalTransform());
+			auto obj = (GameObject*)instance;
+			return Variant::Of(Transform::FromTransformMatrix(obj->GetCommittedGlobalTransform()));
+		},
+		this
+	);
+
+	auto accessor2 = Accessor(
+		"Local Transform",
+		2,
+		[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+		{
+
+		},
+
+		[](UnknownAddress& var, Serializable* instance) -> Variant
+		{
+			auto obj = (GameObject*)instance;
+			return Variant::Of(obj->GetLocalTransform());
 		},
 		this
 	);
 
 	metadata->AddProperty(accessor);
+	metadata->AddProperty(accessor2);
 
 	size_t i = 0;
 	for (auto& comp : m_mainComponents)
@@ -360,7 +391,14 @@ Handle<ClassMetadata> GameObject::GetMetadata(size_t sign)
 
 void GameObject::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
-	if (var.Is(this))
+	if (var.Is(1))
+	{
+		auto& global = newValue.As<Transform>().ToTransformMatrix();
+		auto local = global * (Parent().Get() ? Parent()->GetCommittedGlobalTransform().GetInverse() : Mat4::Identity());
+		SetLocalTransform(Transform::FromTransformMatrix(local));
+	}
+
+	if (var.Is(2))
 	{
 		SetLocalTransform(newValue.As<Transform>());
 	}
@@ -478,7 +516,7 @@ void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 		{
 			child = nullptr;
 			serializer->Deserialize(arr[i], child);
-			AddChild(child);
+			_AddChild(child, INVALID_ID);
 		}
 	}
 
