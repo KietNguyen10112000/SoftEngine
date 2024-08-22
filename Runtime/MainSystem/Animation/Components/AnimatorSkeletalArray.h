@@ -12,6 +12,7 @@ class API AnimatorSkeletalArray : public AnimationComponent
 public:
 	friend class AnimLayer;
 	friend class AnimCCTBufferLayer;
+	friend class AnimationSystem;
 
 	struct RIGID_BODY_PROXY_CONTROL_MODE
 	{
@@ -51,6 +52,8 @@ public:
 	Mat4 m_parentOffset;
 
 	Array<Handle<GameObject>> m_rigidBodyProxy;
+	std::vector<Mat4> m_rigidBodyAnimToPhysOffsets;
+	std::vector<Mat4> m_rigidBodyPhysToAnimOffsets;
 	RIGID_BODY_PROXY_CONTROL_MODE::MODE m_rigidBodyProxyControlMode = RIGID_BODY_PROXY_CONTROL_MODE::DISABLED;
 	GameObject* m_pivotRigidBody = nullptr;
 
@@ -88,11 +91,16 @@ private:
 	void SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection);
 
 	void PublicResultToRigidBodies(Scene* _scene, AnimLayer* last);
+	void FetchResultFromRigidBodies();
 
 	void SetEnableDeferPublicResult(bool enable);
 	void ResetDeferBufferLayer();
 
+	void SetDiscardObjectTransformForRenderingObjects(bool discard);
+	void SwitchBackTo_ANIMATOR_TO_RIGID_BODY_From_RIGID_BODY_TO_ANIMATOR();
 	void SetRigidBodiesControlModeImpl(RIGID_BODY_PROXY_CONTROL_MODE::MODE mode);
+
+	void CalculateAnimToPhysOffsets();
 
 public:
 

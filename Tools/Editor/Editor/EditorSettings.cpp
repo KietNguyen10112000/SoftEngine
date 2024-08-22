@@ -24,32 +24,32 @@ void EditorSettings::OnApplySetting()
 const char* EditorSettings::GetPrecisionCFormatStr(float precision)
 {
 	// =))), simply and effectively work
-	if (precision < 0.000001f)
+	if (precision <= 0.000001f)
 	{
 		return "%f";
 	}
 
-	if (precision < 0.00001f)
+	if (precision <= 0.00001f)
 	{
 		return "%.5f";
 	}
 
-	if (precision < 0.0001f)
+	if (precision <= 0.0001f)
 	{
 		return "%.4f";
 	}
 
-	if (precision < 0.001f)
+	if (precision <= 0.001f)
 	{
 		return "%.3f";
 	}
 
-	if (precision < 0.01f)
+	if (precision <= 0.01f)
 	{
 		return "%.2f";
 	}
 
-	if (precision < 0.1f)
+	if (precision <= 0.1f)
 	{
 		return "%.1f";
 	}

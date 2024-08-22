@@ -149,15 +149,15 @@ Handle<ClassMetadata> AnimatorSkeletalArray::GetMetadata(size_t sign)
 
 void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 {
-	if (!m_isRunning)
+	if (!m_isRunning || m_rigidBodyProxyControlMode == RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR)
 	{
 		return;
 	}
 
-	if (m_isEnableDeferPublicResults && m_deferBufferLayer->m_globalTransforms.empty())
+	/*if (m_isEnableDeferPublicResults && m_deferBufferLayer->m_globalTransforms.empty())
 	{
 		ResetDeferBufferLayer();
-	}
+	}*/
 
 	AnimLayer* last = nullptr;
 	for (auto& layer : m_animLayers)
@@ -596,7 +596,7 @@ void AnimatorSkeletalArray::PublicResultToRigidBodies(Scene* _scene, AnimLayer* 
 					auto& proxy = proxies[i];
 					if (proxy)
 					{
-						auto m = global * globalTransform;
+						auto m = self->m_rigidBodyAnimToPhysOffsets[i] * global * globalTransform;
 						assert(proxy->HasComponent<RigidBodyDynamic>());
 
 						auto comp = proxy->GetComponentRaw<RigidBodyDynamic>();
@@ -610,6 +610,38 @@ void AnimatorSkeletalArray::PublicResultToRigidBodies(Scene* _scene, AnimLayer* 
 	}
 }
 
+void AnimatorSkeletalArray::FetchResultFromRigidBodies()
+{
+	auto& nodes = m_model3D->m_nodes;
+	auto& proxies = m_rigidBodyProxy;
+	auto& globals = m_deferBufferLayer->NodeGlobalTransforms();
+	auto count = globals.size();
+
+	/*if (globals.size() != nodes.size())
+	{
+		globals.resize(nodes.size());
+	}*/
+
+	auto scale = Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
+
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& global = globals[i];
+		auto& proxy = proxies[i];
+		if (proxy)
+		{
+			assert(proxy->HasComponent<RigidBodyDynamic>());
+			auto comp = proxy->GetComponentRaw<RigidBodyDynamic>();
+			auto pxBody = comp->m_pxActor->is<physx::PxRigidDynamic>();
+			auto mat = PhysXUtils::ToTransform(pxBody->getGlobalPose()).ToTransformMatrix();
+			mat = m_model3D->m_boneOffsetInvMatrixs[nodes[i].boneId] * m_rigidBodyPhysToAnimOffsets[i] * mat;
+			global = mat;
+		}
+	}
+
+	UpdateDataToRenderer(GetGameObject()->GetScene(), m_deferBufferLayer->NodeGlobalTransforms(), m_deferBufferLayer->MeshesAABB());
+}
+
 void AnimatorSkeletalArray::SetEnableDeferPublicResult(bool enable)
 {
 	enable = (m_cct != 0)
@@ -617,7 +649,7 @@ void AnimatorSkeletalArray::SetEnableDeferPublicResult(bool enable)
 
 	if (m_isEnableDeferPublicResults != enable)
 	{
-		m_deferBufferLayer->m_globalTransforms.clear();
+		//m_deferBufferLayer->m_globalTransforms.clear();
 		m_isEnableDeferPublicResults = enable;
 	}
 }
@@ -633,25 +665,69 @@ void AnimatorSkeletalArray::ResetDeferBufferLayer()
 	std::memcpy(m_deferBufferLayer->m_meshesAABB.data(), m_lastOutput->MeshesAABB().data(), m_lastOutput->MeshesAABB().size() * sizeof(AABox));
 }
 
+void AnimatorSkeletalArray::SetDiscardObjectTransformForRenderingObjects(bool discard)
+{
+	MAIN_SYSTEM_TASK_COMMON_1(
+		AnimationSystem, AsyncTaskRunner, discard,
+		{
+			self->m_animMeshRenderingBuffer->discardObjectTransform = discard;
+			for (auto& o : self->m_meshRendererObjs)
+			{
+				if (o->HasComponent<AnimModelStaticMeshRenderer>())
+				{
+					o->GetComponentRaw<AnimModelStaticMeshRenderer>()->m_discardObjectTransform = discard;
+				}
+			}
+		}
+	);
+}
+
+void AnimatorSkeletalArray::SwitchBackTo_ANIMATOR_TO_RIGID_BODY_From_RIGID_BODY_TO_ANIMATOR()
+{
+	auto offset = GetGameObject()->GetCommittedGlobalTransform().GetInverse();
+	auto& globals = m_deferBufferLayer->m_globalTransforms;
+	for (auto& m : globals)
+	{
+		m *= offset;
+	}
+}
+
 void AnimatorSkeletalArray::SetRigidBodiesControlModeImpl(RIGID_BODY_PROXY_CONTROL_MODE::MODE mode)
 {
+	auto prevMode = m_rigidBodyProxyControlMode;
+
+	m_rigidBodyProxyControlMode = mode;
+	m_pivotRigidBody = nullptr;
+
 	switch (mode)
 	{
 	case soft::AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::DISABLED:
+		SetDiscardObjectTransformForRenderingObjects(false);
 		SetEnableDeferPublicResult(false);
+		//ResetDeferBufferLayer();
 		break;
 	case soft::AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY:
+		SetDiscardObjectTransformForRenderingObjects(false);
 		SetEnableDeferPublicResult(true);
+
+		if (prevMode == AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::DISABLED)
+		{
+			ResetDeferBufferLayer();
+		}
+
+		if (prevMode == RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR)
+		{
+			SwitchBackTo_ANIMATOR_TO_RIGID_BODY_From_RIGID_BODY_TO_ANIMATOR();
+		}
+
 		break;
 	case soft::AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR:
-		//  ...
+		SetDiscardObjectTransformForRenderingObjects(true);
+		ResetDeferBufferLayer();
 		break;
 	default:
 		break;
 	}
-
-	m_rigidBodyProxyControlMode = mode;
-	m_pivotRigidBody = nullptr;
 }
 
 void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, const std::vector<Mat4>& globalTransforms, const std::vector<AABox>& meshesAABB)
@@ -814,6 +890,36 @@ void AnimatorSkeletalArray::SetForwardCCT(CharacterController* cct, const Vec3& 
 			self->SetForwardCCTImpl(cct, lockUpDirection);
 		}
 	);
+}
+
+void AnimatorSkeletalArray::CalculateAnimToPhysOffsets()
+{
+	auto& boundObjects = m_rigidBodyProxy;
+	auto& model = m_model3D;
+	auto& nodes = model->m_nodes;
+	auto& boneOffsets = model->m_boneOffsetMatrixs;
+
+	auto& offset0 = m_rigidBodyAnimToPhysOffsets;
+	if (offset0.size() != nodes.size())
+	{
+		offset0.resize(nodes.size());
+	}
+
+	auto& offset1 = m_rigidBodyPhysToAnimOffsets;
+	if (offset1.size() != nodes.size())
+	{
+		offset1.resize(nodes.size());
+	}
+
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		if (nodes[i].boneId != INVALID_ID && boundObjects[i])
+		{
+			offset0[i] = (boundObjects[i]->GetCommittedGlobalTransform() * GetGameObject()->GetCommittedGlobalTransform().GetInverse())
+				* boneOffsets[nodes[i].boneId];
+			offset1[i] = GetGameObject()->GetCommittedGlobalTransform() * boundObjects[i]->GetCommittedGlobalTransform().GetInverse();
+		}
+	}
 }
 
 void AnimatorSkeletalArray::SetRigidBodiesControlMode(RIGID_BODY_PROXY_CONTROL_MODE::MODE mode)
@@ -989,9 +1095,25 @@ void AnimatorSkeletalArray::SerializeToJson(Serializer* serializer, json& j) con
 			arr.push_back(serializer->Serialize(body));
 		}
 
+		auto offsets = json::array();
+		for (auto& o : m_rigidBodyAnimToPhysOffsets)
+		{
+			offsets.push_back(o);
+		}
+
+		auto offsets2 = json::array();
+		for (auto& o : m_rigidBodyPhysToAnimOffsets)
+		{
+			offsets2.push_back(o);
+		}
+
+		assert(offsets.size() == arr.size());
+
 		if (countNotNull != 0)
 		{
-			j["RigidBodyProxy"] = arr;
+			j["RigidBodyProxy"] = arr; 
+			j["RigidBodyAnimToPhysOffsets"] = offsets;
+			j["RigidBodyPhysToAnimOffsets"] = offsets2;
 		}
 	}
 }
@@ -1035,6 +1157,11 @@ void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const js
 			serializer->Deserialize(arr[i], temp);
 			m_rigidBodyProxy.Push(temp);
 		}
+
+		m_rigidBodyAnimToPhysOffsets = j["RigidBodyAnimToPhysOffsets"];
+
+		if (j.contains("RigidBodyPhysToAnimOffsets"))
+			m_rigidBodyPhysToAnimOffsets = j["RigidBodyPhysToAnimOffsets"];
 	}
 }
 

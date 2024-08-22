@@ -24,6 +24,7 @@ private:
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
 
 	friend class AnimSkeletalGameObject;
+	friend class PhysicsSystem;
 
 	struct AnimMeshRenderingBufferCounter
 	{
@@ -42,6 +43,8 @@ private:
 
 	raw::AsyncTaskRunnerForMainComponent<AnimationSystem> m_asyncTaskRunner[NUM_DEFER_BUFFER] = {};
 
+	spinlock m_animSkeletalArraysLock;
+
 public:
 	AnimationSystem(Scene* scene);
 	~AnimationSystem();
@@ -50,6 +53,9 @@ private:
 	void AddAnimMeshRenderingBuffer(void*, AnimatorSkeletalGameObject* animator);
 	void RemoveMeshRenderingBuffer(void*, AnimatorSkeletalGameObject* animator);
 	void CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBufferCounter* counter);
+
+	// to fetch data from physics system and forward it to animator
+	void PostPhysicsSimulationUpdate();
 
 	inline auto* GetCurrentAsyncTaskRunnerST()
 	{

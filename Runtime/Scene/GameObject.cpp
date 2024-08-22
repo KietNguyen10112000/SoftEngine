@@ -394,8 +394,8 @@ void GameObject::OnPropertyChanged(const UnknownAddress& var, const Variant& new
 	if (var.Is(1))
 	{
 		auto& global = newValue.As<Transform>().ToTransformMatrix();
-		auto local = global * (Parent().Get() ? Parent()->GetCommittedGlobalTransform().GetInverse() : Mat4::Identity());
-		SetLocalTransform(Transform::FromTransformMatrix(local));
+		//auto local = global * (Parent().Get() ? Parent()->GetCommittedGlobalTransform().GetInverse() : Mat4::Identity());
+		SetGlobalTransform(global, INVALID_ID, TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL);
 	}
 
 	if (var.Is(2))

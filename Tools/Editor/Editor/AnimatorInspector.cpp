@@ -97,10 +97,41 @@ void AnimatorInspector::Inspect()
 
 	if (open)
 	{
-		if (ImGui::Button(ICON_FA_GEARS "  Make RigidBody Skeleton"))
+		if (ImGui::Button(ICON_FA_GEARS "  Generate RigidBody Skeleton"))
 		{
 			MakeRigidBodySkeleton();
 		}
+
+		ImGui::BeginDisabled(m_isEnableTPose != 0);
+		auto v = m_animator->m_rigidBodyProxyControlMode == AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY;
+		if (ImGui::Checkbox("Animator To RigidBody", &v))
+		{
+			if (v)
+			{
+				m_animator->SetRigidBodiesControlMode(AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY);
+			}
+			else
+			{
+				m_animator->SetRigidBodiesControlMode(AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::DISABLED);
+			}
+		}
+
+		ImGui::SameLine();
+		v = m_animator->m_rigidBodyProxyControlMode == AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR;
+		if (ImGui::Checkbox("RigidBody To Animator", &v))
+		{
+			if (v)
+			{
+				m_animator->SetRigidBodiesControlMode(AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR);
+			}
+			else
+			{
+				m_animator->SetRigidBodiesControlMode(AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::DISABLED);
+			}
+		}
+		ImGui::EndDisabled();
+
+		ImGui::Dummy({ 5,5 });
 
 		RenderModelNodeHierarchy(nullptr, nullptr);
 		ImGui::TreePop();
@@ -135,8 +166,41 @@ void AnimatorInspector::BuildModelHierarchy()
 
 	m_root = modelNodes[0];
 	m_modelNodes.swap(modelNodes);
+}
 
-	m_boundObjects.Resize(m_modelNodes.size());
+void AnimatorInspector::CalculateAnimToPhysOffsets()
+{
+	auto& boundObjects = m_animator->m_rigidBodyProxy;
+	auto& model = m_animator->m_model3D;
+	auto& nodes = model->m_nodes;
+	auto& boneOffsets = model->m_boneOffsetMatrixs;
+
+	auto& offset0 = m_animator->m_rigidBodyAnimToPhysOffsets;
+	if (offset0.size() != nodes.size())
+	{
+		offset0.resize(nodes.size());
+	}
+
+	auto& offset1 = m_animator->m_rigidBodyPhysToAnimOffsets;
+	if (offset1.size() != nodes.size())
+	{
+		offset1.resize(nodes.size());
+	}
+
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		if (nodes[i].boneId != INVALID_ID && boundObjects[i])
+		{
+			//auto m = Transform::FromTransformMatrix(boundObjects[i]->GetCommittedGlobalTransform());
+			offset0[i] = (boundObjects[i]->GetCommittedGlobalTransform() * m_animator->GetGameObject()->GetCommittedGlobalTransform().GetInverse()) 
+				* boneOffsets[nodes[i].boneId];
+
+			/*auto t = Transform::FromTransformMatrix((boneOffsets[nodes[i].boneId].GetInverse() * m_animator->GetGameObject()->GetCommittedGlobalTransform()));
+			t.Scale() = { 1,1,1 };
+			offset1[i] = boundObjects[i]->GetCommittedGlobalTransform().GetInverse() * t.ToTransformMatrix();*/
+			offset1[i] = m_animator->GetGameObject()->GetCommittedGlobalTransform() * boundObjects[i]->GetCommittedGlobalTransform().GetInverse();
+		}
+	}
 }
 
 void AnimatorInspector::MakeRigidBodySkeleton()
@@ -301,6 +365,18 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 	fn(nullptr, rootBone, boneRigidBodies, material, nodePositions, model);
 	auto newObj = mheap::New<GameObject>();
 	newObj->AddChild(boneRigidBodies[rootBone->nodeIdx]);
+
+	if (m_animator->m_rigidBodyProxy.size() != nodes.size())
+	{
+		m_animator->m_rigidBodyProxy.Resize(nodes.size());
+	}
+
+	for (size_t i = 0; i < boneRigidBodies.size(); i++)
+	{
+		m_animator->m_rigidBodyProxy[i] = boneRigidBodies[i];
+	}
+
+	CalculateAnimToPhysOffsets();
 
 	//for (size_t i = 0; i < nodes.size(); i++)
 	//{
@@ -524,6 +600,8 @@ void AnimatorInspector::RenderModelNodeHierarchy(void (*callback)(ModelNode*, vo
 
 void AnimatorInspector::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*, void*), void* userPtr, ModelNode* modelNode, void* outRect)
 {
+	auto& boundObjects = m_animator->m_rigidBodyProxy;
+
 	auto& model = m_animator->m_model3D;
 	auto& nodes = model->m_nodes;
 	auto& node = nodes[modelNode->nodeIdx];
@@ -556,8 +634,13 @@ void AnimatorInspector::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*
 		const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_DND_PAYLOAD", target_flags);
 		if (payload && ImGui::IsMouseReleased(0))
 		{
+			if (boundObjects.size() == 0)
+			{
+				boundObjects.Resize(nodes.size());
+			}
+
 			auto dragObj = *(GameObject**)payload->Data;
-			m_boundObjects[modelNode->nodeIdx] = dragObj;
+			boundObjects[modelNode->nodeIdx] = dragObj;
 		}
 	}
 
@@ -628,9 +711,9 @@ void AnimatorInspector::RenderModelNodeHierarchyImpl(void (*callback)(ModelNode*
 		ImGui::SameLine(); callback(modelNode, userPtr); ImGui::Dummy({ 0, 0 });
 	}
 
-	if (m_boundObjects[modelNode->nodeIdx])
+	if (boundObjects.size() > modelNode->nodeIdx && boundObjects[modelNode->nodeIdx])
 	{
-		auto boundObject = m_boundObjects[modelNode->nodeIdx].Get();
+		auto boundObject = boundObjects[modelNode->nodeIdx].Get();
 		ImGui::SameLine(0, 20);
 		ImGui::PushID(ID(modelNode->nodeIdx));
 		ImGui::PushFont(EditorFont::Get()->GetFont(18));

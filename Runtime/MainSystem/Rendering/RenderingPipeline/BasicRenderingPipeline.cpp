@@ -444,7 +444,7 @@ void BasicAnimModelRenderingPass::Render(RenderingSystem* sys, std::vector<AnimM
 			auto buffer = (AnimModel::AnimMeshRenderingBufferData*)shaderBuffer->buffer.Read();
 			auto lastIteration = shaderBuffer->buffer.GetLastUpdateIteration();
 
-			if (curIteration == lastIteration + 1)
+			if (!shaderBuffer->discardObjectTransform && curIteration == lastIteration + 1)
 			{
 				for (auto& v : buffer->bones)
 				{

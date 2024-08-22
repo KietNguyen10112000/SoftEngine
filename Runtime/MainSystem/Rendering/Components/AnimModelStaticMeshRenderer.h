@@ -10,8 +10,11 @@ class API AnimModelStaticMeshRenderer : public MeshBasicRenderer
 {
 public:
 	friend class RenderingSystem;
+	friend class AnimatorSkeletalArray;
 
 	DeferredBuffer<Mat4> m_myGlobalTransform;
+
+	bool m_discardObjectTransform = false;
 
 public:
 	COMPONENT_CLASS(AnimModelStaticMeshRenderer);
@@ -34,7 +37,7 @@ protected:
 public:
 	inline Mat4 GetGlobalTransform()
 	{
-		return (*m_myGlobalTransform.Read()) * GetGameObject()->GetCommittedGlobalTransform();
+		return m_discardObjectTransform ? (*m_myGlobalTransform.Read()) : (*m_myGlobalTransform.Read()) * GetGameObject()->GetCommittedGlobalTransform();
 	}
 
 };

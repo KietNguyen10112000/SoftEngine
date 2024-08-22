@@ -61,14 +61,10 @@ public:
 	ModelNode* m_root = nullptr;
 	std::vector<ModelNode*> m_modelNodes;
 
-	// each modelNode can be bound to a game object
-	Array<Handle<GameObject>> m_boundObjects;
-
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_tposeLayer);
-		tracer->Trace(m_boundObjects);
 	}
 
 public:
@@ -85,6 +81,7 @@ private:
 	void RenderModelNodeHierarchy(void (*)(ModelNode*, void*), void* userPtr);
 	void RenderModelNodeHierarchyImpl(void (*)(ModelNode*, void*), void* userPtr, ModelNode*, void* outRect);
 
+	void CalculateAnimToPhysOffsets();
 	void MakeRigidBodySkeleton();
 	void DrawDebugSkeleton();
 

@@ -79,6 +79,8 @@ private:
 
 	std::vector<Joint*> m_brokenJoints;
 
+	TaskWaitingHandle m_otherSubsystemsCallbackWaitingHandle = { 0,0 };
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)

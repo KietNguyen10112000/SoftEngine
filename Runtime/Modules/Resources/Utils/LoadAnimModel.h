@@ -302,7 +302,10 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 
 				map.insert({ name, map.size() });
 				model->m_boneNames.push_back(name);
-				model->m_boneOffsetMatrixs.push_back(ConvertAssimpMat4(bone->mOffsetMatrix));
+
+				auto m = ConvertAssimpMat4(bone->mOffsetMatrix);
+				model->m_boneOffsetMatrixs.push_back(m);
+				model->m_boneOffsetInvMatrixs.push_back(m.GetInverse());
 			}
 		}
 	};

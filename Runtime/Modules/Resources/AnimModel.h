@@ -53,6 +53,7 @@ public:
 
 		ID id = INVALID_ID;
 		DeferredBuffer<AnimMeshRenderingBufferData> buffer;
+		bool discardObjectTransform = false;
 
 	protected:
 		// Inherited via Serializable
@@ -222,6 +223,7 @@ public:
 
 	// inversed of node's global transform
 	std::vector<Mat4> m_boneOffsetMatrixs;
+	std::vector<Mat4> m_boneOffsetInvMatrixs;
 
 	std::vector<Node> m_nodes;
 

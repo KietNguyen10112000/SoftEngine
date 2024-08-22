@@ -85,6 +85,8 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		euler = cache->euler;
 	}
 
+	ImGui::PushID(cache);
+
 	bool modified = false;
 
 	if (!hideScale)
@@ -292,6 +294,9 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 	{
 		*outputRotateAxis = cache->rotationAxis;
 	}
+
+	ImGui::PopID();
+
 	return modified;
 }
 

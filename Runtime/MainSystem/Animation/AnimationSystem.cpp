@@ -113,6 +113,21 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	}
 }
 
+void AnimationSystem::PostPhysicsSimulationUpdate()
+{
+	m_animSkeletalArraysLock.lock();
+
+	for (auto& animator : m_animSkeletalArrays)
+	{
+		if (animator->m_rigidBodyProxyControlMode == AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR)
+		{
+			animator->FetchResultFromRigidBodies();
+		}
+	}
+
+	m_animSkeletalArraysLock.unlock();
+}
+
 void AnimationSystem::FlushAsyncTasks()
 {
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
@@ -188,6 +203,7 @@ void AnimationSystem::EndModification()
 
 void AnimationSystem::PrevIteration()
 {
+	m_animSkeletalArraysLock.lock_no_check_own_thread();
 }
 
 void AnimationSystem::Iteration(float dt)
@@ -195,6 +211,8 @@ void AnimationSystem::Iteration(float dt)
 	GetPrevAsyncTaskRunnerMT()->ProcessAllTasksMT(this);
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
+
+	m_animSkeletalArraysLock.unlock_no_check_own_thread();
 
 	TaskUtils::ForEachStdVector(m_animMeshRenderingBufferCount, 
 		[this, dt](AnimMeshRenderingBufferCounter& data, ID) 

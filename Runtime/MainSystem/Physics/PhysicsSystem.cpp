@@ -14,6 +14,8 @@
 
 #include "FILTER_FLAG.h"
 
+#include "MainSystem/Animation/AnimationSystem.h"
+
 using namespace physx;
 
 NAMESPACE_BEGIN
@@ -804,6 +806,20 @@ void PhysicsSystem::Iteration(float dt)
 	// lose 1 thread T___T
 	m_pxScene->fetchResults(true);
 
+	{
+		TaskSystem::PrepareHandle(&m_otherSubsystemsCallbackWaitingHandle);
+
+		Task task = {};
+		task.Params() = GetScene()->GetAnimationSystem();
+		task.Entry() = [](void* p)
+		{
+			auto animationSystem = (AnimationSystem*)p;
+			animationSystem->PostPhysicsSimulationUpdate();
+		};
+
+		TaskSystem::Submit(&m_otherSubsystemsCallbackWaitingHandle, task, Task::HIGH);
+	}
+
 	RebuildUpdateList();
 	/*ProcessPostUpdateList();
 	RebuildUpdateList();*/
@@ -824,6 +840,10 @@ void PhysicsSystem::Iteration(float dt)
 			}
 
 		}
+	}
+
+	{
+		TaskSystem::WaitForHandle(&m_otherSubsystemsCallbackWaitingHandle);
 	}
 }
 
