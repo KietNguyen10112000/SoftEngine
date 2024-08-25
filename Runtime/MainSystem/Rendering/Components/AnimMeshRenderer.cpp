@@ -66,7 +66,9 @@ void AnimMeshRenderer::OnComponentRemoved()
 
 AABox AnimMeshRenderer::GetGlobalAABB()
 {
-	return m_animMeshRenderingBuffer->buffer.Read()->meshesAABB[m_mesh->m_model3DIdx].MakeTransform(GlobalTransform());
+	return m_animMeshRenderingBuffer->discardObjectTransform ?
+		m_animMeshRenderingBuffer->buffer.Read()->meshesAABB[m_mesh->m_model3DIdx]:
+		m_animMeshRenderingBuffer->buffer.Read()->meshesAABB[m_mesh->m_model3DIdx].MakeTransform(GlobalTransform());
 	//return AABox(Vec3(0,0,0), Vec3(10000,10000,10000));
 }
 

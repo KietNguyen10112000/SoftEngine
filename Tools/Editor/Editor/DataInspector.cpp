@@ -232,6 +232,12 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 		data->copiedTransform = cache->transform;
 	}
 
+	if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+	{
+		ImGui::TextUnformatted("Copy");
+		ImGui::EndTooltip();
+	}
+
 	ImGui::SameLine();
 	if (ImGui::Button(ICON_FA_PASTE "## paste transform btn"))
 	{
@@ -246,6 +252,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 			{
 			case 0:
 				cache->euler = transform.Rotation().ToEulerAngles();
+				euler = cache->euler;
 				cache->rotationAxis = Vec3::ZERO;
 				break;
 			case 1:
@@ -264,6 +271,12 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 				break;
 			}
 		}
+	}
+
+	if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+	{
+		ImGui::TextUnformatted("Paste");
+		ImGui::EndTooltip();
 	}
 
 	if (modified)

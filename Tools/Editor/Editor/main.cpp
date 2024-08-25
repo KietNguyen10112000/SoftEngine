@@ -58,15 +58,15 @@ void Initialize(Runtime* runtime)
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
 				}*/
 
-				/*{
+				{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<SceneEditorTabFactory>();
 
-					factory->m_filePath = "Editor/SceneEditor/Test2.json";
+					factory->m_filePath = "Editor/SceneEditor/Test2.SceneEditor";
 					auto tab = factory->CreateInstance();
 					EditorContext::s_instance->RunTab(tab);
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
-				}*/
+				}
 
 				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();
@@ -88,15 +88,25 @@ void Initialize(Runtime* runtime)
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
 				}*/
 
-				{
+				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();
 
-					factory->m_filePath = "Editor/GameObjectEditor/Character.GameObjectEditor";
+					factory->m_filePath = "Editor/GameObjectEditor/Character2.GameObjectEditor";
 					auto tab = factory->CreateInstance();
 					EditorContext::s_instance->RunTab(tab);
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
-				}
+				}*/
+
+				/*{
+					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();
+
+					factory->m_filePath = "Editor/GameObjectEditor/Test.GameObjectEditor";
+					auto tab = factory->CreateInstance();
+					EditorContext::s_instance->RunTab(tab);
+
+					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
+				}*/
 			}
 
 			ID editorContextId = EditorContext::s_instance->m_runTimeId;

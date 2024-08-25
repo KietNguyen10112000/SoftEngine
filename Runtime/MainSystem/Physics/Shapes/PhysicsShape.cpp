@@ -43,6 +43,22 @@ SharedPtr<PhysicsMaterial> PhysicsShape::GetDeserializedMaterial(Serializer* ser
 	return material;
 }
 
+void PhysicsShape::RecalculateMass()
+{
+	auto actor = m_pxShape->getActor();
+	if (actor)
+	{
+		auto dynamic = actor->is<PxRigidDynamic>();
+		if (dynamic)
+		{
+			auto comp = ((RigidBodyDynamic*)dynamic->userData);
+			auto pxRigidBody = (PxRigidDynamic*)comp->m_pxActor;
+			PxRigidBodyExt::updateMassAndInertia(*pxRigidBody, comp->m_density);
+			comp->InternalWake();
+		}
+	}
+}
+
 void PhysicsShape::CloneFrom(Serializer* serializer, Serializable* another)
 {
 	auto src = (PhysicsShape*)another;
@@ -137,7 +153,7 @@ void PhysicsShape::SetCollisionMask(uint32_t mask)
 		m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, mask,
 		{
 			PxFilterData data = self->m_pxShape->getSimulationFilterData();
-			data.word1 = uint32_t(INVALID_ID);
+			data.word1 = mask;
 			self->m_pxShape->setSimulationFilterData(data);
 		}
 	);

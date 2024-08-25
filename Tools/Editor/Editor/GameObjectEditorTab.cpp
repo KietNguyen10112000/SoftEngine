@@ -11,6 +11,7 @@
 
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 #include "MainSystem/Physics/Joints/FixedJoint.h"
+#include "MainSystem/Physics/Joints/D6Joint.h"
 
 void GameObjectEditorTab::OnRenderGUI()
 {
@@ -188,6 +189,30 @@ void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 		joint->Break();
 		joint->GetAnotherBody(body)->SetFamilyNoCollideForAllShapes(false);
 	}*/
+
+	if (ImGui::MenuItem("Test"))
+	{
+		m_rootObject->PostTraversal(
+			[](GameObject* o)
+			{
+				if (o->HasComponent<RigidBodyDynamic>())
+				{
+					auto comp = o->GetComponentRaw<RigidBodyDynamic>();
+					auto count = comp->GetJointsCount();
+					for (size_t i = 0; i < count; i++)
+					{
+						auto joint = (D6Joint*)comp->GetJoint(i).Get();
+
+						auto limit = joint->GetSwingLimit();
+						limit.bounceThreshold = 100.5f;
+						limit.stiffness = 0.0f;
+						limit.damping = 100.5f;
+						joint->SetSwingLimit(limit);
+					}
+				}
+			}
+		);
+	}
 }
 
 bool GameObjectEditorTab::ValidateSetting()

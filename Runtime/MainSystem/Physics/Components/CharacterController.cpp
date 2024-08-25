@@ -18,6 +18,33 @@ using namespace physx;
 
 NAMESPACE_BEGIN
 
+class CCTDefaultFilterCallBack : public PxQueryFilterCallback
+{
+public:
+	CharacterController* m_cct = nullptr;
+
+	CCTDefaultFilterCallBack(CharacterController* cct) : m_cct(cct)
+	{
+
+	}
+
+	// Inherited via PxQueryFilterCallback
+	PxQueryHitType::Enum preFilter(const PxFilterData& filterData, const PxShape* shape, const PxRigidActor* actor, PxHitFlags& queryFlags) override
+	{
+		auto comp = (PhysicsComponent*)actor->userData;
+		if (comp->GetGameObject()->GetRoot() == m_cct->GetGameObject()->GetRoot())
+		{
+			return PxQueryHitType::eNONE;
+		}
+
+		return PxQueryHitType::eTOUCH;
+	}
+	PxQueryHitType::Enum postFilter(const PxFilterData& filterData, const PxQueryHit& hit, const PxShape* shape, const PxRigidActor* actor) override
+	{
+		return PxQueryHitType::eTOUCH;
+	}
+};
+
 class CharacterControllerHitCallback : public PxUserControllerHitReport
 {
 public:
@@ -112,12 +139,35 @@ PxControllerFilters g_defaultPxControllerFilters;
 CharacterControllerHitCallback g_defaultPxControllerHitCallback;
 void* g_defaultPxControllerHitCallbackPtr = &g_defaultPxControllerHitCallback;
 
+CharacterController::CharacterController()
+{
+	m_defaultCCTFilterCallback = new CCTDefaultFilterCallBack(this);
+}
+
 CharacterController::~CharacterController()
 {
 	if (m_pxCharacterController)
 		m_pxCharacterController->setUserData(nullptr);
 
+	if (m_defaultCCTFilterCallback)
+	{
+		delete m_defaultCCTFilterCallback;
+		m_defaultCCTFilterCallback = nullptr;
+	}
+
 	PX_RELEASE(m_pxCharacterController);
+}
+
+void CharacterController::RunAnimatorMotionMatchingCallback(void(*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID _param)
+{
+	MAIN_SYSTEM_TASK_COMMON_3(
+		PhysicsSystem, AsyncTaskRunnerST, callback, animator, _param,
+		{
+			self->m_animationMotionMatchingCallback = callback;
+			self->m_animationMotionMatchingCallbackAnimator = animator;
+			self->m_animationMotionMatchingCallbackParam = _param;
+		}
+	);
 }
 
 //void CharacterController::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
@@ -427,7 +477,14 @@ void CharacterController::OnPrevUpdate(float dt)
 	OnUpdate(dt);
 	disp += m_velocity * dt;
 
-	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
+	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
+		PxControllerFilters(nullptr, m_defaultCCTFilterCallback, nullptr));
+
+	if (m_animationMotionMatchingCallback)
+	{
+		m_animationMotionMatchingCallback(m_animationMotionMatchingCallbackAnimator, m_animationMotionMatchingCallbackParam);
+		m_animationMotionMatchingCallback = nullptr;
+	}
 
 	/*if (m_velocity.Length() != 0)
 	{
@@ -496,7 +553,15 @@ void CharacterController::Move(const Vec3& disp)
 			}
 
 			auto& disp = controller->m_sumDisp[controller->GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, g_defaultPxControllerFilters);
+			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
+				PxControllerFilters(nullptr, controller->m_defaultCCTFilterCallback, nullptr));
+
+			if (controller->m_animationMotionMatchingCallback)
+			{
+				controller->m_animationMotionMatchingCallback(controller->m_animationMotionMatchingCallbackAnimator, controller->m_animationMotionMatchingCallbackParam);
+				controller->m_animationMotionMatchingCallback = nullptr;
+			}
+
 			disp = Vec3::ZERO;
 		}
 	);
@@ -558,23 +623,23 @@ bool CharacterController::CCTIsOnGround()
 	return m_isOnGround;
 }
 
-void CharacterController::CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback)
-{
-	m_contactFilterCallback = callback;
-
-	MAIN_SYSTEM_TASK_0(
-		PhysicsSystem, AsyncTaskRunnerST,
-		{
-			PxShape* shape = nullptr;
-			auto pxActor = self->m_pxCharacterController->getActor();
-			pxActor->getShapes(&shape, 1);
-
-			PxFilterData data = shape->getSimulationFilterData();
-			data.word0 |= (PHYSICS_FILTER_FLAG::CALLBACK | PHYSICS_FILTER_FLAG::CCT);
-			shape->setSimulationFilterData(data);
-		}
-	);
-}
+//void CharacterController::CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback)
+//{
+//	m_contactFilterCallback = callback;
+//
+//	MAIN_SYSTEM_TASK_0(
+//		PhysicsSystem, AsyncTaskRunnerST,
+//		{
+//			PxShape* shape = nullptr;
+//			auto pxActor = self->m_pxCharacterController->getActor();
+//			pxActor->getShapes(&shape, 1);
+//
+//			PxFilterData data = shape->getSimulationFilterData();
+//			data.word0 |= (PHYSICS_FILTER_FLAG::CALLBACK | PHYSICS_FILTER_FLAG::CCT);
+//			shape->setSimulationFilterData(data);
+//		}
+//	);
+//}
 
 void CharacterController::CCTSetRotation(const Quaternion& rotation)
 {

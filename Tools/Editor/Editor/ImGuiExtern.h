@@ -236,7 +236,7 @@ inline void PushMultiItemsWidthsAndLabels(const char* labels[], int components, 
 }
 
 inline bool DragFloatNEx(const char* labels[], float* v, int components, float v_speed, float v_min, float v_max,
-    const char* display_format = "%.3f", float power = 0)
+    const char* display_format = "%.3f", ImGuiSliderFlags flags = 0)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -253,7 +253,7 @@ inline bool DragFloatNEx(const char* labels[], float* v, int components, float v
         PushID(i);
         TextUnformatted(labels[i], FindRenderedTextEnd(labels[i]));
         SameLine();
-        value_changed |= DragFloat("", &v[i], v_speed, v_min, v_max, display_format, power);
+        value_changed |= DragFloat("", &v[i], v_speed, v_min, v_max, display_format, flags | ImGuiSliderFlags_AlwaysClamp);
         SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopID();

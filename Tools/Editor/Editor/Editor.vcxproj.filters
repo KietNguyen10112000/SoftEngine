@@ -139,6 +139,9 @@
     <ClCompile Include="EditorSettings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CCTInspector.cpp">
+      <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EditorContext.h">
@@ -239,6 +242,9 @@
     </ClInclude>
     <ClInclude Include="EditorSettings.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CCTInspector.h">
+      <Filter>Source Files\ComponentInspectors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

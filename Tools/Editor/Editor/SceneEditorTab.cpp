@@ -1127,6 +1127,11 @@ void SceneEditorTab::OnRenderMenuBar(const String& menuName)
 		{
 			m_isDrawingInspectingObjectBasis = !m_isDrawingInspectingObjectBasis;
 		}
+
+		if (ImGui::MenuItem("Draw Selected Object AABB", NULL, m_isDrawingInspectingObjectAABB))
+		{
+			m_isDrawingInspectingObjectAABB = !m_isDrawingInspectingObjectAABB;
+		}
 	}
 }
 
@@ -1149,6 +1154,19 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 		{
 			physicsComp->OnDrawDebug();
 		}*/
+	}
+
+	if (m_isDrawingInspectingObjectAABB && m_inspectingObject)
+	{
+		m_inspectingObject->GetRoot()->PostTraversal(
+			[debugGraphics](GameObject* o)
+			{
+				if (o->HasComponent<RenderingComponent>())
+				{
+					debugGraphics->DrawAABox(o->GetComponentRaw<RenderingComponent>()->GetGlobalAABB());
+				}
+			}
+		);
 	}
 
 	if (m_isDrawingDebug)
@@ -1496,6 +1514,7 @@ void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 		j["InspectingObject"] = serializer->Serialize(m_inspectingObject);
 		j["DrawDebug"] = m_isDrawingDebug;
 		j["DrawingInspectingObjectBasis"] = m_isDrawingInspectingObjectBasis;
+		j["DrawingInspectingObjectAABB"] = m_isDrawingInspectingObjectAABB;
 	}
 }
 
@@ -1627,6 +1646,11 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 	if (j.contains("DrawingInspectingObjectBasis"))
 	{
 		m_isDrawingInspectingObjectBasis = j["DrawingInspectingObjectBasis"];
+	}
+
+	if (j.contains("DrawingInspectingObjectAABB"))
+	{
+		m_isDrawingInspectingObjectAABB = j["DrawingInspectingObjectAABB"];
 	}
 }
 

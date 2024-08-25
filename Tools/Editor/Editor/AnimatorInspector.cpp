@@ -102,6 +102,16 @@ void AnimatorInspector::Inspect()
 			MakeRigidBodySkeleton();
 		}
 
+		if (ImGui::Button(ICON_FA_CALCULATOR "  Recalculator Skeleton Offsets"))
+		{
+			CalculateAnimToPhysOffsets();
+		}
+
+		if (ImGui::Checkbox("Show Skeleton Basises", &m_renderPoseBasises))
+		{
+			CalculateAnimToPhysOffsets();
+		}
+
 		ImGui::BeginDisabled(m_isEnableTPose != 0);
 		auto v = m_animator->m_rigidBodyProxyControlMode == AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY;
 		if (ImGui::Checkbox("Animator To RigidBody", &v))
@@ -130,6 +140,8 @@ void AnimatorInspector::Inspect()
 			}
 		}
 		ImGui::EndDisabled();
+
+		ImGui::DragFloat("Bound Scale", &m_animator->m_rigidBodyAABBScale, 0.001f, 1.01f, FLT_MAX);
 
 		ImGui::Dummy({ 5,5 });
 
@@ -357,8 +369,23 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 			Transform localframe0 = Transform::FromTransformMatrix(jointGlobalTransformMat * parentTransform.GetInverse());
 			Transform localframe1 = {};
 			auto d6Joint = mheap::New<D6Joint>(parent, localframe0, dynamic, localframe1);
-			d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Y, D6Joint::MOTION_TYPE::FREE);
-			d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Z, D6Joint::MOTION_TYPE::FREE);
+			d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Y, D6Joint::MOTION_TYPE::LIMITED);
+			d6Joint->SetMotion(D6Joint::MOTION_AXIS::SWING_Z, D6Joint::MOTION_TYPE::LIMITED);
+
+			/*{
+				D6Joint::SwingLimit limit = {};
+				limit.stiffness = 1000000000000.0f;
+				limit.damping = 1000000000000.0f;
+				limit.bounceThreshold = 1000000000000.0f;
+				d6Joint->SetSwingLimit(limit);
+			}*/
+
+			/*{
+				D6Joint::DriveLimit limit = {};
+				limit.forceLimit = 0.00000001f;
+				d6Joint->SetDrive(D6Joint::DRIVE_TYPE::SWING, limit);
+				d6Joint->SetDriveVelocity({ 0,0,0 }, { 0,0,0 });
+			}*/
 		}
 	};
 
@@ -533,6 +560,47 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 	}
 }
 
+void AnimatorInspector::DrawDebugSkeletonBasises()
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics)
+	{
+		return;
+	}
+
+	auto& model = m_animator->m_model3D;
+	auto& nodes = model->m_nodes;
+	auto& offsets = model->m_boneOffsetMatrixs;
+
+	auto& objGlobalTransform = m_animator->GetGameObject()->GetCommittedGlobalTransform();
+
+	std::vector<Mat4> nodeGlobals;
+	nodeGlobals.resize(nodes.size());
+
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		auto& node = nodes[i];
+		if (node.boneId != INVALID_ID)
+		{
+			nodeGlobals[i] = offsets[node.boneId].GetInverse() * objGlobalTransform;
+		}
+	}
+
+	for (size_t i = 0; i < nodes.size(); i++)
+	{
+		auto& node = nodes[i];
+		auto& global = nodeGlobals[i];
+		if (node.boneId != INVALID_ID)
+		{
+			//debugGraphics->DrawSphere(Sphere(global.Position(), 0.01f), { 1,0,0,1 });
+			auto& mat = global;
+			debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Forward().Normal() * 0.2f, { 0,0,1,1 }, 0.0008f);
+			debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Right().Normal() * 0.2f, { 1,0,0,1 }, 0.0008f);
+			debugGraphics->DrawLineSegment(mat.Position(), mat.Position() + mat.Up().Normal() * 0.2f, { 0,1,0,1 }, 0.0008f);
+		}
+	}
+}
+
 void AnimatorInspector::DrawDebugSkeleton()
 {
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
@@ -541,39 +609,10 @@ void AnimatorInspector::DrawDebugSkeleton()
 		return;
 	}
 
-
-
-	//auto& model = m_animator->m_model3D;
-	//auto& nodes = model->m_nodes;
-	//auto& offsets = model->m_boneOffsetMatrixs;
-
-	//auto& objGlobalTransform = m_animator->GetGameObject()->GetCommittedGlobalTransform();
-
-	//std::vector<Mat4> nodeGlobals;
-	//nodeGlobals.resize(nodes.size());
-
-	//for (size_t i = 0; i < nodes.size(); i++)
-	//{
-	//	auto& node = nodes[i];
-	//	if (node.boneId != INVALID_ID)
-	//	{
-	//		nodeGlobals[i] = offsets[node.boneId].GetInverse() * objGlobalTransform;
-	//	}
-	//}
-
-	//for (size_t i = 0; i < nodes.size(); i++)
-	//{
-	//	auto& node = nodes[i];
-	//	auto& global = nodeGlobals[i];
-	//	if (node.boneId != INVALID_ID)
-	//	{
-	//		debugGraphics->DrawSphere(Sphere(global.Position(), 0.01f), { 1,0,0,1 });
-	//		/*auto& mat = global;
-	//		debugGraphics->DrawRay(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
-	//		debugGraphics->DrawRay(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
-	//		debugGraphics->DrawRay(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });*/
-	//	}
-	//}
+	if (m_renderPoseBasises)
+	{
+		DrawDebugSkeletonBasises();
+	}
 }
 
 void AnimatorInspector::RenderModelNodeHierarchy(void (*callback)(ModelNode*, void*), void* userPtr)

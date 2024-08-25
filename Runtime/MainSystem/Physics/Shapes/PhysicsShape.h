@@ -47,6 +47,8 @@ public:
 private:
 	SharedPtr<PhysicsMaterial> GetDeserializedMaterial(Serializer* serializer, const json& j);
 
+	void RecalculateMass();
+
 public:
 	virtual PHYSICS_SHAPE_TYPE GetType() const = 0;
 

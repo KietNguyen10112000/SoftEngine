@@ -82,6 +82,10 @@ public:
 	bool m_prevDrawDebugAllBodiesFromRoot = true;
 	bool m_isDrawDebugAllBodiesFromRoot = true;
 	bool m_isDrawBasis = false;
+	
+	byte m_resetJointConstraintCountdown = 0;
+	Mat4 m_resetJointConstraintOriTransform;
+	Mat4 m_resetJointConstraintOriJointTransform;
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -92,7 +96,7 @@ public:
 public:
 	RigidBodyInspector(RigidBody* body, ClassMetadata* metadata);
 
-private:
+protected:
 	void InitializeNewShapeInspectorDatas(ShapeInspectorData* data, PhysicsShape* shape);
 	void LoadShapeInspectorDatas();
 	void InitializeNewJointInspectorDatas(JointInspectorData* data, Joint* joint);
@@ -108,6 +112,8 @@ private:
 	void InspectMaterials(PhysicsShape* shape);
 
 	void RenderInspectShape();
+
+	void SetJointLocalframes(Joint* joint, const Mat4& jointGlobalTransform);
 
 	bool InspectJointLimitBase(void* limit, Joint* joint);
 
@@ -128,8 +134,10 @@ private:
 	void ScaleBodyFromRootObject(float scaleFactor);
 	void DrawDebugShapeFromRoot();
 
+	bool RenderCollisionMaskChooser(uint32_t* mask, const char* title);
+
 public:
-	void Inspect();
+	virtual void Inspect();
 
 	virtual void OnBeginInspecting() override;
 	virtual void OnEndInspecting() override;

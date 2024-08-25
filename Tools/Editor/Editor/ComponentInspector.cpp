@@ -3,10 +3,12 @@
 #include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 
 #include "MainSystem/Physics/Components/RigidBody.h"
+#include "MainSystem/Physics/Components/CharacterController.h"
 
 #include "DataInspector.h"
 #include "RigidBodyInspector.h"
 #include "AnimatorInspector.h"
+#include "CCTInspector.h"
 
 #include "imgui/imgui.h"
 
@@ -28,6 +30,7 @@ ComponentInspector::ComponentInspector()
 
 	m_map["RigidBodyDynamic"] = InspectRigidBody;
 	m_map["RigidBodyStatic"] = InspectRigidBody;
+	m_map["CharacterControllerCapsule"] = InspectCCTCapsule;
 }
 
 String ComponentInspector::GetName(const String& name, void* comp)
@@ -109,6 +112,21 @@ void ComponentInspector::InspectRigidBody(EditorContext* ctx, Serializable* comp
 	if (inspector == nullptr)
 	{
 		inspector = mheap::New<RigidBodyInspector>(dynamic_cast<RigidBody*>(comp), meta);
+		meta->GenericDictionary()->Store(name, inspector);
+
+		inspector->OnBeginInspecting();
+	}
+
+	inspector->Inspect();
+}
+
+void ComponentInspector::InspectCCTCapsule(EditorContext* ctx, Serializable* comp, ClassMetadata* meta, const char* propertyName)
+{
+	auto name = GetName("CCTCapsuleInspector", comp);
+	auto inspector = meta->GenericDictionary()->Get<CCTInspector>(name);
+	if (inspector == nullptr)
+	{
+		inspector = mheap::New<CCTInspector>(dynamic_cast<CharacterController*>(comp), meta);
 		meta->GenericDictionary()->Store(name, inspector);
 
 		inspector->OnBeginInspecting();

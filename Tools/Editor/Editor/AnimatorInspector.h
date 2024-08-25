@@ -55,6 +55,7 @@ public:
 	float m_currentAlpha = 0.498f;
 
 	byte m_isEnableTPose = 0;
+	bool m_renderPoseBasises = false;
 
 	Handle<AnimLayer> m_tposeLayer;
 
@@ -83,6 +84,7 @@ private:
 
 	void CalculateAnimToPhysOffsets();
 	void MakeRigidBodySkeleton();
+	void DrawDebugSkeletonBasises();
 	void DrawDebugSkeleton();
 
 };

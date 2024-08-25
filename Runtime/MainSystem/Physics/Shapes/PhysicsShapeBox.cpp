@@ -107,6 +107,7 @@ void PhysicsShapeBox::SetDimensions(const Vec3& dimensions)
 		{
 			auto box = (PxBoxGeometry*)&self->m_pxShape->getGeometry();
 			box->halfExtents = PhysXUtils::ToPxVec3(dimensions / 2.0f);
+			self->RecalculateMass();
 		}
 	);
 }

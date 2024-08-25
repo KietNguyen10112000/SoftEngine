@@ -437,6 +437,7 @@ void D6Joint::SetDrive(const DRIVE_TYPE::ENUM& type, const DriveLimit& limit)
 			const PxD6JointDrive drive = PxD6JointDrive(limit.stiffness, limit.damping, limit.forceLimit, limit.isAcceleration);
 			auto joint = (PxD6Joint*)self->m_pxJoint;
 			joint->setDrive(PxD6Drive::Enum(type), drive);
+			joint->setConstraintFlag(PxConstraintFlag::eDRIVE_LIMITS_ARE_FORCES, true);
 		}
 	);
 }

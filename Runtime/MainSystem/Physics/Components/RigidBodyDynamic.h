@@ -67,7 +67,7 @@ public:
 	float GetDensity() const;
 	float GetMass() const;
 
-	void SetKinematic(bool enable);
+	void SetKinematic(bool enable, bool wakeUp = true);
 	bool IsKinematic() const;
 
 	void AddForce(const Vec3& f);

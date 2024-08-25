@@ -94,6 +94,7 @@ void PhysicsShapeSphere::SetRadius(float r)
 		{
 			auto capsule = (PxSphereGeometry*)&self->m_pxShape->getGeometry();
 			capsule->radius = r;
+			self->RecalculateMass();
 		}
 	);
 }

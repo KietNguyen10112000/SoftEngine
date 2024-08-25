@@ -42,6 +42,7 @@ public:
 	bool m_isEnableDeferPublicResults = false;
 	bool m_padd[6];
 	SharedPtr<AnimLayer> m_deferBufferLayer;
+	SharedPtr<AnimLayer> m_deferBufferLayer2;
 
 	CharacterController* m_cct = nullptr;
 	Vec3 m_cctLockedUpDirection = Vec3::ZERO;
@@ -56,6 +57,8 @@ public:
 	std::vector<Mat4> m_rigidBodyPhysToAnimOffsets;
 	RIGID_BODY_PROXY_CONTROL_MODE::MODE m_rigidBodyProxyControlMode = RIGID_BODY_PROXY_CONTROL_MODE::DISABLED;
 	GameObject* m_pivotRigidBody = nullptr;
+	float m_rigidBodyAABBScale = 1.01f;
+	CharacterController* m_rigidBodyProxyCCT = nullptr;
 
 protected:
 	TRACEABLE_FRIEND();

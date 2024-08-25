@@ -6,6 +6,7 @@
 namespace physx
 {
 class PxController;
+class PxQueryFilterCallback;
 }
 
 NAMESPACE_BEGIN
@@ -16,7 +17,8 @@ private:
 	friend class PhysXSimulationFilterCallback;
 	friend class PhysXSimulationCallback;
 	friend class PhysicsSystem;
-	RigidBody::ContactReportFilterCallback m_contactFilterCallback = nullptr;
+	friend class AnimatorSkeletalArray;
+	//RigidBody::ContactReportFilterCallback m_contactFilterCallback = nullptr;
 
 protected:
 
@@ -58,11 +60,19 @@ protected:
 
 	int m_countScheduleUpdate = 0;
 
-	inline CharacterController() {};
+	physx::PxQueryFilterCallback* m_defaultCCTFilterCallback = nullptr;
+
+	void (*m_animationMotionMatchingCallback)(AnimatorSkeletalArray*, ID) = nullptr;
+	AnimatorSkeletalArray* m_animationMotionMatchingCallbackAnimator = nullptr;
+	ID m_animationMotionMatchingCallbackParam = INVALID_ID;
+
+	CharacterController();
 	~CharacterController();
 
 private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
+
+	void RunAnimatorMotionMatchingCallback(void(*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID _param);
 
 	//bool IsHasNextMove();
 
@@ -90,7 +100,7 @@ public:
 	void CCTApplyVelocity(const Vec3& velocity);
 	void CCTApplyImpulse(const Vec3& impulse);
 	bool CCTIsOnGround();
-	void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
+	//void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
 
 	void CCTSetRotation(const Quaternion& rotation);
 

@@ -14,6 +14,9 @@
 #include "MainSystem/Physics/Joints/D6Joint.h"
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
+#include "MainSystem/Rendering/RenderingSystem.h"
+
+#include "MainSystem/MainSystemTaskPacking.h"
 
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
@@ -132,6 +135,14 @@ void RigidBodyInspector::FindJointCreateAnother()
 
 void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 {
+	{
+		auto mask = shape->GetCollisionMask();
+		if (RenderCollisionMaskChooser(&mask, "Shape Collision Mask"))
+		{
+			shape->SetCollisionMask(mask);
+		}
+	}
+
 	ImGui::TextUnformatted("Shape Global Transform");
 
 	Vec3 rotationAxis = Vec3::ZERO;
@@ -141,7 +152,7 @@ void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 	globalTransform.Scale() = { 1,1,1 };
 	auto modified = globalTransform;
 	auto accessor = Accessor::For("Transform", modified, m_body);
-	DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("ShapeGlobalTransform {}", shape).c_str(), true, &rotationAxis);
+	bool changed = DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), String::Format("ShapeGlobalTransform {}", shape).c_str(), true, &rotationAxis);
 	
 	auto dbGr = Graphics::Get()->GetDebugGraphics();
 	if (dbGr && rotationAxis != Vec3::ZERO)
@@ -190,7 +201,7 @@ void RigidBodyInspector::InspectShapeBase(PhysicsShape* shape)
 		dbGr->DrawLineSegment(globalTransform.Position() - 0.5f * Vec3::Y_AXIS, globalTransform.Position() + 0.5f * Vec3::Y_AXIS, { 0,1,0,1 }, 0.003f);
 	}
 	
-	if (!globalTransform.Equals(modified))
+	if (changed)
 	{
 		auto t = Transform::FromTransformMatrix(m_body->GetGameObject()->GetCommittedGlobalTransform());
 		t.Scale() = { 1,1,1 };
@@ -206,7 +217,7 @@ void RigidBodyInspector::InspectShapeBox(PhysicsShape* shape)
 	auto dimensions = box->GetDimensions();
 	const char* names[] = { "X", "Y", "Z" };
 	ImGui::TextUnformatted("Box Dimensions");
-	if (ImGui::DragFloatNEx(names, &dimensions[0], 3, 0.01f, -INFINITY, INFINITY))
+	if (ImGui::DragFloatNEx(names, &dimensions[0], 3, 0.01f, 0.0001f, INFINITY))
 	{
 		box->SetDimensions(dimensions);
 	}
@@ -219,7 +230,7 @@ void RigidBodyInspector::InspectShapeCapsule(PhysicsShape* shape)
 	auto h = capsule->GetHeight();
 	const char* names[] = { "Radius", "Height" };
 	Vec2 temp = { r,h };
-	if (ImGui::DragFloatNEx(names, &temp[0], 2, 0.01f, -INFINITY, INFINITY))
+	if (ImGui::DragFloatNEx(names, &temp[0], 2, 0.01f, 0.0001f, INFINITY))
 	{
 		capsule->SetRadius(temp.x);
 		capsule->SetHeight(temp.y);
@@ -235,7 +246,7 @@ void RigidBodyInspector::InspectShapeSphere(PhysicsShape* shape)
 	auto sphere = (PhysicsShapeSphere*)shape;
 	auto r = sphere->GetRadius();
 	const char* names[] = { "Radius" };
-	if (ImGui::DragFloatNEx(names, &r, 1, 0.01f, -INFINITY, INFINITY))
+	if (ImGui::DragFloatNEx(names, &r, 1, 0.01f, 0.0001f, INFINITY))
 	{
 		sphere->SetRadius(r);
 	}
@@ -505,6 +516,23 @@ void RigidBodyInspector::RenderInspectShape()
 	}
 }
 
+void RigidBodyInspector::SetJointLocalframes(Joint* joint, const Mat4& jointGlobalTransform)
+{
+	auto a0GlobalTransform = joint->GetBody0()->GetGameObject()->GetCommittedGlobalTransform();
+	auto a1GlobalTransform = joint->GetBody1()->GetGameObject()->GetCommittedGlobalTransform();
+
+	auto temp0 = Transform::FromTransformMatrix(a0GlobalTransform);
+	temp0.Scale() = { 1,1,1 };
+	auto temp1 = Transform::FromTransformMatrix(a1GlobalTransform);
+	temp1.Scale() = { 1,1,1 };
+
+	auto localframe0 = Transform::FromTransformMatrix(jointGlobalTransform * temp0.ToTransformMatrix().GetInverse());
+	auto localframe1 = Transform::FromTransformMatrix(jointGlobalTransform * temp1.ToTransformMatrix().GetInverse());
+
+	joint->SetLocalFrame(joint->GetBody0(), localframe0);
+	joint->SetLocalFrame(joint->GetBody1(), localframe1);
+}
+
 bool RigidBodyInspector::InspectJointLimitBase(void* pLimit, Joint* joint)
 {
 	bool modified = false;
@@ -615,6 +643,39 @@ void RigidBodyInspector::InspectJointBase(Joint* joint)
 		}
 	}
 	
+	if (ImGui::Button("Reset Joint Constraint") && m_resetJointConstraintCountdown == 0)
+	{
+		m_resetJointConstraintOriTransform = m_body->GetGameObject()->GetCommittedGlobalTransform();
+		m_resetJointConstraintOriJointTransform = jointGlobalTransform.ToTransformMatrix();
+
+		// forward to X
+		auto& jointForward = jointGlobalTransform.ToTransformMatrix().Right();
+		auto bodyTransform = Transform::FromTransformMatrix(m_body->GetGameObject()->GetCommittedGlobalTransform());
+		//auto& objectForward = Mat4::Rotation(bodyTransform.Rotation()).Right();
+		//auto rotationFromTo = Quaternion::RotationFromTo(objectForward, forward);
+		//auto globalMat = Mat4::Rotation(rotationFromTo) * m_body->GetGameObject()->GetCommittedGlobalTransform();
+
+		auto& p = bodyTransform.Position();
+		auto& o = jointGlobalTransform.Position();
+		auto t = o + (p - o).Length() * jointForward.Normal();
+
+		m_body->GetGameObject()->SetGlobalTransform(
+			Mat4::Rotation(jointGlobalTransform.Rotation()) * Mat4::Translation(t),
+			INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL
+		);
+
+		m_resetJointConstraintCountdown = 3;
+	}
+
+	if (m_resetJointConstraintCountdown != 0)
+	{
+		if (--m_resetJointConstraintCountdown == 0)
+		{
+			SetJointLocalframes(joint, m_resetJointConstraintOriJointTransform);
+			m_body->GetGameObject()->SetGlobalTransform(m_resetJointConstraintOriTransform, 
+				INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::GLOBAL_TO_LOCAL);
+		}
+	}
 }
 
 void RigidBodyInspector::InspectJointFixed(Joint* joint)
@@ -925,71 +986,94 @@ void RigidBodyInspector::InspectJointD6(Joint* _joint)
 			drive.forceLimit = FLT_MAX;
 		}
 
+		if (ImGui::Checkbox("Accelate", &drive.isAcceleration))
+		{
+			modified = true;
+		}
+
 		if (modified)
 		{
+			//joint->SetDrivePosition({});
 			joint->SetDrive(type, drive);
 		}
 	};
+
+	ImGuiTreeNodeFlags nodeFlags =
+		ImGuiTreeNodeFlags_OpenOnArrow
+		| ImGuiTreeNodeFlags_OpenOnDoubleClick
+		| ImGuiTreeNodeFlags_AllowItemOverlap
+		| ImGuiTreeNodeFlags_FramePadding
+		| ImGuiTreeNodeFlags_Framed;
 	
-	if (ImGui::CollapsingHeader("X Axis Motion"))
+	if (ImGui::TreeNodeEx("X Axis Motion", nodeFlags))
 	{
 		AxisMotionUI(joint, D6Joint::MOTION_AXIS::X, this);
+		ImGui::TreePop();
 	}
 
-	if (ImGui::CollapsingHeader("Y Axis Motion"))
+	if (ImGui::TreeNodeEx("Y Axis Motion", nodeFlags))
 	{
 		AxisMotionUI(joint, D6Joint::MOTION_AXIS::Y, this);
+		ImGui::TreePop();
 	}
 
-	if (ImGui::CollapsingHeader("Z Axis Motion"))
+	if (ImGui::TreeNodeEx("Z Axis Motion", nodeFlags))
 	{
 		AxisMotionUI(joint, D6Joint::MOTION_AXIS::Z, this);
+		ImGui::TreePop();
 	}
 
-	if (ImGui::CollapsingHeader("Swing Y,Z Motion"))
+	if (ImGui::TreeNodeEx("Swing Y,Z Motion", nodeFlags))
 	{
 		SwingMotionUI(joint, this);
+		ImGui::TreePop();
 	}
 
-	if (ImGui::CollapsingHeader("Twist X Motion"))
+	if (ImGui::TreeNodeEx("Twist X Motion", nodeFlags))
 	{
 		TwistMotionUI(joint, this);
+		ImGui::TreePop();
 	}
 
 	{
-		ImGuiTreeNodeFlags nodeFlags =
-			ImGuiTreeNodeFlags_OpenOnArrow
-			| ImGuiTreeNodeFlags_OpenOnDoubleClick
-			| ImGuiTreeNodeFlags_AllowItemOverlap
-			| ImGuiTreeNodeFlags_FramePadding
-			| ImGuiTreeNodeFlags_Framed;
 		auto open = ImGui::TreeNodeEx("Drive", nodeFlags);
 
 		if (open)
 		{
-			if (ImGui::CollapsingHeader("Drive Limit X"))
+			if (ImGui::TreeNodeEx("Drive Limit X", nodeFlags))
 			{
 				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::X);
+				ImGui::TreePop();
 			}
 
-			if (ImGui::CollapsingHeader("Drive Limit Y"))
+			if (ImGui::TreeNodeEx("Drive Limit Y", nodeFlags))
 			{
 				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::Y);
+				ImGui::TreePop();
 			}
 
-			if (ImGui::CollapsingHeader("Drive Limit Z"))
+			if (ImGui::TreeNodeEx("Drive Limit Z", nodeFlags))
 			{
 				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::Z);
+				ImGui::TreePop();
 			}
 
-			if (ImGui::CollapsingHeader("Drive Swing"))
+			if (ImGui::TreeNodeEx("Drive Swing", nodeFlags))
 			{
 				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::SWING);
+				ImGui::TreePop();
 			}
 
-			if (ImGui::CollapsingHeader("Drive Twist"))
+			if (ImGui::TreeNodeEx("Drive Slerp", nodeFlags))
+			{
+				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::SLERP);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNodeEx("Drive Twist", nodeFlags))
 			{
 				DriveMotionUI(joint, this, D6Joint::DRIVE_TYPE::TWIST);
+				ImGui::TreePop();
 			}
 
 			{
@@ -1535,6 +1619,17 @@ void RigidBodyInspector::Inspect()
 
 	ImGui::BeginDisabled(disableAll);
 
+	if (m_body->GetShapesCount() != 0)
+	{
+		auto mask = m_body->GetShape(0)->GetCollisionMask();
+		ImGui::Separator();
+		if (RenderCollisionMaskChooser(&mask, "All Collision Masks"))
+		{
+			m_body->SetCollisionMaskForAllShapes(mask);
+		}
+		ImGui::Separator();
+	}
+
 	{
 		const char* switchStr = nullptr;
 		if (m_bodyType == PHYSICS_TYPE_RIGID_BODY_DYNAMIC)
@@ -1649,11 +1744,12 @@ void RigidBodyInspector::Inspect()
 		auto v = body->GetDensity();
 		auto mass = body->GetMass();
 		ImGui::Text("Current Mass: %.3f", mass);
-		if (ImGui::DragFloat("Body Density", &v, 0.01f, 0.01f, INFINITY))
+		if (ImGui::DragFloat("Body Density", &v, 0.01f, 0.01f, INFINITY, "%.3f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp))
 		{
 			body->SetDensity(v);
 		}
 	}
+
 
 	RenderInspectShape();
 	RenderInspectJoint();
@@ -1661,6 +1757,76 @@ void RigidBodyInspector::Inspect()
 	ImGui::EndDisabled();
 
 	FlushDrawDebug();
+}
+
+bool RigidBodyInspector::RenderCollisionMaskChooser(uint32_t* pmask, const char* title)
+{
+	bool modifed = false;
+	if (ImGui::TreeNode(title))
+	{
+		if (ImGui::Button(ICON_FA_ROTATE "  Reset"))
+		{
+			if (*pmask)
+			{
+				*pmask = 0;
+			}
+			else
+			{
+				*pmask = uint32_t(INVALID_ID);
+			}
+			modifed = true;
+		}
+
+		if (ImGui::BeginTable("## table", 16, ImGuiTableFlags_::ImGuiTableFlags_Borders))
+		{
+			std::bitset<32> mask = *pmask;
+			char label[32] = {};
+			for (size_t y = 0; y < 2; y++)
+			{
+				for (size_t x = 0; x < 16; x++)
+				{
+					ImGui::TableNextColumn();
+
+					auto pos = x + y * 16;
+
+					ImGui::PushID(pos + 1);
+
+					sprintf(label, "%02d", pos);
+
+					//ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 0.0f, 0.0f });
+					bool pop = false;
+					if (!mask.test(pos))
+					{
+						ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, {0.5f,0.5f,0.5f,1.0f});
+						pop = true;
+					}
+					if (ImGui::SmallButton(label))
+					{
+						mask.set(pos, !mask.test(pos));
+						modifed = true;
+					}
+
+					//ImGui::SameLine();
+					//ImGui::Dummy({ 5, 5 });
+
+					if (pop)
+					{
+						ImGui::PopStyleColor();
+					}
+					//ImGui::PopStyleVar();
+
+					ImGui::PopID();
+				}
+			}
+
+			*pmask = uint32_t(mask.to_ulong());
+
+			ImGui::EndTable();
+		}
+		ImGui::TreePop();
+	}
+
+	return modifed;
 }
 
 void RigidBodyInspector::OnBeginInspecting()

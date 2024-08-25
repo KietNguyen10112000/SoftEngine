@@ -121,6 +121,7 @@ void PhysicsShapeCapsule::SetHeight(float h)
 		{
 			auto capsule = (PxCapsuleGeometry*)&self->m_pxShape->getGeometry();
 			capsule->halfHeight = h / 2.0f;
+			self->RecalculateMass();
 		}
 	);
 }
@@ -137,6 +138,7 @@ void PhysicsShapeCapsule::SetRadius(float r)
 		{
 			auto capsule = (PxCapsuleGeometry*)&self->m_pxShape->getGeometry();
 			capsule->radius = r;
+			self->RecalculateMass();
 		}
 	);
 }

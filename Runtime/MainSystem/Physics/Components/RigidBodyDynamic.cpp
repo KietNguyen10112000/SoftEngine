@@ -182,16 +182,21 @@ float RigidBodyDynamic::GetMass() const
 	return pxRigidBody->getMass();
 }
 
-void RigidBodyDynamic::SetKinematic(bool enable)
+void RigidBodyDynamic::SetKinematic(bool enable, bool wakeUp)
 {
-	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
-	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
-	if (!enable && pxRigidBody->getScene() && pxRigidBody->isSleeping())
-	{
-		pxRigidBody->wakeUp();
-	}
+	MAIN_SYSTEM_TASK_COMMON_2(
+		PhysicsSystem, AsyncTaskRunnerST, enable, wakeUp,
+		{
+			auto pxRigidBody = (PxRigidDynamic*)self->m_pxActor;
+			pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
+			if (wakeUp && !enable && pxRigidBody->getScene() && pxRigidBody->isSleeping())
+			{
+				pxRigidBody->wakeUp();
+			}
 
-	m_isKinematic = (byte)enable;
+			self->m_isKinematic = (byte)enable;
+		}
+	);
 }
 
 bool RigidBodyDynamic::IsKinematic() const
@@ -279,22 +284,22 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 	RigidBody::DeserializeFromJson(serializer, j);
 
 	PxRigidDynamic* body;
-	if (m_pxActor == nullptr)
+	/*if (m_pxActor == nullptr)
 	{
 		auto physics = PhysX::Get()->GetPxPhysics();
 		body = physics->createRigidDynamic(PxTransform(PxIdentity));
 		m_pxActor = body;
 		m_pxActor->userData = this;
 	}
-	else
+	else*/
 	{
 		body = m_pxActor->is<PxRigidDynamic>();
 	}
 
-	for (auto& shape : m_shapes)
+	/*for (auto& shape : m_shapes)
 	{
 		body->attachShape(*shape->m_pxShape);
-	}
+	}*/
 
 	{
 		body->setLinearVelocity(PhysXUtils::ToPxVec3(j["LinearVelocity"]));
@@ -314,7 +319,7 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 		}
 	}
 
-	RigidBody::DeserializeFromJson(serializer, j);
+	//RigidBody::DeserializeFromJson(serializer, j);
 }
 
 Handle<ClassMetadata> RigidBodyDynamic::GetMetadata(size_t sign)

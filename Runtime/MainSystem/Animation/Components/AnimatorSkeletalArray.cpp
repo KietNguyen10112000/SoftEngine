@@ -52,7 +52,8 @@ public:
 
 AnimatorSkeletalArray::AnimatorSkeletalArray() : AnimationComponent(ANIMATION_TYPE_SKELETAL_ARRAY)
 {
-	m_deferBufferLayer = std::make_shared<AnimCCTBufferLayer>();
+	m_deferBufferLayer = std::make_shared<AnimCCTBufferLayer>(); 
+	m_deferBufferLayer2 = std::make_shared<AnimCCTBufferLayer>();
 }
 
 AnimatorSkeletalArray::~AnimatorSkeletalArray()
@@ -565,6 +566,31 @@ void AnimatorSkeletalArray::OnDrawDebug()
 
 void AnimatorSkeletalArray::PublicResultToRigidBodies(Scene* _scene, AnimLayer* last)
 {
+	static auto Fn = [](AnimatorSkeletalArray* self, ID param) -> void
+	{
+		auto last = (AnimLayer*)param;
+		auto& globalTransform = self->GetGameObject()->GetCommittedGlobalTransform();
+		auto& globals = last->NodeGlobalTransforms();
+
+		auto& proxies = self->m_rigidBodyProxy;
+
+		auto count = globals.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			auto& global = globals[i];
+			auto& proxy = proxies[i];
+			if (proxy)
+			{
+				auto m = self->m_rigidBodyAnimToPhysOffsets[i] * global * globalTransform;
+				assert(proxy->HasComponent<RigidBodyDynamic>());
+
+				auto comp = proxy->GetComponentRaw<RigidBodyDynamic>();
+				auto pxBody = comp->m_pxActor->is<physx::PxRigidDynamic>();
+				pxBody->setKinematicTarget(PhysXUtils::ToPxTransform(Transform::FromTransformMatrix(m)));
+			}
+		}
+	};
+
 	if (m_pivotRigidBody == nullptr)
 	{
 		for (auto& b : m_rigidBodyProxy)
@@ -577,36 +603,17 @@ void AnimatorSkeletalArray::PublicResultToRigidBodies(Scene* _scene, AnimLayer* 
 		}
 	}
 
-	if (m_pivotRigidBody)
+	m_deferBufferLayer2->NodeGlobalTransforms() = m_deferBufferLayer->NodeGlobalTransforms();
+	m_deferBufferLayer2->MeshesAABB() = m_deferBufferLayer->MeshesAABB();
+
+	if (m_rigidBodyProxyCCT)
+	{
+		m_rigidBodyProxyCCT->RunAnimatorMotionMatchingCallback(Fn, this, ID(m_deferBufferLayer2.get()));
+	}
+	else if (m_pivotRigidBody)
 	{
 		assert(m_pivotRigidBody->HasComponent<RigidBodyDynamic>());
-		m_pivotRigidBody->GetComponentRaw<RigidBodyDynamic>()->RunAnimatorMotionMatchingCallback(
-			[](AnimatorSkeletalArray* self, ID param)
-			{
-				auto last = (AnimLayer*)param;
-				auto& globalTransform = self->GetGameObject()->GetCommittedGlobalTransform();
-				auto& globals = last->NodeGlobalTransforms();
-
-				auto& proxies = self->m_rigidBodyProxy;
-
-				auto count = globals.size();
-				for (size_t i = 0; i < count; i++)
-				{
-					auto& global = globals[i];
-					auto& proxy = proxies[i];
-					if (proxy)
-					{
-						auto m = self->m_rigidBodyAnimToPhysOffsets[i] * global * globalTransform;
-						assert(proxy->HasComponent<RigidBodyDynamic>());
-
-						auto comp = proxy->GetComponentRaw<RigidBodyDynamic>();
-						auto pxBody = comp->m_pxActor->is<physx::PxRigidDynamic>();
-						pxBody->setKinematicTarget(PhysXUtils::ToPxTransform(Transform::FromTransformMatrix(m)));
-					}
-				}
-			},
-			this, ID(last)
-		);
+		m_pivotRigidBody->GetComponentRaw<RigidBodyDynamic>()->RunAnimatorMotionMatchingCallback(Fn, this, ID(m_deferBufferLayer2.get()));
 	}
 }
 
@@ -615,6 +622,7 @@ void AnimatorSkeletalArray::FetchResultFromRigidBodies()
 	auto& nodes = m_model3D->m_nodes;
 	auto& proxies = m_rigidBodyProxy;
 	auto& globals = m_deferBufferLayer->NodeGlobalTransforms();
+	auto& AABBs = m_deferBufferLayer->MeshesAABB();
 	auto count = globals.size();
 
 	/*if (globals.size() != nodes.size())
@@ -623,6 +631,8 @@ void AnimatorSkeletalArray::FetchResultFromRigidBodies()
 	}*/
 
 	auto scale = Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
+
+	AABox aabb = {};
 
 	for (size_t i = 0; i < count; i++)
 	{
@@ -636,7 +646,23 @@ void AnimatorSkeletalArray::FetchResultFromRigidBodies()
 			auto mat = PhysXUtils::ToTransform(pxBody->getGlobalPose()).ToTransformMatrix();
 			mat = m_model3D->m_boneOffsetInvMatrixs[nodes[i].boneId] * m_rigidBodyPhysToAnimOffsets[i] * mat;
 			global = mat;
+
+			auto bound = pxBody->getWorldBounds(m_rigidBodyAABBScale);
+			AABox aabox = AABox(PhysXUtils::ToVec3((bound.minimum + bound.maximum) / 2.0f), PhysXUtils::ToVec3(bound.maximum - bound.minimum));
+
+			if (aabb.IsValid())
+			{
+				aabb.Joint(aabox);
+				continue;
+			}
+
+			aabb = aabox;
 		}
+	}
+
+	for (auto& bound : AABBs)
+	{
+		bound = aabb;
 	}
 
 	UpdateDataToRenderer(GetGameObject()->GetScene(), m_deferBufferLayer->NodeGlobalTransforms(), m_deferBufferLayer->MeshesAABB());
@@ -856,6 +882,7 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Ve
 	}
 
 	SetEnableDeferPublicResult(true);
+	ResetDeferBufferLayer();
 
 	Vec3 scaling; Quaternion rotation; Vec3 translation;
 	auto& rootLocalTransform = m_lastOutput->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId];
@@ -1046,6 +1073,10 @@ void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* anot
 	{
 		m_rigidBodyProxy.Push(serializer->Clone(body));
 	}
+
+	m_rigidBodyAnimToPhysOffsets = src->m_rigidBodyAnimToPhysOffsets;
+	m_rigidBodyPhysToAnimOffsets = src->m_rigidBodyPhysToAnimOffsets;
+	m_rigidBodyAABBScale = src->m_rigidBodyAABBScale;
 }
 
 void AnimatorSkeletalArray::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
@@ -1114,6 +1145,7 @@ void AnimatorSkeletalArray::SerializeToJson(Serializer* serializer, json& j) con
 			j["RigidBodyProxy"] = arr; 
 			j["RigidBodyAnimToPhysOffsets"] = offsets;
 			j["RigidBodyPhysToAnimOffsets"] = offsets2;
+			j["RigidBodyAABBScale"] = m_rigidBodyAABBScale;
 		}
 	}
 }
@@ -1162,6 +1194,9 @@ void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const js
 
 		if (j.contains("RigidBodyPhysToAnimOffsets"))
 			m_rigidBodyPhysToAnimOffsets = j["RigidBodyPhysToAnimOffsets"];
+
+		if (j.contains("RigidBodyAABBScale"))
+			m_rigidBodyAABBScale = j["RigidBodyAABBScale"];
 	}
 }
 
