@@ -43,7 +43,8 @@ private:
 
 	raw::AsyncTaskRunnerForMainComponent<AnimationSystem> m_asyncTaskRunner[NUM_DEFER_BUFFER] = {};
 
-	spinlock m_animSkeletalArraysLock;
+	std::atomic<ID> m_publicResultToRigidBodiesTrigger = 0;
+	std::atomic<ID> m_fetchResultFromRigidBodiesTrigger = 0;
 
 public:
 	AnimationSystem(Scene* scene);
@@ -53,6 +54,9 @@ private:
 	void AddAnimMeshRenderingBuffer(void*, AnimatorSkeletalGameObject* animator);
 	void RemoveMeshRenderingBuffer(void*, AnimatorSkeletalGameObject* animator);
 	void CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBufferCounter* counter);
+
+	// to public data from animator to physics system
+	void PrevPhysicsSimulationUpdate();
 
 	// to fetch data from physics system and forward it to animator
 	void PostPhysicsSimulationUpdate();

@@ -792,6 +792,10 @@ void PhysicsSystem::Iteration(float dt)
 	RebuildUpdateList();
 	ProcessPrevUpdateList();
 
+	{
+		GetScene()->GetAnimationSystem()->PrevPhysicsSimulationUpdate();
+	}
+
 	m_pxScene->simulate(dt);
 
 	for (auto& joint : m_brokenJoints)

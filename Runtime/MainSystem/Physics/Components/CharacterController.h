@@ -18,23 +18,32 @@ private:
 	friend class PhysXSimulationCallback;
 	friend class PhysicsSystem;
 	friend class AnimatorSkeletalArray;
-	//RigidBody::ContactReportFilterCallback m_contactFilterCallback = nullptr;
-
-protected:
-
+	friend class CharacterControllerHitCallback;
+	
+public:
 	struct CollisionPlane
 	{
 		Vec3 position;
 		Vec3 normal;
-		
-		float staticFriction;
-		float dynamicFriction;
 
-		bool isGround;
-		bool isApplyedDynamicFriction;
-		bool isGroundForMotion = false;
+		PhysicsShape* shape = nullptr;
+		GameObject* object = nullptr;
+
+		bool isGround = false;
+
+		inline bool TestGround(const Vec3& dir) const
+		{
+			return dir.Normal().Dot(normal) < -0.0001f;
+		}
 	};
 
+	struct CollisionPlanes
+	{
+		std::vector<CollisionPlane> planes;
+		size_t groundCount = 0;
+	};
+
+protected:
 	//Mat4 m_lastGlobalTransform;
 
 	physx::PxController* m_pxCharacterController = nullptr;
@@ -44,13 +53,15 @@ protected:
 	Vec3 m_gravity = Vec3::ZERO;
 	Vec3 m_velocity = Vec3::ZERO;
 
-	Vec3 m_sumF = Vec3::ZERO;
+	float m_overrideGravityStaticFriction = 0.0f;
+	float m_overrideGravityDynamicFriction = 0.0f;
+	float m_overrideVelocityStaticFriction = 0.0f;
+	float m_overrideVelocityDynamicFriction = 0.0f;
 
 	Vec3 m_sumDisp[2] = { Vec3::ZERO, Vec3::ZERO };
-	Vec3 m_lastDisp = Vec3::ZERO;
 	size_t m_lastMoveIterationCount = 0;
 
-	std::vector<CollisionPlane> m_collisionPlanes;
+	DeferredBuffer<CollisionPlanes> m_collisionPlanesBuffer;
 
 	float m_mass = 1;
 
@@ -58,13 +69,9 @@ protected:
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
-	int m_countScheduleUpdate = 0;
+	int m_countScheduleUpdate = 0; 
 
 	physx::PxQueryFilterCallback* m_defaultCCTFilterCallback = nullptr;
-
-	void (*m_animationMotionMatchingCallback)(AnimatorSkeletalArray*, ID) = nullptr;
-	AnimatorSkeletalArray* m_animationMotionMatchingCallbackAnimator = nullptr;
-	ID m_animationMotionMatchingCallbackParam = INVALID_ID;
 
 	CharacterController();
 	~CharacterController();
@@ -72,9 +79,8 @@ protected:
 private:
 	static void TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self);
 
-	void RunAnimatorMotionMatchingCallback(void(*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID _param);
-
-	//bool IsHasNextMove();
+	void ReduceVelocityByCollisionPlanes(float dt);
+	void ApplyGravity(float dt);
 
 protected:
 	virtual void Wake() override;
@@ -103,6 +109,9 @@ public:
 	//void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
 
 	void CCTSetRotation(const Quaternion& rotation);
+
+	// return the collision planes that the CCT is currenly in contact
+	const CollisionPlanes& CCTGetCollisionPlanes();
 
 	inline const auto& CCTGetRotation() const
 	{

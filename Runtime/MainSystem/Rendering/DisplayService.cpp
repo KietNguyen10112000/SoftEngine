@@ -47,7 +47,7 @@ void DisplayService::End()
 	graphics->UnsetRenderTargets(1, &screenRT, screenDS);
 }
 
-void DisplayService::Display(SharedPtr<GraphicsShaderResource>& resource, GRAPHICS_VIEWPORT viewport)
+void DisplayService::Display(const SharedPtr<GraphicsShaderResource>& resource, GRAPHICS_VIEWPORT viewport)
 {
 	auto graphics = Graphics::Get();
 	auto baseDims = Vec2(graphics->GetWindowWidth(), graphics->GetWindowHeight());
@@ -72,7 +72,7 @@ void DisplayService::Display(SharedPtr<GraphicsShaderResource>& resource, GRAPHI
 
 	auto params = m_pipeline->PrepareRenderParams();
 	params->SetConstantBuffers(GRAPHICS_SHADER_SPACE::SHADER_SPACE_VS, 0, 1, &m_constantBuffer);
-	params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, &resource);
+	params->SetShaderResources(GRAPHICS_SHADER_SPACE::SHADER_SPACE_PS, 0, 1, (SharedPtr<GraphicsShaderResource>*)&resource);
 	graphics->SetGraphicsPipeline(m_pipeline.get());
 	graphics->DrawInstanced(0, 0, 6, 1, 0, 0);
 }

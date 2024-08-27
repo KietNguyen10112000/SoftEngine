@@ -25,7 +25,7 @@ public:
 
 	CharacterControllerCapsuleDesc m_desc;
 
-	inline CharacterControllerCapsule() {};
+	CharacterControllerCapsule();
 	CharacterControllerCapsule(const CharacterControllerCapsuleDesc& desc);
 
 	~CharacterControllerCapsule();

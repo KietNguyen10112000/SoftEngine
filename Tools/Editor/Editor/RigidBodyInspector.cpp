@@ -1402,6 +1402,14 @@ void RigidBodyInspector::DrawDebugImpl(const Mat4& globalTransformMat, PhysicsSh
 		return;
 	}
 
+	auto body = shape->GetAttachedBody();
+	if (body->GetPhysicsType() == PHYSICS_TYPE_CHARACTER_CONTROLLER)
+	{
+		//auto pos = transform.Position();
+		//std::cout << "DrawDebug Capsule: " << std::setprecision(6) << pos.x << ", " << pos.y << ", " << pos.z << " --- " << m_body->GetGameObject()->GetScene()->GetIterationCount() << "\n";
+		return;
+	}
+
 	Transform globalTransform = {};
 	//m_body->GetGameObject()->GetCommittedGlobalTransform().Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());
 	globalTransformMat.Decompose(globalTransform.Scale(), globalTransform.Rotation(), globalTransform.Position());

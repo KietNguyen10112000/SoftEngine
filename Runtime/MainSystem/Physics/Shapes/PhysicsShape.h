@@ -57,6 +57,11 @@ public:
 		return m_meterial;
 	}
 
+	inline auto* GetAttachedBody()
+	{
+		return m_attachedRigidBody;
+	}
+
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override;
 	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override;

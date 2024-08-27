@@ -698,4 +698,8 @@ void DebugGraphics::RenderToTarget(GraphicsRenderTarget* renderTarget, GraphicsD
 	graphics->UnsetRenderTargets(1, &renderTarget, depthBuffer);
 }
 
+void DebugGraphics::Clear()
+{
+}
+
 NAMESPACE_END

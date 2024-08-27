@@ -36,6 +36,9 @@ private:
 	bool m_isBroken = false;
 	bool m_padd[7];
 
+	Transform m_initBody0Transform = {};
+	Transform m_initBody1Transform = {};
+
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
 	{
@@ -58,6 +61,8 @@ public:
 private:
 	void CommitJointToBodies();
 	void RemoveJointFromBodies();
+
+	void ReconstraintBodyForwardToXAxisOfJointGlobalTransform(int bodyIndex);
 
 protected:
 	void InitJoint(void* pxInitFunc, const Handle<RigidBody>& body0, const Transform& localFrame0, const Handle<RigidBody>& body1, const Transform& localFrame1);

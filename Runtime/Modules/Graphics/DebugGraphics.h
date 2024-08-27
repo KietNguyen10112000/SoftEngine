@@ -161,6 +161,8 @@ public:
 	void RenderToTarget(GraphicsRenderTarget* renderTarget, GraphicsDepthStencilBuffer* depthBuffer, 
 		SharedPtr<GraphicsConstantBuffer>& cameraBuffer);
 
+	void Clear();
+
 };
 
 NAMESPACE_END

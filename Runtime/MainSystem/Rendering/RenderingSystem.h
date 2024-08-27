@@ -92,6 +92,8 @@ private:
 
 	AsyncTaskRunner m_mAsyncTaskRunnerST[NUM_DEFER_BUFFER] = {};
 
+	SharedPtr<GraphicsRenderTarget> m_HUDRenderTarget;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)

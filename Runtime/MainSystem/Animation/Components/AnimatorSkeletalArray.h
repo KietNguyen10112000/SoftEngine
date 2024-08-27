@@ -5,6 +5,8 @@
 
 #include "Resources/AnimModel.h"
 
+#include "Scene/DeferredBuffer.h"
+
 NAMESPACE_BEGIN
 
 class API AnimatorSkeletalArray : public AnimationComponent
@@ -41,8 +43,7 @@ public:
 	// to defer public results to RenderingSystem
 	bool m_isEnableDeferPublicResults = false;
 	bool m_padd[6];
-	SharedPtr<AnimLayer> m_deferBufferLayer;
-	SharedPtr<AnimLayer> m_deferBufferLayer2;
+	DeferredBuffer<SharedPtr<AnimLayer>> m_deferBufferLayer;
 
 	CharacterController* m_cct = nullptr;
 	Vec3 m_cctLockedUpDirection = Vec3::ZERO;
@@ -59,6 +60,7 @@ public:
 	GameObject* m_pivotRigidBody = nullptr;
 	float m_rigidBodyAABBScale = 1.01f;
 	CharacterController* m_rigidBodyProxyCCT = nullptr;
+	Mat4 m_rigidBodyProxyCCTOffset;
 
 protected:
 	TRACEABLE_FRIEND();
@@ -93,7 +95,8 @@ private:
 	void CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* last);
 	void SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection);
 
-	void PublicResultToRigidBodies(Scene* _scene, AnimLayer* last);
+	//void PublicResultToRigidBodies(Scene* _scene, AnimLayer* last);
+	void PublicResultToRigidBodies();
 	void FetchResultFromRigidBodies();
 
 	void SetEnableDeferPublicResult(bool enable);
@@ -128,6 +131,8 @@ public:
 	void SetForwardCCT(CharacterController* cct, const Vec3& lockUpDirection = Vec3::ZERO);
 
 	void SetRigidBodiesControlMode(RIGID_BODY_PROXY_CONTROL_MODE::MODE mode);
+
+	void SetRigidBoiesControlCCT(CharacterController* cct);
 
 public:
 	template <typename T, bool IS_EXTERN = false, typename... Args>

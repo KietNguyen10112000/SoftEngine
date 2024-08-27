@@ -19,6 +19,12 @@ NAMESPACE_BEGIN
 
 extern void* g_defaultPxControllerHitCallbackPtr;
 
+CharacterControllerCapsule::CharacterControllerCapsule()
+{
+	m_desc.capsule = Capsule({ 0,0,0 }, 1.0f, 0.5f);
+	m_desc.material = std::make_shared<PhysicsMaterial>(0.5f, 0.5f, 0.5f);
+}
+
 CharacterControllerCapsule::CharacterControllerCapsule(const CharacterControllerCapsuleDesc& desc)
 {
 	m_desc = desc;
@@ -39,7 +45,7 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 	pxDesc.upDirection = reinterpret_cast<const PxVec3&>(desc.capsule.m_up);
 	pxDesc.position = PxExtendedVec3(desc.capsule.m_center.x, desc.capsule.m_center.y, desc.capsule.m_center.z);
 	pxDesc.material = desc.material->m_pxMaterial;
-	//pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
+	pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
 	pxDesc.scaleCoeff = 1.0f;
 	pxDesc.contactOffset = 0.01f;
 
@@ -55,6 +61,8 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 
 	m_shape = PhysicsShapeCapsule::MakeDummy(shape, desc.capsule.m_height, desc.capsule.m_radius, desc.material);
 	m_shapes.push_back(m_shape);
+
+	m_shape->m_attachedRigidBody = this;
 
 	//if (shape)
 	{

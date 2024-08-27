@@ -31,6 +31,11 @@ public:
 		return reinterpret_cast<const Vec3&>(vec);
 	}
 
+	inline static Vec3 ToVec3(const physx::PxExtendedVec3& vec)
+	{
+		return Vec3(static_cast<float>(vec.x), static_cast<float>(vec.y), static_cast<float>(vec.z));
+	}
+
 	inline static physx::PxTransform ToPxTransform(const Transform& transform)
 	{
 		auto& pos = transform.GetPosition();

@@ -22,7 +22,7 @@ public:
 
 	void Begin();
 	void End();
-	void Display(SharedPtr<GraphicsShaderResource>& resource, GRAPHICS_VIEWPORT viewport);
+	void Display(const SharedPtr<GraphicsShaderResource>& resource, GRAPHICS_VIEWPORT viewport);
 
 };
 

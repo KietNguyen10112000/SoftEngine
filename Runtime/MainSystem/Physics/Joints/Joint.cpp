@@ -103,6 +103,39 @@ void Joint::RemoveJointFromBodies()
 	}
 }
 
+void Joint::ReconstraintBodyForwardToXAxisOfJointGlobalTransform(int bodyIndex)
+{
+	auto jointGlobalTransform = GetGlobalTransform();
+	auto body = bodyIndex == 0 ? GetBody0()->m_pxActor->is<PxRigidBody>() : GetBody1()->m_pxActor->is<PxRigidBody>();
+	auto resetJointConstraintOriTransform = body->getGlobalPose();
+	auto resetJointConstraintOriJointTransform = jointGlobalTransform.ToTransformMatrix();
+
+	// forward to X
+	auto& jointForward = jointGlobalTransform.ToTransformMatrix().Right();
+	auto bodyTransform = PhysXUtils::ToTransform(body->getGlobalPose());
+
+	auto& p = bodyTransform.Position();
+	auto& o = jointGlobalTransform.Position();
+	auto t = o + (p - o).Length() * jointForward.Normal();
+
+	body->setGlobalPose(
+		PhysXUtils::ToPxTransform(Transform::FromTransformMatrix(
+			Mat4::Rotation(jointGlobalTransform.Rotation()) * Mat4::Translation(t)
+		))
+	);
+
+	auto a0GlobalTransform = PhysXUtils::ToTransform(GetBody0()->m_pxActor->is<PxRigidBody>()->getGlobalPose());
+	auto a1GlobalTransform = PhysXUtils::ToTransform(GetBody1()->m_pxActor->is<PxRigidBody>()->getGlobalPose());
+
+	auto localframe0 = Transform::FromTransformMatrix(resetJointConstraintOriJointTransform * a0GlobalTransform.ToTransformMatrix().GetInverse());
+	auto localframe1 = Transform::FromTransformMatrix(resetJointConstraintOriJointTransform * a1GlobalTransform.ToTransformMatrix().GetInverse());
+
+	m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR0, PhysXUtils::ToPxTransform(localframe0));
+	m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR1, PhysXUtils::ToPxTransform(localframe1));
+
+	body->setGlobalPose(resetJointConstraintOriTransform);
+}
+
 void Joint::InitJoint(void* pxInitFunc, const Handle<RigidBody>& body0, const Transform& localFrame0, const Handle<RigidBody>& body1, const Transform& localFrame1)
 {
 	assert(body0.Get() != nullptr || body1.Get() != nullptr);
@@ -149,6 +182,16 @@ void Joint::InitJoint(void* pxInitFunc, const Handle<RigidBody>& body0, const Tr
 				self->GetComponent()->GetGameObject()->GetScene()->GenericStorage()->Remove(ID(self->m_pxJoint));
 			}
 
+			if (a0)
+			{
+				self->m_initBody0Transform = PhysXUtils::ToTransform(a0->is<PxRigidActor>()->getGlobalPose());
+			}
+
+			if (a1)
+			{
+				self->m_initBody1Transform = PhysXUtils::ToTransform(a1->is<PxRigidActor>()->getGlobalPose());
+			}
+
 			self->m_pxJoint = ((InitFunc)pxInitFunc)(*px,
 				a0->is<PxRigidActor>(),
 				l0,
@@ -169,6 +212,45 @@ void Joint::InitJoint(void* pxInitFunc, Serializer* serializer, const json& j)
 	Transform l1 = j["Localframe1"];
 
 	InitJoint(pxInitFunc, m_body0, l0, m_body1, l1);
+
+	if (j.contains("InitBody0Transform"))
+	{
+		Transform initTransform0 = j["InitBody0Transform"];
+		Transform initTransform1 = j["InitBody1Transform"];
+
+		m_initBody0Transform = initTransform0;
+		m_initBody1Transform = initTransform1;
+
+		auto a0 = m_body0.Get() ? m_body0->m_pxActor->is<PxRigidActor>() : nullptr;
+		auto a1 = m_body1.Get() ? m_body1->m_pxActor->is<PxRigidActor>() : nullptr;
+
+		PxTransform temp0;
+		if (a0)
+		{
+			temp0 = a0->getGlobalPose();
+			a0->setGlobalPose(PhysXUtils::ToPxTransform(initTransform0));
+		}
+
+		PxTransform temp1;
+		if (a1)
+		{
+			temp1 = a1->getGlobalPose(); 
+			a1->setGlobalPose(PhysXUtils::ToPxTransform(initTransform1));
+		}
+
+		m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR0, PhysXUtils::ToPxTransform(l0));
+		m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR1, PhysXUtils::ToPxTransform(l1));
+
+		if (a0)
+		{
+			a0->setGlobalPose(temp0);
+		}
+
+		if (a1)
+		{
+			a1->setGlobalPose(temp1);
+		}
+	}
 }
 
 void Joint::CloneFrom(Serializer* serializer, Serializable* another)
@@ -190,6 +272,9 @@ void Joint::SerializeToJson(Serializer* serializer, json& j) const
 
 	j["Localframe0"] = PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR0));
 	j["Localframe1"] = PhysXUtils::ToTransform(m_pxJoint->getLocalPose(PxJointActorIndex::eACTOR1));
+
+	j["InitBody0Transform"] = m_initBody0Transform;
+	j["InitBody1Transform"] = m_initBody1Transform;
 }
 
 void Joint::DeserializeFromJson(Serializer* serializer, const json& j)
@@ -286,6 +371,19 @@ void Joint::SetLocalFrame(RigidBody* body, const Transform& transform)
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		PhysicsSystem, AsyncTaskRunnerST, body, transform,
 		{
+			auto a0 = self->m_body0.Get() ? self->m_body0->m_pxActor : nullptr;
+			auto a1 = self->m_body1.Get() ? self->m_body1->m_pxActor : nullptr;
+
+			if (a0)
+			{
+				self->m_initBody0Transform = PhysXUtils::ToTransform(a0->is<PxRigidActor>()->getGlobalPose());
+			}
+
+			if (a1)
+			{
+				self->m_initBody1Transform = PhysXUtils::ToTransform(a1->is<PxRigidActor>()->getGlobalPose());
+			}
+
 			if (body == self->m_body0)
 			{
 				self->m_pxJoint->setLocalPose(PxJointActorIndex::eACTOR0, PhysXUtils::ToPxTransform(transform));

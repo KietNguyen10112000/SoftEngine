@@ -73,7 +73,7 @@ void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
 
 	RigidBody::DeserializeFromJson(serializer, j);
 
-	/*PxRigidStatic* body;
+	PxRigidStatic* body;
 	if (m_pxActor == nullptr)
 	{
 		auto physics = PhysX::Get()->GetPxPhysics();
@@ -89,9 +89,10 @@ void RigidBodyStatic::DeserializeFromJson(Serializer* serializer, const json& j)
 	for (auto& shape : m_shapes)
 	{
 		body->attachShape(*shape->m_pxShape);
+		shape->m_attachedRigidBody = this;
 	}
 
-	RigidBody::DeserializeFromJson(serializer, j);*/
+	//RigidBody::DeserializeFromJson(serializer, j);
 }
 
 Handle<ClassMetadata> RigidBodyStatic::GetMetadata(size_t sign)

@@ -39,6 +39,13 @@ RenderingSystem::RenderingSystem(Scene* scene) : MainSystem(scene), m_eventDispa
 	{
 		ss = m_bvh.NewQuerySession();
 	}
+
+	GRAPHICS_RENDER_TARGET_DESC desc;
+	desc.format = GRAPHICS_DATA_FORMAT::FORMAT_R8G8B8A8_UNORM;
+	desc.width = -1;
+	desc.height = -1;
+	desc.mipLevels = 1;
+	Graphics::Get()->CreateRenderTargets(1, &desc, &m_HUDRenderTarget);
 }
 
 RenderingSystem::~RenderingSystem()
@@ -204,8 +211,13 @@ void RenderingSystem::DisplayAllCamera()
 
 	for (auto& cam : m_displayingCamera)
 	{
-		auto rc = cam.camera->m_renderTarget->GetShaderResource();
+		auto& rc = cam.camera->m_renderTarget->GetShaderResource();
 		displayService->Display(rc, cam.viewport);
+	}
+
+	if constexpr (Config::ENABLE_DEBUG_GRAPHICS)
+	{
+		DisplayService::Get()->Display(m_HUDRenderTarget->GetShaderResource(), GetDefaultViewport());
 	}
 
 	displayService->End();
@@ -336,8 +348,8 @@ void RenderingSystem::PostIteration()
 
 void RenderingSystem::RenderWithDebugGraphics()
 {
-	if constexpr (Config::ENABLE_DEBUG_GRAPHICS) {
-
+	if constexpr (Config::ENABLE_DEBUG_GRAPHICS)
+	{
 		auto& camCBuffer = GetBuiltinConstantBuffers()->GetCameraBuffer();
 		auto graphics = Graphics::Get();
 		auto debugGraphics = graphics->GetDebugGraphics();
@@ -347,14 +359,23 @@ void RenderingSystem::RenderWithDebugGraphics()
 			return;
 		}
 
+		{
+			auto rt = m_HUDRenderTarget.get();
+			graphics->SetRenderTargets(1, &rt, nullptr);
+			graphics->ClearRenderTarget(rt, { 0,0,0,0 },0, 0);
+			EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+			graphics->UnsetRenderTargets(1, &rt, nullptr);
+		}
+
 		for (auto& cam : m_displayingCamera)
 		{
 			SetBuiltinConstantBufferForCamera(cam.camera);
 			debugGraphics->RenderToTarget(cam.camera->m_renderTarget.get(), cam.camera->m_depthBuffer.get(), camCBuffer);
 		}
 
+		debugGraphics->Clear();
 		DisplayAllCamera();
-		EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+		
 		graphics->EndFrame();
 
 	}

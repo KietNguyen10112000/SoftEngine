@@ -113,9 +113,29 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	}
 }
 
+void AnimationSystem::PrevPhysicsSimulationUpdate()
+{
+	--m_publicResultToRigidBodiesTrigger;
+	while (m_publicResultToRigidBodiesTrigger.load(std::memory_order_relaxed) != 0)
+	{
+		Thread::Yield();
+	}
+
+	for (auto& animator : m_animSkeletalArrays)
+	{
+		if (animator->m_rigidBodyProxyControlMode == AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY)
+		{
+			animator->PublicResultToRigidBodies();
+		}
+	}
+}
+
 void AnimationSystem::PostPhysicsSimulationUpdate()
 {
-	m_animSkeletalArraysLock.lock();
+	if ((--m_fetchResultFromRigidBodiesTrigger) != 0)
+	{
+		return;
+	}
 
 	for (auto& animator : m_animSkeletalArrays)
 	{
@@ -124,8 +144,6 @@ void AnimationSystem::PostPhysicsSimulationUpdate()
 			animator->FetchResultFromRigidBodies();
 		}
 	}
-
-	m_animSkeletalArraysLock.unlock();
 }
 
 void AnimationSystem::FlushAsyncTasks()
@@ -203,7 +221,8 @@ void AnimationSystem::EndModification()
 
 void AnimationSystem::PrevIteration()
 {
-	m_animSkeletalArraysLock.lock_no_check_own_thread();
+	m_publicResultToRigidBodiesTrigger.store(2, std::memory_order_relaxed);
+	m_fetchResultFromRigidBodiesTrigger.store(2, std::memory_order_relaxed);
 }
 
 void AnimationSystem::Iteration(float dt)
@@ -212,7 +231,8 @@ void AnimationSystem::Iteration(float dt)
 	GetPrevAsyncTaskRunnerST()->ProcessAllTasks(this);
 	GetPrevAsyncTaskRunner()->ProcessAllTasks(this);
 
-	m_animSkeletalArraysLock.unlock_no_check_own_thread();
+	--m_publicResultToRigidBodiesTrigger;
+	PostPhysicsSimulationUpdate();
 
 	TaskUtils::ForEachStdVector(m_animMeshRenderingBufferCount, 
 		[this, dt](AnimMeshRenderingBufferCounter& data, ID) 

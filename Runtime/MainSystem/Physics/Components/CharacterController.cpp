@@ -1,6 +1,7 @@
 #include "CharacterController.h"
 
 #include "PhysX/PhysX.h"
+#include "PhysX/Utils.h"
 
 #include "MainSystem/Physics/PhysicsSystem.h"
 #include "MainSystem/MainSystemTaskPacking.h"
@@ -9,6 +10,7 @@
 #include "Scene/GameObject.h"
 
 #include "../Materials/PhysicsMaterial.h"
+#include "../Shapes/PhysicsShape.h"
 #include "../FILTER_FLAG.h"
 
 #include "Common/Actions/ActionInterpolation.h"
@@ -50,79 +52,21 @@ class CharacterControllerHitCallback : public PxUserControllerHitReport
 public:
 	void onShapeHit(const PxControllerShapeHit& hit) override
 	{
-		//std::cout << "onShapeHit all " << "\n";
-		return;
-		/*auto dynamicRigidActor = hit.actor->is<PxRigidDynamic>();
-		auto staticRigidActor = hit.actor->is<PxRigidStatic>();
+		auto cct = (CharacterController*)hit.controller->getUserData();
+		auto& collisionPlanes = *cct->m_collisionPlanesBuffer.Write();
+		auto& planes = collisionPlanes.planes;
 
-		if (!staticRigidActor && !dynamicRigidActor)
+		auto& plane = planes.emplace_back();
+		plane.position = PhysXUtils::ToVec3(hit.worldPos);
+		plane.normal = PhysXUtils::ToVec3(hit.worldNormal);
+		plane.shape = (PhysicsShape*)hit.shape->userData;
+		plane.object = ((PhysicsComponent*)hit.actor->userData)->GetGameObject();
+		plane.isGround = plane.TestGround(cct->m_gravity);
+
+		if (plane.isGround)
 		{
-			return;
-		}*/
-
-		/*if (dynamicRigidActor && !dynamicRigidActor->isSleeping())
-		{
-			return;
-		}*/
-
-		//auto controller = (CharacterController*)hit.controller->getActor()->userData;
-		//auto system = controller->GetGameObject()->GetScene()->GetPhysicsSystem();
-
-		//std::cout << "onShapeHit all " << system->GetScene()->GetIterationCount() << "\n";
-
-		//auto& activeComponentsHasContact = system->m_activeComponentsHasContact;
-
-		//PxActor* actors[2] = { hit.controller->getActor(), hit.actor };
-
-		//for (auto a : actors)
-		//{
-		//	auto comp = (PhysicsComponent*)a->userData;
-		//	if (comp && comp->HasPhysicsFlag(PHYSICS_FLAG_ENABLE_COLLISION)
-		//		&& comp->m_collisionResult->lastActiveIterationCount != system->GetScene()->GetIterationCount())
-		//	{
-		//		comp->m_collisionResult->lastActiveIterationCount = system->GetScene()->GetIterationCount();
-		//		activeComponentsHasContact.push_back(comp);
-		//	}
-		//}
-
-		////if (hit.actor->is<PxRigidDynamic>())
-		////{
-		////	//int x = 3;
-		////	//std::cout << "onShapeHit dynamic " << system->GetScene()->GetIterationCount() << "\n";
-		////}
-
-		//auto A = (PhysicsComponent*)actors[0]->userData;
-		//auto B = (PhysicsComponent*)actors[1]->userData;
-
-		//auto AContactPairs = (A && A->m_collisionResult) ? &A->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
-		//auto BContactPairs = (B && B->m_collisionResult) ? &B->m_collisionResult->collision.ForceWrite()->contactPairs : nullptr;
-
-		//if (!AContactPairs && !BContactPairs)
-		//{
-		//	return;
-		//}
-
-		//SharedPtr<CollisionContactPair> contactPair = std::make_shared<CollisionContactPair>();
-
-		//contactPair->A = A->GetGameObject();
-		//contactPair->B = B->GetGameObject();
-
-		//if (AContactPairs)
-		//{
-		//	AContactPairs->push_back(contactPair);
-		//}
-
-		//if (BContactPairs)
-		//{
-		//	BContactPairs->push_back(contactPair);
-		//}
-
-		//CollisionContactPoint contactPoint;
-		//contactPoint.position = reinterpret_cast<const Vec3&>(hit.worldPos);
-		//contactPoint.normal = reinterpret_cast<const Vec3&>(hit.worldNormal);
-		//contactPoint.impulse = reinterpret_cast<const Vec3&>(hit.dir * hit.length);
-
-		//contactPair->contacts.push_back(contactPoint);
+			collisionPlanes.groundCount++;
+		}
 	}
 
 	void onControllerHit(const PxControllersHit& hit) override
@@ -158,86 +102,129 @@ CharacterController::~CharacterController()
 	PX_RELEASE(m_pxCharacterController);
 }
 
-void CharacterController::RunAnimatorMotionMatchingCallback(void(*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID _param)
+void CharacterController::ReduceVelocityByCollisionPlanes(float dt)
 {
-	MAIN_SYSTEM_TASK_COMMON_3(
-		PhysicsSystem, AsyncTaskRunnerST, callback, animator, _param,
+	// block all velocity vectors that direct to collision planes
+	auto& collisionPlanes = CCTGetCollisionPlanes();
+
+	if (collisionPlanes.groundCount == 0 || m_velocity.Length2() < 0.00001f)
+	{
+		return;
+	}
+	Vec3 sumV = Vec3::ZERO;
+
+	auto invDVelcity = -m_velocity.Normal();
+	auto VLength = m_velocity.Length();
+
+	//auto ourStaticFriction = m_shapes[0]->GetFirstMaterial()->GetStaticFriction();
+	auto ourDynamicFriction = m_shapes[0]->GetFirstMaterial()->GetDynamicFriction();
+
+	if (m_overrideVelocityDynamicFriction != 0.0f)
+	{
+		ourDynamicFriction = m_overrideVelocityDynamicFriction;
+	}
+
+	for (auto& plane : collisionPlanes.planes)
+	{
+		if (!plane.TestGround(m_velocity))
 		{
-			self->m_animationMotionMatchingCallback = callback;
-			self->m_animationMotionMatchingCallbackAnimator = animator;
-			self->m_animationMotionMatchingCallbackParam = _param;
+			return;
 		}
-	);
+
+		auto cosA = plane.normal.Dot(invDVelcity);
+		if (std::abs(cosA - 1.0f) < 0.00001f)
+		{
+			continue;
+		}
+
+		auto Vn = -VLength * cosA * plane.normal;
+		auto Vt = m_velocity - Vn;
+
+		auto material = plane.shape->GetFirstMaterial().get();
+		//auto staticFriction = material->GetStaticFriction();
+		auto dynamicFriction = std::clamp((material->GetDynamicFriction() + ourDynamicFriction) / 2.0f, 0.0f, 1.0f);
+
+		Vt = (1.0f - dynamicFriction) * Vt;
+
+		sumV += Vt;
+	}
+
+	sumV /= float(collisionPlanes.groundCount);
+	m_velocity = sumV;
 }
 
-//void CharacterController::TransformContributor(GameObject* object, Transform& local, Mat4& global, void* self)
-//{
-//	auto controller = (CharacterController*)self;
-//	auto gameObject = controller->GetGameObject();
-//	auto scene = gameObject->GetScene();
-//	auto pxController = controller->m_pxCharacterController;
-//
-//	if (gameObject->m_lastWriteLocalTransformIterationCount == scene->GetIterationCount())
-//	{
-//		return;
-//	}
-//
-//	if (object->ReadGlobalTransformMat() != controller->m_lastGlobalTransform)
-//	{
-//		auto localTrans = global;
-//		if (!object->Parent().IsNull())
-//		{
-//			localTrans = localTrans * object->Parent()->WriteGlobalTransformMat().GetInverse();
-//		}
-//		localTrans.Decompose(local.Scale(), local.Rotation(), local.Translation());
-//		return;
-//	}
-//
-//	auto& pxPosition = pxController->getPosition();
-//
-//	global.SetIdentity();
-//	global.SetPosition(pxPosition.x, pxPosition.y, pxPosition.z);
-//
-//	controller->m_lastGlobalTransform = global;
-//
-//	/*if (gameObject->Parent().IsNull())
-//	{
-//		local = {};
-//		local.Position() = global.Position();
-//	}*/
-//
-//	gameObject->m_isNeedRecalculateLocalTransform = true;
-//}
+void CharacterController::ApplyGravity(float dt)
+{
+	auto& collisionPlanes = CCTGetCollisionPlanes();
+	if (collisionPlanes.groundCount == 0)
+	{
+		m_velocity += m_gravity * dt;
+		return;
+	}
 
-//bool CharacterController::IsHasNextMove()
-//{
-//	auto& disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-//	return m_lastMoveIterationCount >= GetGameObject()->GetScene()->GetIterationCount() - 1 
-//		|| disp != Vec3::ZERO 
-//		|| m_gravity != Vec3::ZERO 
-//		|| m_velocity != Vec3::ZERO;
-//}
+	Vec3 sumG = Vec3::ZERO;
+
+	auto eachG = m_gravity / float(collisionPlanes.groundCount);
+	auto invDGravity = -m_gravity.Normal();
+	auto GLength = eachG.Length();
+
+	auto ourStaticFriction = m_shapes[0]->GetFirstMaterial()->GetStaticFriction();
+	auto ourDynamicFriction = m_shapes[0]->GetFirstMaterial()->GetDynamicFriction();
+
+	if (m_overrideGravityStaticFriction != 0.0f)
+	{
+		ourStaticFriction = m_overrideGravityStaticFriction;
+	}
+
+	if (m_overrideGravityDynamicFriction != 0.0f)
+	{
+		ourDynamicFriction = m_overrideGravityDynamicFriction;
+	}
+
+	for (auto& plane : collisionPlanes.planes)
+	{
+		if (!plane.isGround)
+		{
+			return;
+		}
+
+		auto cosA = plane.normal.Dot(invDGravity);
+		if (std::abs(cosA - 1.0f) < 0.00001f)
+		{
+			continue;
+		}
+
+		auto Gn = -GLength * cosA * plane.normal;
+		auto Gt = eachG - Gn;
+
+		auto material = plane.shape->GetFirstMaterial().get();
+		auto staticFriction = std::clamp((material->GetStaticFriction() + ourStaticFriction) / 2.0f, 0.0f, 1.0f);
+		auto dynamicFriction = std::clamp((material->GetDynamicFriction() + ourDynamicFriction) / 2.0f, 0.0f, 1.0f);
+
+		auto Ft = Gt.Length2();
+		auto Fstatic = Gn.Length2() * staticFriction;
+
+		// static force wins dynamic force, no contribution here
+		if (Fstatic >= Ft)
+		{
+			continue;
+		}
+
+		Gt = dynamicFriction * Gt;
+		sumG += Gt;
+	}
+
+	m_velocity += sumG * dt;
+}
 
 void CharacterController::Wake()
 {
-	/*if (!m_pxCharacterController)
-	{
-		return;
-	}
-
-	auto actor = m_pxCharacterController->getActor();
-	if (!actor || !(((PxRigidDynamic*)actor)->isSleeping()))
-	{
-		return;
-	}
-	OnPhysicsTransformChanged();*/
+	
 }
 
 void CharacterController::OnPhysicsTransformChanged()
 {
 	auto obj = GetGameObject();
-	/*obj->ContributeTransform(this, CharacterController::TransformContributor);
-	obj->GetScene()->OnObjectTransformChanged(obj);*/
 
 	auto pxController = m_pxCharacterController;
 	auto& pxPosition = pxController->getPosition();
@@ -250,248 +237,244 @@ void CharacterController::OnPhysicsTransformChanged()
 
 void CharacterController::OnUpdate(float dt)
 {
-	auto mass = m_mass;
+	//auto mass = m_mass;
 
-	if (HasCollisionAnyChanged())
-	{
-		m_isOnGround = false;
-		m_collisionPlanes.clear();
+	//if (HasCollisionAnyChanged())
+	//{
+	//	m_isOnGround = false;
+	//	m_collisionPlanes.clear();
 
-		Vec3 sumF = Vec3::ZERO;
+	//	Vec3 sumF = Vec3::ZERO;
 
-		auto collisionCount = m_collisionResult->GetContactPointsCount();
+	//	auto collisionCount = m_collisionResult->GetContactPointsCount();
 
-		////if (collisionCount == 0)
-		//{
-		//	m_velocity = Vec3::ZERO;
-		//}
+	//	////if (collisionCount == 0)
+	//	//{
+	//	//	m_velocity = Vec3::ZERO;
+	//	//}
 
-		/*if (collisionCount == 1)
-		{
-			int x = 3;
-		}*/
+	//	/*if (collisionCount == 1)
+	//	{
+	//		int x = 3;
+	//	}*/
 
-		auto gForce = m_gravity * mass;
-		auto eachForce = gForce / (float)collisionCount;
+	//	auto gForce = m_gravity * mass;
+	//	auto eachForce = gForce / (float)collisionCount;
 
-		m_collisionResult->ForEachContactPairs(
-			[&](const SharedPtr<CollisionContact>& contact, const SharedPtr<CollisionContactPair>& pair)
-			{
-				auto& contactPoints = pair->contactPoints;
-				auto F = eachForce / contactPoints.size();
-				auto nF = F.Normal();
+	//	m_collisionResult->ForEachContactPairs(
+	//		[&](const SharedPtr<CollisionContact>& contact, const SharedPtr<CollisionContactPair>& pair)
+	//		{
+	//			auto& contactPoints = pair->contactPoints;
+	//			auto F = eachForce / contactPoints.size();
+	//			auto nF = F.Normal();
 
-				bool isA = contact->A == GetGameObject() ? true : false;
+	//			bool isA = contact->A == GetGameObject() ? true : false;
 
-				for (auto& point : contactPoints)
-				{
-					auto normal = point.normal;
-					if (isA)
-					{
-						normal = -normal;
-					}
+	//			for (auto& point : contactPoints)
+	//			{
+	//				auto normal = point.normal;
+	//				if (isA)
+	//				{
+	//					normal = -normal;
+	//				}
 
-					// normal is AB, A is this controller
+	//				// normal is AB, A is this controller
 
-					CollisionPlane plane;
-					plane.normal = -normal;
-					plane.staticFriction = point.staticFriction;
-					plane.dynamicFriction = point.dynamicFriction;
-					plane.isApplyedDynamicFriction = false;
-					if (normal.Dot(m_gravity) > 0.01f)
-					{
-						// ground
-						plane.isGround = true;
+	//				CollisionPlane plane;
+	//				plane.normal = -normal;
+	//				plane.staticFriction = point.staticFriction;
+	//				plane.dynamicFriction = point.dynamicFriction;
+	//				plane.isApplyedDynamicFriction = false;
+	//				if (normal.Dot(m_gravity) > 0.01f)
+	//				{
+	//					// ground
+	//					plane.isGround = true;
 
-						m_isOnGround = true;
-					}
-					else
-					{
-						// not ground
-						plane.isGround = false;
+	//					m_isOnGround = true;
+	//				}
+	//				else
+	//				{
+	//					// not ground
+	//					plane.isGround = false;
 
-						//sumF += F;
-					}
+	//					//sumF += F;
+	//				}
 
-					if (normal.Dot(m_velocity) > 0.01f)
-					{
-						m_velocity = Vec3::ZERO;
-					}
+	//				if (normal.Dot(m_velocity) > 0.01f)
+	//				{
+	//					m_velocity = Vec3::ZERO;
+	//				}
 
-					if (plane.isGround) 
-					{
-						auto cosA = normal.Dot(nF);
-						auto Fn = cosA * F.Length() * normal;
-						auto Ft = F - Fn;
+	//				if (plane.isGround) 
+	//				{
+	//					auto cosA = normal.Dot(nF);
+	//					auto Fn = cosA * F.Length() * normal;
+	//					auto Ft = F - Fn;
 
-						auto FnLen = Fn.Length();
+	//					auto FnLen = Fn.Length();
 
-						auto staticFrictionForce = FnLen * point.staticFriction;
-						auto dynamicFrictionForce = FnLen * point.dynamicFriction;
+	//					auto staticFrictionForce = FnLen * point.staticFriction;
+	//					auto dynamicFrictionForce = FnLen * point.dynamicFriction;
 
-						/*if (std::abs(normal.y) != 1)
-						{
-							int x = 3;
-						}*/
+	//					/*if (std::abs(normal.y) != 1)
+	//					{
+	//						int x = 3;
+	//					}*/
 
-						// win static friction and dynamic friction, so this force make cct move
-						auto FtLen = Ft.Length();
-						if (staticFrictionForce < FnLen && FtLen > dynamicFrictionForce)
-						{
-							sumF += (Ft - (FtLen - dynamicFrictionForce) * Ft.Normal());
+	//					// win static friction and dynamic friction, so this force make cct move
+	//					auto FtLen = Ft.Length();
+	//					if (staticFrictionForce < FnLen && FtLen > dynamicFrictionForce)
+	//					{
+	//						sumF += (Ft - (FtLen - dynamicFrictionForce) * Ft.Normal());
 
-							plane.isApplyedDynamicFriction = true;
-						}
+	//						plane.isApplyedDynamicFriction = true;
+	//					}
 
-						/*if (staticFrictionForce < FnLen)
-						{
-							sumF += (Ft);
-						}*/
-					}
+	//					/*if (staticFrictionForce < FnLen)
+	//					{
+	//						sumF += (Ft);
+	//					}*/
+	//				}
 
-					//if (plane.isGround)
-					m_collisionPlanes.push_back(plane);
-				}
-			}
-		);
+	//				//if (plane.isGround)
+	//				m_collisionPlanes.push_back(plane);
+	//			}
+	//		}
+	//	);
 
-		m_sumF = sumF;
-	}
+	//	m_sumF = sumF;
+	//}
 
-	//if (m_sumF == Vec3::ZERO && !HasCollisionContactPairs())
-	if ((m_sumF == Vec3::ZERO && !HasCollisionContactPairs()) || !m_isOnGround)
-	{
-		m_sumF = m_gravity * mass;
-		//m_velocity.y = -10.0f;
-	}
+	////if (m_sumF == Vec3::ZERO && !HasCollisionContactPairs())
+	//if ((m_sumF == Vec3::ZERO && !HasCollisionContactPairs()) || !m_isOnGround)
+	//{
+	//	m_sumF = m_gravity * mass;
+	//	//m_velocity.y = -10.0f;
+	//}
 
-	m_velocity += (m_sumF / mass)  * dt;
+	//m_velocity += (m_sumF / mass)  * dt;
 
-	auto& disp = m_lastDisp;
-	disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-	m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()] = Vec3::ZERO;
+	//auto& disp = m_lastDisp;
+	//disp = m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	//m_sumDisp[GetGameObject()->GetScene()->GetPrevDeferBufferIdx()] = Vec3::ZERO;
 
-	//std::cout << json(disp) << "\n";
+	////std::cout << json(disp) << "\n";
 
-	if (m_collisionPlanes.size() != 0)
-	//if (HasCollisionContactPairs())
-	{
-		// slide over first ground
-		for (auto& plane : m_collisionPlanes)
-		{
-			if (!plane.isGround)
-			{
-				continue;
-			}
+	//if (m_collisionPlanes.size() != 0)
+	////if (HasCollisionContactPairs())
+	//{
+	//	// slide over first ground
+	//	for (auto& plane : m_collisionPlanes)
+	//	{
+	//		if (!plane.isGround)
+	//		{
+	//			continue;
+	//		}
 
-			auto& firstPlane = plane;
-			//auto& firstContact = m_collisionResult->collision.Read()->contacts[0];
-			auto& firstPoint = firstPlane.position;//firstContact->contactPairs[0]->contactPoints[0];
+	//		auto& firstPlane = plane;
+	//		//auto& firstContact = m_collisionResult->collision.Read()->contacts[0];
+	//		auto& firstPoint = firstPlane.position;//firstContact->contactPairs[0]->contactPoints[0];
 
-			auto& normal = firstPlane.normal;//firstPoint.normal;
-			/*bool isA = firstContact->A == GetGameObject() ? true : false;
-			if (!isA)
-			{
-				normal = -normal;
-			}*/
+	//		auto& normal = firstPlane.normal;//firstPoint.normal;
+	//		/*bool isA = firstContact->A == GetGameObject() ? true : false;
+	//		if (!isA)
+	//		{
+	//			normal = -normal;
+	//		}*/
 
-			float dot = normal.Dot(m_gravity);
+	//		float dot = normal.Dot(m_gravity);
 
-			if (dot < 0)
-			{
-				auto dispLen = disp.Length();
+	//		if (dot < 0)
+	//		{
+	//			auto dispLen = disp.Length();
 
-				if (dispLen != 0)
-				{
-					auto dispDir = disp.Normal();
-					//auto rotation = Quaternion::RotationFromTo(Vec3::UP, normal);
-					//dispDir = (Vec4(dispDir, 0.0f) * Mat4::Rotation(rotation)).xyz();
+	//			if (dispLen != 0)
+	//			{
+	//				auto dispDir = disp.Normal();
+	//				//auto rotation = Quaternion::RotationFromTo(Vec3::UP, normal);
+	//				//dispDir = (Vec4(dispDir, 0.0f) * Mat4::Rotation(rotation)).xyz();
 
-					//disp = dispDir * dispLen;
+	//				//disp = dispDir * dispLen;
 
-					auto plane = Plane(firstPoint, normal);
-					if (plane.Project(firstPoint + dispDir, m_gravity.Normal(), dispDir))
-					{
-						dispDir -= firstPoint;
-						dispDir.Normalize();
-						disp = dispDir * dispLen;
-					}
+	//				auto plane = Plane(firstPoint, normal);
+	//				if (plane.Project(firstPoint + dispDir, m_gravity.Normal(), dispDir))
+	//				{
+	//					dispDir -= firstPoint;
+	//					dispDir.Normalize();
+	//					disp = dispDir * dispLen;
+	//				}
 
-				}
-			}
+	//			}
+	//		}
 
-			break;
-		}
+	//		break;
+	//	}
 
-		uint32_t numNotAppliedDynamicFriction = 0;
-		if (m_velocity != Vec3::ZERO)
-		{
-			auto vN = m_velocity.Normal();
-			for (auto& plane : m_collisionPlanes)
-			{
-				if (!plane.isGround || plane.isApplyedDynamicFriction)
-				{
-					continue;
-				}
+	//	uint32_t numNotAppliedDynamicFriction = 0;
+	//	if (m_velocity != Vec3::ZERO)
+	//	{
+	//		auto vN = m_velocity.Normal();
+	//		for (auto& plane : m_collisionPlanes)
+	//		{
+	//			if (!plane.isGround || plane.isApplyedDynamicFriction)
+	//			{
+	//				continue;
+	//			}
 
-				if (vN.Dot(plane.normal) < -0.01f)
-				{
-					plane.isGroundForMotion = true;
+	//			if (vN.Dot(plane.normal) < -0.01f)
+	//			{
+	//				plane.isGroundForMotion = true;
 
-					numNotAppliedDynamicFriction++;
-				}
-			}
-		}
-		
-		if (numNotAppliedDynamicFriction != 0 && m_velocity != Vec3::ZERO)
-		{
-			Vec3 sumV = Vec3::ZERO;
-			Vec3 projV;
-			auto vEach = m_velocity / (float)numNotAppliedDynamicFriction;
-			auto nVEach = vEach.Normal();
-			for (auto& plane : m_collisionPlanes)
-			{
-				if (!plane.isGround || plane.isApplyedDynamicFriction || !plane.isGroundForMotion)
-				{
-					continue;
-				}
+	//				numNotAppliedDynamicFriction++;
+	//			}
+	//		}
+	//	}
+	//	
+	//	if (numNotAppliedDynamicFriction != 0 && m_velocity != Vec3::ZERO)
+	//	{
+	//		Vec3 sumV = Vec3::ZERO;
+	//		Vec3 projV;
+	//		auto vEach = m_velocity / (float)numNotAppliedDynamicFriction;
+	//		auto nVEach = vEach.Normal();
+	//		for (auto& plane : m_collisionPlanes)
+	//		{
+	//			if (!plane.isGround || plane.isApplyedDynamicFriction || !plane.isGroundForMotion)
+	//			{
+	//				continue;
+	//			}
 
-				auto cosA = plane.normal.Dot(nVEach);
-				auto Vn = cosA * vEach.Length() * plane.normal;
-				auto Vt = vEach - Vn;
+	//			auto cosA = plane.normal.Dot(nVEach);
+	//			auto Vn = cosA * vEach.Length() * plane.normal;
+	//			auto Vt = vEach - Vn;
 
-				Vt = Vt * (1 - plane.dynamicFriction);
+	//			Vt = Vt * (1 - plane.dynamicFriction);
 
-				sumV += (Vt + Vn);
-			}
+	//			sumV += (Vt + Vn);
+	//		}
 
-			m_velocity = sumV;
-		}
-	}
+	//		m_velocity = sumV;
+	//	}
+	//}
 }
 
 void CharacterController::OnPrevUpdate(float dt)
 {
-	auto& disp = m_lastDisp;
+	auto scene = GetGameObject()->GetScene();
+	auto& disp = m_sumDisp[scene->GetPrevDeferBufferIdx()];
 
-	OnUpdate(dt);
+	ReduceVelocityByCollisionPlanes(dt);
+	ApplyGravity(dt);
 	disp += m_velocity * dt;
+
+	scene->BeginWrite<false>(m_collisionPlanesBuffer);
+	auto p = m_collisionPlanesBuffer.Write();
+	p->planes.clear();
+	p->groundCount = 0;
 
 	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
 		PxControllerFilters(nullptr, m_defaultCCTFilterCallback, nullptr));
 
-	if (m_animationMotionMatchingCallback)
-	{
-		m_animationMotionMatchingCallback(m_animationMotionMatchingCallbackAnimator, m_animationMotionMatchingCallbackParam);
-		m_animationMotionMatchingCallback = nullptr;
-	}
-
-	/*if (m_velocity.Length() != 0)
-	{
-		std::cout << m_velocity.y << "\n";
-	}*/
-
-	//std::cout << disp.y << "\n";
+	scene->EndWrite(m_collisionPlanesBuffer);
 
 	disp = Vec3::ZERO;
 }
@@ -512,9 +495,6 @@ void CharacterController::OnTransformChanged()
 		PxExtendedVec3 position = { pos.x, pos.y, pos.z };
 		m_pxCharacterController->setPosition(position);
 		m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>(rotationMat.Up()));
-
-		//m_lastGlobalTransform = globalTransform;
-
 		m_lastRotation = m_rotation;
 	}
 }
@@ -536,15 +516,12 @@ void CharacterController::Move(const Vec3& disp)
 	struct Param
 	{
 		CharacterController* controller;
-		//Vec3 disp;
-		//float minDist;
 		float dt;
 	};
 
 	auto task = taskRunner->CreateTask(
 		[](PhysicsSystem* system, void* p)
 		{
-			//TASK_SYSTEM_UNPACK_PARAM_REF_4(Param, p, controller, disp, minDist, dt);
 			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, dt);
 
 			if (controller->m_gravity != Vec3::ZERO || controller->m_velocity != Vec3::ZERO)
@@ -556,20 +533,12 @@ void CharacterController::Move(const Vec3& disp)
 			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
 				PxControllerFilters(nullptr, controller->m_defaultCCTFilterCallback, nullptr));
 
-			if (controller->m_animationMotionMatchingCallback)
-			{
-				controller->m_animationMotionMatchingCallback(controller->m_animationMotionMatchingCallbackAnimator, controller->m_animationMotionMatchingCallbackParam);
-				controller->m_animationMotionMatchingCallback = nullptr;
-			}
-
 			disp = Vec3::ZERO;
 		}
 	);
 
 	auto param = taskRunner->CreateParam<Param>(&task);
 	param->controller = this;
-	//param->disp = disp;
-	//param->minDist = minDist;
 	param->dt = GetGameObject()->GetScene()->Dt();
 
 	taskRunner->RunAsync(this, &task);
@@ -653,6 +622,14 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 	);
 
 	m_lastRotation = rotation;
+}
+
+const CharacterController::CollisionPlanes& CharacterController::CCTGetCollisionPlanes()
+{
+	// to use this function, ctt must be in a gravity field
+	assert(m_gravity != Vec3::ZERO);
+	
+	return *m_collisionPlanesBuffer.Read();
 }
 
 NAMESPACE_END

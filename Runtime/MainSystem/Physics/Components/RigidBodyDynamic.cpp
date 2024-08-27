@@ -272,6 +272,7 @@ void RigidBodyDynamic::SerializeToJson(Serializer* serializer, json& j) const
 	j["AngularVelocity"]			= PhysXUtils::ToVec3(body->getAngularVelocity());
 	j["MassSpaceInertiaTensor"]		= PhysXUtils::ToVec3(body->getMassSpaceInertiaTensor());
 	j["Mass"]						= body->getMass();
+	j["CMassLocal"]					= PhysXUtils::ToTransform(body->getCMassLocalPose());
 	j["Density"]					= m_density;
 	//j["ContactReportThreshold"]		= body->getContactReportThreshold();
 	//j["ContactSlopCoefficient"]		= body->getContactSlopCoefficient();
@@ -284,28 +285,35 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 	RigidBody::DeserializeFromJson(serializer, j);
 
 	PxRigidDynamic* body;
-	/*if (m_pxActor == nullptr)
+	if (m_pxActor == nullptr)
 	{
 		auto physics = PhysX::Get()->GetPxPhysics();
 		body = physics->createRigidDynamic(PxTransform(PxIdentity));
 		m_pxActor = body;
 		m_pxActor->userData = this;
 	}
-	else*/
+	else
 	{
 		body = m_pxActor->is<PxRigidDynamic>();
 	}
 
-	/*for (auto& shape : m_shapes)
+	for (auto& shape : m_shapes)
 	{
 		body->attachShape(*shape->m_pxShape);
-	}*/
+		shape->m_attachedRigidBody = this;
+	}
 
 	{
 		body->setLinearVelocity(PhysXUtils::ToPxVec3(j["LinearVelocity"]));
 		body->setAngularVelocity(PhysXUtils::ToPxVec3(j["AngularVelocity"]));
 		body->setMassSpaceInertiaTensor(PhysXUtils::ToPxVec3(j["MassSpaceInertiaTensor"]));
 		body->setMass(j["Mass"]);
+
+
+		if (j.contains("CMassLocal"))
+		{
+			body->setCMassLocalPose(PhysXUtils::ToPxTransform(j["CMassLocal"]));
+		}
 
 		m_isKinematic = j["IsKinematic"];
 		if (m_isKinematic)
@@ -316,6 +324,7 @@ void RigidBodyDynamic::DeserializeFromJson(Serializer* serializer, const json& j
 		if (j.contains("Density"))
 		{
 			m_density = j["Density"];
+			//PxRigidBodyExt::updateMassAndInertia(*body, m_density);
 		}
 	}
 

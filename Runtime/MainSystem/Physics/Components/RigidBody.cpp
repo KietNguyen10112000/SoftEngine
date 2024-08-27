@@ -264,8 +264,8 @@ void RigidBody::DeserializeFromJson(Serializer* serializer, const json& j)
 		{
 			SharedPtr<PhysicsShape> shape;
 			serializer->Deserialize(arr[i], shape);
-			//m_shapes.push_back(shape);
-			AddShapeImpl(shape);
+			m_shapes.push_back(shape);
+			//AddShapeImpl(shape);
 		}
 	}
 
