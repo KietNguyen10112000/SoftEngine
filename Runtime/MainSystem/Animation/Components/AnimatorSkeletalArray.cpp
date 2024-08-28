@@ -164,7 +164,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 	}
 	for (auto& layer : m_animLayers)
 	{
-		if (layer && layer->IsEnable())
+		if (layer && layer->m_isEnabled)
 		{
 			layer->Run(dt);
 		}

@@ -23,8 +23,19 @@ void AnimBlendLayer::Run(float dt)
 
 	m_t = std::clamp(m_t + dt, m_rangeMin, m_rangeMax);
 
+	auto prevSBlend = m_blendFactor;
 	auto& sBlend = m_blendFactor;
-	sBlend = m_controlFunction->Test(m_t);
+	sBlend = std::clamp(m_controlFunction->Test(m_t), 0.0f, 1.0f);
+	if (prevSBlend == m_blendFactor)
+	{
+		return;
+	}
+
+	if (m_t == m_rangeMax)
+	{
+		SetEnabledImpl(false);
+		m_input[1 - (int)std::round(m_blendFactor)]->SetEnabledImpl(false);
+	}
 
 	auto num = m_globalTransforms.size();
 
@@ -58,7 +69,7 @@ void AnimBlendLayer::Run(float dt)
 
 AnimLayer* AnimBlendLayer::GetOutput()
 {
-	if (!IsEnable() || m_blendFactor == 0.0f || m_blendFactor == 1.0f)
+	if (!IsEnabledImpl() || m_blendFactor == 0.0f || m_blendFactor == 1.0f)
 	{
 		return GetMainLayer();
 	}
@@ -72,12 +83,16 @@ void AnimBlendLayer::SetInput(AnimLayer* l1, AnimLayer* l2)
 	m_input[1] = l2;
 }
 
-void AnimBlendLayer::SetControlFunction(const SharedPtr<Function1D>& func1D, float rangeMin, float rangeMax)
+void AnimBlendLayer::StartBlending(const SharedPtr<Function1D>& func1D, float rangeMin, float rangeMax)
 {
 	MAIN_SYSTEM_TASK_IMPL_COMMON_3(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, func1D, rangeMin, rangeMax,
 		{
-			self->m_controlFunction = func1D;
+			if (func1D)
+			{
+				self->m_controlFunction = func1D;
+			}
+
 			if (self->m_controlFunction == nullptr)
 			{
 				// f(x) = x;
@@ -88,6 +103,21 @@ void AnimBlendLayer::SetControlFunction(const SharedPtr<Function1D>& func1D, flo
 			self->m_rangeMax = rangeMax;
 
 			self->m_t = 0;
+
+			self->m_input[0]->SetEnabledImpl(true);
+			self->m_input[1]->SetEnabledImpl(true);
+		}
+	);
+}
+
+void AnimBlendLayer::Restart()
+{
+	MAIN_SYSTEM_TASK_IMPL_COMMON_0(GetComponent(),
+		AnimationSystem, AsyncTaskRunner,
+		{
+			self->m_t = 0;
+			self->m_input[0]->SetEnabledImpl(true);
+			self->m_input[1]->SetEnabledImpl(true);
 		}
 	);
 }

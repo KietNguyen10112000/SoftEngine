@@ -44,6 +44,14 @@ public:
 
 #define ANIMATOR_EDITOR_NODE_CPP_EXE_ID String::Format("constexpr static ID ID = {}", excutionOrder)
 
+	class TPoseLayer : public AnimLayer
+	{
+	public:
+		virtual void SetTransform(const Transform& transform) = 0;
+		virtual Transform GetTransform() const = 0;
+
+	};
+
 	// prefix "commited" mean the last successful build result 
 	// eg: inputs -> commitedInputs; <inputs> is what user see on screen graph, <commitedInputs> is what's actually running inside Animator
 	struct Node
@@ -348,7 +356,7 @@ public:
 	static void InitializeSerializableList();
 
 public:
-	static Handle<AnimLayer> MakeTPoseLayer(AnimatorSkeletalArray* animator);
+	static Handle<TPoseLayer> MakeTPoseLayer(AnimatorSkeletalArray* animator);
 
 };
 

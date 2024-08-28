@@ -120,6 +120,7 @@ void EditorContext::RenderMenuBar()
 				else
 				{
 					String path("");
+					FileSystem::Get()->SaveCache();
 					EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
 				}
 			}
@@ -598,6 +599,7 @@ void EditorContext::DoSave(const String& path)
 		currentTab->m_saveDirectory = FileUtils::PopPath(path);
 
 		String path("");
+		FileSystem::Get()->SaveCache();
 		EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
 	}
 }

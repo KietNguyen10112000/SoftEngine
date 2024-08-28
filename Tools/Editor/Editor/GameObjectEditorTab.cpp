@@ -8,10 +8,13 @@
 
 #include "SystemDialog.h"
 #include "DataInspector.h"
+#include "AnimatorInspector.h"
 
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 #include "MainSystem/Physics/Joints/FixedJoint.h"
 #include "MainSystem/Physics/Joints/D6Joint.h"
+
+#include "MainSystem/Animation/Components/AnimatorSkeletalArray.h"
 
 void GameObjectEditorTab::OnRenderGUI()
 {
@@ -190,6 +193,36 @@ void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 		joint->GetAnotherBody(body)->SetFamilyNoCollideForAllShapes(false);
 	}*/
 
+	if (obj->HasComponent<AnimatorSkeletalArray>())
+	{
+		if (ImGui::MenuItem("Change Animator Object File"))
+		{
+			SystemDialog::FileChooserDialog otp;
+			otp.forceInsideResourcesPath = false;
+			otp.extensionGroups = {
+				{
+					"JSON files",
+					{ "json" }
+				}
+			};
+			bool success = SystemDialog::OpenFileChooser(otp);
+
+			if (success)
+			{
+				auto newObj = LoadGameObjectFromFile(otp.outputFilePath);
+				
+				auto oldComp = obj->GetComponentRaw<AnimatorSkeletalArray>();
+				auto newComp = newObj->GetComponentRaw<AnimatorSkeletalArray>();
+
+				AnimatorInspector::CopyRigidBoiesData(newComp, oldComp);
+
+				obj->Parent()->AddChild(newObj, obj->ParentIdx());
+				obj->RemoveFromParent(true);
+				OnObjectDelete(obj);
+			}
+		}
+	}
+
 	if (ImGui::MenuItem("Test"))
 	{
 		m_rootObject->PostTraversal(
@@ -213,6 +246,12 @@ void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 			}
 		);
 	}
+}
+
+bool GameObjectEditorTab::CheckCanBeDeleted(GameObject* obj)
+{
+	std::cerr << "[ERROR]: Can not delete root object!\n";
+	return obj != m_rootObject;
 }
 
 bool GameObjectEditorTab::ValidateSetting()

@@ -272,10 +272,9 @@ public:
 	inline void insert(T* it, const T& v)
 	{
 		_MANAGED_CONTAINER_CHECK_THREAD_SAFE(m_lock);
+		size_t index = it - m_buffer.Get();
 
 		Resize(m_size + 1);
-
-		size_t index = it - m_buffer.Get();
 		_MANAGED_ARRAY_CHECK_BOUND(index);
 
 		auto buf = m_buffer.Get();

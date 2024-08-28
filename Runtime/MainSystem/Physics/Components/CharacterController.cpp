@@ -463,7 +463,12 @@ void CharacterController::OnPrevUpdate(float dt)
 	auto& disp = m_sumDisp[scene->GetPrevDeferBufferIdx()];
 
 	ReduceVelocityByCollisionPlanes(dt);
-	ApplyGravity(dt);
+
+	if (m_isEnableGravity && m_gravity != Vec3::ZERO)
+	{
+		ApplyGravity(dt);
+	}
+
 	disp += m_velocity * dt;
 
 	scene->BeginWrite<false>(m_collisionPlanesBuffer);
@@ -551,7 +556,23 @@ void CharacterController::SetGravity(const Vec3& g)
 	MAIN_SYSTEM_TASK_1(
 		PhysicsSystem, AsyncTaskRunner, g,
 		{
-			if (self->m_gravity == Vec3::ZERO)
+			self->m_gravity = g;
+		}
+	);
+}
+
+void CharacterController::SetGravityEnabled(bool enable)
+{
+	if (m_isEnableGravity == enable)
+	{
+		return;
+	}
+	m_isEnableGravity = enable;
+
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunner, enable,
+		{
+			if (enable)
 			{
 				if (self->m_countScheduleUpdate++ == 0)
 				{
@@ -560,13 +581,10 @@ void CharacterController::SetGravity(const Vec3& g)
 				}
 			}
 
-			self->m_gravity = g;
-
-			if (g == Vec3::ZERO && --(self->m_countScheduleUpdate) == 0)
+			if (!enable)
 			{
 				//system->UnscheduleUpdate(self);
 				system->UnschedulePrevUpdate(self);
-				return;
 			}
 		}
 	);
@@ -627,7 +645,7 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 const CharacterController::CollisionPlanes& CharacterController::CCTGetCollisionPlanes()
 {
 	// to use this function, ctt must be in a gravity field
-	assert(m_gravity != Vec3::ZERO);
+	assert(m_isEnableGravity);
 	
 	return *m_collisionPlanesBuffer.Read();
 }

@@ -109,7 +109,6 @@ private:
 	void CalculateAnimToPhysOffsets();
 
 public:
-
 	// Inherited via Animator
 	virtual void OnComponentAdded() override;
 

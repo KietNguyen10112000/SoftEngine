@@ -5,6 +5,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Structures/Managed/Array.h"
 
+#include "AnimatorEditorTab.h"
+
 namespace soft
 {
 	class RigidBody;
@@ -57,7 +59,7 @@ public:
 	byte m_isEnableTPose = 0;
 	bool m_renderPoseBasises = false;
 
-	Handle<AnimLayer> m_tposeLayer;
+	Handle<AnimatorEditorTab::TPoseLayer> m_tposeLayer;
 
 	ModelNode* m_root = nullptr;
 	std::vector<ModelNode*> m_modelNodes;
@@ -86,5 +88,10 @@ private:
 	void MakeRigidBodySkeleton();
 	void DrawDebugSkeletonBasises();
 	void DrawDebugSkeleton();
+
+	void RematchRigidBodiesWithTPose();
+
+public:
+	static void CopyRigidBoiesData(AnimatorSkeletalArray* dest, AnimatorSkeletalArray* src);
 
 };

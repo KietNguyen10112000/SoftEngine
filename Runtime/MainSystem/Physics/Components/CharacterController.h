@@ -66,6 +66,7 @@ protected:
 	float m_mass = 1;
 
 	bool m_isOnGround = false;
+	bool m_isEnableGravity = false;
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
@@ -100,8 +101,8 @@ public:
 public:
 	void Move(const Vec3& disp);
 
-	// to unset gravity, let g = { 0,0,0 }
 	void SetGravity(const Vec3& g);
+	void SetGravityEnabled(bool enable);
 
 	void CCTApplyVelocity(const Vec3& velocity);
 	void CCTApplyImpulse(const Vec3& impulse);

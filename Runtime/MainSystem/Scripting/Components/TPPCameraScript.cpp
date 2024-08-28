@@ -21,6 +21,7 @@ void TPPCameraScript::OnStart()
 {
 	m_controller = GetGameObject()->GetComponentRaw<CharacterController>();
 
+	m_controller->SetGravityEnabled(true);
 	m_controller->SetGravity(GetGameObject()->GetScene()->GetPhysicsSystem()->GetGravity());
 
 	//m_prevPosY1 = GetGameObject()->ReadGlobalTransformMat().Position().y;

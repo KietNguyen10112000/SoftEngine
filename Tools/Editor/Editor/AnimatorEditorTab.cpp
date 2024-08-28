@@ -865,7 +865,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 			return;
 		}
 
-		layer->SetControlFunction(m_currentFunction, m_rangeMin, m_rangeMax);
+		layer->StartBlending(m_currentFunction, m_rangeMin, m_rangeMax);
 	}
 	
 	inline void EditFixed()
@@ -1429,13 +1429,15 @@ struct AnimMixLayerNode : public AnimatorEditorTab::Node
 	}
 };
 
-struct AnimatorEditorTPoseLayer : public AnimLayer
+struct AnimatorEditorTPoseLayer : public AnimatorEditorTab::TPoseLayer
 {
 public:
 	SERIALIZABLE_CLASS(AnimatorEditorTPoseLayer);
 
 	bool m_once = true;
 	float m_coeff = 1.0f;
+
+	Transform m_transform = Transform::FromTransformMatrix(Mat4::Rotation(Vec3::Y_AXIS, PI));
 
 	// Inherited via AnimLayer
 	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
@@ -1464,6 +1466,8 @@ public:
 
 		m_once = false;
 
+		auto prevTransform = m_transform.ToTransformMatrix();
+
 		auto& model = m_model;
 		auto& nodes = model->m_nodes;
 
@@ -1473,7 +1477,7 @@ public:
 			auto& node = nodes[i];
 			if (node.boneId != INVALID_ID)
 			{
-				m_globalTransforms[i] = offsetMatrix[node.boneId].GetInverse();
+				m_globalTransforms[i] = offsetMatrix[node.boneId].GetInverse() * prevTransform;
 				m_globalTransforms[i] *= m_coeff;
 			}
 		}
@@ -1484,6 +1488,20 @@ public:
 		}
 	}
 
+	void SetTransform(const Transform& t)
+	{
+		m_transform = t;
+
+		auto temp = m_once;
+		m_once = false;
+		Run(0);
+		m_once = temp;
+	}
+
+	virtual Transform GetTransform() const
+	{
+		return m_transform;
+	}
 };
 
 AnimatorEditorTab::AnimatorEditorTab(const String& modelPath, Scene* scene, const String& tabName)
@@ -1660,7 +1678,7 @@ void AnimatorEditorTab::OnRenderGUI()
 		{
 			if (set.find(node->nodeId) != set.end())
 			{
-				node->layer->SetEnable(!node->layer->IsEnable());
+				node->layer->SetEnabled(!node->layer->IsEnabled());
 			}
 		}
 	}
@@ -1805,7 +1823,7 @@ void AnimatorEditorTab::OnRenderGUI()
 				[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
 				{
 					auto var = accessor.Get();
-					if (var.Type() == VARIANT_TYPE::TRANSFORM3D)
+					if (var.Type() == VARIANT_TYPE::TRANSFORM3D && std::strcmp(propertyName, "Local Transform") == 0)
 					{
 						DataInspector::Inspect(metadata, accessor, propertyName);
 						return false;
@@ -1818,7 +1836,7 @@ void AnimatorEditorTab::OnRenderGUI()
 			ImGui::Separator();
 			wflags = ImGuiWindowFlags_::ImGuiWindowFlags_HorizontalScrollbar;
 			//ImGui::SetNextWindowSize(ImVec2(ImGui::GetWindowSize().x, viewPortSize.y / 4.0f));
-			ImGui::BeginChild("AnimMotions", { 0,viewPortSize.y / 4.0f }, true, wflags);
+			ImGui::BeginChild("AnimMotions", { 0,0 }, true, wflags);
 			/*if (ImGui::BeginTable("Table", 2, ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_::ImGuiTableFlags_BordersInnerV))
 			{
 				for (auto& a : m_animator->m_model3D->m_animations)
@@ -1840,6 +1858,9 @@ void AnimatorEditorTab::OnRenderGUI()
 				//ImGui::TableHeadersRow();
 
 				auto& animations = m_animator->m_model3D->m_animations;
+
+				ID srcMoveIdx = INVALID_ID;
+				ID destMoveIdx = INVALID_ID;
 
 				size_t i = 0;
 				for (auto& animation : animations)
@@ -1879,6 +1900,33 @@ void AnimatorEditorTab::OnRenderGUI()
 							m_inputName[0] = 0;
 						}
 
+						ImGuiDragDropFlags src_flags = 0;
+						src_flags |= ImGuiDragDropFlags_SourceNoDisableHover;
+						src_flags |= ImGuiDragDropFlags_SourceNoHoldToOpenOthers;
+						src_flags |= ImGuiDragDropFlags_SourceAllowNullID;
+						if (ImGui::BeginDragDropSource(src_flags))
+						{
+							if (!(src_flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
+								ImGui::Text("Move to here");
+							ImGui::SetDragDropPayload("ANIM_MOTION_DND_PAYLOAD", &i, sizeof(size_t));
+							ImGui::EndDragDropSource();
+						}
+
+						if (ImGui::BeginDragDropTarget())
+						{
+							ImGuiDragDropFlags target_flags = 0;
+							target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;
+							const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ANIM_MOTION_DND_PAYLOAD", target_flags);
+
+							if (payload && ImGui::IsMouseReleased(0))
+							{
+								srcMoveIdx = ID(*(ID*)payload->Data);
+								destMoveIdx = i;
+							}
+
+							ImGui::EndDragDropTarget();
+						}
+
 						if (ImGui::BeginPopupContextItem())
 						{
 							if (ImGui::MenuItem("Delete"))
@@ -1893,6 +1941,24 @@ void AnimatorEditorTab::OnRenderGUI()
 					}
 
 					i++;
+				}
+
+				if (srcMoveIdx != destMoveIdx && srcMoveIdx != INVALID_ID)
+				{
+					if (srcMoveIdx > destMoveIdx)
+					{
+						std::rotate(animations.rend() - srcMoveIdx - 1, 
+							animations.rend() - srcMoveIdx, animations.rend() - destMoveIdx);
+						std::rotate(m_animationsEditingState.rend() - srcMoveIdx - 1, 
+							m_animationsEditingState.rend() - srcMoveIdx, m_animationsEditingState.rend() - destMoveIdx);
+					}
+					else
+					{
+						std::rotate(animations.begin() + srcMoveIdx, 
+							animations.begin() + srcMoveIdx + 1, animations.begin() + destMoveIdx + 1);
+						std::rotate(m_animationsEditingState.begin() + srcMoveIdx,
+							m_animationsEditingState.begin() + srcMoveIdx + 1, m_animationsEditingState.begin() + destMoveIdx + 1);
+					}
 				}
 
 				ImGui::EndTable();
@@ -1916,6 +1982,42 @@ void AnimatorEditorTab::OnRenderGUI()
 	{
 		m_animationsEditingState.erase(m_animationsEditingState.begin() + deleteAnimationId);
 		m_animator->m_model3D->RemoveAnimation(deleteAnimation);
+
+		for (auto& node : m_nodes)
+		{
+			auto type = node->layerType;
+			switch (type)
+			{
+			case AnimatorEditorTab::LAYER_TYPE::NONE:
+				break;
+			case AnimatorEditorTab::LAYER_TYPE::PLAYER:
+			{
+				auto n = ((AnimPlayerLayerNode*)node.Get());
+				if (n->currentAnimId == deleteAnimationId)
+				{
+					n->currentAnimId = 0;
+				}
+				break;
+			}
+			case AnimatorEditorTab::LAYER_TYPE::TRANSIT:
+			{
+				auto n = ((AnimTransitLayerNode*)node.Get());
+				if (n->currentAnimId == deleteAnimationId)
+				{
+					n->currentAnimId = 0;
+				}
+				break;
+			}
+			case AnimatorEditorTab::LAYER_TYPE::BLEND:
+				break;
+			case AnimatorEditorTab::LAYER_TYPE::JOINT:
+				break;
+			case AnimatorEditorTab::LAYER_TYPE::MIX:
+				break;
+			default:
+				break;
+			}
+		}
 	}
 
 	if (isOpenSettingPopUp)
@@ -2524,7 +2626,7 @@ void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title,
 	util::BlueprintNodeBuilder& builder = *(util::BlueprintNodeBuilder*)p;
 
 	ImColor headerColor = ImColor(128,195,255);
-	if (!node->layer->IsEnable())
+	if (!node->layer->IsEnabled())
 	{
 		headerColor = ImColor(255,255,255);
 	}
@@ -2571,13 +2673,13 @@ void AnimatorEditorTab::RenderNodeHeader(void* p, Node* node, const char* title,
 	ImGui::PopStyleColor();
 
 	ImGui::SameLine();
-	auto icon = node->layer->IsEnable() ? ICON_FA_PAUSE : ICON_FA_PLAY;
-	auto btnColor = node->layer->IsEnable() ? ImColor(128, 128, 128) : ImColor(128,195,255);
+	auto icon = node->layer->IsEnabled() ? ICON_FA_PAUSE : ICON_FA_PLAY;
+	auto btnColor = node->layer->IsEnabled() ? ImColor(128, 128, 128) : ImColor(128,195,255);
 
 	ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, ImVec4(btnColor));
 	if (ImGui::Button(icon))
 	{
-		node->layer->SetEnable(!node->layer->IsEnable());
+		node->layer->SetEnabled(!node->layer->IsEnabled());
 	}
 	ImGui::PopStyleColor();
 
@@ -3614,7 +3716,7 @@ void AnimatorEditorTab::InitializeSerializableList()
 	SerializableDB::Get()->Register<AnimBlendLayerNode::FixedFunction1D>();
 }
 
-Handle<AnimLayer> AnimatorEditorTab::MakeTPoseLayer(AnimatorSkeletalArray* animator)
+Handle<AnimatorEditorTab::TPoseLayer> AnimatorEditorTab::MakeTPoseLayer(AnimatorSkeletalArray* animator)
 {
 	return animator->NewAnimLayer<AnimatorEditorTPoseLayer, true>();
 }

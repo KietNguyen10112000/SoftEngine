@@ -1018,6 +1018,7 @@ void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 	if (ImGui::MenuItem("Delete"))
 	{
 		bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+		allowDelete = allowDelete && CheckCanBeDeleted(obj);
 
 		if (allowDelete)
 		{
@@ -1032,6 +1033,7 @@ void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 	if (ImGui::MenuItem("Delete (Break All Dependencies)"))
 	{
 		bool allowDelete = obj->Parent().Get() == nullptr || obj->Parent()->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false;
+		allowDelete = allowDelete && CheckCanBeDeleted(obj);
 
 		if (allowDelete)
 		{
@@ -1448,9 +1450,23 @@ void SceneEditorTab::OnClose()
 
 void SceneEditorTab::OnObjectDelete(GameObject* obj)
 {
-	if (obj == m_inspectingObject)
+	if (m_inspectingObject && (obj->GetRoot() == m_inspectingObject->GetRoot()))
 	{
-		OnObjectSelected(nullptr);
+		bool has = false;
+		obj->PostTraversal(
+			[&](GameObject* o)
+			{
+				if (o == m_inspectingObject)
+				{
+					has = true;
+				}
+			}
+		);
+
+		if (has)
+		{
+			OnObjectSelected(nullptr);
+		}
 	}
 
 	obj->PostTraversal(
@@ -1656,6 +1672,11 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 
 void SceneEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 {
+}
+
+bool SceneEditorTab::CheckCanBeDeleted(GameObject* obj)
+{
+	return true;
 }
 
 void SceneEditorTab::HighlightObject(GameObject* obj)

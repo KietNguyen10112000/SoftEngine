@@ -11,14 +11,15 @@
 
 NAMESPACE_BEGIN
 
-class AnimLayer : public Serializable
+class API AnimLayer : public Serializable
 {
 private:
 	friend class AnimatorSkeletalArray;
 	friend class GameObject;
 	friend class AnimationComponent;
+	friend class AnimBlendLayer;
 
-	bool m_isEnable = true;
+	bool m_isEnabled = true;
 	bool m_padd[7];
 
 	AnimationComponent* m_ownerComp = nullptr;
@@ -50,6 +51,8 @@ protected:
 
 		j["GlobalTransformsSize"] = m_globalTransforms.size();
 		j["MeshesAABBSize"] = m_meshesAABB.size();
+
+		j["IsEnabled"] = m_isEnabled;
 	}
 
 	inline void DeserializeFromJson(Serializer* serializer, const json& j)
@@ -63,6 +66,21 @@ protected:
 
 		size = j["MeshesAABBSize"];
 		m_meshesAABB.resize(size);
+
+		if (j.contains("IsEnabled"))
+		{
+			m_isEnabled = j["IsEnabled"];
+		}
+	}
+
+	inline void SetEnabledImpl(bool enabled)
+	{
+		m_isEnabled = enabled;
+	}
+
+	inline bool IsEnabledImpl() const
+	{
+		return m_isEnabled;
 	}
 
 public:
@@ -97,15 +115,12 @@ public:
 		return m_meshesAABB;
 	}
 
-	inline bool IsEnable() const
+	inline bool IsEnabled() const
 	{
-		return m_isEnable;
+		return m_isEnabled;
 	}
 
-	inline void SetEnable(bool enable)
-	{
-		m_isEnable = enable;
-	}
+	void SetEnabled(bool enabled);
 
 	inline auto* GetCommittedObject()
 	{

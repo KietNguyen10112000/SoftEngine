@@ -151,6 +151,8 @@ public:
 	virtual void ReadSaveDataFromJson(Serializer* serializer, const json& j);
 	virtual void OnRenderGameObjectContextMenu(GameObject* obj);
 
+	virtual bool CheckCanBeDeleted(GameObject* obj);
+
 public:
 	void HighlightObject(GameObject* obj);
 	void UnhighlightObject(GameObject* obj);

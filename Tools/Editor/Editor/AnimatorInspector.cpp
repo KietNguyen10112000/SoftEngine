@@ -23,6 +23,7 @@
 #include "AnimatorEditorTab.h"
 #include "SceneEditorTab.h"
 #include "EditorFont.h"
+#include "DataInspector.h"
 
 AnimatorInspector::AnimatorInspector(AnimatorSkeletalArray* animator, ClassMetadata* meta) 
 	: ComponentInspectorBase(animator), m_animator(animator), m_metadata(meta)
@@ -44,6 +45,11 @@ void AnimatorInspector::OnBeginInspecting()
 {
 	auto root = m_animator->GetGameObject()->GetRoot();
 	SetOpacityForObject(root, m_currentAlpha);
+
+	if (!m_animator->m_isRunning)
+	{
+		m_isEnableTPose = 1;
+	}
 }
 
 void AnimatorInspector::OnEndInspecting()
@@ -85,6 +91,23 @@ void AnimatorInspector::Inspect()
 				m_isEnableTPose = 0;
 			}
 		}
+
+		/*if (ImGui::Button("Rematch TPose"))
+		{
+			RematchRigidBodiesWithTPose();
+		}*/
+
+		/*if (m_isEnableTPose)
+		{
+			auto t = m_tposeLayer->GetTransform();
+			auto accessor = Accessor::For("Transform", t, m_animator);
+			bool changed = DataInspector::InspectTransformEx(m_metadata, accessor, accessor.Get(), 
+				String::Format("AnimatorTPoseLocalTransform {}", m_tposeLayer.Get()).c_str(), true);
+			if (changed)
+			{
+				m_tposeLayer->SetTransform(t);
+			}
+		}*/
 	}
 	
 	ImGuiTreeNodeFlags nodeFlags =
@@ -236,6 +259,8 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 	auto& offsets = m_animator->m_model3D->m_boneOffsetMatrixs;
 	auto& objGlobal = m_animator->GetGameObject()->GetCommittedGlobalTransform();
 
+	auto prevTransform = m_tposeLayer->GetTransform().ToTransformMatrix();
+
 	std::vector<Vec3> nodePositions;
 	nodePositions.resize(nodes.size());
 
@@ -244,7 +269,7 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 		auto& node = nodes[i];
 		if (node.boneId != INVALID_ID)
 		{
-			nodePositions[i] = (offsets[node.boneId].GetInverse() * objGlobal).Position();
+			nodePositions[i] = (offsets[node.boneId].GetInverse() * prevTransform * objGlobal).Position();
 		}
 		else
 		{
@@ -613,6 +638,37 @@ void AnimatorInspector::DrawDebugSkeleton()
 	{
 		DrawDebugSkeletonBasises();
 	}
+}
+
+void AnimatorInspector::RematchRigidBodiesWithTPose()
+{
+	auto last = m_tposeLayer.Get();
+	auto& globals = last->NodeGlobalTransforms();
+	auto& proxies = m_animator->m_rigidBodyProxy;
+
+	auto globalTransform = m_animator->GetGameObject()->GetCommittedGlobalTransform();
+
+	auto count = globals.size();
+	for (size_t i = 0; i < count; i++)
+	{
+		auto& global = globals[i];
+		auto& proxy = proxies[i];
+		if (proxy)
+		{
+			auto m = m_animator->m_rigidBodyAnimToPhysOffsets[i] * global * globalTransform;
+			assert(proxy->HasComponent<RigidBodyDynamic>());
+			proxy->SetGlobalTransform(m, INVALID_ID, GameObject::TRANSFORM_CONSTRAINT::FREE);
+		}
+	}
+}
+
+void AnimatorInspector::CopyRigidBoiesData(AnimatorSkeletalArray* dest, AnimatorSkeletalArray* src)
+{
+	dest->m_rigidBodyProxy.Concat(src->m_rigidBodyProxy.begin(), src->m_rigidBodyProxy.end());
+	dest->m_rigidBodyAnimToPhysOffsets = src->m_rigidBodyAnimToPhysOffsets;
+	dest->m_rigidBodyPhysToAnimOffsets = src->m_rigidBodyPhysToAnimOffsets;
+	dest->m_pivotRigidBody = src->m_pivotRigidBody;
+	dest->m_rigidBodyAABBScale = src->m_rigidBodyAABBScale;
 }
 
 void AnimatorInspector::RenderModelNodeHierarchy(void (*callback)(ModelNode*, void*), void* userPtr)

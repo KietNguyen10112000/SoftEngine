@@ -325,7 +325,7 @@ void AnimPlayerLayer::SetTimeImpl(float tick, float startTick, float tickDuratio
 		m_needResetKeyFrameIndex = false;
 	}
 
-	if (!IsEnable())
+	if (!IsEnabledImpl())
 	{
 		Run(0);
 	}

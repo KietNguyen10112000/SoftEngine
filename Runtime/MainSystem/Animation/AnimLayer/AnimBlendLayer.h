@@ -18,6 +18,7 @@ public:
 	float m_rangeMax = 1;
 	float m_t = 0;
 
+	// default: f(x) = x, range: 0 <= x <= 1
 	SharedPtr<Function1D> m_controlFunction = std::make_shared<FunctionLinear1D>(1.0f, 0.0f);
 
 protected:
@@ -42,7 +43,8 @@ public:
 	virtual AnimLayer* GetOutput() override;
 
 	void SetInput(AnimLayer* l1, AnimLayer* l2);
-	void SetControlFunction(const SharedPtr<Function1D>& func1D, float rangeMin, float rangeMax);
+	void StartBlending(const SharedPtr<Function1D>& func1D, float rangeMin, float rangeMax);
+	void Restart();
 
 	void SetTime(float t);
 

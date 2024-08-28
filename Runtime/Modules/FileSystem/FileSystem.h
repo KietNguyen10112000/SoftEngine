@@ -42,7 +42,6 @@ public:
 
 private:
 	void LoadCache();
-	void SaveCache();
 
 	inline auto GetCachePath(const String& path)
 	{
@@ -61,6 +60,8 @@ private:
 	}
 
 public:
+	void SaveCache();
+
 	bool IsFileExist(const char* path);
 	bool IsResourceExist(const char* path);
 

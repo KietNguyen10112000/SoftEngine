@@ -54,7 +54,7 @@ void AnimTransitLayer::PrevRun(float dt)
 
 		if (m_curFadeState.direction == TransitDirection::BACKWARD)
 		{
-			auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input);
+			auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input->GetOutput());
 			if (l0)
 			{
 				l0->m_needResetKeyFrameIndex = true;
@@ -70,7 +70,7 @@ void AnimTransitLayer::PrevRun(float dt)
 			m_transitTotalTime = currentFateState.fadeTime;
 			m_curFadeState = currentFateState;
 
-			auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input);
+			auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input->GetOutput());
 			if (l0)
 			{
 				l0->m_needResetKeyFrameIndex = true;
@@ -104,6 +104,8 @@ void AnimTransitLayer::Run(float dt)
 		return;
 	}
 
+	auto input = m_input->GetOutput();
+
 	if (m_transitTime < dt)
 	{
 		/*if (m_transitTime > -1.0f && !m_input->IsEnable())
@@ -127,7 +129,7 @@ void AnimTransitLayer::Run(float dt)
 
 	auto num = m_globalTransforms.size();
 
-	auto& transforms0 = m_input->NodeGlobalTransforms();
+	auto& transforms0 = input->NodeGlobalTransforms();
 	auto& transforms1 = m_lastGlobalTransforms;
 	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
 	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
@@ -142,7 +144,7 @@ void AnimTransitLayer::Run(float dt)
 
 	num = m_meshesAABB.size();
 
-	auto& meshAABB0 = m_input->MeshesAABB();
+	auto& meshAABB0 = input->MeshesAABB();
 	auto& meshAABB1 = m_lastMeshesAABB;
 	for (size_t i = 0; i < num; i++)
 	{
@@ -157,14 +159,14 @@ void AnimTransitLayer::Run(float dt)
 
 AnimLayer* AnimTransitLayer::GetOutput()
 {
-	if (!IsEnable())
+	if (!IsEnabledImpl())
 	{
-		return m_input;
+		return m_input->GetOutput();
 	}
 
 	if (m_transitTime < 0)
 	{
-		return m_input;
+		return m_input->GetOutput();
 	}
 
 	return this;
@@ -179,7 +181,7 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 {
 	if (direction == TransitDirection::FORWARD)
 	{
-		auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input);
+		auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input->GetOutput());
 		if (l0)
 		{
 			l0->SetAnimation(animation, startTime, endTime);
