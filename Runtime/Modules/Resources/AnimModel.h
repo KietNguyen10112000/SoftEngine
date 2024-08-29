@@ -26,7 +26,7 @@ public:
 	{
 		ID parentId = INVALID_ID;
 		ID boneId = INVALID_ID;
-		Mat4 localTransform;
+		Transform localTransform;
 	};
 
 	enum ANIM_MESH_TYPE
@@ -51,7 +51,7 @@ public:
 	{
 		SERIALIZABLE_CLASS(AnimMeshRenderingBuffer, SERIALIZABLE_MEM_SHARED);
 
-		ID id = INVALID_ID;
+		//ID id = INVALID_ID;
 		DeferredBuffer<AnimMeshRenderingBufferData> buffer;
 		bool discardObjectTransform = false;
 
@@ -191,6 +191,8 @@ public:
 
 		ANIM_MESH_TYPE m_type;
 
+		std::vector<uint16_t> m_influencedByBoneIds;
+
 		inline const auto& GetVertexBuffer() const
 		{
 			return m_vertexBuffer;
@@ -230,22 +232,20 @@ public:
 	// refer node for static mesh, INVALID_ID if animMesh
 	std::vector<ID> m_boundNodeIds;
 
+	// same size with m_boneOffsetMatrixs, represents bounding box of rigged mesh around the bone
+	std::vector<AABox> m_boneAABoxes;
+
 	ID m_rootBoneNodeId = INVALID_ID;
 
 	friend class AnimMotion;
 
 	~AnimModel();
 
-	/*inline void InitializeAnimationTrack(ID animationId, AnimationTrack* track, float startTime, float endTime)
-	{
-		m_animations[animationId]->InitializeTrack(track, startTime, endTime);
-		track->animationId = animationId;
-	}*/
-
 private:
-	void CreateCache(Animation* animation, ByteStream& stream, const String& streamPath);
-	void ReadCache(Animation* animation, ByteStream& stream);
-	void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
+	void CreateCache(ByteStream& stream, const String& streamPath);
+	void ReadCache(ByteStream& stream);
+	//void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
+	void LoadBoneAABoxes(AnimMeshVertices* meshVertices);
 
 protected:
 	virtual int Load(const String& path) override;
@@ -257,13 +257,13 @@ protected:
 	void DeserializeExtDataFromBinary(Serializer* serializer, const ByteStream& stream) override;
 
 public:
-	std::vector<AnimMeshVertices> LoadAnimMeshVertices() const;
+	//std::vector<AnimMeshVertices> LoadAnimMeshVertices() const;
 
-	SharedPtr<Animation> AddAnimation(const Resource<AnimMotion>& motion, AnimMeshVertices* vertices = nullptr);
+	SharedPtr<Animation> AddAnimation(const Resource<AnimMotion>& motion);
 
 	// LoadAnimation(PlaceHolderAnimation(motion)) same as AddAnimation(motion)
 	ID PlaceHolderAnimation(const Resource<AnimMotion>& motion);
-	void LoadAnimation(ID animationId, const AnimMotion* motion, AnimMeshVertices* vertices = nullptr);
+	void LoadAnimation(ID animationId, const AnimMotion* motion);
 
 	virtual Handle<GameObject> MakeGameObject() override;
 

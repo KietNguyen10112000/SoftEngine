@@ -40,8 +40,7 @@ void AnimTransitLayer::OnEndTransit()
 
 void AnimTransitLayer::Initialize()
 {
-	m_lastGlobalTransforms.resize(NodeGlobalTransforms().size());
-	m_lastMeshesAABB.resize(MeshesAABB().size());
+	m_lastLocalTransforms.resize(NodeLocalTransforms().size());
 }
 
 void AnimTransitLayer::PrevRun(float dt)
@@ -82,12 +81,11 @@ void AnimTransitLayer::PrevRun(float dt)
 			{
 				if (currentFateState.direction == TransitDirection::FORWARD)
 				{
-					std::memcpy(m_lastGlobalTransforms.data(), lastLayer->NodeGlobalTransforms().data(), m_lastGlobalTransforms.size() * sizeof(Mat4));
-					std::memcpy(m_lastMeshesAABB.data(), lastLayer->MeshesAABB().data(), m_lastMeshesAABB.size() * sizeof(AABox));
+					std::memcpy(m_lastLocalTransforms.data(), lastLayer->NodeLocalTransforms().data(), m_lastLocalTransforms.size() * sizeof(Mat4));
 				}
 				else if (currentFateState.direction == TransitDirection::BACKWARD)
 				{
-					AnimPlayerLayer::MakeClipCut(m_lastGlobalTransforms, m_lastMeshesAABB, m_model,
+					AnimPlayerLayer::MakeClipCut(m_lastLocalTransforms, m_model,
 						currentFateState.animation.get(), currentFateState.startTime * currentFateState.animation->GetTicksPerSecond());
 				}
 			}
@@ -127,10 +125,10 @@ void AnimTransitLayer::Run(float dt)
 		sBlend = 1 - sBlend;
 	}
 
-	auto num = m_globalTransforms.size();
+	auto num = m_localTransforms.size();
 
-	auto& transforms0 = input->NodeGlobalTransforms();
-	auto& transforms1 = m_lastGlobalTransforms;
+	auto& transforms0 = input->NodeLocalTransforms();
+	auto& transforms1 = m_localTransforms;
 	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
 	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
 	for (size_t i = 0; i < num; i++)
@@ -138,22 +136,7 @@ void AnimTransitLayer::Run(float dt)
 		auto& v0 = transforms0[i];
 		auto& v1 = transforms1[i];
 
-		m_globalTransforms[i] = Lerp(v1, v0, sBlend);
-		//m_localTransforms[i] = Lerp(ltransforms1[i], ltransforms0[i], sBlend);
-	}
-
-	num = m_meshesAABB.size();
-
-	auto& meshAABB0 = input->MeshesAABB();
-	auto& meshAABB1 = m_lastMeshesAABB;
-	for (size_t i = 0; i < num; i++)
-	{
-		auto& v0 = meshAABB0[i];
-		auto& v1 = meshAABB1[i];
-
-		auto& aabb = m_meshesAABB[i];
-		aabb.m_center = Lerp(v1.m_center, v0.m_center, sBlend);
-		aabb.m_halfDimensions = Lerp(v1.m_halfDimensions, v0.m_halfDimensions, sBlend);
+		m_localTransforms[i] = ActionInterpolation<Transform>::InterpolationFnStruct<Transform>::Fn(v1, v0, sBlend);
 	}
 }
 
@@ -206,12 +189,11 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 			{
 				if (direction == TransitDirection::FORWARD)
 				{
-					std::memcpy(self->m_lastGlobalTransforms.data(), lastLayer->NodeGlobalTransforms().data(), self->m_lastGlobalTransforms.size() * sizeof(Mat4));
-					std::memcpy(self->m_lastMeshesAABB.data(), lastLayer->MeshesAABB().data(), self->m_lastMeshesAABB.size() * sizeof(AABox));
+					std::memcpy(self->m_lastLocalTransforms.data(), lastLayer->NodeLocalTransforms().data(), self->m_lastLocalTransforms.size() * sizeof(Mat4));
 				}
 				else if (direction == TransitDirection::BACKWARD)
 				{
-					AnimPlayerLayer::MakeClipCut(self->m_lastGlobalTransforms, self->m_lastMeshesAABB, self->m_model,
+					AnimPlayerLayer::MakeClipCut(self->m_lastLocalTransforms, self->m_model,
 						animation.get(), startTick);
 				}
 			}
@@ -252,8 +234,7 @@ void AnimTransitLayer::DeserializeFromJson(Serializer* serializer, const json& j
 
 	serializer->Deserialize(j["Input"], m_input);
 
-	m_lastGlobalTransforms.resize(m_globalTransforms.size());
-	m_lastMeshesAABB.resize(m_meshesAABB.size());
+	m_lastLocalTransforms.resize(m_lastLocalTransforms.size());
 
 	Run(0);
 }

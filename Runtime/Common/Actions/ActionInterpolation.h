@@ -27,6 +27,7 @@ for (size_t i = 0; i < keyframes.size() - 1; i++)			\
 template <typename T>
 class ActionInterpolation : public ActionBase
 {
+public:
 	template <typename TT>
 	struct InterpolationFnStruct
 	{

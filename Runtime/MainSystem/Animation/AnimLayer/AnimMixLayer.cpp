@@ -64,34 +64,29 @@ void AnimMixLayer::Run(float dt)
 		input.outputLayer = input.layer ? input.layer->GetOutput() : nullptr;
 	}
 
-	auto count = m_globalTransforms.size();
+	auto count = m_localTransforms.size();
 	for (size_t i = 0; i < count; i++)
 	{
 		auto& node = nodes[i];
-		auto& mat = m_globalTransforms[i];
-		mat = Mat4::Zero();
+		auto& localTransform = m_localTransforms[i];
+		localTransform.Scale() = { 0,0,0 };
+		localTransform.Rotation().x = 0;
+		localTransform.Rotation().y = 0;
+		localTransform.Rotation().z = 0;
+		localTransform.Rotation().w = 0;
+		localTransform.Position() = { 0,0,0 };
 		for (auto& input : m_inputs)
 		{
 			if (input.layer)
 			{
-				mat += (input.outputLayer->NodeGlobalTransforms()[i] * input.weight);
-			}
-		}
-	}
+				auto& transform = input.outputLayer->NodeLocalTransforms()[i];
 
-	count = m_meshesAABB.size();
-	for (size_t i = 0; i < count; i++)
-	{
-		auto& aabb = m_meshesAABB[i];
-		aabb.m_center = { 0,0,0 };
-		aabb.m_halfDimensions = { 0,0,0 };
-		for (auto& input : m_inputs)
-		{
-			if (input.layer)
-			{
-				auto& temp = input.outputLayer->MeshesAABB()[i];
-				aabb.m_center += (temp.m_center * input.weight);
-				aabb.m_halfDimensions += (temp.m_halfDimensions * input.weight);
+				localTransform.Scale()		+= (transform.Scale() * input.weight);
+				localTransform.Rotation().x	+= (transform.Rotation().x * input.weight);
+				localTransform.Rotation().y += (transform.Rotation().y * input.weight);
+				localTransform.Rotation().z += (transform.Rotation().z * input.weight);
+				localTransform.Rotation().w += (transform.Rotation().w * input.weight);
+				localTransform.Position()	+= (transform.Position() * input.weight);
 			}
 		}
 	}

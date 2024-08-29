@@ -26,7 +26,7 @@ void AnimBlendLayer::Run(float dt)
 	auto prevSBlend = m_blendFactor;
 	auto& sBlend = m_blendFactor;
 	sBlend = std::clamp(m_controlFunction->Test(m_t), 0.0f, 1.0f);
-	if (prevSBlend == m_blendFactor)
+	/*if (prevSBlend == m_blendFactor)
 	{
 		return;
 	}
@@ -35,35 +35,48 @@ void AnimBlendLayer::Run(float dt)
 	{
 		SetEnabledImpl(false);
 		m_input[1 - (int)std::round(m_blendFactor)]->SetEnabledImpl(false);
-	}
+	}*/
 
-	auto num = m_globalTransforms.size();
+	auto num = m_localTransforms.size();
 
-	auto& transforms0 = l0->NodeGlobalTransforms();
-	auto& transforms1 = l1->NodeGlobalTransforms();
+	auto& transforms0 = l0->NodeLocalTransforms();
+	auto& transforms1 = l1->NodeLocalTransforms();
 	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
 	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
+
+	//auto& nodes = m_model->m_nodes;
+
 	for (size_t i = 0; i < num; i++)
 	{
 		auto& v0 = transforms0[i];
 		auto& v1 = transforms1[i];
 
-		m_globalTransforms[i] = Lerp(v0, v1, sBlend);
+		/*auto& node = nodes[i];
+		if (node.parentId != INVALID_ID)
+		{
+			auto local0 = v0 * transforms0[node.parentId].GetInverse();
+			Transform l0 = Transform::FromTransformMatrix(local0);
+
+			auto local1 = v1 * transforms1[node.parentId].GetInverse();
+			Transform l1 = Transform::FromTransformMatrix(local1);
+
+			auto v = ActionInterpolation<Transform>::InterpolationFnStruct<Transform>::Fn(l0, l1, sBlend);
+			m_globalTransforms[i] = v.ToTransformMatrix() * m_globalTransforms[node.parentId];
+		}
+		else
+		{
+			auto& local0 = v0;
+			Transform l0 = Transform::FromTransformMatrix(local0);
+
+			auto& local1 = v1;
+			Transform l1 = Transform::FromTransformMatrix(local1);
+
+			auto v = ActionInterpolation<Transform>::InterpolationFnStruct<Transform>::Fn(l0, l1, sBlend);
+			m_globalTransforms[i] = v.ToTransformMatrix();
+		}*/
+
+		m_localTransforms[i] = Lerp(v0, v1, sBlend);
 		//m_localTransforms[i] = Lerp(ltransforms1[i], ltransforms0[i], sBlend);
-	}
-
-	num = m_meshesAABB.size();
-
-	auto& meshAABB0 = l0->MeshesAABB();
-	auto& meshAABB1 = l1->MeshesAABB();
-	for (size_t i = 0; i < num; i++)
-	{
-		auto& v0 = meshAABB0[i];
-		auto& v1 = meshAABB1[i];
-
-		auto& aabb = m_meshesAABB[i];
-		aabb.m_center = Lerp(v0.m_center, v1.m_center, sBlend);
-		aabb.m_halfDimensions = Lerp(v0.m_halfDimensions, v1.m_halfDimensions, sBlend);
 	}
 }
 

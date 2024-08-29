@@ -50,10 +50,7 @@ protected:
 	SharedPtr<Animation>			m_animation;
 
 	std::vector<KeyFramesIndex>		m_keyFramesIndex;
-	std::vector<uint32_t>			m_aabbKeyFrameIndex;
-
 	std::vector<KeyFramesIndex>		m_startKeyFrameIndex;
-	std::vector<uint32_t>			m_startAABBKeyFrameIndex;
 
 	float m_tickDuration = 0;
 	float m_ticksPerSecond = 0;
@@ -151,7 +148,7 @@ public:
 
 	void SetEnableRootMotion(bool enableScaling, bool enableRotation, bool enableTranslation);
 
-	static void MakeClipCut(std::vector<Mat4>& globalTransforms, std::vector<AABox>& bounds, AnimModel* model, Animation* animation, float tick);
+	static void MakeClipCut(std::vector<Transform>& localTransforms, AnimModel* model, Animation* animation, float tick);
 
 };
 

@@ -27,9 +27,7 @@ private:
 protected:
 	AnimModel* m_model = nullptr;
 
-	//std::vector<Mat4> m_localTransforms;
-	std::vector<Mat4> m_globalTransforms;
-	std::vector<AABox> m_meshesAABB;
+	std::vector<Transform> m_localTransforms;
 
 	inline AnimLayer() {};
 
@@ -40,18 +38,13 @@ protected:
 		m_ownerComp = serializer->Clone(src->m_ownerComp);
 
 		m_model = src->m_model;
-		m_globalTransforms = src->m_globalTransforms;
-		m_meshesAABB = src->m_meshesAABB;
+		m_localTransforms = src->m_localTransforms;
 	}
 
 	inline void SerializeToJson(Serializer* serializer, json& j) const
 	{
 		j["OwnerComp"] = serializer->Serialize(m_ownerComp);
 		j["Model"] = serializer->Serialize(m_model);
-
-		j["GlobalTransformsSize"] = m_globalTransforms.size();
-		j["MeshesAABBSize"] = m_meshesAABB.size();
-
 		j["IsEnabled"] = m_isEnabled;
 	}
 
@@ -60,12 +53,7 @@ protected:
 		serializer->Deserialize(j["OwnerComp"], m_ownerComp);
 		serializer->Deserialize(j["Model"], m_model);
 
-		size_t size = j["GlobalTransformsSize"];
-		m_globalTransforms.resize(size);
-		//m_localTransforms.resize(size);
-
-		size = j["MeshesAABBSize"];
-		m_meshesAABB.resize(size);
+		m_localTransforms.resize(m_model->m_nodes.size());
 
 		if (j.contains("IsEnabled"))
 		{
@@ -95,9 +83,9 @@ public:
 		return this;
 	}
 
-	inline auto& NodeGlobalTransforms()
+	inline auto& NodeLocalTransforms()
 	{
-		return m_globalTransforms;
+		return m_localTransforms;
 	}
 
 	inline auto* GetAnimModel()
@@ -109,11 +97,6 @@ public:
 	{
 		return m_localTransforms;
 	}*/
-
-	inline auto& MeshesAABB()
-	{
-		return m_meshesAABB;
-	}
 
 	inline bool IsEnabled() const
 	{

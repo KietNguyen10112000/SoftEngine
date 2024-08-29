@@ -51,135 +51,100 @@ void AnimPlayerLayer::Run(float dt)
 
 		std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
 			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
-
-		std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
-			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 	}
 
 	auto t = m_t + m_startTick;
 
 	auto& nodes = m_model->m_nodes;
-	auto& globalTransforms = m_globalTransforms;
 	auto& nodeToChannelId = m_animation->GetNodeToChannelId();
 	auto& channels = m_animation->GetChannels();
-	//auto& localTransforms = m_localTransforms;
 
 	auto rootBoneNodeId = m_model->m_rootBoneNodeId;
 
-	// root transform
-	{
-		auto& node = nodes[0];
+	//// root transform
+	//{
+	//	auto& node = nodes[0];
+	//	auto& localTransform = m_localTransforms[0];
+	//	localTransform = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
 
-		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
-		//localTransforms[0] = node.localTransform;
+	//	auto& channelId = nodeToChannelId[0];
+	//	if (channelId != INVALID_ID)
+	//	{
+	//		auto& channel = channels[channelId];
+	//		auto& index = m_keyFramesIndex[channelId];
 
-		auto& channelId = nodeToChannelId[0];
-		if (channelId != INVALID_ID)
-		{
-			auto& channel = channels[channelId];
-			auto& index = m_keyFramesIndex[channelId];
+	//		if (rootBoneNodeId != 0)
+	//		{
+	//			localTransform.Scale()			= channel.FindScale(&index.s, index.s, t);
+	//			localTransform.Rotation()		= channel.FindRotation(&index.r, index.r, t);
+	//			localTransform.Translation()	= channel.FindTranslation(&index.t, index.t, t);
+	//		}
+	//		else
+	//		{
+	//			if (!m_disableRootMotionScaling)
+	//			{
+	//				localTransform.Scale() = channel.FindScale(&index.s, index.s, t);
+	//			}
+	//			if (!m_disableRootMotionRotation)
+	//			{
+	//				localTransform.Rotation() = channel.FindRotation(&index.r, index.r, t);
+	//			}
+	//			if (!m_disableRootMotionTranslation)
+	//			{
+	//				localTransform.Translation() = channel.FindTranslation(&index.t, index.t, t);
+	//			}
 
-			Mat4 scaling = {}, rotation = {}, translation = {};
+	//			if (m_disableRootMotionScaling && m_disableRootMotionRotation && m_disableRootMotionTranslation)
+	//			{
+	//				localTransform = {};
+	//			}
+	//		}
+	//	}
 
-			if (rootBoneNodeId != 0)
-			{
-				channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-				channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-				channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
-				globalTransforms[0] = scaling * rotation * translation;
-			}
-			else
-			{
-				if (!m_disableRootMotionScaling)
-				{
-					channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-				}
-				if (!m_disableRootMotionRotation)
-				{
-					channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-				}
-				if (!m_disableRootMotionTranslation)
-				{
-					channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
-				}
-
-				if (!m_disableRootMotionScaling || !m_disableRootMotionRotation || !m_disableRootMotionTranslation)
-				{
-					globalTransforms[0] = scaling * rotation * translation;
-				}
-				else
-				{
-					globalTransforms[0] = Mat4::Identity();
-				}
-			}
-
-			//localTransforms[0] = globalTransforms[0];
-		}
-
-		assert(node.parentId == INVALID_ID);
-	}
+	//	assert(node.parentId == INVALID_ID);
+	//}
 
 	{
 		auto num = nodes.size();
-		for (size_t i = 1; i < num; i++)
+		for (size_t i = 0; i < num; i++)
 		{
 			auto& node = nodes[i];
 			auto& channelId = nodeToChannelId[i];
-			auto& globalTransform = globalTransforms[i];
+			auto& localTransform = m_localTransforms[i];
 
-			globalTransform = node.localTransform;
+			localTransform = node.localTransform;
 			if (channelId != INVALID_ID)
 			{
 				auto& channel = channels[channelId];
 				auto& index = m_keyFramesIndex[channelId];
 
-				Mat4 scaling = {}, rotation = {}, translation = {};
-
 				if (rootBoneNodeId != i)
 				{
-					channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
-					channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
-					channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
-
-					globalTransform = scaling * rotation * translation;
+					localTransform.Scale()			= channel.FindScale(&index.s, index.s, t);
+					localTransform.Rotation()		= channel.FindRotation(&index.r, index.r, t);
+					localTransform.Translation()	= channel.FindTranslation(&index.t, index.t, t);
 				}
 				else
 				{
 					if (!m_disableRootMotionScaling)
 					{
-						channel.FindScaleMatrix(&scaling, &index.s, index.s, t);
+						localTransform.Scale() = channel.FindScale(&index.s, index.s, t);
 					}
 					if (!m_disableRootMotionRotation)
 					{
-						channel.FindRotationMatrix(&rotation, &index.r, index.r, t);
+						localTransform.Rotation() = channel.FindRotation(&index.r, index.r, t);
 					}
 					if (!m_disableRootMotionTranslation)
 					{
-						channel.FindTranslationMatrix(&translation, &index.t, index.t, t);
+						localTransform.Translation() = channel.FindTranslation(&index.t, index.t, t);
 					}
 
-					if (!m_disableRootMotionScaling || !m_disableRootMotionRotation || !m_disableRootMotionTranslation)
+					if (m_disableRootMotionScaling && m_disableRootMotionRotation && m_disableRootMotionTranslation)
 					{
-						globalTransform = scaling * rotation * translation;
-					}
-					else
-					{
-						globalTransform = Mat4::Identity();
+						localTransform = {};
 					}
 				}
 			}
-
-			globalTransform = globalTransform * globalTransforms[node.parentId];
-		}
-	}
-
-	{
-		auto& animMeshLocalAABoxKeyFrames = m_animation->GetMeshLocalAABBKeyFrames();
-		auto num = animMeshLocalAABoxKeyFrames.size();
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& index = m_aabbKeyFrameIndex[i];
-			m_meshesAABB[i] = animMeshLocalAABoxKeyFrames[i].Find(&index, index, t);
 		}
 	}
 }
@@ -189,13 +154,11 @@ void AnimPlayerLayer::SetAnimationImpl(const SharedPtr<Animation>& animation, fl
 	m_animation = animation;//m_model->m_animations[animationId];
 
 	auto& channels = m_animation->GetChannels();
-	auto& animMeshLocalAABoxKeyFrames = m_animation->GetMeshLocalAABBKeyFrames();
 
 	auto startTick = startTime < 0 ? 0 : startTime * m_animation->GetTicksPerSecond();
 	auto endTick = endTime < 0 ? m_animation->GetTickDuration() : endTime * m_animation->GetTicksPerSecond();
 
 	auto& startIndex = m_startKeyFrameIndex;
-	auto& startAABBIndex = m_startAABBKeyFrameIndex;
 
 	auto num = (uint32_t)channels.size();
 	startIndex.resize(num);
@@ -211,18 +174,6 @@ void AnimPlayerLayer::SetAnimationImpl(const SharedPtr<Animation>& animation, fl
 		channel.BinaryFindTranslation(startTick, &index.t);
 	}
 
-	num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
-	startAABBIndex.resize(num);
-	m_aabbKeyFrameIndex.resize(num);
-
-	for (uint32_t i = 0; i < num; i++)
-	{
-		auto& channel = animMeshLocalAABoxKeyFrames[i];
-		auto& index = startAABBIndex[i];
-
-		channel.BinaryFind(startTick, &index);
-	}
-
 	m_startTick = startTick;
 	m_tickDuration = endTick - startTick;
 	m_ticksPerSecond = m_animation->GetTicksPerSecond();
@@ -231,9 +182,6 @@ void AnimPlayerLayer::SetAnimationImpl(const SharedPtr<Animation>& animation, fl
 	{
 		std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
 			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
-
-		std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
-			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 
 		m_needResetKeyFrameIndex = false;
 	}
@@ -274,10 +222,7 @@ void AnimPlayerLayer::SetTimeImpl(float tick, float startTick, float tickDuratio
 		m_startTick = startTick;
 
 		auto& channels = m_animation->GetChannels();
-		auto& animMeshLocalAABoxKeyFrames = m_animation->GetMeshLocalAABBKeyFrames();
-
 		auto& startIndex = m_startKeyFrameIndex;
-		auto& startAABBIndex = m_startAABBKeyFrameIndex;
 
 		auto num = (uint32_t)channels.size();
 		startIndex.resize(num);
@@ -290,18 +235,6 @@ void AnimPlayerLayer::SetTimeImpl(float tick, float startTick, float tickDuratio
 			channel.BinaryFindScale(startTick, &index.s);
 			channel.BinaryFindRotation(startTick, &index.r);
 			channel.BinaryFindTranslation(startTick, &index.t);
-		}
-
-		num = (uint32_t)animMeshLocalAABoxKeyFrames.size();
-		startAABBIndex.resize(num);
-		m_aabbKeyFrameIndex.resize(num);
-
-		for (uint32_t i = 0; i < num; i++)
-		{
-			auto& channel = animMeshLocalAABoxKeyFrames[i];
-			auto& index = startAABBIndex[i];
-
-			channel.BinaryFind(startTick, &index);
 		}
 	}
 
@@ -319,8 +252,6 @@ void AnimPlayerLayer::SetTimeImpl(float tick, float startTick, float tickDuratio
 	{
 		std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
 			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
-		std::memcpy(m_aabbKeyFrameIndex.data(), m_startAABBKeyFrameIndex.data(),
-			m_aabbKeyFrameIndex.size() * sizeof(uint32_t));
 
 		m_needResetKeyFrameIndex = false;
 	}
@@ -508,9 +439,7 @@ void AnimPlayerLayer::CloneFrom(Serializer* serializer, Serializable* another)
 	auto src = (AnimPlayerLayer*)another;
 	m_animation					= src->m_animation;
 	m_keyFramesIndex			= src->m_keyFramesIndex;
-	m_aabbKeyFrameIndex			= src->m_aabbKeyFrameIndex;
 	m_startKeyFrameIndex		= src->m_startKeyFrameIndex;
-	m_startAABBKeyFrameIndex	= src->m_startAABBKeyFrameIndex;
 	m_tickDuration				= src->m_tickDuration;
 	m_ticksPerSecond			= src->m_ticksPerSecond;
 	m_startTick					= src->m_startTick;
@@ -545,15 +474,6 @@ void AnimPlayerLayer::SerializeToJson(Serializer* serializer, json& j) const
 		}
 		j["StartKeyFrameIndex"] = arr;
 	}*/
-	
-	{
-		auto arr = json::array();
-		for (auto& v : m_startAABBKeyFrameIndex)
-		{
-			arr.push_back(v);
-		}
-		j["StartAABBKeyFrameIndex"] = arr;
-	}
 
 	j["TickDuration"]		= m_tickDuration;
 	j["TicksPerSecond"]		= m_ticksPerSecond;
@@ -589,24 +509,12 @@ void AnimPlayerLayer::DeserializeFromJson(Serializer* serializer, const json& j)
 		}
 	}*/
 
-	{
-		auto& arr = j["StartAABBKeyFrameIndex"];
-		auto count = arr.size();
-		for (size_t i = 0; i < count; i++)
-		{
-			auto& j1 = arr[i];
-			uint32_t index = j1;
-			m_startAABBKeyFrameIndex.push_back(index);
-		}
-	}
-
 	m_tickDuration		= j["TickDuration"];
 	m_ticksPerSecond	= j["TicksPerSecond"];
 	m_startTick			= j["StartTick"];
 	m_t					= j["Time"];
 
 	m_keyFramesIndex.resize(m_startKeyFrameIndex.size());
-	m_aabbKeyFrameIndex.resize(m_startAABBKeyFrameIndex.size());
 
 	auto endTick = m_startTick + m_tickDuration;
 	SetAnimationImpl(
@@ -627,39 +535,38 @@ void AnimPlayerLayer::OnPropertyChanged(const UnknownAddress& var, const Variant
 {
 }
 
-void AnimPlayerLayer::MakeClipCut(std::vector<Mat4>& globalTransforms, std::vector<AABox>& bounds, AnimModel* model, Animation* animation, float tick)
+void AnimPlayerLayer::MakeClipCut(std::vector<Transform>& localTransforms, AnimModel* model, Animation* animation, float tick)
 {
 	auto& t = tick;
 
 	auto& nodes = model->m_nodes;
-	//auto& globalTransforms = output->NodeGlobalTransforms();
 	auto& nodeToChannelId = animation->GetNodeToChannelId();
 	auto& channels = animation->GetChannels();
 
-	{
-		auto& node = nodes[0];
+	//{
+	//	auto& node = nodes[0];
 
-		globalTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
-		//localTransforms[0] = node.localTransform;
+	//	localTransforms[0] = node.localTransform;//GetGameObject()->ReadGlobalTransformMat();
+	//	//localTransforms[0] = node.localTransform;
 
-		auto& channelId = nodeToChannelId[0];
-		if (channelId != INVALID_ID)
-		{
-			auto& channel = channels[channelId];
+	//	auto& channelId = nodeToChannelId[0];
+	//	if (channelId != INVALID_ID)
+	//	{
+	//		auto& channel = channels[channelId];
 
-			Mat4 scaling;
-			scaling.SetScale(channel.BinaryFindScale(t, nullptr));
-			Mat4 rotation;
-			rotation.SetRotation(channel.BinaryFindRotation(t, nullptr));
-			Mat4 translation;
-			translation.SetTranslation(channel.BinaryFindTranslation(t, nullptr));
+	//		Mat4 scaling;
+	//		scaling.SetScale(channel.BinaryFindScale(t, nullptr));
+	//		Mat4 rotation;
+	//		rotation.SetRotation(channel.BinaryFindRotation(t, nullptr));
+	//		Mat4 translation;
+	//		translation.SetTranslation(channel.BinaryFindTranslation(t, nullptr));
 
-			globalTransforms[0] = scaling * rotation * translation;
-			//localTransforms[0] = globalTransforms[0];
-		}
+	//		localTransforms[0] = scaling * rotation * translation;
+	//		//localTransforms[0] = globalTransforms[0];
+	//	}
 
-		assert(node.parentId == INVALID_ID);
-	}
+	//	assert(node.parentId == INVALID_ID);
+	//}
 
 	{
 		auto num = nodes.size();
@@ -667,39 +574,17 @@ void AnimPlayerLayer::MakeClipCut(std::vector<Mat4>& globalTransforms, std::vect
 		{
 			auto& node = nodes[i];
 			auto& channelId = nodeToChannelId[i];
-			auto& globalTransform = globalTransforms[i];
+			auto& localTransform = localTransforms[i];
 
-			globalTransform = node.localTransform;
-
-			//auto& localTransform = localTransforms[i];
-			//localTransform = node.localTransform;
+			localTransform = node.localTransform;
 
 			if (channelId != INVALID_ID)
 			{
 				auto& channel = channels[channelId];
-
-				Mat4 scaling;
-				scaling.SetScale(channel.BinaryFindScale(t, nullptr));
-				Mat4 rotation;
-				rotation.SetRotation(channel.BinaryFindRotation(t, nullptr));
-				Mat4 translation;
-				translation.SetTranslation(channel.BinaryFindTranslation(t, nullptr));
-
-				globalTransform = scaling * rotation * translation;
-				//localTransform = globalTransform;
+				localTransform.Scale()			= channel.BinaryFindScale(t, nullptr);
+				localTransform.Rotation()		= channel.BinaryFindRotation(t, nullptr);
+				localTransform.Translation()	= channel.BinaryFindTranslation(t, nullptr);
 			}
-
-			globalTransform = globalTransform * globalTransforms[node.parentId];
-		}
-	}
-
-	{
-		auto& meshesAABBs = bounds;
-		auto& animMeshLocalAABoxKeyFrames = animation->GetMeshLocalAABBKeyFrames();
-		auto num = animMeshLocalAABoxKeyFrames.size();
-		for (uint32_t i = 0; i < num; i++)
-		{
-			meshesAABBs[i] = animMeshLocalAABoxKeyFrames[i].BinaryFind(t, nullptr);
 		}
 	}
 }

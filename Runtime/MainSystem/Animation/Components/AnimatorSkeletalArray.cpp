@@ -20,40 +20,10 @@
 
 NAMESPACE_BEGIN
 
-class AnimCCTBufferLayer : public AnimLayer
-{
-public:
-	SERIALIZABLE_CLASS(AnimCCTBufferLayer);
-
-	virtual void Run(float dt) override
-	{
-
-	}
-
-	// Inherited via AnimLayer
-	void SerializeToBinary(Serializer* serializer, ByteStream& stream) const override
-	{
-	}
-
-	void DeserializeFromBinary(Serializer* serializer, const ByteStream& stream) override
-	{
-	}
-
-	Handle<ClassMetadata> GetMetadata(size_t sign) override
-	{
-		return Handle<ClassMetadata>();
-	}
-
-	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override
-	{
-	}
-
-};
-
 AnimatorSkeletalArray::AnimatorSkeletalArray() : AnimationComponent(ANIMATION_TYPE_SKELETAL_ARRAY)
 {
-	m_deferBufferLayer.Buffers()[0] = std::make_shared<AnimCCTBufferLayer>();
-	m_deferBufferLayer.Buffers()[1] = std::make_shared<AnimCCTBufferLayer>();
+	m_deferBufferLayer.Buffers()[0] = std::make_shared<BufferLayer>();
+	m_deferBufferLayer.Buffers()[1] = std::make_shared<BufferLayer>();
 }
 
 AnimatorSkeletalArray::~AnimatorSkeletalArray()
@@ -69,9 +39,7 @@ void AnimatorSkeletalArray::InitAnimLayer(AnimLayer* animLayer)
 {
 	animLayer->m_model = m_model3D;
 	animLayer->m_ownerComp = this;
-	animLayer->m_globalTransforms.resize(m_model3D->m_nodes.size());
-	//animLayer->m_localTransforms.resize(m_model3D->m_nodes.size());
-	animLayer->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
+	animLayer->m_localTransforms.resize(m_model3D->m_nodes.size());
 
 	animLayer->Initialize();
 }
@@ -638,7 +606,7 @@ void AnimatorSkeletalArray::PublicResultToRigidBodies()
 	}
 
 	auto last = m_deferBufferLayer.Read()->get();
-	auto& globals = last->NodeGlobalTransforms();
+	auto& globals = last->m_lastGlobalTransforms;
 	auto& proxies = m_rigidBodyProxy;
 
 	auto count = globals.size();
@@ -723,18 +691,15 @@ void AnimatorSkeletalArray::SetEnableDeferPublicResult(bool enable)
 
 void AnimatorSkeletalArray::ResetDeferBufferLayer()
 {
-	m_deferBufferLayer.Buffers()[0]->m_globalTransforms.resize(m_model3D->m_nodes.size());
-	m_deferBufferLayer.Buffers()[0]->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
-
-	m_deferBufferLayer.Buffers()[1]->m_globalTransforms.resize(m_model3D->m_nodes.size());
-	m_deferBufferLayer.Buffers()[1]->m_meshesAABB.resize(m_model3D->m_animMeshes.size());
+	m_deferBufferLayer.Buffers()[0]->m_localTransforms.resize(m_model3D->m_nodes.size());
+	m_deferBufferLayer.Buffers()[0]->m_lastGlobalTransforms.resize(m_model3D->m_nodes.size());
+	m_deferBufferLayer.Buffers()[1]->m_localTransforms.resize(m_model3D->m_nodes.size());
+	m_deferBufferLayer.Buffers()[0]->m_lastGlobalTransforms.resize(m_model3D->m_nodes.size());
 
 	if (m_lastOutput != nullptr)
 	{
 		std::memcpy((*m_deferBufferLayer.Read())->m_globalTransforms.data(), 
 			m_lastOutput->NodeGlobalTransforms().data(), m_lastOutput->NodeGlobalTransforms().size() * sizeof(Mat4));
-		std::memcpy((*m_deferBufferLayer.Read())->m_meshesAABB.data(),
-			m_lastOutput->MeshesAABB().data(), m_lastOutput->MeshesAABB().size() * sizeof(AABox));
 	}
 }
 

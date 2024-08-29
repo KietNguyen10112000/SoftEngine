@@ -25,7 +25,7 @@ private:
 
 	Resource<AnimMotion> m_motion;
 	std::vector<ID> m_nodeToChannelId;
-	std::vector<AABoxKeyFrames> m_animMeshLocalAABoxKeyFrames;
+	//std::vector<AABoxKeyFrames> m_animMeshLocalAABoxKeyFrames;
 
 public:
 	inline Animation() {};
@@ -45,10 +45,10 @@ public:
 		return m_motion->m_channels;
 	}
 
-	inline auto& GetMeshLocalAABBKeyFrames()
+	/*inline auto& GetMeshLocalAABBKeyFrames()
 	{
 		return m_animMeshLocalAABoxKeyFrames;
-	}
+	}*/
 
 	inline auto& GetNodeToChannelId()
 	{

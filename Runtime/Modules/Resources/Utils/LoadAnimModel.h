@@ -171,6 +171,8 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 		size_t curVertexBoneTypeSize = vertexBoneTypeSizes[vertexTypeIdx];
 		size_t curMaxWeightPerVertex = maxWeightPerVertex[vertexTypeIdx];
 
+		std::bitset<std::numeric_limits<uint16_t>::max()> hasBoneIds;
+
 		while (vertexTypeIdx < NUM_TYPE)
 		{
 			for (uint32_t i = 0; i < mesh->mNumBones; i++)
@@ -180,7 +182,12 @@ void LoadAllAnimMeshsForAnimModel(AnimModel* model, const aiScene* scene)
 
 				assert(model->m_boneIds.find(name) != model->m_boneIds.end());
 
-				auto boneId = model->m_boneIds[name];
+				auto boneId = uint16_t(model->m_boneIds[name]);
+
+				if (!hasBoneIds.test(boneId))
+				{
+					output->m_influencedByBoneIds.push_back(boneId);
+				}
 
 				auto weights = bone->mWeights;
 				auto numWeights = bone->mNumWeights;

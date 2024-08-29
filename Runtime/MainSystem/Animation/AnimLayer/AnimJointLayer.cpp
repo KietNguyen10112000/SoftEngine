@@ -64,47 +64,16 @@ void AnimJointLayer::Run(float dt)
 		input.outputLayer = input.layer ? input.layer->GetOutput() : nullptr;
 	}
 
-	auto count = m_globalTransforms.size();
+	auto count = m_localTransforms.size();
 	for (size_t i = 0; i < count; i++)
 	{
 		auto& node = nodes[i];
-		auto& mat = m_globalTransforms[i];
-		mat = Mat4::Zero();
+		auto& localTransform = m_localTransforms[i];
 		for (auto& input : m_inputs)
-		//auto& input = m_inputs[0];
 		{
 			if (input.outputLayer && input.mask[i])
 			{
-				auto& nodeGlobalTransform = input.outputLayer->NodeGlobalTransforms()[i];
-				if (node.parentId != INVALID_ID)
-				{
-					auto& parentGlobalTransform = m_globalTransforms[node.parentId];
-					auto& oriParentGlobalTransform = input.outputLayer->NodeGlobalTransforms()[node.parentId];
-					if (parentGlobalTransform != oriParentGlobalTransform)
-					{
-						mat += ((nodeGlobalTransform * oriParentGlobalTransform.GetInverse()) * parentGlobalTransform);
-						continue;
-					}
-				}
-
-				mat += (input.outputLayer->NodeGlobalTransforms()[i]);
-			}
-		}
-	}
-
-	count = m_meshesAABB.size();
-	for (size_t i = 0; i < count; i++)
-	{
-		auto& aabb = m_meshesAABB[i];
-		aabb.m_center = { 0,0,0 };
-		aabb.m_halfDimensions = { 0,0,0 };
-		for (auto& input : m_inputs)
-		{
-			if (input.layer)
-			{
-				auto& temp = input.outputLayer->MeshesAABB()[i];
-				aabb.m_center += (temp.m_center * float(input.mask[i]));
-				aabb.m_halfDimensions += (temp.m_halfDimensions * float(input.mask[i]));
+				localTransform = input.outputLayer->NodeLocalTransforms()[i];
 			}
 		}
 	}
@@ -125,7 +94,7 @@ void AnimJointLayer::SetMaskImpl(ID index, const std::vector<bool>& mask)
 
 void AnimJointLayer::AddInput(AnimLayer* layer, const std::vector<bool>& mask)
 {
-	assert(mask.size() == m_globalTransforms.size());
+	assert(mask.size() == m_localTransforms.size());
 
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, layer, mask,
@@ -137,7 +106,7 @@ void AnimJointLayer::AddInput(AnimLayer* layer, const std::vector<bool>& mask)
 
 void AnimJointLayer::SetMask(ID index, const std::vector<bool>& mask)
 {
-	assert(mask.size() == m_globalTransforms.size());
+	assert(mask.size() == m_localTransforms.size());
 
 	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
 		AnimationSystem, AsyncTaskRunner, index, mask,

@@ -67,8 +67,7 @@ public:
 
 	AnimLayer* m_input = nullptr;
 
-	std::vector<Mat4> m_lastGlobalTransforms;
-	std::vector<AABox> m_lastMeshesAABB;
+	std::vector<Transform> m_lastLocalTransforms;
 
 	float m_transitTime = 0;
 	float m_transitTotalTime = 0;

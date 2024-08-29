@@ -26,6 +26,16 @@ public:
 		};
 	};
 
+private:
+	class BufferLayer
+	{
+	public:
+		std::vector<Transform> m_localTransforms;
+		std::vector<Mat4> m_lastGlobalTransforms;
+		std::vector<AABox> m_lastBoneGlobalAABoxes;
+	};
+
+public:
 	Resource<AnimModel>	m_model3D;
 
 	ID m_animationSystemId = 0;
@@ -37,13 +47,14 @@ public:
 
 	Array<Handle<AnimLayer>> m_animLayers;
 	AnimLayer* m_lastOutput = nullptr;
+	std::vector<Mat4> m_lastGlobalTransform;
 
 	bool m_isRunning = true;
 
 	// to defer public results to RenderingSystem
 	bool m_isEnableDeferPublicResults = false;
 	bool m_padd[6];
-	DeferredBuffer<SharedPtr<AnimLayer>> m_deferBufferLayer;
+	DeferredBuffer<SharedPtr<BufferLayer>> m_deferBufferLayer;
 
 	CharacterController* m_cct = nullptr;
 	Vec3 m_cctLockedUpDirection = Vec3::ZERO;
