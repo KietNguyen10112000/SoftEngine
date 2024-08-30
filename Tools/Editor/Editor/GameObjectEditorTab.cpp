@@ -209,7 +209,7 @@ void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 
 			if (success)
 			{
-				auto newObj = LoadGameObjectFromFile(otp.outputFilePath);
+				auto newObj = LoadGameObjectFromFile(otp.outputFilePath, false);
 				
 				auto oldComp = obj->GetComponentRaw<AnimatorSkeletalArray>();
 				auto newComp = newObj->GetComponentRaw<AnimatorSkeletalArray>();
@@ -244,6 +244,19 @@ void GameObjectEditorTab::OnRenderGameObjectContextMenu(GameObject* obj)
 					}
 				}
 			}
+		);
+	}
+}
+
+void GameObjectEditorTab::OnHotReloadGameObject(GameObject* startNewObj, GameObject* startOldObj, GameObject* currentNewObj, GameObject* currentOldObj)
+{
+	Base::OnHotReloadGameObject(startNewObj, startOldObj, currentNewObj, currentOldObj);
+
+	if (currentNewObj->HasComponent<AnimatorSkeletalArray>())
+	{
+		AnimatorInspector::CopyRigidBoiesData(
+			currentNewObj->GetCommittedComponentRaw<AnimatorSkeletalArray>(), 
+			currentOldObj->GetCommittedComponentRaw<AnimatorSkeletalArray>()
 		);
 	}
 }

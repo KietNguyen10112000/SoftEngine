@@ -29,48 +29,6 @@ void RegisterSerializables()
 
 void Initialize(Runtime* runtime)
 {
-	/*{
-		Transform parent0;
-		parent0.Position() = { 10,10,2 };
-		parent0.Rotation() = Mat4::Rotation(Vec3::Y_AXIS, PI / 3.0f);
-
-		Transform parent1;
-		parent1.Position() = { 5,4,8 };
-		parent1.Rotation() = Mat4::Rotation(Vec3::X_AXIS, PI / 3.0f);
-
-		Transform child0;
-		child0.Position() = { 5,5,5 };
-		child0.Rotation() = Mat4::Rotation(Vec3::Y_AXIS, PI / 2.0f);
-
-		Transform child1;
-		child1.Position() = { 3,3,2 };
-		child1.Rotation() = Mat4::Rotation(Vec3::Z_AXIS, -PI / 2.0f);
-
-		float blendFactor = 0.2345f;
-
-		Mat4 ret0;
-		{
-			Transform p;
-			p.Position() = Lerp(parent0.Position(), parent1.Position(), blendFactor);
-			p.Rotation() = SLerp(parent0.Rotation(), parent1.Rotation(), blendFactor);
-
-			Transform c;
-			c.Position() = Lerp(child0.Position(), child1.Position(), blendFactor);
-			c.Rotation() = SLerp(child0.Rotation(), child1.Rotation(), blendFactor);
-
-			ret0 = c.ToTransformMatrix() * p.ToTransformMatrix();
-		}
-
-		Mat4 ret1;
-		{
-			auto m0 = child0.ToTransformMatrix() * parent0.ToTransformMatrix();
-			auto m1 = child1.ToTransformMatrix() * parent1.ToTransformMatrix();
-			ret1 = Lerp(m0, m1, blendFactor);
-		}
-
-		int x = 3;
-	}*/
-
 	EditorSettings::SingletonInitialize();
 	EditorFont::SingletonInitialize();
 
@@ -90,7 +48,7 @@ void Initialize(Runtime* runtime)
 				EditorContext::s_instance = editorContext;
 				EditorContext::s_instance->m_runTimeId = editorContextId;
 
-				{
+				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<AnimatorEditorTabFactory>();
 
 					factory->m_modelPath = "Editor/AnimatorEditor/Character.AnimatorEditor";
@@ -98,17 +56,17 @@ void Initialize(Runtime* runtime)
 					EditorContext::s_instance->RunTab(tab);
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
-				}
+				}*/
 
-				/*{
+				{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<SceneEditorTabFactory>();
 
-					factory->m_filePath = "Editor/SceneEditor/Test2.json";
+					factory->m_filePath = "Editor/SceneEditor/Test2.SceneEditor";
 					auto tab = factory->CreateInstance();
 					EditorContext::s_instance->RunTab(tab);
 
 					EditorContext::s_instance->CloseTab(EditorContext::s_instance->GetCurrentTab());
-				}*/
+				}
 
 				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<GameObjectEditorTabFactory>();

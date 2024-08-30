@@ -26,57 +26,27 @@ void AnimBlendLayer::Run(float dt)
 	auto prevSBlend = m_blendFactor;
 	auto& sBlend = m_blendFactor;
 	sBlend = std::clamp(m_controlFunction->Test(m_t), 0.0f, 1.0f);
-	/*if (prevSBlend == m_blendFactor)
+	if (prevSBlend == m_blendFactor)
 	{
 		return;
 	}
 
-	if (m_t == m_rangeMax)
+	if (m_t == m_rangeMax && !m_flags.test(FLAG::NO_AUTO_DISABLE))
 	{
 		SetEnabledImpl(false);
 		m_input[1 - (int)std::round(m_blendFactor)]->SetEnabledImpl(false);
-	}*/
+	}
 
 	auto num = m_localTransforms.size();
 
 	auto& transforms0 = l0->NodeLocalTransforms();
 	auto& transforms1 = l1->NodeLocalTransforms();
-	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
-	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
-
-	//auto& nodes = m_model->m_nodes;
 
 	for (size_t i = 0; i < num; i++)
 	{
 		auto& v0 = transforms0[i];
 		auto& v1 = transforms1[i];
-
-		/*auto& node = nodes[i];
-		if (node.parentId != INVALID_ID)
-		{
-			auto local0 = v0 * transforms0[node.parentId].GetInverse();
-			Transform l0 = Transform::FromTransformMatrix(local0);
-
-			auto local1 = v1 * transforms1[node.parentId].GetInverse();
-			Transform l1 = Transform::FromTransformMatrix(local1);
-
-			auto v = ActionInterpolation<Transform>::InterpolationFnStruct<Transform>::Fn(l0, l1, sBlend);
-			m_globalTransforms[i] = v.ToTransformMatrix() * m_globalTransforms[node.parentId];
-		}
-		else
-		{
-			auto& local0 = v0;
-			Transform l0 = Transform::FromTransformMatrix(local0);
-
-			auto& local1 = v1;
-			Transform l1 = Transform::FromTransformMatrix(local1);
-
-			auto v = ActionInterpolation<Transform>::InterpolationFnStruct<Transform>::Fn(l0, l1, sBlend);
-			m_globalTransforms[i] = v.ToTransformMatrix();
-		}*/
-
-		m_localTransforms[i] = Lerp(v0, v1, sBlend);
-		//m_localTransforms[i] = Lerp(ltransforms1[i], ltransforms0[i], sBlend);
+		m_localTransforms[i] = ActionInterpolation<Transform>::InterpolationFnStruct<Transform>::Fn(v0, v1, sBlend);
 	}
 }
 
@@ -143,6 +113,21 @@ void AnimBlendLayer::SetTime(float t)
 			self->m_t = t;
 		}
 	);
+}
+
+void AnimBlendLayer::SetFlag(FLAG::ENUM flag, bool enable)
+{
+	MAIN_SYSTEM_TASK_IMPL_COMMON_2(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, flag, enable,
+		{
+			self->m_flags.set(size_t(flag), enable);
+		}
+	);
+}
+
+const std::bitset<64>& AnimBlendLayer::GetFlags() const
+{
+	return m_flags;
 }
 
 void AnimBlendLayer::SerializeToBinary(Serializer* serializer, ByteStream& stream) const

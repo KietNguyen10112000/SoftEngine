@@ -12,6 +12,7 @@ protected:
 
 	bool m_enableTPP = true;
 
+	TRACEABLE_FRIEND();
 	void Trace(Tracer* tracer)
 	{
 		tracer->Trace(m_target);

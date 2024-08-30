@@ -22,8 +22,7 @@ NAMESPACE_BEGIN
 
 AnimatorSkeletalArray::AnimatorSkeletalArray() : AnimationComponent(ANIMATION_TYPE_SKELETAL_ARRAY)
 {
-	m_deferBufferLayer.Buffers()[0] = std::make_shared<BufferLayer>();
-	m_deferBufferLayer.Buffers()[1] = std::make_shared<BufferLayer>();
+
 }
 
 AnimatorSkeletalArray::~AnimatorSkeletalArray()
@@ -33,6 +32,15 @@ AnimatorSkeletalArray::~AnimatorSkeletalArray()
 		delete layer;
 	}*/
 	m_animLayers.clear();
+}
+
+void AnimatorSkeletalArray::Initialize()
+{
+	m_lastOutputBuffer.Initialize(m_model3D);
+	for (size_t i = 0; i < 2; i++)
+	{
+		m_deferBuffer.Buffers()[i].Initialize(m_model3D);
+	}
 }
 
 void AnimatorSkeletalArray::InitAnimLayer(AnimLayer* animLayer)
@@ -123,7 +131,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 		return;
 	}
 
-	scene->BeginWrite<false>(m_deferBufferLayer);
+	scene->BeginWrite<false>(m_deferBuffer);
 
 	AnimLayer* last = nullptr;
 	for (auto& layer : m_animLayers)
@@ -162,7 +170,7 @@ void AnimatorSkeletalArray::Update(Scene* scene, float dt)
 		}
 	}
 
-	scene->EndWrite(m_deferBufferLayer);
+	scene->EndWrite(m_deferBuffer);
 }
 
 struct MyData
@@ -605,8 +613,8 @@ void AnimatorSkeletalArray::PublicResultToRigidBodies()
 		globalTransform = m_rigidBodyProxyCCTOffset * p.ToTransformMatrix();
 	}
 
-	auto last = m_deferBufferLayer.Read()->get();
-	auto& globals = last->m_lastGlobalTransforms;
+	auto last = m_deferBuffer.Read();
+	auto& globals = last->m_globalTransforms;
 	auto& proxies = m_rigidBodyProxy;
 
 	auto count = globals.size();
@@ -630,8 +638,9 @@ void AnimatorSkeletalArray::FetchResultFromRigidBodies()
 {
 	auto& nodes = m_model3D->m_nodes;
 	auto& proxies = m_rigidBodyProxy;
-	auto& globals = (*m_deferBufferLayer.Read())->NodeGlobalTransforms();
-	auto& AABBs = (*m_deferBufferLayer.Read())->MeshesAABB();
+	auto& buffer = (ResultBuffer&)*m_deferBuffer.Read();
+	auto& globals = buffer.m_globalTransforms;
+	auto& AABBs = buffer.m_animMeshAABoxes;
 	auto count = globals.size();
 
 	/*if (globals.size() != nodes.size())
@@ -640,12 +649,9 @@ void AnimatorSkeletalArray::FetchResultFromRigidBodies()
 	}*/
 
 	auto scale = Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
-
-	AABox aabb = {};
-
 	for (size_t i = 0; i < count; i++)
 	{
-		auto& global = globals[i];
+		auto& global = (Mat4&)(globals[i]);
 		auto& proxy = proxies[i];
 		if (proxy)
 		{
@@ -655,26 +661,12 @@ void AnimatorSkeletalArray::FetchResultFromRigidBodies()
 			auto mat = PhysXUtils::ToTransform(pxBody->getGlobalPose()).ToTransformMatrix();
 			mat = m_model3D->m_boneOffsetInvMatrixs[nodes[i].boneId] * m_rigidBodyPhysToAnimOffsets[i] * mat;
 			global = mat;
-
-			auto bound = pxBody->getWorldBounds(m_rigidBodyAABBScale);
-			AABox aabox = AABox(PhysXUtils::ToVec3((bound.minimum + bound.maximum) / 2.0f), PhysXUtils::ToVec3(bound.maximum - bound.minimum));
-
-			if (aabb.IsValid())
-			{
-				aabb.Joint(aabox);
-				continue;
-			}
-
-			aabb = aabox;
 		}
 	}
 
-	for (auto& bound : AABBs)
-	{
-		bound = aabb;
-	}
+	CalculateAnimMeshsAABBResultBuffer(buffer);
 
-	UpdateDataToRenderer(GetGameObject()->GetScene(), (*m_deferBufferLayer.Read())->NodeGlobalTransforms(), (*m_deferBufferLayer.Read())->MeshesAABB());
+	UpdateDataToRenderer(GetGameObject()->GetScene(), globals, AABBs);
 }
 
 void AnimatorSkeletalArray::SetEnableDeferPublicResult(bool enable)
@@ -691,15 +683,15 @@ void AnimatorSkeletalArray::SetEnableDeferPublicResult(bool enable)
 
 void AnimatorSkeletalArray::ResetDeferBufferLayer()
 {
-	m_deferBufferLayer.Buffers()[0]->m_localTransforms.resize(m_model3D->m_nodes.size());
-	m_deferBufferLayer.Buffers()[0]->m_lastGlobalTransforms.resize(m_model3D->m_nodes.size());
-	m_deferBufferLayer.Buffers()[1]->m_localTransforms.resize(m_model3D->m_nodes.size());
-	m_deferBufferLayer.Buffers()[0]->m_lastGlobalTransforms.resize(m_model3D->m_nodes.size());
-
-	if (m_lastOutput != nullptr)
 	{
-		std::memcpy((*m_deferBufferLayer.Read())->m_globalTransforms.data(), 
-			m_lastOutput->NodeGlobalTransforms().data(), m_lastOutput->NodeGlobalTransforms().size() * sizeof(Mat4));
+		std::memcpy((void*)(m_deferBuffer.Read()->m_localTransforms.data()),
+			m_lastOutput->m_localTransforms.data(), m_lastOutput->m_localTransforms.size() * sizeof(Transform));
+		std::memcpy((void*)(m_deferBuffer.Read()->m_globalTransforms.data()),
+			m_lastOutput->m_globalTransforms.data(), m_lastOutput->m_globalTransforms.size() * sizeof(Mat4));
+		std::memcpy((void*)(m_deferBuffer.Read()->m_boneGlobalAABoxes.data()),
+			m_lastOutput->m_boneGlobalAABoxes.data(), m_lastOutput->m_boneGlobalAABoxes.size() * sizeof(AABox));
+		std::memcpy((void*)(m_deferBuffer.Read()->m_animMeshAABoxes.data()),
+			m_lastOutput->m_animMeshAABoxes.data(), m_lastOutput->m_animMeshAABoxes.size() * sizeof(AABox));
 	}
 }
 
@@ -723,10 +715,17 @@ void AnimatorSkeletalArray::SetDiscardObjectTransformForRenderingObjects(bool di
 void AnimatorSkeletalArray::SwitchBackTo_ANIMATOR_TO_RIGID_BODY_From_RIGID_BODY_TO_ANIMATOR()
 {
 	auto offset = GetGameObject()->GetCommittedGlobalTransform().GetInverse();
-	auto& globals = (*m_deferBufferLayer.Read())->m_globalTransforms;
+	auto& buffer = (ResultBuffer&)*m_deferBuffer.Read();
+	auto& globals = buffer.m_globalTransforms;
 	for (auto& m : globals)
 	{
 		m *= offset;
+	}
+
+	auto& AABBs = buffer.m_animMeshAABoxes;
+	for (auto& aaBox : AABBs)
+	{
+		aaBox.Transform(offset);
 	}
 }
 
@@ -742,6 +741,7 @@ void AnimatorSkeletalArray::SetRigidBodiesControlModeImpl(RIGID_BODY_PROXY_CONTR
 	case soft::AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::DISABLED:
 		SetDiscardObjectTransformForRenderingObjects(false);
 		SetEnableDeferPublicResult(false);
+		m_rigidBodyProxyCCT = nullptr;
 		//ResetDeferBufferLayer();
 		break;
 	case soft::AnimatorSkeletalArray::RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY:
@@ -861,25 +861,95 @@ void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, const std::vecto
 	}
 }
 
+void AnimatorSkeletalArray::CalculateResultBuffer(AnimLayer* last, ResultBuffer& buffer)
+{
+	std::memcpy(buffer.m_localTransforms.data(), last->m_localTransforms.data(), sizeof(Transform) * last->m_localTransforms.size());
+
+	auto& nodes = m_model3D->m_nodes;
+	auto& globals = buffer.m_globalTransforms;
+
+	// calculate nodes' global transform
+	{
+		auto count = buffer.m_localTransforms.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			auto& node = nodes[i];
+			if (node.parentId != INVALID_ID)
+			{
+				globals[i] = buffer.m_localTransforms[i].ToTransformMatrix() * globals[node.parentId];
+				continue;
+			}
+
+			globals[i] = buffer.m_localTransforms[i].ToTransformMatrix();
+		}
+	}
+
+	CalculateAnimMeshsAABBResultBuffer(buffer);
+}
+
+void AnimatorSkeletalArray::CalculateAnimMeshsAABBResultBuffer(ResultBuffer& buffer)
+{
+	auto& nodes = m_model3D->m_nodes;
+	auto& globals = buffer.m_globalTransforms;
+	// calculate bones' global AABB
+	{
+		//auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+
+		auto& boneOffsets = m_model3D->m_boneOffsetMatrixs;
+		auto& localAABBs = m_model3D->m_boneAABoxes;
+		auto count = buffer.m_localTransforms.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			auto& node = nodes[i];
+			if (node.boneId != INVALID_ID)
+			{
+				auto& aaBox = buffer.m_boneGlobalAABoxes[node.boneId];
+				auto& localAABox = localAABBs[node.boneId];
+				aaBox = localAABox;
+				aaBox.Transform(boneOffsets[node.boneId] * buffer.m_globalTransforms[i]);
+
+				//debugGraphics->DrawAABox(aaBox.MakeTransform(GetGameObject()->GetCommittedGlobalTransform()));
+			}
+		}
+	}
+
+	// calculate anim meshes' AABB
+	{
+		auto count = buffer.m_animMeshAABoxes.size();
+		for (size_t i = 0; i < count; i++)
+		{
+			auto& aaBox = buffer.m_animMeshAABoxes[i];
+			aaBox = {};
+			auto& animMesh = m_model3D->m_animMeshes[i];
+
+			if (!animMesh.m_influencedByBoneIds.empty())
+			{
+				auto c = animMesh.m_influencedByBoneIds.size();
+				aaBox = buffer.m_boneGlobalAABoxes[animMesh.m_influencedByBoneIds[0]];
+				for (size_t j = 0; j < c; j++)
+				{
+					aaBox.Joint(buffer.m_boneGlobalAABoxes[animMesh.m_influencedByBoneIds[j]]);
+				}
+			}
+			
+		}
+	}
+}
+
 void AnimatorSkeletalArray::UpdateDataToRenderer(Scene* _scene, AnimLayer* last)
 {
-	m_lastOutput = last;
-
 	if (m_isEnableDeferPublicResults)
 	{
-		UpdateDataToRenderer(_scene, (*m_deferBufferLayer.Read())->NodeGlobalTransforms(), (*m_deferBufferLayer.Read())->MeshesAABB());
+		UpdateDataToRenderer(_scene, m_deferBuffer.Read()->m_globalTransforms, m_deferBuffer.Read()->m_animMeshAABoxes);
+		m_lastOutput = m_deferBuffer.Read();
 
-		std::memcpy((*m_deferBufferLayer.Write())->m_globalTransforms.data(), 
-			last->NodeGlobalTransforms().data(), last->NodeGlobalTransforms().size() * sizeof(Mat4));
-
-		std::memcpy((*m_deferBufferLayer.Write())->m_meshesAABB.data(),
-			last->MeshesAABB().data(), last->MeshesAABB().size() * sizeof(AABox));
-
-		m_lastOutput = m_deferBufferLayer.Read()->get();
+		CalculateResultBuffer(last, *m_deferBuffer.Write());
 	}
 	else
 	{
-		UpdateDataToRenderer(_scene, last->NodeGlobalTransforms(), last->MeshesAABB());
+		CalculateResultBuffer(last, m_lastOutputBuffer);
+		UpdateDataToRenderer(_scene, m_lastOutputBuffer.m_globalTransforms, m_lastOutputBuffer.m_animMeshAABoxes);
+		m_lastOutput = &m_lastOutputBuffer;
 	}
 }
 
@@ -891,10 +961,11 @@ void AnimatorSkeletalArray::SetRunning(bool running)
 void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection)
 {
 	m_cct = cct;
-	m_cctLockedUpDirection = lockUpDirection;
+	//m_cctLockedUpDirection = lockUpDirection;
 
 	if (cct == nullptr)
 	{
+		// TODO: reset local buffer
 		SetEnableDeferPublicResult(false);
 		return;
 	}
@@ -902,29 +973,24 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Ve
 	SetEnableDeferPublicResult(true);
 	ResetDeferBufferLayer();
 
-	Vec3 scaling; Quaternion rotation; Vec3 translation;
-	auto& rootLocalTransform = m_lastOutput->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId];
-	auto mat = rootLocalTransform;
-	mat *= GetGameObject()->GetCommittedGlobalTransform();
-	mat.Decompose(scaling, rotation, translation);
-	m_cctPrevPosition = translation;
-	m_cctPrevRotation = rotation;
+	m_cctOffset = m_cct->GetGameObject()->GetCommittedGlobalTransform() * GetGameObject()->GetCommittedGlobalTransform().GetInverse();
+	auto temp = Transform::FromTransformMatrix(m_cctOffset);
+	temp.Scale() = { 1,1,1 };
+	m_cctOffsetTransform = temp;
+	m_cctOffset = temp.ToTransformMatrix();
+	m_cctStartRotation = Transform::FromTransformMatrix(m_cct->GetGameObject()->GetCommittedGlobalTransform()).Rotation();
+	m_cctPrevRootBonePosition = m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId].GetPosition();
+	m_cctLastRootBoneLocalTransform = m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId];
 
-	m_cctOffset = GetGameObject()->GetCommittedGlobalTransform();
-	m_parentOffset = m_cctOffset * m_cct->GetGameObject()->GetCommittedGlobalTransform().GetInverse();
+	m_cctLockedUpDirection = lockUpDirection;
 
-	auto cctStartForward = m_cct->GetGameObject()->GetCommittedGlobalTransform().Forward().Normal();
-	/*auto cctRootTransformGlobal = m_cct->GetGameObject()->GetCommittedGlobalTransform();
-	cctRootTransformGlobal = cctRootTransformGlobal * GetGameObject()->GetLocalTransform().ToTransformMatrix().GetInverse();
-	cctRootTransformGlobal = cctRootTransformGlobal * rootLocalTransform.GetInverse();*/
-	auto& p = m_cct->GetGameObject()->GetCommittedGlobalTransform().Position();
-	m_rootOffset = Mat4::Translation(GetGameObject()->GetCommittedGlobalTransform().GetInverse().Transform(p));
-	m_rootOffset = Mat4::Translation(-rootLocalTransform.GetInverse().Transform(m_rootOffset.Position()));
-	m_rootOffset *= Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
-	m_rootOffset *= Mat4::Rotation(Quaternion::RotationFromTo(-Vec3::Z_AXIS, Vec3(cctStartForward.x, 0, cctStartForward.z).Normal()));
+	Mat4 tMat = m_lastOutput->m_globalTransforms[m_model3D->m_rootBoneNodeId];
+	tMat.Position() = { 0,0,0 };
+	m_cctStartRootBoneGlobalRotation = tMat.GetInverse();
 
-	//m_offset = GetGameObject()->GetLocalTransform();
+	assert(m_cctLastRootBoneLocalTransform.Scale().Equals({ 1,1,1 }, 0.0001f));
 
+	m_test = 0;
 }
 
 void AnimatorSkeletalArray::SetForwardCCT(CharacterController* cct, const Vec3& lockUpDirection)
@@ -992,93 +1058,108 @@ void AnimatorSkeletalArray::SetRigidBoiesControlCCT(CharacterController* cct)
 void AnimatorSkeletalArray::ForwardCTTUpdateDataToRenderer(Scene* _scene, AnimLayer* last)
 {
 #ifdef _DEBUG
-	if (m_deferBufferLayer.Read()->get()->m_globalTransforms.empty())
+	if (m_deferBuffer.Read()->m_globalTransforms.empty())
 	{
 		assert(0);
 	}
 #endif // _DEBUG
 
-	m_lastOutput = m_deferBufferLayer.Read()->get();
-	UpdateDataToRenderer(_scene, m_lastOutput->NodeGlobalTransforms(), m_lastOutput->MeshesAABB());
-
-	Vec3 scaling; Quaternion rotation; Vec3 translation;
-	auto& rootLocalTransform = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId];
-	auto mat = rootLocalTransform;
-	mat *= m_cctOffset;
-	mat.Decompose(scaling, rotation, translation);
-
-	/*auto debugGraphics = Graphics::Get()->GetDebugGraphics();
-	debugGraphics->DrawDirection(mat.Position(), mat.Forward().Normal(), { 0,0,1,1 }, { 0,0,1,1 });
-	debugGraphics->DrawDirection(mat.Position(), mat.Right().Normal(), { 1,0,0,1 }, { 1,0,0,1 });
-	debugGraphics->DrawDirection(mat.Position(), mat.Up().Normal(), { 0,1,0,1 }, { 0,1,0,1 });*/
-
-	auto dMove = translation - m_cctPrevPosition;
-	m_cct->Move(dMove);
-	m_cctPrevPosition = translation;
-
-	Quaternion dRot = Mat4::Rotation(m_cctPrevRotation).GetInverse() * Mat4::Rotation(rotation);
-	m_cctPrevRotation = rotation;
-
-	auto cctRotation = m_cct->CCTGetRotation() * dRot;
-	if (m_cctLockedUpDirection != Vec3::ZERO)
+	/*if (++m_test >= 2)
 	{
-		auto cctRotMat = Mat4::Rotation(cctRotation);
-		auto up = cctRotMat.Up().Normal();
-		if (up != m_cctLockedUpDirection)
+		*m_deferBuffer.Write() = *m_deferBuffer.Read();
+		UpdateDataToRenderer(_scene, m_deferBuffer.Read()->m_globalTransforms, m_deferBuffer.Read()->m_animMeshAABoxes);
+		m_lastOutput = m_deferBuffer.Read();
+		return;
+	}*/
+
+	//Thread::Sleep(50);
+
+	UpdateDataToRenderer(_scene, m_deferBuffer.Read()->m_globalTransforms, m_deferBuffer.Read()->m_animMeshAABoxes);
+	m_lastOutput = m_deferBuffer.Read();
+
+	Mat4 offsetRotation = Mat4::Identity();
+	{
+		auto currentRootGlobal = last->m_localTransforms[m_model3D->m_rootBoneNodeId].ToTransformMatrix();
+		/*auto& nodes = m_model3D->m_nodes;
+		auto it = m_model3D->m_rootBoneNodeId;
+		it = nodes[it].parentId;
+		while (it != INVALID_ID)
 		{
-			cctRotMat *= Mat4::Rotation(Quaternion::RotationFromTo(up, m_cctLockedUpDirection));
-			cctRotation = cctRotMat;
+			currentRootGlobal = currentRootGlobal * last->m_localTransforms[it].ToTransformMatrix();
+			it = nodes[it].parentId;
+		}*/
+
+		auto dMove = currentRootGlobal.Position() - m_cctPrevRootBonePosition;
+		dMove = (Vec4(dMove, 0.0f) * GetGameObject()->GetCommittedGlobalTransform()).xyz();
+		m_cctPrevRootBonePosition = currentRootGlobal.Position();
+
+		m_cct->Move(dMove);
+
+		currentRootGlobal.Position() = { 0,0,0 };
+		auto rotation = Mat4::Rotation(m_cctStartRotation * (/*m_cctStartRootBoneGlobalRotation **/ currentRootGlobal));
+
+		if (m_cctLockedUpDirection != Vec3::ZERO)
+		{
+			auto& basis = rotation;
+			auto oriRotation = rotation;
+			auto up = basis.Up().Normal();
+			if (!up.Equals(m_cctLockedUpDirection, 0.00001f))
+			{
+				auto rot = Mat4::Rotation(Quaternion::RotationFromTo(up, m_cctLockedUpDirection));
+				basis *= rot;
+
+				//offsetRotation = oriRotation * basis.GetInverse();
+			}
+
+			//basis = Mat4::Rotation(rotation);
+			assert(AngleBetween(basis.Up().Normal(), m_cctLockedUpDirection) < 0.0001f);
 		}
+		m_cct->CCTSetRotation(rotation);
 	}
 
-	m_cct->CCTSetRotation(cctRotation);
-
-	/*mat = rootLocalTransform * GetGameObject()->GetLocalTransform().ToTransformMatrix() * m_cct->GetGameObject()->GetCommittedGlobalTransform();
-	mat.Decompose(scaling, rotation, translation);
-	m_cct->CCTSetRotation(rotation);*/
-
 	{
-		CopyDataToForwardCTTUpdateDataToRenderer(last);
+		auto& buffer = *m_deferBuffer.Write();
+		std::memcpy(buffer.m_localTransforms.data(), last->m_localTransforms.data(), sizeof(Transform) * last->m_localTransforms.size());
 
-		/*assert(m_rigidBodyProxyControlMode != RIGID_BODY_PROXY_CONTROL_MODE::RIGID_BODY_TO_ANIMATOR);
-		if (m_rigidBodyProxyControlMode == RIGID_BODY_PROXY_CONTROL_MODE::ANIMATOR_TO_RIGID_BODY)
+		auto& nodes = m_model3D->m_nodes;
+		auto& globals = buffer.m_globalTransforms;
+
+		// discard root motion
+		buffer.m_localTransforms[m_model3D->m_rootBoneNodeId] = m_cctOffsetTransform;
+
+		// calculate nodes' global transform
 		{
-			PublicResultToRigidBodies(_scene, m_deferBufferLayer.get());
-		}*/
+			auto count = buffer.m_localTransforms.size();
+			for (size_t i = 0; i < count; i++)
+			{
+				auto& node = nodes[i];
+				auto& global = globals[i];
+				if (node.parentId != INVALID_ID)
+				{
+					global = buffer.m_localTransforms[i].ToTransformMatrix() * globals[node.parentId];
+					if (i == m_model3D->m_rootBoneNodeId)
+					{
+						global = global * offsetRotation;
+					}
+
+					continue;
+				}
+
+				global = buffer.m_localTransforms[i].ToTransformMatrix();
+				if (i == m_model3D->m_rootBoneNodeId)
+				{
+					global = global * offsetRotation;
+				}
+			}
+		}
+
+		CalculateAnimMeshsAABBResultBuffer(buffer);
 	}
 }
 
-void AnimatorSkeletalArray::CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* last)
+void AnimatorSkeletalArray::CopyDataToForwardCTTUpdateDataToRenderer()
 {
-	auto& deferBufferLayer = *m_deferBufferLayer.Write();
-	std::memcpy(deferBufferLayer->m_globalTransforms.data(), last->NodeGlobalTransforms().data(), sizeof(Mat4) * last->NodeGlobalTransforms().size());
-	std::memcpy(deferBufferLayer->m_meshesAABB.data(), last->MeshesAABB().data(), sizeof(AABox) * last->MeshesAABB().size());
-
-	{
-		// because we forward root transform to cct, so need to discard root transfrom from node to prevent transformed twices
-		auto mat = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId].GetInverse();// *m_rootOffset;
-
-		auto rootLocalTransform = last->NodeGlobalTransforms()[m_model3D->m_rootBoneNodeId];
-		auto m = (m_parentOffset * Mat4::Rotation(m_cct->CCTGetRotation()));
-		rootLocalTransform.Position() = Vec3::ZERO;
-		//rootLocalTransform = {};
-		rootLocalTransform *= m_rootOffset;
-		//rootLocalTransform *= Mat4::Scaling(GetGameObject()->GetLocalTransform().GetScale());
-		//auto f = Mat4::Rotation(m_cctStartRotation).Transform(Vec3::Z_AXIS).Normal();
-		//rootLocalTransform *= Mat4::Rotation(Quaternion::RotationFromTo(-Vec3::Z_AXIS, Vec3(m_cctStartForward.x, 0, m_cctStartForward.z).Normal()));
-		rootLocalTransform *= m.GetInverse();
-
-		auto temp = mat * rootLocalTransform;
-		for (auto& transform : deferBufferLayer->m_globalTransforms)
-		{
-			transform *= temp;
-		}
-
-		for (auto& aabb : deferBufferLayer->m_meshesAABB)
-		{
-			aabb.Transform(temp);
-		}
-	}
+	
 }
 
 void AnimatorSkeletalArray::CloneFrom(Serializer* serializer, Serializable* another)
@@ -1240,6 +1321,8 @@ void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const js
 		serializer->Deserialize(j["RigidBodyProxyCCT"], m_rigidBodyProxyCCT);
 		m_rigidBodyProxyCCTOffset = j["RigidBodyProxyCCTOffset"];
 	}
+
+	Initialize();
 }
 
 void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)

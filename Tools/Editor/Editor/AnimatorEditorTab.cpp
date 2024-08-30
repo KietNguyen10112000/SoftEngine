@@ -263,7 +263,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 		currentAnimId = 0;
 		animation = tab->m_animator->m_model3D->m_animations[currentAnimId];
 		auto layer = (AnimTransitLayer*)this->layer.Get();
-		auto playerInputLayer = dynamic_cast<AnimPlayerLayer*>(layer->m_input);
+		auto playerInputLayer = dynamic_cast<AnimPlayerLayer*>(layer->m_input->GetOutput());
 		if (playerInputLayer)
 		{
 			m_inputPlayerLayer = playerInputLayer;
@@ -271,7 +271,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 				this, 0.0f,
 				[](Handle<AnimTransitLayerNode> self, AnimTransitLayer* layer)
 				{
-					auto l0 = dynamic_cast<AnimPlayerLayer*>(layer->m_input);
+					auto l0 = dynamic_cast<AnimPlayerLayer*>(layer->m_input->GetOutput());
 					if (l0 && self->isEnableFadeTimeTest)
 					{
 						//l0->SetAnimation();
@@ -290,7 +290,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 				this,
 				[](Handle<AnimTransitLayerNode> self, AnimTransitLayer* layer)
 				{
-					auto l0 = dynamic_cast<AnimPlayerLayer*>(layer->m_input);
+					auto l0 = dynamic_cast<AnimPlayerLayer*>(layer->m_input->GetOutput());
 					if (l0 && self->isEnableFadeTimeTest && self->m_inputPlayerLayerPrevAnim)
 					{
 						l0->SetAnimation(self->m_inputPlayerLayerPrevAnim, -1, -1);
@@ -865,6 +865,7 @@ struct AnimBlendLayerNode : public AnimatorEditorTab::Node
 			return;
 		}
 
+		layer->SetFlag(AnimBlendLayer::FLAG::NO_AUTO_DISABLE, true);
 		layer->StartBlending(m_currentFunction, m_rangeMin, m_rangeMax);
 	}
 	
@@ -1132,7 +1133,7 @@ struct AnimJointLayerNode : public AnimatorEditorTab::Node
 			masks.resize(inputs.size());
 			for (auto& w : masks)
 			{
-				w.resize(this->layer->NodeGlobalTransforms().size(), 1.0f);
+				w.resize(this->layer->NodeLocalTransforms().size(), 1.0f);
 				RevalueRootWeights();
 			}
 		}
@@ -1143,7 +1144,7 @@ struct AnimJointLayerNode : public AnimatorEditorTab::Node
 		auto layer = (AnimJointLayer*)this->layer.Get();
 
 		auto& weight = masks.emplace_back();
-		weight.resize(layer->NodeGlobalTransforms().size(), 1.0f);
+		weight.resize(layer->NodeLocalTransforms().size(), 1.0f);
 		RevalueRootWeights();
 
 		ResizeInputs(inputs.size() + 1);
@@ -1472,20 +1473,30 @@ public:
 		auto& nodes = model->m_nodes;
 
 		auto& offsetMatrix = model->m_boneOffsetMatrixs;
-		for (size_t i = 0; i < m_globalTransforms.size(); i++)
+		for (size_t i = 0; i < m_localTransforms.size(); i++)
 		{
 			auto& node = nodes[i];
 			if (node.boneId != INVALID_ID)
 			{
-				m_globalTransforms[i] = offsetMatrix[node.boneId].GetInverse() * prevTransform;
-				m_globalTransforms[i] *= m_coeff;
+				m_localTransforms[i] = Transform::FromTransformMatrix(
+					offsetMatrix[node.boneId].GetInverse() 
+					* ((node.parentId != INVALID_ID && nodes[node.parentId].boneId != INVALID_ID) ? 
+						offsetMatrix[nodes[node.parentId].boneId] : Mat4::Identity())
+				);
+
+				m_localTransforms[i].Scale()	*= m_coeff;
+				(Vec4&)m_localTransforms[i].Rotation() *= m_coeff;
+				m_localTransforms[i].Position() *= m_coeff;
 			}
 		}
 
-		for (auto& aabb : m_meshesAABB) 
+		m_localTransforms[0] = nodes[0].localTransform;
+		m_localTransforms[0] = Transform::FromTransformMatrix(m_localTransforms[0].ToTransformMatrix() * prevTransform);
+
+		/*for (auto& aabb : m_meshesAABB) 
 		{
 			aabb = AABox({ 0,0,0 }, { 1000,1000,1000 });
-		}
+		}*/
 	}
 
 	void SetTransform(const Transform& t)
@@ -2032,6 +2043,19 @@ void AnimatorEditorTab::OnRenderGUI()
 		ExportImpl();
 		m_isExporting = false;
 	}
+
+	DrawDebug();
+}
+
+void AnimatorEditorTab::OnRenderMenuBar(const String& menuName)
+{
+	if (menuName == "Tab")
+	{
+		if (ImGui::MenuItem("Draw Anim Meshes' AABB", NULL, m_drawDebugAABBs))
+		{
+			m_drawDebugAABBs = !m_drawDebugAABBs;
+		}
+	}
 }
 
 void AnimatorEditorTab::OnRenderInGameDebugGraphics()
@@ -2275,6 +2299,8 @@ void AnimatorEditorTab::WriteNodeDataToJson(Serializer* serializer, json& j) con
 		exportData["ExportCppPath"] = m_exportCppPath;
 		j["ExportData"] = exportData;
 	}
+
+	j["DrawDebugAABBs"] = m_drawDebugAABBs;
 }
 
 void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json& j)
@@ -2399,6 +2425,11 @@ void AnimatorEditorTab::ReadNodeDataFromJson(Serializer* serializer, const json&
 
 		m_exportResourcePath = exportData["ExportResourcePath"];
 		m_exportCppPath = exportData["ExportCppPath"];
+	}
+
+	if (j.contains("DrawDebugAABBs"))
+	{
+		m_drawDebugAABBs = j["DrawDebugAABBs"];
 	}
 }
 
@@ -2725,7 +2756,7 @@ void AnimatorEditorTab::RenderModelSkeleton()
 		std::vector<Vec3> bonePos;
 		bonePos.reserve(offsetMatrix.size());
 
-		auto& rootTrans = m_object->GetCommittedGlobalTransform();
+		auto rootTrans = ((AnimatorEditorTPoseLayer*)m_tposeLayer.Get())->m_transform.ToTransformMatrix() * m_object->GetCommittedGlobalTransform();
 
 		for (auto& bone : model->m_boneOffsetMatrixs)
 		{
@@ -3707,6 +3738,29 @@ struct )xxx";
 		cpp = cpp + "\n};\n";
 
 		FileUtils::WriteFile((m_exportCppPath + m_exportInputName + ".h").c_str(), cpp.c_str(), cpp.length());
+	}
+}
+
+void AnimatorEditorTab::DrawDebug()
+{
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (!debugGraphics)
+	{
+		return;
+	}
+
+	if (m_drawDebugAABBs)
+	{
+		m_animator->GetGameObject()->GetRoot()->PostTraversal(
+			[&](GameObject* o)
+			{
+				if (o->HasComponent<RenderingComponent>())
+				{
+					auto box = o->GetComponentRaw<RenderingComponent>()->GetGlobalAABB();
+					debugGraphics->DrawAABox(box);
+				}
+			}
+		);
 	}
 }
 

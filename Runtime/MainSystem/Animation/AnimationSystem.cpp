@@ -20,7 +20,7 @@ AnimationSystem::~AnimationSystem()
 
 void AnimationSystem::AddAnimMeshRenderingBuffer(void* p, AnimatorSkeletalGameObject* animator)
 {
-	auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)p;
+	/*auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)p;
 	auto& id = animMeshRenderingBuffer->id;
 
 	if (id != INVALID_ID)
@@ -33,12 +33,12 @@ void AnimationSystem::AddAnimMeshRenderingBuffer(void* p, AnimatorSkeletalGameOb
 	}
 
 	id = m_animMeshRenderingBufferCount.size();
-	m_animMeshRenderingBufferCount.push_back({ 1,p,animator });
+	m_animMeshRenderingBufferCount.push_back({ 1,p,animator });*/
 }
 
 void AnimationSystem::RemoveMeshRenderingBuffer(void* p, AnimatorSkeletalGameObject* animator)
 {
-	auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)p;
+	/*auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)p;
 	auto& id = animMeshRenderingBuffer->id;
 
 	assert(id != INVALID_ID);
@@ -58,12 +58,12 @@ void AnimationSystem::RemoveMeshRenderingBuffer(void* p, AnimatorSkeletalGameObj
 		return;
 	}
 
-	count--;
+	count--;*/
 }
 
 void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBufferCounter* counter)
 {
-	auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)(counter->p);
+	/*auto animMeshRenderingBuffer = (AnimModel::AnimMeshRenderingBuffer*)(counter->p);
 	auto& buffer = animMeshRenderingBuffer->buffer;
 	auto animator = counter->animator;
 
@@ -110,7 +110,7 @@ void AnimationSystem::CalculateAABBForMeshRenderingBuffer(AnimMeshRenderingBuffe
 	else
 	{
 		m_scene->EndWrite<false>(buffer);
-	}
+	}*/
 }
 
 void AnimationSystem::PrevPhysicsSimulationUpdate()
@@ -239,7 +239,7 @@ void AnimationSystem::Iteration(float dt)
 		{
 			auto animator = data.animator;
 			animator->Update(dt);
-			CalculateAABBForMeshRenderingBuffer(&data);
+			//CalculateAABBForMeshRenderingBuffer(&data);
 		},
 		TaskSystem::GetWorkerCount()
 	);

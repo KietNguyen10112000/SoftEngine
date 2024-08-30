@@ -54,7 +54,7 @@ struct GRAPHICS_DATA_FORMAT
 
 struct GRAPHICS_CONSTANT_BUFFER_DESC
 {
-	size_t perferNumRoom = -1;
+	size_t perferNumRoom = INVALID_ID;
 	size_t bufferSize;
 };
 

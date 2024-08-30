@@ -3,6 +3,8 @@
 #include "AnimLayer.h"
 #include "Common/Math/Function1D.h"
 
+#include <bitset>
+
 NAMESPACE_BEGIN
 
 class API AnimBlendLayer : public AnimLayer
@@ -11,6 +13,14 @@ protected:
 	SERIALIZABLE_CLASS(AnimBlendLayer);
 
 public:
+	struct FLAG
+	{
+		enum ENUM
+		{
+			NO_AUTO_DISABLE = 1 << 0,
+		};
+	};
+
 	AnimLayer* m_input[2] = {};
 
 	float m_blendFactor = 0;
@@ -20,6 +30,8 @@ public:
 
 	// default: f(x) = x, range: 0 <= x <= 1
 	SharedPtr<Function1D> m_controlFunction = std::make_shared<FunctionLinear1D>(1.0f, 0.0f);
+
+	std::bitset<64> m_flags;
 
 protected:
 	// Inherited via AnimLayer
@@ -47,6 +59,9 @@ public:
 	void Restart();
 
 	void SetTime(float t);
+
+	void SetFlag(FLAG::ENUM flag, bool enable);
+	const std::bitset<64>& GetFlags() const;
 
 	inline auto GetMainLayer() const
 	{

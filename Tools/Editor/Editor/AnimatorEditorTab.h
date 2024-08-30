@@ -254,7 +254,7 @@ public:
 
 	byte m_tposeMode = 0;
 	bool m_isEnableTPoseMode = false;
-	bool m_isEnableModelInTPoseMode = false;
+	bool m_isEnableModelInTPoseMode = true;
 	bool m_isShowRootNode = false;
 
 	String m_edSavePath;
@@ -270,6 +270,8 @@ public:
 	String m_exportCppPath = "./"; 
 	char m_exportInputName[256] = {};
 	bool m_isExporting = false;
+
+	bool m_drawDebugAABBs = false;
 
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -290,6 +292,7 @@ public:
 	void OnObjectsAdded(std::vector<GameObject*>& objects) override;
 	void OnObjectsRemoved(std::vector<GameObject*>& objects) override;
 	void OnRenderGUI() override;
+	virtual void OnRenderMenuBar(const String& menuName) override;
 	void OnRenderInGameDebugGraphics() override;
 	void OnShow() override;
 	void OnHide() override;
@@ -351,6 +354,8 @@ private:
 	bool ValidateSetting();
 	void Export(); 
 	void ExportImpl();
+
+	void DrawDebug();
 
 public:
 	static void InitializeSerializableList();

@@ -245,7 +245,7 @@ private:
 	void CreateCache(ByteStream& stream, const String& streamPath);
 	void ReadCache(ByteStream& stream);
 	//void LoadAABoxAnimMesh(AnimMesh* mesh, Animation* animation, AnimMeshVertices* vertices);
-	void LoadBoneAABoxes(AnimMeshVertices* meshVertices);
+	void LoadBoneAABoxes(std::vector<AnimMeshVertices>& meshVertices);
 
 protected:
 	virtual int Load(const String& path) override;

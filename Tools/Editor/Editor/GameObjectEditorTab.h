@@ -19,6 +19,7 @@ public:
 	void WriteSaveDataToJson(Serializer* serializer, json& j) override;
 	void ReadSaveDataFromJson(Serializer* serializer, const json& j) override;
 	void OnRenderGameObjectContextMenu(GameObject* obj) override;
+	virtual void OnHotReloadGameObject(GameObject* startNewObj, GameObject* startOldObj, GameObject* currentNewObj, GameObject* currentOldObj) override;
 	virtual bool CheckCanBeDeleted(GameObject* obj) override;
 
 	bool ValidateSetting();

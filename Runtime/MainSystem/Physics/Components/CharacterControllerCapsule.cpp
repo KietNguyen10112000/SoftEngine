@@ -83,7 +83,7 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 void CharacterControllerCapsule::OnDrawDebug()
 {
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
-	if (debugGraphics)
+	if (debugGraphics && m_pxCharacterController)
 	{
 		auto pxController = (PxCapsuleController*)m_pxCharacterController;
 

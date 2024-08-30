@@ -78,6 +78,9 @@ public:
 
 	inline void Joint(const AABox& right)
 	{
+		if (!right.IsValid())
+			return;
+
 		Vec3 points[16];
 		right.GetPoints(points);
 		GetPoints(&points[8]);
@@ -86,6 +89,9 @@ public:
 
 	inline void Joint(const AABox& right, Vec3* buffer)
 	{
+		if (!right.IsValid())
+			return;
+
 		right.GetPoints(buffer);
 		GetPoints(&buffer[8]);
 		FromPoints(buffer, 16);
@@ -103,6 +109,9 @@ public:
 
 	inline AABox MakeJointed(const AABox& right) const
 	{
+		if (!right.IsValid())
+			return *this;
+
 		AABox ret = *this;
 		ret.Joint(right);
 		return ret;

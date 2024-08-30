@@ -103,7 +103,7 @@ protected:
 	void ShowCreateComponentPopup();
 	void ShowCreateGameObjectPopup();
 
-	Handle<GameObject> LoadGameObjectFromFile(const String& path);
+	Handle<GameObject> LoadGameObjectFromFile(const String& path, bool hotReload = true);
 
 	Handle<GameObject> LoadStaticModelFromFile(const String& path);
 
@@ -121,6 +121,8 @@ public:
 	void OnObjectsRemoved(std::vector<GameObject*>& objects) override;
 	void OnRenderGUI() override;
 	virtual void OnRenderMenuBar(const String& menuName) override;
+
+	virtual void OnHotReloadGameObject(GameObject* startNewObj, GameObject* startOldObj, GameObject* currentNewObj, GameObject* currentOldObj);
 
 	void OnRenderInGameDebugGraphics() override;
 	

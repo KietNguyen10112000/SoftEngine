@@ -76,12 +76,13 @@ void AnimTransitLayer::PrevRun(float dt)
 				l0->SetAnimationImpl(currentFateState.animation, currentFateState.startTime, currentFateState.endTime);
 			}
 
-			auto lastLayer = GetComponentAs<AnimatorSkeletalArray>()->GetLastAnimLayerOutput();
-			if (lastLayer)
+			auto buf = GetComponentAs<AnimatorSkeletalArray>()->GetLastOutputResultBuffer();
+			if (buf)
 			{
+				auto lastLocalTransform = &buf->m_localTransforms;
 				if (currentFateState.direction == TransitDirection::FORWARD)
 				{
-					std::memcpy(m_lastLocalTransforms.data(), lastLayer->NodeLocalTransforms().data(), m_lastLocalTransforms.size() * sizeof(Mat4));
+					std::memcpy(m_lastLocalTransforms.data(), lastLocalTransform->data(), m_lastLocalTransforms.size() * sizeof(Transform));
 				}
 				else if (currentFateState.direction == TransitDirection::BACKWARD)
 				{
@@ -128,7 +129,7 @@ void AnimTransitLayer::Run(float dt)
 	auto num = m_localTransforms.size();
 
 	auto& transforms0 = input->NodeLocalTransforms();
-	auto& transforms1 = m_localTransforms;
+	auto& transforms1 = m_lastLocalTransforms;
 	//auto& ltransforms0 = curLayer->NodeLocalTransforms();
 	//auto& ltransforms1 = prevLayer->NodeLocalTransforms();
 	for (size_t i = 0; i < num; i++)
@@ -184,12 +185,13 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 			self->m_transitTime = fadeTime;
 			self->m_transitTotalTime = fadeTime;
 
-			auto lastLayer = self->GetComponentAs<AnimatorSkeletalArray>()->GetLastAnimLayerOutput();
-			if (lastLayer)
+			auto buf = self->GetComponentAs<AnimatorSkeletalArray>()->GetLastOutputResultBuffer();
+			if (buf)
 			{
+				auto lastLocalTransform = &buf->m_localTransforms;
 				if (direction == TransitDirection::FORWARD)
 				{
-					std::memcpy(self->m_lastLocalTransforms.data(), lastLayer->NodeLocalTransforms().data(), self->m_lastLocalTransforms.size() * sizeof(Mat4));
+					std::memcpy(self->m_lastLocalTransforms.data(), lastLocalTransform->data(), self->m_lastLocalTransforms.size() * sizeof(Transform));
 				}
 				else if (direction == TransitDirection::BACKWARD)
 				{
@@ -234,7 +236,7 @@ void AnimTransitLayer::DeserializeFromJson(Serializer* serializer, const json& j
 
 	serializer->Deserialize(j["Input"], m_input);
 
-	m_lastLocalTransforms.resize(m_lastLocalTransforms.size());
+	m_lastLocalTransforms.resize(NodeLocalTransforms().size());
 
 	Run(0);
 }

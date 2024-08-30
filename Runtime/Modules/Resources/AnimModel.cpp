@@ -113,7 +113,7 @@ int AnimModel::Load(const String& path)
 		}
 	}
 
-	LoadBoneAABoxes(ctx.animMeshesVertices.data());
+	LoadBoneAABoxes(ctx.animMeshesVertices);
 
 	{
 		std::vector<Resource<AnimMotion>> motions;
@@ -351,13 +351,14 @@ void AnimModel::ReadCache(ByteStream& stream)
 //	animation->m_animMeshLocalAABoxKeyFrames[meshId].boundAABox = boundAABox;
 //}
 
-void AnimModel::LoadBoneAABoxes(AnimMeshVertices* meshVertices)
+void AnimModel::LoadBoneAABoxes(std::vector<AnimMeshVertices>& meshVertices)
 {
 	auto myPath = GetPath();
 	auto streamPath = myPath + ".BoneAABoxes";
 	ByteStream stream;
 	if (FileSystem::Get()->IsFileChanged(myPath.c_str())
 		|| !FileSystem::Get()->ReadCacheStream(streamPath.c_str(), &stream))
+	//if (true)
 	{
 		auto numBones = m_boneOffsetMatrixs.size();
 		m_boneAABoxes.resize(numBones);
@@ -365,7 +366,7 @@ void AnimModel::LoadBoneAABoxes(AnimMeshVertices* meshVertices)
 		struct Param
 		{
 			AnimModel* model;
-			AnimMeshVertices* meshVertices;
+			std::vector<AnimMeshVertices>* meshVertices;
 			ID boneId;
 		};
 
@@ -381,7 +382,7 @@ void AnimModel::LoadBoneAABoxes(AnimMeshVertices* meshVertices)
 			auto& param = params[i];
 
 			param.model = this;
-			param.meshVertices = meshVertices;
+			param.meshVertices = &meshVertices;
 			param.boneId = i;
 
 			task.Params() = &param;
@@ -390,20 +391,26 @@ void AnimModel::LoadBoneAABoxes(AnimMeshVertices* meshVertices)
 					TASK_SYSTEM_UNPACK_PARAM_REF_3(Param, p, model, meshVertices, boneId);
 
 					std::vector<Vec3> influencedVertices;
-					for (auto& v : meshVertices->vertices)
+					for (auto& mesh : *meshVertices)
 					{
-						for (size_t i = 0; i < sizeof(v.boneID) / sizeof(v.boneID[0]); i++)
+						for (auto& v : mesh.vertices)
 						{
-							if (v.weight[i] != 0.0f && v.boneID[i] == uint16_t(boneId))
+							for (size_t i = 0; i < sizeof(v.boneID) / sizeof(v.boneID[0]); i++)
 							{
-								influencedVertices.push_back(v.position);
-								break;
+								if (v.weight[i] != 0.0f && v.boneID[i] == uint16_t(boneId))
+								{
+									influencedVertices.push_back(v.position);
+									break;
+								}
 							}
 						}
 					}
 
 					AABox aaBox;
-					aaBox.FromPoints(influencedVertices.data(), influencedVertices.size());
+					if (influencedVertices.size() != 0)
+					{
+						aaBox.FromPoints(influencedVertices.data(), influencedVertices.size());
+					}
 
 					model->m_boneAABoxes[boneId] = aaBox;
 				};
@@ -526,8 +533,7 @@ Handle<GameObject> AnimModel::MakeGameObject()
 	}
 	animator->m_animMeshRenderingBuffer = buffer;
 	animator->m_model3D = model;
-	animator->m_lastGlobalTransform.resize(model->m_nodes.size());
-	//animator->m_rigidBodyProxy.Resize(model->m_nodeIds.size());
+	animator->Initialize();
 
 	auto count = m_meshes.size();
 	for (size_t i = 0; i < count; i++)

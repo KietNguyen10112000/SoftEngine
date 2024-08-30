@@ -858,7 +858,7 @@ void SceneEditorTab::ShowCreateGameObjectPopup()
 	}
 }
 
-Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
+Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path, bool hotReload)
 {
 	auto ext = FileUtils::GetExtension(path);
 	if (ext != "json")
@@ -880,12 +880,15 @@ Handle<GameObject> SceneEditorTab::LoadGameObjectFromFile(const String& path)
 
 	//m_scene->AddObject(obj);
 
-	m_loadFromFileObject.insert({ obj->GetUUID(), { path,FileSystem::Get()->GetFileModifiedLastTime(path) }});
-	obj->PostTraversal([](GameObject* o)
-		{
-			o->NewComponent<GameObjectEditorComponent>()->hotReloadFromFile = true;
-		}
-	);
+	if (hotReload)
+	{
+		m_loadFromFileObject.insert({ obj->GetUUID(), { path,FileSystem::Get()->GetFileModifiedLastTime(path) } });
+		obj->PostTraversal([](GameObject* o)
+			{
+				o->NewComponent<GameObjectEditorComponent>()->hotReloadFromFile = true;
+			}
+		);
+	}
 
 	return obj;
 }
@@ -1135,6 +1138,11 @@ void SceneEditorTab::OnRenderMenuBar(const String& menuName)
 			m_isDrawingInspectingObjectAABB = !m_isDrawingInspectingObjectAABB;
 		}
 	}
+}
+
+void SceneEditorTab::OnHotReloadGameObject(GameObject* startNewObj, GameObject* startOldObj, GameObject* currentNewObj, GameObject* currentOldObj)
+{
+	currentNewObj->Name() = currentOldObj->Name();
 }
 
 void SceneEditorTab::OnRenderInGameDebugGraphics()
@@ -1561,25 +1569,40 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 				std::vector<GameObject*> stack0;
 				std::vector<GameObject*> stack1;
 				
-				stack0.push_back(object);
-				stack1.push_back(replaceObject);
-				while (!stack0.empty())
 				{
-					assert(stack0.size() == stack1.size() && "GameObject structure modified. Invalid file!");
-
-					auto o0 = stack0.back();
-					auto o1 = stack1.back();
-					stack0.pop_back();
-					stack1.pop_back();
-
-					o1->CopyTransform(o0);
-
-					assert(o0->Children().size() == o1->Children().size() && "GameObject structure modified. Invalid file!");
-
-					for (size_t i = 0; i < o0->Children().size(); i++)
+					bool _break = false;
+					stack0.push_back(object);
+					stack1.push_back(replaceObject);
+					while (!stack0.empty() && !_break)
 					{
-						stack0.push_back(o0->Children()[i]);
-						stack1.push_back(o1->Children()[i]);
+						if (stack0.size() != stack1.size())
+						{
+							std::cout << "[WARN]: GameObject structure modified!\n";
+							_break = true;
+							break;
+						}
+
+						auto o0 = stack0.back();
+						auto o1 = stack1.back();
+						stack0.pop_back();
+						stack1.pop_back();
+
+						o1->CopyTransform(o0);
+
+						OnHotReloadGameObject(replaceObject, object, o1, o0);
+
+						if (o0->Children().size() != o1->Children().size())
+						{
+							std::cout << "[WARN]: GameObject structure modified!\n";
+							_break = true;
+							break;
+						}
+
+						for (size_t i = 0; i < o0->Children().size(); i++)
+						{
+							stack0.push_back(o0->Children()[i]);
+							stack1.push_back(o1->Children()[i]);
+						}
 					}
 				}
 

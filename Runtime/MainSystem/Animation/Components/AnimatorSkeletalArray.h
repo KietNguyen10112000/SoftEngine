@@ -9,12 +9,15 @@
 
 NAMESPACE_BEGIN
 
+class CharacterController;
+
 class API AnimatorSkeletalArray : public AnimationComponent
 {
 public:
 	friend class AnimLayer;
 	friend class AnimCCTBufferLayer;
 	friend class AnimationSystem;
+	friend class AnimModel;
 
 	struct RIGID_BODY_PROXY_CONTROL_MODE
 	{
@@ -27,12 +30,22 @@ public:
 	};
 
 private:
-	class BufferLayer
+	class ResultBuffer
 	{
 	public:
 		std::vector<Transform> m_localTransforms;
-		std::vector<Mat4> m_lastGlobalTransforms;
-		std::vector<AABox> m_lastBoneGlobalAABoxes;
+		std::vector<Mat4> m_globalTransforms;
+		std::vector<AABox> m_boneGlobalAABoxes;
+		std::vector<AABox> m_animMeshAABoxes;
+
+		inline void Initialize(AnimModel* model)
+		{
+			m_localTransforms.resize(model->m_nodes.size());
+			m_globalTransforms.resize(model->m_nodes.size());
+			m_boneGlobalAABoxes.resize(model->m_boneOffsetMatrixs.size());
+			m_animMeshAABoxes.resize(model->m_animMeshes.size());
+		}
+
 	};
 
 public:
@@ -46,23 +59,32 @@ public:
 	Array<Handle<GameObject>> m_meshRendererObjs;
 
 	Array<Handle<AnimLayer>> m_animLayers;
-	AnimLayer* m_lastOutput = nullptr;
-	std::vector<Mat4> m_lastGlobalTransform;
+	//AnimLayer* m_lastOutput = nullptr;
+	//const std::vector<Transform>* m_lastOutputLocalTransform = nullptr;
+	//const std::vector<Mat4>* m_lastOutputGlobalTransform = nullptr;
+	ResultBuffer m_lastOutputBuffer;
 
 	bool m_isRunning = true;
 
 	// to defer public results to RenderingSystem
 	bool m_isEnableDeferPublicResults = false;
 	bool m_padd[6];
-	DeferredBuffer<SharedPtr<BufferLayer>> m_deferBufferLayer;
+	DeferredBuffer<ResultBuffer> m_deferBuffer;
+
+	const ResultBuffer* m_lastOutput = &m_lastOutputBuffer;
 
 	CharacterController* m_cct = nullptr;
 	Vec3 m_cctLockedUpDirection = Vec3::ZERO;
-	Vec3 m_cctPrevPosition;
-	Quaternion m_cctPrevRotation;
-	Mat4 m_cctOffset;
-	Mat4 m_rootOffset;
-	Mat4 m_parentOffset;
+	Vec3 m_cctPrevRootBonePosition;
+	Quaternion m_cctStartRotation;
+	Quaternion m_cctStartRootBoneGlobalRotation;
+
+	int m_test = 0;
+
+	// in local space of anim model
+	Mat4 m_cctOffset; 
+	Transform m_cctOffsetTransform;
+	Transform m_cctLastRootBoneLocalTransform;
 
 	Array<Handle<GameObject>> m_rigidBodyProxy;
 	std::vector<Mat4> m_rigidBodyAnimToPhysOffsets;
@@ -89,6 +111,7 @@ public:
 	~AnimatorSkeletalArray();
 
 private:
+	void Initialize();
 	void InitAnimLayer(AnimLayer*);
 
 	// Inherited via Animator
@@ -102,8 +125,11 @@ private:
 
 	void UpdateDataToRenderer(Scene* _scene, const std::vector<Mat4>& globalTransform, const std::vector<AABox>& meshesAABB);
 
+	void CalculateResultBuffer(AnimLayer* last, ResultBuffer& buffer);
+	void CalculateAnimMeshsAABBResultBuffer(ResultBuffer& buffer);
+
 	void ForwardCTTUpdateDataToRenderer(Scene* _scene, AnimLayer* last);
-	void CopyDataToForwardCTTUpdateDataToRenderer(AnimLayer* last);
+	void CopyDataToForwardCTTUpdateDataToRenderer();
 	void SetForwardCCTImpl(CharacterController* cct, const Vec3& lockUpDirection);
 
 	//void PublicResultToRigidBodies(Scene* _scene, AnimLayer* last);
@@ -157,7 +183,7 @@ public:
 		return ret;
 	}
 
-	inline auto* GetLastAnimLayerOutput() const
+	inline auto* GetLastOutputResultBuffer() const
 	{
 		return m_lastOutput;
 	}

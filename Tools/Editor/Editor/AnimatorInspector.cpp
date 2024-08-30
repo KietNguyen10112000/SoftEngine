@@ -255,7 +255,7 @@ void AnimatorInspector::MakeRigidBodySkeleton()
 		}
 	}
 
-	auto& boneGlobals = m_tposeLayer->NodeGlobalTransforms();
+	//auto& boneGlobals = m_tposeLayer->NodeGlobalTransforms();
 	auto& offsets = m_animator->m_model3D->m_boneOffsetMatrixs;
 	auto& objGlobal = m_animator->GetGameObject()->GetCommittedGlobalTransform();
 
@@ -643,7 +643,7 @@ void AnimatorInspector::DrawDebugSkeleton()
 void AnimatorInspector::RematchRigidBodiesWithTPose()
 {
 	auto last = m_tposeLayer.Get();
-	auto& globals = last->NodeGlobalTransforms();
+	auto& globals = m_animator->GetLastOutputResultBuffer()->m_globalTransforms;
 	auto& proxies = m_animator->m_rigidBodyProxy;
 
 	auto globalTransform = m_animator->GetGameObject()->GetCommittedGlobalTransform();
