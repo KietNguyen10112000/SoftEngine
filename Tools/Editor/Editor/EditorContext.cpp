@@ -78,7 +78,7 @@ void EditorContext::RenderMenuBar()
 					}
 					
 					SystemDialog::SaveAsDialog otp;
-					otp.defaultPath = FileSystem::Get()->GetExecutablePath() + savePath;
+					otp.defaultPath = FileSystem::Get()->GetCurrentWorkingDirectory() + savePath;
 					otp.extensionGroups = { 
 						{ 
 							currentTab->GetTabClassName(), 
@@ -89,7 +89,7 @@ void EditorContext::RenderMenuBar()
 					{
 						savePath = otp.outputFilePath;
 						m_savingPath = savePath;
-						if (FileSystem::Get()->IsFileExist(savePath.c_str()))
+						if (FileSystem::Get()->IsFileExisted(savePath.c_str()))
 						{
 							OpenOkCancelDialog({},
 								[](void* p)

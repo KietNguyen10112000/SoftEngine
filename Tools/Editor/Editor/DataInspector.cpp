@@ -647,7 +647,7 @@ bool DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 				auto input = Variant(VARIANT_TYPE::STRING_PATH);
 				if (allowOutsideResources)
 				{
-					auto rcpath = FileSystem::Get()->GetExecutablePath();
+					auto rcpath = FileSystem::Get()->GetCurrentWorkingDirectory();
 					if (fullPath.find(rcpath.c_str()) != 0)
 					{
 						input.As<String>() = fullPath.c_str();
@@ -661,7 +661,7 @@ bool DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 					return true;
 				}
 
-				auto rcpath = FileSystem::Get()->GetResourcesRootPath();
+				auto rcpath = FileSystem::Get()->GetCurrentWorkingDirectory();
 
 				if (fullPath.find(rcpath.c_str()) != 0)
 				{
@@ -739,7 +739,7 @@ bool DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 				std::string fullPath(size_needed, 0);
 				WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
 
-				const std::filesystem::path base = FileUtils::PopPath(FileSystem::Get()->GetExecutablePath()).c_str();
+				const std::filesystem::path base = FileUtils::PopPath(FileSystem::Get()->GetCurrentWorkingDirectory()).c_str();
 				const std::filesystem::path p = fullPath.c_str();
 
 				auto input = Variant(VARIANT_TYPE::STRING_PATH);

@@ -4,7 +4,7 @@
 
 void EditorTab::SetSaveFilePath(const String& dir)
 {
-	if (!FileSystem::Get()->IsFileExist(dir.c_str()))
+	if (!FileSystem::Get()->IsFileExisted(dir.c_str()))
 	{
 		std::cerr << "[ERROR]: EditorTab::SetSaveFilePath() error!\n";
 		return;

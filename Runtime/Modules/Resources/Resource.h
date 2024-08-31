@@ -5,6 +5,7 @@
 #include "Core/Structures/String.h"
 
 #include "FileSystem/FileUtils.h"
+#include "FileSystem/FileSystem.h"
 
 #include "Runtime/StartupConfig.h"
 
@@ -243,7 +244,16 @@ namespace internal
 	template <bool DIRECT_LOAD, typename _T, typename... Args>
 	inline Resource<_T> LoadEx(String path, Args&&... args)
 	{
-		path = StartupConfig::Get().resourcesPath + path;
+		auto temp = FileSystem::Get()->GetFilePath(path);//StartupConfig::Get().resourcesPath + path;
+		if (!temp.empty())
+		{
+			path = temp;
+		}
+		/*else
+		{
+			path = StartupConfig::Get().resourcesPath + path;
+		}*/
+
 		_T* rc = dynamic_cast<_T*>(internal::TryLoad(path, typeid(_T).name()));
 
 		if (!rc)

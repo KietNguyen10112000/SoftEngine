@@ -466,7 +466,7 @@ void Serializer::WriteToFileJson(const String& path)
 		{
 			json j1;
 			j1["UUID"] = key;
-			j1["Path"] = FileUtils::ShiftPath(value.resource->GetPath());
+			j1["Path"] = value.resource->GetPath();
 			arr.push_back(j1);
 		}
 		j["UsedResources"] = arr;
@@ -602,8 +602,10 @@ void Serializer::WriteToFile(const String& path)
 	}
 }
 
-void Serializer::ReadFromFile(const String& path)
+void Serializer::ReadFromFile(const String& _path)
 {
+	auto path = FileSystem::Get()->GetFilePath(_path);
+
 	switch (m_mode)
 	{
 	case Serializer::MODE_BINARY: {

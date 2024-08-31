@@ -119,9 +119,10 @@ void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMo
 int LoadAnimMotion(String path, std::vector<Resource<AnimMotion>>& output)
 {
 	auto fs = FileSystem::Get();
+	path = fs->GetFilePath(path);
 
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(fs->GetResourcesPath(path).c_str(),
+	const aiScene* scene = importer.ReadFile(path.c_str(),
 		aiProcess_Triangulate | aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals | aiProcess_ConvertToLeftHanded);
 
 	if (scene == nullptr)

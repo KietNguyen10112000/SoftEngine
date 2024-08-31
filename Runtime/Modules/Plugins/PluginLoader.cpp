@@ -271,7 +271,7 @@ void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 	};
 
 	auto hotReloadPath = m_pluginPath + "HotReload/";
-	auto hotReloadPathReal = FileSystem::Get()->GetCachePath() + "Plugins/HotReload/";
+	auto hotReloadPathReal = FileSystem::Get()->GetCacheDirectory() + "Plugins/HotReload/";
 
 	if (!FileUtils::IsExist(hotReloadPath.c_str()))
 	{

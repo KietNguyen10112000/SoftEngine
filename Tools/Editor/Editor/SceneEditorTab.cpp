@@ -22,6 +22,7 @@
 #include "EditorFont.h"
 
 #include "SystemDialog.h"
+#include <MainSystem/Physics/Components/CharacterController.h>
 
 SceneEditorTab::SceneEditorTab()
 {
@@ -42,6 +43,11 @@ void SceneEditorTab::OnObjectsAdded(std::vector<GameObject*>& objects)
 
 void SceneEditorTab::OnObjectsRemoved(std::vector<GameObject*>& objects)
 {
+	if (m_isHotDeserializingGameObjectFromFile)
+	{
+		return;
+	}
+
 	for (auto& obj : objects)
 	{
 		assert(obj->HasComponent<GameObjectEditorComponent>());
@@ -1143,6 +1149,21 @@ void SceneEditorTab::OnRenderMenuBar(const String& menuName)
 void SceneEditorTab::OnHotReloadGameObject(GameObject* startNewObj, GameObject* startOldObj, GameObject* currentNewObj, GameObject* currentOldObj)
 {
 	currentNewObj->Name() = currentOldObj->Name();
+
+	if (currentOldObj->HasComponent<CharacterController>())
+	{
+		auto comp = currentOldObj->GetComponent<CharacterController>();
+		currentOldObj->RemoveComponent(comp);
+		currentNewObj->AddComponent(comp);
+	}
+
+	if (currentOldObj->HasComponent<Script>())
+	{
+		auto scriptName = currentOldObj->GetComponentRaw<Script>()->GetClassName();
+		auto record = SerializableDB::Get()->GetSerializableRecord(scriptName);
+		auto comp = DynamicCast<Script>(record.ctor());
+		currentNewObj->AddComponent(comp);
+	}
 }
 
 void SceneEditorTab::OnRenderInGameDebugGraphics()
@@ -1544,6 +1565,21 @@ void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 
 void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 {
+	if (j.contains("Objects"))
+	{
+		m_objects.clear();
+
+		Handle<GameObject> obj;
+		auto& arr = j["Objects"];
+		for (size_t i = 0; i < arr.size(); i++)
+		{
+			serializer->Deserialize(arr[i], obj);
+			m_objects.push_back(obj);
+		}
+
+		ReindexObjects();
+	}
+
 	if (j.contains("LoadedFromFileObject"))
 	{
 		m_isHotDeserializingGameObjectFromFile = true;
@@ -1563,7 +1599,7 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 			if (object && lastModifiedTime != FileSystem::Get()->GetFileModifiedLastTime(filePath))
 			{
 				auto replaceObject = LoadGameObjectFromFile(filePath);
-				m_loadFromFileObject[replaceObject->GetUUID()].loadedLastModifiedTime = lastModifiedTime;
+				m_loadFromFileObject[replaceObject->GetUUID()].loadedLastModifiedTime = FileSystem::Get()->GetFileModifiedLastTime(filePath);
 				assert(replaceObject.Get() != nullptr);
 
 				std::vector<GameObject*> stack0;
@@ -1610,7 +1646,7 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 				{
 					auto editorId = object->GetComponentRaw<GameObjectEditorComponent>()->id;
 					m_objects[editorId] = replaceObject.Get();
-					AddObjectToEditor(replaceObject);
+					//AddObjectToEditor(replaceObject);
 
 					m_scene->RemoveObject(object);
 					m_scene->AddObject(replaceObject);
@@ -1655,26 +1691,15 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 		m_isHotDeserializingGameObjectFromFile = false;
 	}
 
-	if (j.contains("Objects"))
-	{
-		m_objects.clear();
-
-		Handle<GameObject> obj;
-		auto& arr = j["Objects"];
-		for (size_t i = 0; i < arr.size(); i++)
-		{
-			serializer->Deserialize(arr[i], obj);
-			m_objects.push_back(obj);
-		}
-
-		ReindexObjects();
-	}
-
 	if (j.contains("InspectingObject"))
 	{
 		Handle<GameObject> inspectingObject;
 		serializer->Deserialize(j["InspectingObject"], inspectingObject);
-		OnObjectSelected(inspectingObject);
+		
+		if (m_loadFromFileObject.find(inspectingObject->GetUUID()) != m_loadFromFileObject.end())
+		{
+			OnObjectSelected(inspectingObject);
+		}
 	}
 
 	if (j.contains("DrawDebug"))

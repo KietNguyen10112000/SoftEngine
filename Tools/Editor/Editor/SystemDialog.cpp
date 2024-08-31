@@ -101,7 +101,7 @@ bool SystemDialog::OpenSaveAsDialog(SaveAsDialog& opt)
 
 		std::replace(fullPath.begin(), fullPath.end(), '\\', '/');
 
-		auto& rcpath = FileSystem::Get()->GetExecutablePath();
+		auto& rcpath = FileSystem::Get()->GetCurrentWorkingDirectory();
 		if (fullPath.find(rcpath.c_str()) != 0)
 		{
 			opt.outputFilePath = fullPath.c_str();
@@ -154,7 +154,7 @@ bool SystemDialog::OpenFileChooser(FileChooserDialog& opt)
 
 		if (!opt.forceInsideResourcesPath)
 		{
-			auto rcpath = FileSystem::Get()->GetExecutablePath();
+			auto rcpath = FileSystem::Get()->GetCurrentWorkingDirectory();
 			if (fullPath.find(rcpath.c_str()) != 0)
 			{
 				opt.outputFilePath = fullPath.c_str();
@@ -166,7 +166,7 @@ bool SystemDialog::OpenFileChooser(FileChooserDialog& opt)
 			return true;
 		}
 
-		auto rcpath = FileSystem::Get()->GetResourcesRootPath();
+		auto rcpath = FileSystem::Get()->GetCurrentWorkingDirectory();
 
 		if (fullPath.find(rcpath.c_str()) != 0)
 		{

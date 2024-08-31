@@ -38,13 +38,14 @@ FileSystem::FileSystem()
 	std::replace(str.begin(), str.end(), '\\', '/');
 
 	m_executablePath = FileUtils::PopPath(str.c_str());
+	m_currentPath = m_executablePath;
 
 	auto path = fs::path(str);
 	
 	m_cachePath = String(path.parent_path().u8string().c_str()) + "/.cache/";
-	m_rootPath = StartupConfig::Get().resourcesPath;
+	//m_rootPath = StartupConfig::Get().resourcesPath;
 
-	m_rootFullPath = String(path.parent_path().u8string().c_str()) + "/" + StartupConfig::Get().resourcesPath;
+	//m_rootFullPath = String(path.parent_path().u8string().c_str()) + "/" + StartupConfig::Get().resourcesPath;
 
 	LoadCache();
 }
@@ -68,6 +69,16 @@ void FileSystem::LoadCache()
 			m_indexedFiles.insert({ path, file });
 		}
 	}
+}
+
+void FileSystem::BeginInitializeResourcePaths()
+{
+	m_isInitializedResourcePaths = false;
+}
+
+void FileSystem::EndInitializeResourcePaths()
+{
+	m_isInitializedResourcePaths = true;
 }
 
 void FileSystem::SaveCache()
@@ -95,20 +106,35 @@ void FileSystem::SaveCache()
 	WriteCacheStream(".filesystem", &stream);
 }
 
-bool FileSystem::IsFileExist(const char* path)
+bool FileSystem::IsFileExisted(const char* path)
 {
-	return std::filesystem::is_regular_file(path) && std::filesystem::exists(path);
+	//return std::filesystem::is_regular_file(path) && std::filesystem::exists(path);
+	return GetFilePath(path) != "";
 }
 
-bool FileSystem::IsResourceExist(const char* path)
-{
-	auto str = m_rootPath + path;
-	return std::filesystem::is_regular_file(str.c_str()) && std::filesystem::exists(str.c_str());
-}
+//bool FileSystem::IsResourceExist(const char* path)
+//{
+//	auto str = m_rootPath + path;
+//	return std::filesystem::is_regular_file(str.c_str()) && std::filesystem::exists(str.c_str());
+//}
 
-bool FileSystem::IsDirectoryExist(const char* path)
+bool FileSystem::IsDirectoryExisted(const char* path)
 {
-	return std::filesystem::is_directory(path) && std::filesystem::exists(path);
+	if (std::filesystem::is_directory(path) && std::filesystem::exists(path))
+	{
+		return true;
+	}
+
+	for (auto& p : m_searchDirectories)
+	{
+		auto _p = p + path;
+		if (std::filesystem::is_directory(_p.c_str()) && std::filesystem::exists(_p.c_str()))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 size_t FileSystem::GetFileModifiedLastTime(const String& path) const
@@ -186,7 +212,7 @@ void FileSystem::WriteCacheStream(const String& path, ByteStreamRead* stream)
 bool FileSystem::ReadStream(const String& path, ByteStream* output)
 {
 	String fullpath = path;//GetCachePath(path);
-	if (!IsFileExist(fullpath.c_str()))
+	if (!IsFileExisted(fullpath.c_str()))
 	{
 		return false;
 	}
@@ -216,9 +242,41 @@ bool FileSystem::ReadCacheStream(const String& path, ByteStream* output)
 	return ReadStream(GetCachePath(path), output);
 }
 
-String FileSystem::GetResourcesRootPath()
+//String FileSystem::GetResourcesRootPath()
+//{
+//	return m_rootFullPath;
+//}
+
+void FileSystem::AddSearchDirectory(const String& path)
 {
-	return m_rootFullPath;
+	assert(m_isInitializedResourcePaths == false);
+	assert(std::filesystem::is_directory(path.c_str()) && std::filesystem::exists(path.c_str()));
+
+	if (path[path.length() - 1] != '/')
+	{
+		m_searchDirectories.push_back(path + "/");
+		return;
+	}
+	m_searchDirectories.push_back(path);
+}
+
+String FileSystem::GetFilePath(const String& path)
+{
+	if (std::filesystem::exists(path.c_str()) && std::filesystem::is_regular_file(path.c_str()))
+	{
+		return path;
+	}
+
+	for (auto& sPath : m_searchDirectories)
+	{
+		auto p = sPath + path;
+		if (std::filesystem::exists(p.c_str()) && std::filesystem::is_regular_file(p.c_str()))
+		{
+			return p;
+		}
+	}
+
+	return "";
 }
 
 NAMESPACE_END

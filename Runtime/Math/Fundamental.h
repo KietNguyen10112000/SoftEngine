@@ -668,11 +668,16 @@ public:
         return *this;
     }
 
-    inline auto Normal()
+    inline auto Normal() const
     {
         Quaternion ret;
-        ret.GLMQuat() = glm::normalize(GLMQuat());
+        ret.GLMQuat() = glm::normalize(GLMQuatConst());
         return ret;
+    }
+
+    inline Quaternion Conjugate() const
+    {
+        return glm::conjugate(GLMQuatConst());
     }
 
     inline friend bool operator==(const Quaternion& v1, const Quaternion& v2)
@@ -1409,9 +1414,7 @@ inline float ToDegrees(float radians)
 
 inline float AngularDistance(const Quaternion& q1, const Quaternion& q2)
 {
-    auto v1 = (Vec4(1, 0, 0, 1) * Mat4::Rotation(q1)).xyz();
-    auto v2 = (Vec4(1, 0, 0, 1) * Mat4::Rotation(q2)).xyz();
-    return AngleBetween(v1, v2);
+    return 2 * acos(abs((q1 * q2.Conjugate()).w));
 }
 
 template <typename T, typename _Scala>

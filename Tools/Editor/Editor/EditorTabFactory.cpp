@@ -27,7 +27,7 @@ EditorTabFactoryManager::~EditorTabFactoryManager()
 
 bool EditorTabFactory::AskIfExisted(const String& path)
 {
-	if (FileSystem::Get()->IsFileExist(path.c_str()))
+	if (FileSystem::Get()->IsFileExisted(path.c_str()))
 	{
 		m_pathToCheckExist = path;
 		if (!m_overwriteExist)

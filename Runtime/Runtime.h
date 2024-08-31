@@ -5,6 +5,7 @@
 #include "Core/Pattern/Singleton.h"
 #include "Core/Structures/Managed/Array.h"
 #include "Core/Structures/STD/STDContainers.h"
+#include "Core/Structures/String.h"
 
 #include "Common/Utils/GenericStorage.h"
 #include "Common/Utils/EventDispatcher.h"
@@ -150,6 +151,8 @@ private:
 	void ProcessSwapRunningScene();
 
 public:
+	void SetWorkingDirectory(const String& path);
+
 	void Setup();
 
 	void Run();

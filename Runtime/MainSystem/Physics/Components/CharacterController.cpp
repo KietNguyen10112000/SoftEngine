@@ -217,6 +217,20 @@ void CharacterController::ApplyGravity(float dt)
 	m_velocity += sumG * dt;
 }
 
+void CharacterController::CCTSetRotationImpl(const Quaternion& rotation)
+{
+	m_rotation = rotation;
+	auto up = Mat4::Rotation(rotation).Up().Normal();
+	auto curUp = PhysXUtils::ToVec3(m_pxCharacterController->getUpDirection()).Normal();
+	if (AngleBetween(up, curUp) > 0.001f)
+	{
+		m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>(up));
+		std::cout << "SetUpDirection\n";
+	}
+
+	OnPhysicsTransformChanged();
+}
+
 void CharacterController::Wake()
 {
 	
@@ -499,7 +513,14 @@ void CharacterController::OnTransformChanged()
 		auto& pos = globalTransform.Position();
 		PxExtendedVec3 position = { pos.x, pos.y, pos.z };
 		m_pxCharacterController->setPosition(position);
-		m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>(rotationMat.Up()));
+
+		auto curUp = PhysXUtils::ToVec3(m_pxCharacterController->getUpDirection()).Normal();
+		auto up = rotationMat.Up().Normal();
+		if (AngleBetween(up, curUp) > 0.001f)
+		{
+			std::cout << "CharacterController::OnTransformChanged --- SetUpDirection\n";
+			m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>(up));
+		}
 		m_lastRotation = m_rotation;
 	}
 }
@@ -507,13 +528,19 @@ void CharacterController::OnTransformChanged()
 void CharacterController::Move(const Vec3& disp)
 {
 	auto scene = GetGameObject()->GetScene();
+
+#ifdef _DEBUG
 	auto iteration = scene->GetIterationCount();
-	if (m_lastMoveIterationCount == iteration)
+	auto& atom = (std::atomic<size_t>&)m_lastMoveIterationCount;
+	if (atom.exchange(iteration) == iteration)
 	{
+		// to correct character movement, Move() function should be called only one time per frame. 
+		assert(0 && "Multiple actors called move() in a frame.");
 		return;
 	}
+#endif // _DEBUG
 
-	m_lastMoveIterationCount = iteration;
+	//m_lastMoveIterationCount = iteration;
 
 	auto system = scene->GetPhysicsSystem();
 	auto taskRunner = system->AsyncTaskRunnerST();
@@ -529,7 +556,7 @@ void CharacterController::Move(const Vec3& disp)
 		{
 			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, dt);
 
-			if (controller->m_gravity != Vec3::ZERO || controller->m_velocity != Vec3::ZERO)
+			if (controller->m_isEnableGravity || (controller->m_gravity != Vec3::ZERO || controller->m_velocity != Vec3::ZERO))
 			{
 				return;
 			}
@@ -633,9 +660,7 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 	MAIN_SYSTEM_TASK_1(
 		PhysicsSystem, AsyncTaskRunnerST, rotation,
 		{
-			self->m_rotation = rotation;
-			self->m_pxCharacterController->setUpDirection(reinterpret_cast<const PxVec3&>((Mat4::Rotation(rotation).Up())));
-			self->OnPhysicsTransformChanged();
+			self->CCTSetRotationImpl(rotation);
 		}
 	);
 

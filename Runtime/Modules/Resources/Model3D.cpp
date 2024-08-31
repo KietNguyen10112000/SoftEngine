@@ -99,9 +99,11 @@ int Model3D::Load(const String& path)
 
 			std::string str = file.C_Str();
 			std::replace(str.begin(), str.end(), '\\', '/');
-			String diffusePath = fs->GetResourcesRelativePath(basePath + str.c_str());
+			String diffusePath = basePath + str.c_str();// fs->GetResourcesRelativePath(basePath + str.c_str());
 
-			if (fs->IsResourceExist(diffusePath.c_str()))
+			//assert(0 && "TODO: Check this again!!!");
+
+			if (fs->IsFileExisted(diffusePath.c_str()))
 			{
 				diffuseTextures.push_back(diffusePath);
 			}

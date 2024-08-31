@@ -33,6 +33,11 @@ public:
 
 		inline bool TestGround(const Vec3& dir) const
 		{
+			if (dir.Length2() == 0)
+			{
+				return false;
+			}
+
 			return dir.Normal().Dot(normal) < -0.0001f;
 		}
 	};
@@ -82,6 +87,8 @@ private:
 
 	void ReduceVelocityByCollisionPlanes(float dt);
 	void ApplyGravity(float dt);
+
+	void CCTSetRotationImpl(const Quaternion& rotation);
 
 protected:
 	virtual void Wake() override;

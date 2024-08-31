@@ -25,7 +25,7 @@ public:
 
 	ResourceManager()
 	{
-		if (FileSystem::Get()->IsFileExist(META_PATH))
+		if (FileSystem::Get()->IsFileExisted(META_PATH))
 		{
 			byte* buffer = nullptr; size_t fileSize = 0;
 			FileUtils::ReadFile(META_PATH, buffer, fileSize);

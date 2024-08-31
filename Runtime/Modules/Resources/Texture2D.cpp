@@ -14,7 +14,7 @@ const char* Texture2D::DEFAULT_FILE		= "Default/default.png";
 
 int Texture2D::Load(const String& path)
 {
-	assert(FileSystem::Get()->IsFileExist(path.c_str()));
+	assert(FileSystem::Get()->IsFileExisted(path.c_str()));
 
 	ByteStream stream;
 	auto streamPath = (path + CACHE_EXTENSION);

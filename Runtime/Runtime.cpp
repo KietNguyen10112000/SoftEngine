@@ -96,6 +96,9 @@ Handle<Runtime> Runtime::Initialize()
 {
 	UUIDGenerator::SingletonInitialize();
 	FileSystem::Initialize();
+	FileSystem::Get()->BeginInitializeResourcePaths();
+	FileSystem::Get()->AddSearchDirectory(StartupConfig::Get().resourcesPath);
+
 	MetadataParser::Initialize();
 	resource::internal::Initialize();
 
@@ -104,6 +107,8 @@ Handle<Runtime> Runtime::Initialize()
 	Runtime::s_instance.reset(ret.Get());
 
 	Runtime::s_instance->InitializeModules();
+
+	FileSystem::Get()->EndInitializeResourcePaths();
 
 	return ret;
 }
@@ -276,6 +281,16 @@ void Runtime::FinalPlugins()
 {
 	PluginLoader::Get()->UnloadAll(this, m_plugins);
 	PluginLoader::SingletonFinalize();
+}
+
+void Runtime::SetWorkingDirectory(const String& path)
+{
+	static bool once = false;
+	assert(once == false && "Just only one plugin can set its directory as main working directory!!!");
+
+	once = true;
+
+	FileSystem::Get()->AddSearchDirectory(path);
 }
 
 // why need this function -> this function is allowed to use fiber-based task system (fiber context switching), 

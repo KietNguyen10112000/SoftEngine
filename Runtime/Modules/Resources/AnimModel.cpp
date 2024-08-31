@@ -117,7 +117,7 @@ int AnimModel::Load(const String& path)
 
 	{
 		std::vector<Resource<AnimMotion>> motions;
-		ResourceUtils::LoadAnimMotion(FileUtils::ShiftPath(path), (void*)scene, motions);
+		ResourceUtils::LoadAnimMotion(path, (void*)scene, motions);
 
 		for (auto& motion : motions)
 		{
