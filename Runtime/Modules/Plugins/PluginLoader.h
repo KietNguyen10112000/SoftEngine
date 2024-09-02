@@ -16,15 +16,17 @@ private:
 	std::vector<Plugin*> m_loadedPlugins;
 	Plugin* m_currentLoadingPlugin = nullptr;
 
-	String m_pluginPath;
+	std::vector<String> m_pluginDirectories;
 
 private:
 	Plugin* LoadPluginImpl(Runtime* engine, const wchar_t* path, ID idx = INVALID_ID);
 
+	bool LoadAllFromDirectory(Runtime* engine, const char* directory, std::vector<Plugin*>& output);
+
 public:
 	// return false if any plugin failed to load
-	bool LoadAll(Runtime* engine, const char* path, std::Vector<Plugin*>& output);
-	void UnloadAll(Runtime* engine, std::Vector<Plugin*>& input, bool freeLib = false);
+	bool LoadAll(Runtime* engine, std::vector<Plugin*>& output);
+	void UnloadAll(Runtime* engine, std::vector<Plugin*>& input, bool freeLib = false);
 
 	void Unload(Runtime* engine, Plugin* input, bool freeLib = false);
 
@@ -35,6 +37,7 @@ public:
 
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
 private:
+	void LoadAllHotReloadPluginFromDirectory(Runtime* engine, const String& directory);
 	void LoadAllHotReloadPlugin(Runtime* engine);
 
 public:

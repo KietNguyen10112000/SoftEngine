@@ -97,7 +97,24 @@ Handle<Runtime> Runtime::Initialize()
 	UUIDGenerator::SingletonInitialize();
 	FileSystem::Initialize();
 	FileSystem::Get()->BeginInitializeResourcePaths();
-	FileSystem::Get()->AddSearchDirectory(StartupConfig::Get().resourcesPath);
+	FileSystem::Get()->AddWorkingDirectory(FileSystem::Get()->GetExecutableDirectory());
+	FileSystem::Get()->AddSearchDirectory(FileSystem::Get()->GetExecutableDirectory(), "Resources/");
+
+	if (StartupConfig::Get()->configFilePath.empty())
+	{
+		StartupConfig::Get()->configFilePath = FileSystem::Get()->GetCurrentWorkingDirectory() + "Default.Soft";
+	}
+
+	if (StartupConfig::Get()->currentConfigName.empty())
+	{
+#ifdef _DEBUG
+		StartupConfig::Get()->currentConfigName = "Debug";
+#else
+		StartupConfig::Get()->currentConfigName = "Release";
+#endif // _DEBUG
+	}
+
+	StartupConfig::Get()->LoadConfigFile(StartupConfig::Get()->configFilePath.c_str());
 
 	MetadataParser::Initialize();
 	resource::internal::Initialize();
@@ -202,14 +219,14 @@ void Runtime::FinalizeModules()
 
 void Runtime::InitGraphics()
 {
-	if (StartupConfig::Get().isEnableRendering)
+	if (StartupConfig::Get()->isEnableRendering)
 	{
 		/*SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 		::SetProcessDPIAware();*/
 
 		m_input = rheap::New<Input>();
 
-		m_window = (void*)platform::CreateWindow(m_input, 0, 0, StartupConfig::Get().windowWidth, StartupConfig::Get().windowHeight, "SoftEngine");
+		m_window = (void*)platform::CreateWindow(m_input, 0, 0, StartupConfig::Get()->windowWidth, StartupConfig::Get()->windowHeight, "SoftEngine");
 		if (Graphics::Initilize(platform::GetWindowNativeHandle(m_window), GRAPHICS_BACKEND_API::DX12) != 0)
 		{
 			m_isRunning = false;
@@ -222,7 +239,7 @@ void Runtime::InitGraphics()
 
 void Runtime::FinalGraphics()
 {
-	if (StartupConfig::Get().isEnableRendering)
+	if (StartupConfig::Get()->isEnableRendering)
 	{
 		//Graphics::Finalize();
 		platform::DeleteWindow(m_window);
@@ -232,7 +249,7 @@ void Runtime::FinalGraphics()
 
 void Runtime::InitNetwork()
 {
-	if (StartupConfig::Get().isEnableNetwork)
+	if (StartupConfig::Get()->isEnableNetwork)
 	{
 		Network::Initialize();
 	}
@@ -240,7 +257,7 @@ void Runtime::InitNetwork()
 
 void Runtime::FinalNetwork()
 {
-	if (StartupConfig::Get().isEnableNetwork)
+	if (StartupConfig::Get()->isEnableNetwork)
 	{
 		Network::Finalize();
 	}
@@ -250,9 +267,9 @@ void Runtime::InitPlugins()
 {
 	PluginLoader::SingletonInitialize();
 
-	if (StartupConfig::Get().pluginsPath)
+	//if (StartupConfig::Get()->pluginsPath)
 	{
-		if (PluginLoader::Get()->LoadAll(this, StartupConfig::Get().pluginsPath, m_plugins) == false)
+		if (PluginLoader::Get()->LoadAll(this, m_plugins) == false)
 		{
 			std::cerr << "[PLUGIN]: Initialization failed!\n";
 			m_isRunning = false;
@@ -290,7 +307,9 @@ void Runtime::SetWorkingDirectory(const String& path)
 
 	once = true;
 
-	FileSystem::Get()->AddSearchDirectory(path);
+	assert(path[path.length() - 1] == '/');
+	FileSystem::Get()->SetCurrentWorkingDirectory(path);
+	FileSystem::Get()->AddWorkingDirectory(path);
 }
 
 // why need this function -> this function is allowed to use fiber-based task system (fiber context switching), 
@@ -784,7 +803,7 @@ void Runtime::Iteration()
 		return;
 	}
 
-	auto fixedDt = StartupConfig::Get().fixedDt;
+	auto fixedDt = StartupConfig::Get()->fixedDt;
 	if (fixedDt > 0)
 	{
 		while (g_sumDt > fixedDt)

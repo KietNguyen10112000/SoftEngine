@@ -71,10 +71,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins/HotReload</OutDir>
+    <OutDir>$(SolutionDir)/build/$(Configuration)/HotReload/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins/HotReload</OutDir>
+    <OutDir>$(SolutionDir)/build/$(Configuration)/HotReload/</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -108,7 +108,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;PLUGIN_ALLOW_HOT_RELOAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -126,7 +126,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;PLUGIN_ALLOW_HOT_RELOAD;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(SOFT_ENGINE_HOME);$(SOFT_ENGINE_HOME)/Runtime;$(SOFT_ENGINE_HOME)/Runtime/Modules;$(SOFT_ENGINE_HOME)/Libraries;$(SOFT_ENGINE_HOME)/Libraries/glm;$(SolutionDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -142,6 +142,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="..\Natvis\DebugView.natvis" />
+    <Natvis Include="..\Natvis\glm.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

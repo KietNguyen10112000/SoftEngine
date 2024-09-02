@@ -103,9 +103,9 @@ int Model3D::Load(const String& path)
 
 			//assert(0 && "TODO: Check this again!!!");
 
-			if (fs->IsFileExisted(diffusePath.c_str()))
+			if (!str.empty() && fs->IsFileExisted(diffusePath.c_str()))
 			{
-				diffuseTextures.push_back(diffusePath);
+				diffuseTextures.push_back(FileSystem::Get()->GetRelativeFilePath(diffusePath));
 			}
 			else
 			{

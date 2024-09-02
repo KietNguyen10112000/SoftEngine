@@ -40,40 +40,52 @@ inline void ProcessArgs(int argc, const char** argv)
 {
 	using namespace soft;
 
-	StartupConfig::Get().executablePath = platform::GetExecutablePathCStr();
+	StartupConfig::Get()->executablePath = platform::GetExecutablePathCStr();
 
 	size_t id = -1;
 	for (int i = 1; i < argc; i++)
 	{
 		std::string_view str = argv[i];
 
+		if ((id = str.find("--ConfigFile=")) != std::string_view::npos)
+		{
+			StartupConfig::Get()->configFilePath = std::string(str.substr(id + strlen("--ConfigFile="))).c_str();
+			continue;
+		}
+
+		if ((id = str.find("--ConfigBuildName=")) != std::string_view::npos)
+		{
+			StartupConfig::Get()->currentConfigName = std::string(str.substr(id + strlen("--ConfigBuildName="))).c_str();
+			continue;
+		}
+
 		if ((id = str.find("--NReservedThread=")) != std::string_view::npos)
 		{
-			StartupConfig::Get().reservedThread = std::stoi(str.substr(id + 18).data());
+			StartupConfig::Get()->reservedThread = std::stoi(str.substr(id + 18).data());
 			continue;
 		}
 
 		if ((id = str.find("--NThread=")) != std::string_view::npos)
 		{
-			StartupConfig::Get().numThreads = std::stoi(str.substr(id + 10).data());
+			StartupConfig::Get()->numThreads = std::stoi(str.substr(id + 10).data());
 			continue;
 		}
 
-		if ((id = str.find("--RcPath=")) != std::string_view::npos)
+		/*if ((id = str.find("--RcPath=")) != std::string_view::npos)
 		{
-			StartupConfig::Get().resourcesPath = str.substr(id + 9).data();
+			StartupConfig::Get()->resourcesPath = str.substr(id + 9).data();
 			continue;
-		}
+		}*/
 
-		if ((id = str.find("--PlgPath=")) != std::string_view::npos)
+		/*if ((id = str.find("--PlgPath=")) != std::string_view::npos)
 		{
-			StartupConfig::Get().pluginsPath = str.substr(id + 10).data();
+			StartupConfig::Get()->pluginsPath = str.substr(id + 10).data();
 			continue;
-		}
+		}*/
 
 		if ((id = str.find("--NoRendering")) != std::string_view::npos)
 		{
-			StartupConfig::Get().isEnableRendering = false;
+			StartupConfig::Get()->isEnableRendering = false;
 			continue;
 		}
 	}
@@ -95,6 +107,7 @@ int main(int argc, const char** argv)
 	FiberPool::Initialize();
 	Thread::InitializeForThisThreadInThisModule();
 
+	StartupConfig::SingletonInitialize();
 	ProcessArgs(argc, argv);
 
 	//struct AllocInfo
@@ -151,7 +164,7 @@ int main(int argc, const char** argv)
 
 	//return 0;
 
-	TaskWorker::Initalize(StartupConfig::Get().maxThreads, StartupConfig::Get().reservedThread);
+	TaskWorker::Initalize(StartupConfig::Get()->maxThreads, StartupConfig::Get()->reservedThread);
 
 	auto sys = soft::gc::g_system;
 
@@ -188,6 +201,8 @@ int main(int argc, const char** argv)
 
 	byte resetValues[2] = { MARK_COLOR::WHITE, MARK_COLOR::BLACK };
 	gc::PerformFullSystemGC(255, resetValues);
+
+	StartupConfig::SingletonFinalize();
 
 	TaskWorker::Finalize();
 	Thread::FinalizeForThisThreadInThisModule();

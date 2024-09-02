@@ -115,6 +115,7 @@ namespace resource
 
 		void Initialize();
 		void Finalize();
+		API void SaveCache();
 
 		API std::map<String, ResourceBaseClass*>* GetInternalRCMap();
 
@@ -244,7 +245,8 @@ namespace internal
 	template <bool DIRECT_LOAD, typename _T, typename... Args>
 	inline Resource<_T> LoadEx(String path, Args&&... args)
 	{
-		auto temp = FileSystem::Get()->GetFilePath(path);//StartupConfig::Get().resourcesPath + path;
+		assert(std::filesystem::path(path.c_str()).is_relative());
+		auto temp = FileSystem::Get()->FindRelativeFilePath(path);//StartupConfig::Get().resourcesPath + path;
 		if (!temp.empty())
 		{
 			path = temp;
@@ -264,7 +266,7 @@ namespace internal
 
 			if constexpr (DIRECT_LOAD)
 			{
-				auto errCode = ((ResourceBase*)rc)->Load(path);
+				auto errCode = ((ResourceBase*)rc)->Load(FileSystem::Get()->FindAbsoluteFilePath(path));
 				if (errCode != 0)
 				{
 					rheap::Delete(rc);

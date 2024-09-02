@@ -90,10 +90,10 @@ inline void ForEachFiles(String path, Func callback)
 	}
 }
 
-inline bool IsExist(const char* path)
-{
-	return std::fs::exists(path);
-}
+//inline bool IsExist(const char* path)
+//{
+//	return std::fs::exists(path);
+//}
 
 inline String GetLastName(const char* path)
 {
@@ -111,8 +111,10 @@ inline String GetLastName(const char* path)
 
 inline String PopPath(const String& path)
 {
-	std::string_view str = path.c_str();
-	auto idx = str.find_last_of('/');
+	assert(path.length() >= 1);
+
+	std::string_view str = std::string_view(path.c_str(), path[path.length() - 1] == '/' ? path.length() - 1 : path.length());
+	auto idx = str.rfind('/');
 	if (idx == std::string_view::npos)
 	{
 		return path;
@@ -140,6 +142,30 @@ inline String ShiftPath(const String& path)
 inline String GetExtension(const String& path)
 {
 	return path.SubString(path.FindLastOf(".") + 1);
+}
+
+inline String JoinPaths(String base, String relative)
+{
+	String pattern = "../";
+	while (!relative.empty())
+	{
+		auto idx = relative.Find('/');
+		if (idx == INVALID_ID)
+		{
+			break;
+		}
+
+		auto head = relative.SubString(0, idx + 1);
+		if (head != pattern)
+		{
+			break;
+		}
+
+		base = PopPath(base);
+		relative = ShiftPath(relative);
+	}
+
+	return base + relative;
 }
 
 }

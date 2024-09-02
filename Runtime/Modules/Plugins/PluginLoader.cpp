@@ -9,6 +9,8 @@
 
 #include "Plugin.h"
 
+#include "../StartupConfig.h"
+
 #ifdef WIN32
 #include <Windows.h>
 #endif // WIN32
@@ -133,19 +135,19 @@ Plugin* PluginLoader::LoadPluginImpl(Runtime* engine, const wchar_t* filePath, I
 	return plugin;
 }
 
-bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin*>& output)
+bool PluginLoader::LoadAllFromDirectory(Runtime* engine, const char* path, std::vector<Plugin*>& output)
 {
-	if (m_pluginPath.empty())
+	/*if (m_pluginPath.empty())
 	{
 		m_pluginPath = path;
-	}
+	}*/
 
 	bool ret = true;
 
-	if (!FileUtils::IsExist(path))
+	if (!FileSystem::Get()->IsDirectoryExisted(path))
 	{
-		std::cout << "[ERROR]: Plugins path '" << path << "' doesn't exist!\n";
-		return false;
+		std::cout << "[WARN]: Plugins path '" << path << "' doesn't exist!\n";
+		return true;
 	}
 
 	auto LoadPlugin = [&](const wchar_t* filePath)
@@ -169,7 +171,7 @@ bool PluginLoader::LoadAll(Runtime* engine, const char* path, std::Vector<Plugin
 	FileUtils::ForEachFiles(path, LoadPlugin);
 
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
-	LoadAllHotReloadPlugin(engine);
+	LoadAllHotReloadPluginFromDirectory(engine, path);
 #endif // PLUGIN_ALLOW_HOT_RELOAD
 
 	return ret;
@@ -243,7 +245,33 @@ void PluginLoader::Unload(Runtime* engine, Plugin* input, bool freeLib)
 	}
 }
 
-void PluginLoader::UnloadAll(Runtime* engine, std::Vector<Plugin*>& input, bool freeLib)
+bool PluginLoader::LoadAll(Runtime* engine, std::vector<Plugin*>& output)
+{
+	bool ret = true;
+	FileSystem::Get()->ForEachWorkingDirectory(
+		[&](const String& wkd)
+		{
+			ret = LoadAllFromDirectory(engine, (wkd + "Plugins/").c_str(), output) && ret;
+		}
+	);
+
+	for (auto& buildConfig : StartupConfig::Get()->buildConfigs)
+	{
+		if (buildConfig.name != StartupConfig::Get()->currentConfigName)
+		{
+			continue;
+		}
+
+		for (auto& buildOutputDir : buildConfig.outputDirectories)
+		{
+			ret = LoadAllFromDirectory(engine, buildOutputDir.c_str(), output) && ret;
+		}
+	}
+
+	return ret;
+}
+
+void PluginLoader::UnloadAll(Runtime* engine, std::vector<Plugin*>& input, bool freeLib)
 {
 	for (auto& plugin : m_loadedPlugins)
 	{
@@ -253,7 +281,7 @@ void PluginLoader::UnloadAll(Runtime* engine, std::Vector<Plugin*>& input, bool 
 
 #ifdef PLUGIN_ALLOW_HOT_RELOAD
 
-void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
+void PluginLoader::LoadAllHotReloadPluginFromDirectory(Runtime* engine, const String& directory)
 {
 	auto startIdx = m_loadedPlugins.size();
 	auto LoadPlugin = [&](const wchar_t* filePath)
@@ -270,15 +298,15 @@ void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 		LoadPluginImpl(engine, filePath);
 	};
 
-	auto hotReloadPath = m_pluginPath + "HotReload/";
+	auto hotReloadPath = directory + "HotReload/";
 	auto hotReloadPathReal = FileSystem::Get()->GetCacheDirectory() + "Plugins/HotReload/";
 
-	if (!FileUtils::IsExist(hotReloadPath.c_str()))
+	if (!FileSystem::Get()->IsDirectoryExisted(hotReloadPath.c_str()))
 	{
 		std::filesystem::create_directories(hotReloadPath.c_str());
 	}
 
-	if (!FileUtils::IsExist(hotReloadPathReal.c_str()))
+	if (!FileSystem::Get()->IsDirectoryExisted(hotReloadPathReal.c_str()))
 	{
 		std::filesystem::create_directories(hotReloadPathReal.c_str());
 	}
@@ -323,6 +351,24 @@ void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
 	{
 		auto plugin = m_loadedPlugins[i];
 		plugin->m_isHotReloadable = true;
+	}
+}
+
+void PluginLoader::LoadAllHotReloadPlugin(Runtime* engine)
+{
+	FileSystem::Get()->ForEachWorkingDirectory(
+		[&](const String& wkd)
+		{
+			LoadAllHotReloadPluginFromDirectory(engine, (wkd + "Plugins/").c_str());
+		}
+	);
+
+	for (auto& buildConfig : StartupConfig::Get()->buildConfigs)
+	{
+		for (auto& buildOutputDir : buildConfig.outputDirectories)
+		{
+			LoadAllHotReloadPluginFromDirectory(engine, buildOutputDir.c_str());
+		}
 	}
 }
 

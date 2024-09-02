@@ -85,8 +85,8 @@ private:
 
 	std::atomic<bool> m_gcIsRunning = false;
 
-	std::Vector<Plugin*> m_plugins;
-	std::Vector<Plugin*> m_intevalPlugins;
+	std::vector<Plugin*> m_plugins;
+	std::vector<Plugin*> m_intevalPlugins;
 
 	void* m_eventArgv[NUM_ARGS] = {};
 
@@ -150,9 +150,10 @@ private:
 	void SwapModifiedRecorder();
 	void ProcessSwapRunningScene();
 
-public:
+	friend class StartupConfig;
 	void SetWorkingDirectory(const String& path);
 
+public:
 	void Setup();
 
 	void Run();

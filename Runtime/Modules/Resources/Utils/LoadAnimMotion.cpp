@@ -98,16 +98,18 @@ void ExtractAnimMotionData(void* _aiNode, AnimMotion* animMotion)
 	}
 }
 
-void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMotion>>& output)
+void LoadAnimMotion(String absFilePath, void* _aiScene, std::vector<Resource<AnimMotion>>& output)
 {
 	auto scene = (const aiScene*)_aiScene;
+
+	auto relative = FileSystem::Get()->GetRelativeFilePath(absFilePath);
 
 	auto numAnimations = scene->mNumAnimations;
 	for (uint32_t i = 0; i < numAnimations; i++)
 	{
 		auto aiAnim = scene->mAnimations[i];
 		
-		auto animMotion = resource::internal::LoadEx<false, AnimMotion>(String::Format("{}|{}", filePath, i));
+		auto animMotion = resource::internal::LoadEx<false, AnimMotion>(String::Format("{}|{}", relative, i));
 
 		if (animMotion->m_channels.size() == 0)
 			ExtractAnimMotionData(aiAnim, animMotion);
@@ -119,7 +121,7 @@ void LoadAnimMotion(String filePath, void* _aiScene, std::vector<Resource<AnimMo
 int LoadAnimMotion(String path, std::vector<Resource<AnimMotion>>& output)
 {
 	auto fs = FileSystem::Get();
-	path = fs->GetFilePath(path);
+	path = fs->FindAbsoluteFilePath(path);
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path.c_str(),

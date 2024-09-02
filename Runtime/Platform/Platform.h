@@ -41,4 +41,6 @@ String GetExecutablePath();
 
 const char* GetExecutablePathCStr();
 
+void SetCurrentDirectory(const char* path);
+
 NAMESPACE_PLATFORM_END

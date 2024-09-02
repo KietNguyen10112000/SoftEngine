@@ -4,6 +4,8 @@
 
 #include "Runtime/StartupConfig.h"
 
+#include "Platform/Platform.h"
+
 #include "FileUtils.h"
 
 #include <cassert>
@@ -34,20 +36,11 @@ void FileSystem::FileOrDirectory::Deserialize(ByteStreamRead* stream)
 
 FileSystem::FileSystem()
 {
-	std::string str = StartupConfig::Get().executablePath;
+	std::string str = StartupConfig::Get()->executablePath;
 	std::replace(str.begin(), str.end(), '\\', '/');
 
 	m_executablePath = FileUtils::PopPath(str.c_str());
-	m_currentPath = m_executablePath;
-
-	auto path = fs::path(str);
-	
-	m_cachePath = String(path.parent_path().u8string().c_str()) + "/.cache/";
-	//m_rootPath = StartupConfig::Get().resourcesPath;
-
-	//m_rootFullPath = String(path.parent_path().u8string().c_str()) + "/" + StartupConfig::Get().resourcesPath;
-
-	LoadCache();
+	SetCurrentWorkingDirectory(m_executablePath);
 }
 
 FileSystem::~FileSystem()
@@ -78,7 +71,17 @@ void FileSystem::BeginInitializeResourcePaths()
 
 void FileSystem::EndInitializeResourcePaths()
 {
+	LoadCache();
 	m_isInitializedResourcePaths = true;
+}
+
+void FileSystem::SetCurrentWorkingDirectory(const String& path)
+{
+	//m_executablePath = path;
+	m_currentPath = path;
+	m_cachePath = path + ".cache/";
+
+	platform::SetCurrentDirectory(path.c_str());
 }
 
 void FileSystem::SaveCache()
@@ -106,53 +109,88 @@ void FileSystem::SaveCache()
 	WriteCacheStream(".filesystem", &stream);
 }
 
-bool FileSystem::IsFileExisted(const char* path)
+bool FileSystem::IsFileExisted(const String& relativePath)
 {
-	//return std::filesystem::is_regular_file(path) && std::filesystem::exists(path);
-	return GetFilePath(path) != "";
-}
-
-//bool FileSystem::IsResourceExist(const char* path)
-//{
-//	auto str = m_rootPath + path;
-//	return std::filesystem::is_regular_file(str.c_str()) && std::filesystem::exists(str.c_str());
-//}
-
-bool FileSystem::IsDirectoryExisted(const char* path)
-{
-	if (std::filesystem::is_directory(path) && std::filesystem::exists(path))
+	if (std::filesystem::is_regular_file(relativePath.c_str()) && std::filesystem::exists(relativePath.c_str()))
 	{
 		return true;
 	}
 
-	for (auto& p : m_searchDirectories)
+	if (std::filesystem::path(relativePath.c_str()).is_absolute())
 	{
-		auto _p = p + path;
-		if (std::filesystem::is_directory(_p.c_str()) && std::filesystem::exists(_p.c_str()))
+		if (std::filesystem::is_regular_file(relativePath.c_str()) && std::filesystem::exists(relativePath.c_str()))
 		{
 			return true;
 		}
+		else
+		{
+			return false;
+		}
 	}
 
-	return false;
+	//return std::filesystem::is_regular_file(path) && std::filesystem::exists(path);
+	return FindRelativeFilePath(relativePath) != "";
 }
 
-size_t FileSystem::GetFileModifiedLastTime(const String& path) const
+bool FileSystem::IsDirectoryExisted(const String& relativePath)
 {
+	if (std::filesystem::is_directory(relativePath.c_str()) && std::filesystem::exists(relativePath.c_str()))
+	{
+		return true;
+	}
+
+	if (std::filesystem::path(relativePath.c_str()).is_absolute())
+	{
+		if (std::filesystem::is_directory(relativePath.c_str()) && std::filesystem::exists(relativePath.c_str()))
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	assert(std::filesystem::path(relativePath.c_str()).is_relative());
+
+	bool ret = false;
+	ForEachSearchDirectories(
+		[&](const String& wkd, const String& seachDirectory)
+		{
+			auto p = seachDirectory + relativePath;
+			if (std::filesystem::is_directory(p.c_str()) && std::filesystem::exists(p.c_str()))
+			{
+				ret = true;
+				return true;
+			}
+
+			return false;
+		}
+	);
+
+	return ret;
+}
+
+size_t FileSystem::GetFileModifiedLastTime(const String& _path)
+{
+	auto path = FindAbsoluteFilePath(_path);
 	assert(fs::is_regular_file(path.c_str()));
 	return std::chrono::duration_cast<std::chrono::milliseconds>(
 		fs::last_write_time(path.c_str()).time_since_epoch()
 	).count();
 }
 
-bool FileSystem::IsFileChanged(const char* fullpath, bool updateLastModifiedTime)
+bool FileSystem::IsFileChanged(const String& relativePath, bool updateLastModifiedTime)
 {
-	//auto fullpath = GetFullPath(path);
+	auto fullpath = std::filesystem::path(relativePath.c_str()).is_relative() ? FindAbsoluteFilePath(relativePath) : relativePath;
+
+	assert(!fullpath.empty());
+
 	//std::string_view fullpath = path;
-	assert(fs::is_regular_file(fullpath));
+	assert(fs::is_regular_file(fullpath.c_str()));
 
 	auto lastWriteTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-		fs::last_write_time(fullpath).time_since_epoch()
+		fs::last_write_time(fullpath.c_str()).time_since_epoch()
 	).count();
 
 	auto it = m_indexedFiles.find(fullpath);
@@ -176,7 +214,7 @@ bool FileSystem::IsFileChanged(const char* fullpath, bool updateLastModifiedTime
 	return true;
 }
 
-bool FileSystem::IsDirectoryChanged(const char* path, bool updateLastModifiedTime)
+bool FileSystem::IsDirectoryChanged(const String& relativePath, bool updateLastModifiedTime)
 {
 	assert(0);
 	return false;
@@ -242,40 +280,113 @@ bool FileSystem::ReadCacheStream(const String& path, ByteStream* output)
 	return ReadStream(GetCachePath(path), output);
 }
 
-//String FileSystem::GetResourcesRootPath()
-//{
-//	return m_rootFullPath;
-//}
-
-void FileSystem::AddSearchDirectory(const String& path)
+void FileSystem::AddWorkingDirectory(const String& workingDirectory)
 {
+	assert(std::filesystem::path(workingDirectory.c_str()).is_absolute());
+	assert(std::find_if(m_workingDirectories.begin(), m_workingDirectories.end(),
+		[&](const WorkingDirectory& wkd)
+		{
+			return wkd.rootPath == workingDirectory;
+		}
+	) == m_workingDirectories.end());
 	assert(m_isInitializedResourcePaths == false);
-	assert(std::filesystem::is_directory(path.c_str()) && std::filesystem::exists(path.c_str()));
 
-	if (path[path.length() - 1] != '/')
-	{
-		m_searchDirectories.push_back(path + "/");
-		return;
-	}
-	m_searchDirectories.push_back(path);
+	auto& wkd = m_workingDirectories.emplace_back();
+	wkd.rootPath = workingDirectory;
 }
 
-String FileSystem::GetFilePath(const String& path)
+void FileSystem::AddSearchDirectory(const String& workingDirectory, const String& searchDirectory)
 {
+	assert(m_isInitializedResourcePaths == false);
+
+	for (auto& wkd : m_workingDirectories)
+	{
+		if (wkd.rootPath != workingDirectory)
+		{
+			continue;
+		}
+
+		auto path = wkd.rootPath + searchDirectory;
+		assert(std::filesystem::is_directory(path.c_str()) && std::filesystem::exists(path.c_str()));
+
+		if (path[path.length() - 1] != '/')
+		{
+			wkd.searchDirectories.push_back(searchDirectory + "/");
+			return;
+		}
+		wkd.searchDirectories.push_back(searchDirectory);
+		return;
+	}
+
+	assert(0 && "Working directory is not found.");
+}
+
+String FileSystem::FindRelativeFilePath(const String& path, String* outputWkd)
+{
+	assert(std::filesystem::path(path.c_str()).is_relative());
+
+	if (outputWkd)
+	{
+		*outputWkd = "";
+	}
+
 	if (std::filesystem::exists(path.c_str()) && std::filesystem::is_regular_file(path.c_str()))
+	{
+		if (outputWkd)
+		{
+			*outputWkd = GetCurrentWorkingDirectory();
+		}
+		return path;
+	}
+
+	String ret = "";
+	ForEachSearchDirectories(
+		[&](const String& wkd, const String& seachDirectory)
+		{
+			auto p = seachDirectory + path;
+			if (std::filesystem::exists(p.c_str()) && std::filesystem::is_regular_file(p.c_str()))
+			{
+				if (outputWkd)
+				{
+					*outputWkd = wkd;
+				}
+				ret = p.SubString(wkd.length());
+				return true;
+			}
+
+			return false;
+		}
+	);
+
+	return ret;
+}
+
+String FileSystem::FindAbsoluteFilePath(const String& path)
+{
+	if (std::filesystem::path(path.c_str()).is_absolute())
 	{
 		return path;
 	}
 
-	for (auto& sPath : m_searchDirectories)
+	assert(std::filesystem::path(path.c_str()).is_relative());
+
+	String base = "";
+	auto relative = FindRelativeFilePath(path, &base);
+	return base + relative;
+}
+
+String FileSystem::GetRelativeFilePath(const String& absolutePath)
+{
+	assert(std::filesystem::path(absolutePath.c_str()).is_absolute());
+	for (auto& wkd : m_workingDirectories)
 	{
-		auto p = sPath + path;
-		if (std::filesystem::exists(p.c_str()) && std::filesystem::is_regular_file(p.c_str()))
+		auto idx = absolutePath.Find(wkd.rootPath);
+		if (idx == 0)
 		{
-			return p;
+			return absolutePath.SubString(wkd.rootPath.length());
 		}
 	}
-
+	assert(0);
 	return "";
 }
 

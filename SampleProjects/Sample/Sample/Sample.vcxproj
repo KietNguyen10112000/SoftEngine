@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{f017036e-373c-4fbf-8329-8c8471e5571c}</ProjectGuid>
-    <RootNamespace>Test</RootNamespace>
+    <RootNamespace>Sample</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -71,10 +71,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins/HotReload</OutDir>
+    <OutDir>$(SolutionDir)/build/$(Configuration)/HotReload/</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>$(SOFT_ENGINE_HOME)/build/bin/$(Configuration)/Plugins/HotReload</OutDir>
+    <OutDir>$(SolutionDir)/build/$(Configuration)/HotReload/</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -142,14 +142,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="MyTestScript.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MyTestScript.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="..\..\..\Libraries\glm\util\glm.natvis" />
-    <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis" />
+    <Natvis Include="..\Natvis\DebugView.natvis" />
+    <Natvis Include="..\Natvis\glm.natvis" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

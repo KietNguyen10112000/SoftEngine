@@ -463,7 +463,7 @@ void LoadMaterialsForAnimModel(const String& basePath, std::vector<String>& diff
 
 			if (fs->IsFileExisted(diffusePath.c_str()))
 			{
-				diffuseTextures.push_back(diffusePath);
+				diffuseTextures.push_back(FileSystem::Get()->GetRelativeFilePath(diffusePath));
 			}
 			else
 			{

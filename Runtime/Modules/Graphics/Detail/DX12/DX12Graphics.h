@@ -88,7 +88,7 @@ public:
 
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferViews[16] = {};
 
-	String m_compiledShadersPath = "";
+	//String m_compiledShadersPath = "";
 
 	size_t m_renderCallCount = 0;
 

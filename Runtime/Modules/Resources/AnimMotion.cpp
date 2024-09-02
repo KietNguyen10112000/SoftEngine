@@ -27,9 +27,9 @@ int AnimMotion::Load(const String& path)
 	return LoadFromFile(path);
 }
 
-int AnimMotion::LoadFromFile(const String& path)
+int AnimMotion::LoadFromFile(const String& _path)
 {
-	auto modelFilePath = FileSystem::Get()->GetFilePath(GetModelFilePath());
+	auto modelFilePath = FileSystem::Get()->FindAbsoluteFilePath(GetModelFilePath());
 
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(modelFilePath.c_str(),

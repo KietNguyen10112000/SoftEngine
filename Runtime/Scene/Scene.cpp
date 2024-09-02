@@ -86,7 +86,7 @@ void Scene::SetupMainSystemIterationTasks()
 		};
 	}
 
-	if (StartupConfig::Get().isEnableGUIEditing)
+	if (StartupConfig::Get()->isEnableGUIEditing)
 	{
 		m_mainProcessingSystemIterationTasks[m_numMainProcessingSystem++] = m_mainSystemIterationTasks[MainSystemInfo::RENDERING_ID];
 	}

@@ -18,20 +18,12 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MyTestScript.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MyTestScript.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="..\..\..\Runtime\Core\DebugView.natvis">
+    <Natvis Include="..\Natvis\DebugView.natvis">
       <Filter>Source Files</Filter>
     </Natvis>
-    <Natvis Include="..\..\..\Libraries\glm\util\glm.natvis">
+    <Natvis Include="..\Natvis\glm.natvis">
       <Filter>Source Files</Filter>
     </Natvis>
   </ItemGroup>

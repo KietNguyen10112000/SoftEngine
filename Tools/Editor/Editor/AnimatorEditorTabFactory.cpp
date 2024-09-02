@@ -121,11 +121,6 @@ LoadJson:
 Succeed:
 	m_name = m_nameBuf;
 
-	if (m_modelPath.Find(StartupConfig::Get().resourcesPath) == 0)
-	{
-		m_modelPath = FileUtils::ShiftPath(m_modelPath);
-	}
-
 	auto scene = Runtime::Get()->CreateScene();
 	auto tab = mheap::New<AnimatorEditorTab>(m_modelPath, scene, m_name);
 	tab->m_scene = scene;

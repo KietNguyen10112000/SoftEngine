@@ -25,7 +25,7 @@ public:
 
 	ResourceManager()
 	{
-		if (FileSystem::Get()->IsFileExisted(META_PATH))
+		if (std::filesystem::exists(META_PATH))
 		{
 			byte* buffer = nullptr; size_t fileSize = 0;
 			FileUtils::ReadFile(META_PATH, buffer, fileSize);
@@ -44,6 +44,11 @@ public:
 	}
 
 	~ResourceManager()
+	{
+		SaveCache();
+	}
+
+	inline void SaveCache()
 	{
 		auto arr = json::array();
 		for (auto& [key, value] : m_uuidMap)
@@ -163,6 +168,11 @@ void Finalize()
 	}
 	GetRcMap().clear();
 	FreeGcMap(GetRcMap());
+}
+
+void SaveCache()
+{
+	ResourceManager::Get()->SaveCache();
 }
 
 }

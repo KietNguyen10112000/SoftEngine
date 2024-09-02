@@ -17,6 +17,7 @@
 
 #include "Core/Time/Clock.h"
 
+#include "FileSystem/FileSystem.h"
 
 NAMESPACE_DX12_BEGIN
 
@@ -31,7 +32,9 @@ DX12Graphics::DX12Graphics(void* hwnd)
     InitGPUVisibleDescriptorHeap();
     InitImGui(hwnd);
 
-    m_compiledShadersPath = StartupConfig::Get().compiledShadersPath;
+    //m_compiledShadersPath = StartupConfig::Get().compiledShadersPath;
+
+    FileSystem::Get()->AddSearchDirectory(FileSystem::Get()->GetExecutableDirectory(), "Shaders/");
 }
 
 DX12Graphics::~DX12Graphics()
@@ -417,27 +420,27 @@ SharedPtr<GraphicsPipeline> DX12Graphics::CreateRasterizerPipeline(const GRAPHIC
 
     if (desc.vs)
     {
-        FileUtils::ReadFile(m_compiledShadersPath + String(desc.vs) + ".cso", vs, lenVS);
+        FileUtils::ReadFile(FileSystem::Get()->FindAbsoluteFilePath(String(desc.vs) + ".cso"), vs, lenVS);
     }
 
     if (desc.ps)
     {
-        FileUtils::ReadFile(m_compiledShadersPath + String(desc.ps) + ".cso", ps, lenPS);
+        FileUtils::ReadFile(FileSystem::Get()->FindAbsoluteFilePath(String(desc.ps) + ".cso"), ps, lenPS);
     }
 
     if (desc.gs)
     {
-        FileUtils::ReadFile(m_compiledShadersPath + String(desc.gs) + ".cso", gs, lenGS);
+        FileUtils::ReadFile(FileSystem::Get()->FindAbsoluteFilePath(String(desc.gs) + ".cso"), gs, lenGS);
     }
 
     if (desc.hs)
     {
-        FileUtils::ReadFile(m_compiledShadersPath + String(desc.hs) + ".cso", hs, lenHS);
+        FileUtils::ReadFile(FileSystem::Get()->FindAbsoluteFilePath(String(desc.hs) + ".cso"), hs, lenHS);
     }
 
     if (desc.ds)
     {
-        FileUtils::ReadFile(m_compiledShadersPath + String(desc.ds) + ".cso", ds, lenDS);
+        FileUtils::ReadFile(FileSystem::Get()->FindAbsoluteFilePath(String(desc.ds) + ".cso"), ds, lenDS);
     }
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC dx12desc = {};
@@ -647,7 +650,7 @@ void DX12Graphics::InitImGui(void* hwnd)
     //config.GlyphExtraSpacing.x = 1.0f;
 
     //io.Fonts->AddFontDefault(&config);
-    io.Fonts->AddFontFromFileTTF("Resources/Default/segoeui.ttf", (int)(24.0f), &config);
+    io.Fonts->AddFontFromFileTTF(FileSystem::Get()->FindAbsoluteFilePath("Resources/Default/segoeui.ttf").c_str(), (int)(24.0f), &config);
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);

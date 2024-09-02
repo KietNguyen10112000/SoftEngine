@@ -3,6 +3,8 @@
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 #include "imgui/imgui.h"
 
+#include "FileSystem/FileSystem.h"
+
 EditorFont::EditorFont()
 {
 	// init icon font
@@ -14,7 +16,7 @@ EditorFont::EditorFont()
 		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.Fonts->AddFontFromFileTTF("Editor/Fonts/FontAwesome6_900.otf", (int)(23.0f), &config, icon_ranges);
+		io.Fonts->AddFontFromFileTTF(soft::FileSystem::Get()->FindAbsoluteFilePath("Editor/Fonts/FontAwesome6_900.otf").c_str(), (int)(23.0f), &config, icon_ranges);
 	}
 
 	{
@@ -40,7 +42,7 @@ void EditorFont::InitializeFont(int size)
 	//config.GlyphMinAdvanceX = float(size);
 	config.GlyphRanges = io.Fonts->GetGlyphRangesVietnamese();
 
-	font = io.Fonts->AddFontFromFileTTF("Resources/Default/segoeui.ttf", float(size), &config);
+	font = io.Fonts->AddFontFromFileTTF(soft::FileSystem::Get()->FindAbsoluteFilePath("Resources/Default/segoeui.ttf").c_str(), float(size), &config);
 
 	{
 		ImFontConfig config;
@@ -50,6 +52,6 @@ void EditorFont::InitializeFont(int size)
 		static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
 
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.Fonts->AddFontFromFileTTF("Editor/Fonts/FontAwesome6_900.otf", float(size), &config, icon_ranges);
+		io.Fonts->AddFontFromFileTTF(soft::FileSystem::Get()->FindAbsoluteFilePath("Editor/Fonts/FontAwesome6_900.otf").c_str(), float(size), &config, icon_ranges);
 	}
 }

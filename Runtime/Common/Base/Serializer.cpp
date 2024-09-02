@@ -604,7 +604,7 @@ void Serializer::WriteToFile(const String& path)
 
 void Serializer::ReadFromFile(const String& _path)
 {
-	auto path = FileSystem::Get()->GetFilePath(_path);
+	auto path = FileSystem::Get()->FindAbsoluteFilePath(_path);
 
 	switch (m_mode)
 	{

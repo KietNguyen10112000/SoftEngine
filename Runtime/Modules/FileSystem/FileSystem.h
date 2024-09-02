@@ -30,6 +30,13 @@ private:
 		void Deserialize(ByteStreamRead* stream);
 	};
 
+	struct WorkingDirectory
+	{
+		// this must be absolute path
+		String rootPath;
+		std::vector<String> searchDirectories;
+	};
+
 	String m_cachePath;
 	//String m_rootPath;
 	//String m_rootFullPath;
@@ -38,7 +45,7 @@ private:
 
 	std::map<String, FileOrDirectory> m_indexedFiles;
 
-	std::vector<String> m_searchDirectories;
+	std::vector<WorkingDirectory> m_workingDirectories;
 	bool m_isInitializedResourcePaths = false;
 
 public:
@@ -53,32 +60,43 @@ private:
 		return m_cachePath + path;
 	}
 
-	//// get full resource path
-	//inline auto GetFullPath(const String& path)
-	//{
-	//	std::string_view str = path.c_str();
-	//	if (str.find_first_of(m_rootPath.c_str()) == 0)
-	//	{
-	//		return String(path);
-	//	}
-	//	return m_rootPath + path;
-	//}
-
 	void BeginInitializeResourcePaths(); 
 	void EndInitializeResourcePaths();
+	void SetCurrentWorkingDirectory(const String& path);
+
+	template <typename Fn>
+	void ForEachSearchDirectories(Fn fn)
+	{
+		for (auto& wkd : m_workingDirectories)
+		{
+			if (fn(wkd.rootPath, wkd.rootPath))
+			{
+				return;
+			}
+
+			for (auto& path : wkd.searchDirectories)
+			{
+				if (fn(wkd.rootPath, wkd.rootPath + path))
+				{
+					return;
+				}
+			}
+		}
+	}
+
 
 public:
 	void SaveCache();
 
-	bool IsFileExisted(const char* path);
+	bool IsFileExisted(const String& relativePath);
 	//bool IsResourceExist(const char* path);
 
-	bool IsDirectoryExisted(const char* path);
+	bool IsDirectoryExisted(const String& relativePath);
 
 	// in ms
-	size_t GetFileModifiedLastTime(const String& path) const;
-	bool IsFileChanged(const char* path, bool updateLastModifiedTime = true);
-	bool IsDirectoryChanged(const char* path, bool updateLastModifiedTime = true);
+	size_t GetFileModifiedLastTime(const String& relativePath);
+	bool IsFileChanged(const String& relativePath, bool updateLastModifiedTime = true);
+	bool IsDirectoryChanged(const String& relativePath, bool updateLastModifiedTime = true);
 
 	void WriteStream(const String& path, ByteStreamRead* stream);
 	bool ReadStream(const String& path, ByteStream* output);
@@ -86,26 +104,27 @@ public:
 	void WriteCacheStream(const String& path, ByteStreamRead* stream);
 	bool ReadCacheStream(const String& path, ByteStream* output);
 
-	void AddSearchDirectory(const String& path);
-	String GetFilePath(const String& path);
+	void AddWorkingDirectory(const String& workingDirectory);
+	void AddSearchDirectory(const String& workingDirectory, const String& searchDirectory);
 
-	// full path to Resources/
-	//String GetResourcesRootPath();
+	// input: 
+	//	+ path: relative path to search
+	// output: 
+	//	+ return the relative path to a one of working directories if found
+	//	+ return empty string if path is not found
+	// example:
+	//	Assumption that there are 3 working directories: 1 - "D:/Engine/", 2 - "D:/MyProject/", 3 - "D:/Editor/"
+	//		+ Directory 1 has a file "D:/Engine/Resources/Image/Image1.png" and AddSearchDirectory("D:/Engine/", "Resources/") called
+	//			=> FindRelativeFilePath("Image/Image1.png") will return "Resources/Image/Image1.png"
+	// 
+	String FindRelativeFilePath(const String& relativePath, String* outputWkd = nullptr);
 
-	/*String GetResourcesPath(String path)
-	{
-		return m_rootFullPath + path;
-	}*/
+	//
+	// same as FindAbsoluteFilePath but return a absolute path
+	//
+	String FindAbsoluteFilePath(const String& relativePath);
 
-	/*String GetResourcesRelativePath(String path)
-	{
-		return path;
-	}*/
-
-	/*inline const String& GetExecutablePath() const
-	{
-		return m_executablePath;
-	}*/
+	String GetRelativeFilePath(const String& absolutePath);
 
 	inline const String& GetCacheDirectory() const
 	{
@@ -115,6 +134,20 @@ public:
 	inline const String& GetCurrentWorkingDirectory() const
 	{
 		return m_currentPath;
+	}
+
+	inline const String& GetExecutableDirectory() const
+	{
+		return m_executablePath;
+	}
+
+	template <typename Fn>
+	void ForEachWorkingDirectory(Fn fn)
+	{
+		for (auto& wkd : m_workingDirectories)
+		{
+			fn(wkd.rootPath);
+		}
 	}
 };
 

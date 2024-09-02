@@ -121,6 +121,7 @@ void EditorContext::RenderMenuBar()
 				{
 					String path("");
 					FileSystem::Get()->SaveCache();
+					resource::internal::SaveCache();
 					EventDispatcher()->Dispatch(EVENT::MENU_ON_SAVE, &path);
 				}
 			}

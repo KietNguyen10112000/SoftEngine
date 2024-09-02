@@ -106,7 +106,7 @@ int Graphics::Initilize(void* windowNativeHandle, GRAPHICS_BACKEND_API backendAP
 		((dx12::DX12Graphics*)ret)->FirstInit();
 
 		// show maximized before init d3d12 cause screen flickering when drag and drop application window ????
-		if (StartupConfig::Get().windowWidth == -1 || StartupConfig::Get().windowHeight == -1)
+		if (StartupConfig::Get()->windowWidth == -1 || StartupConfig::Get()->windowHeight == -1)
 			ShowWindow((HWND)windowNativeHandle, SW_SHOWMAXIMIZED);
 
 	if constexpr (Config::ENABLE_DEBUG_GRAPHICS)

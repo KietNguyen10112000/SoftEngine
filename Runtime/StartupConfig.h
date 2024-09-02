@@ -1,16 +1,17 @@
 #pragma once
 #include "Core/TypeDef.h"
+#include "Core/Structures/String.h"
+#include "Core/Pattern/Singleton.h"
 
 NAMESPACE_BEGIN
 
-struct API StartupConfig
+struct StartupConfig : public Singleton<StartupConfig>
 {
-	static StartupConfig s_instance;
-
-	inline static auto& Get()
+	struct BuildConfig
 	{
-		return s_instance;
-	}
+		String name;
+		std::vector<String> outputDirectories;
+	};
 
 	bool isEnableRendering	= true;
 	bool isEnablePhysics	= true;
@@ -20,9 +21,9 @@ struct API StartupConfig
 	bool isEnableGUIEditing	= true;
 	bool padd[3];
 
-	const char* pluginsPath			= "Plugins/";
-	const char* resourcesPath		= "Resources/";
-	const char* compiledShadersPath = "Shaders/";
+	String configFilePath = nullptr;
+	std::vector<BuildConfig> buildConfigs;
+	String currentConfigName = nullptr;
 	const char* executablePath = nullptr;
 
 	const char* windowTitle = "SoftEngine";
@@ -33,6 +34,8 @@ struct API StartupConfig
 	uint32_t numThreads		= -1;
 	uint32_t maxThreads		= -1;
 	uint32_t reservedThread = 4;
+
+	void LoadConfigFile(const String& path);
 
 };
 

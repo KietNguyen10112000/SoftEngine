@@ -17,7 +17,7 @@ int Texture2D::Load(const String& path)
 	assert(FileSystem::Get()->IsFileExisted(path.c_str()));
 
 	ByteStream stream;
-	auto streamPath = (path + CACHE_EXTENSION);
+	auto streamPath = (GetPath() + CACHE_EXTENSION);
 	if (FileSystem::Get()->IsFileChanged(path.c_str()) || !FileSystem::Get()->ReadCacheStream(streamPath.c_str(), &stream))
 	{
 		CreateCache(path);
@@ -75,7 +75,7 @@ void Texture2D::CreateCache(String path)
 	int width, height, numComponents;
 	auto imaData = stbi_load_from_memory(buffer, (int)fileSize, &width, &height, &numComponents, 0);
 
-	WriteCache(path + CACHE_EXTENSION, imaData, width, height, numComponents, -1);
+	WriteCache(GetPath() + CACHE_EXTENSION, imaData, width, height, numComponents, -1);
 
 	stbi_image_free(imaData);
 

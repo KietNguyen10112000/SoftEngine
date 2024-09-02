@@ -501,4 +501,14 @@ const char* GetExecutablePathCStr()
 #endif
 }
 
+#undef SetCurrentDirectory
+void SetCurrentDirectory(const char* path)
+{
+    if (!::SetCurrentDirectoryA(path))
+    {
+        assert(0);
+        exit(-1);
+    }
+}
+
 NAMESPACE_PLATFORM_END

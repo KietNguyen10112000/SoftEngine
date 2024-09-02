@@ -1,0 +1,98 @@
+[
+  {
+    "Path": "Resources/Default/sphere_lowpoly.obj",
+    "UUID": "7b365c15ca9671de0000069b0dddf000"
+  },
+  {
+    "Path": "Resources/model/Character/FallIdle.fbx|0",
+    "UUID": "7fffffffffffffff0000076bda30a000"
+  },
+  {
+    "Path": "Resources/model/Character/FallSoftLanding.fbx|0",
+    "UUID": "7fffffffffffffff00000cb1d0ae5000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleLeftTurn90.fbx|0",
+    "UUID": "7fffffffffffffff000000798136c000"
+  },
+  {
+    "Path": "Resources/model/Character/Idle.fbx|0",
+    "UUID": "71f85c15ca9671de00000427adda2000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleRightTurn180.fbx|0",
+    "UUID": "55675c15ca9671de00000993397b1000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleJumpUp.fbx|0",
+    "UUID": "078d5c15ca9671de00000fef31d7a000"
+  },
+  {
+    "Path": "Resources/Default/cube1.obj",
+    "UUID": "7fffffffffffffff00000405dc639000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleTurnLeftNoRotationCarefully.fbx|0",
+    "UUID": "7fffffffffffffff000009a2c7e70000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleCarefully.fbx",
+    "UUID": "7fffffffffffffff000005a634342000"
+  },
+  {
+    "Path": "Resources/model/Character/RunJumpInPlaceShort.fbx|0",
+    "UUID": "7fffffffffffffff0000001878124000"
+  },
+  {
+    "Path": "Resources/model/Character/RunJump.fbx|0",
+    "UUID": "7fffffffffffffff00000e54a9979000"
+  },
+  {
+    "Path": "Resources/Default/default.png",
+    "UUID": "5c175c15ca9671de000000e36976f000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleRightTurn90.fbx|0",
+    "UUID": "7fffffffffffffff000008bae9f2d000"
+  },
+  {
+    "Path": "Resources/model/Character/RunSlow.fbx|0",
+    "UUID": "061b5c15ca9671de00000bafa99e5000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleLeftTurn180.fbx|0",
+    "UUID": "3f655c15ca9671de00000f7d47581000"
+  },
+  {
+    "Path": "Resources/Default/green.png",
+    "UUID": "6aba5c15ca9671de000009af73cdc000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleTurnRightNoRotationCarefully.fbx|0",
+    "UUID": "7a2a5c15ca9671de00000cf203bfa000"
+  },
+  {
+    "Path": "Resources/model/Character/FallHardLanding.fbx|0",
+    "UUID": "36ff5c15ca9671de000002d6f00fb000"
+  },
+  {
+    "Path": "Resources/model/Character/RunFast.fbx|0",
+    "UUID": "05ea5c15ca9671de00000507c9b1f000"
+  },
+  {
+    "Path": "Resources/Default/capsule.obj",
+    "UUID": "7fffffffffffffff000005fdab83c000"
+  },
+  {
+    "Path": "Resources/model/Character/IdleCarefully.fbx|0",
+    "UUID": "7fffffffffffffff00000281ea552000"
+  },
+  {
+    "Path": "Resources/Default/white.png",
+    "UUID": "16b25c15ca9671de00000d1082884000"
+  },
+  {
+    "Path": "Resources/model/Character/RunJumpInPlace.fbx|0",
+    "UUID": "1b625c15ca9671de00000693742a7000"
+  }
+]
