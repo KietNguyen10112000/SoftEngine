@@ -33,16 +33,10 @@ public:
 	Handle<CameraTPP> m_camera;
 	Handle<FPPCameraScript> m_fppCamScript;
 
-	Handle<RigidBodyDynamic> m_testBody;
-
 	float m_rotateX = 0;
 	//float m_rotateY = 0;
 	float m_rotationSensi = 0.25f;
 	Vec3 m_viewPoint = Vec3(5, 5, 5);
-	Vec3 m_lastMotion = Vec3::ZERO;
-	Vec3 m_lastMotionDir = Vec3::ZERO;
-
-	float m_movingSpeed = 15.0f;
 
 protected:
 	virtual void OnStart() override;
@@ -58,6 +52,7 @@ protected:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 
 public:
+	void UpdateCameraDefault(float dt);
 	Vec3 GetForwardToCCT() const;
 
 };

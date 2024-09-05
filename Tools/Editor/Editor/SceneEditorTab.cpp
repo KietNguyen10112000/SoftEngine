@@ -1696,9 +1696,12 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 		Handle<GameObject> inspectingObject;
 		serializer->Deserialize(j["InspectingObject"], inspectingObject);
 		
-		if (m_loadFromFileObject.find(inspectingObject->GetUUID()) != m_loadFromFileObject.end())
+		if (inspectingObject)
 		{
-			OnObjectSelected(inspectingObject);
+			if (m_loadFromFileObject.find(inspectingObject->GetUUID()) != m_loadFromFileObject.end())
+			{
+				OnObjectSelected(inspectingObject);
+			}
 		}
 	}
 

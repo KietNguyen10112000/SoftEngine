@@ -605,7 +605,7 @@ void AnimatorSkeletalArray::PublicResultToRigidBodies()
 	{
 		auto& pos = m_rigidBodyProxyCCT->m_pxCharacterController->getPosition();
 		auto& up = m_rigidBodyProxyCCT->m_pxCharacterController->getUpDirection();
-		auto& rotation = m_rigidBodyProxyCCT->CCTGetRotation();
+		auto& rotation = m_rigidBodyProxyCCT->m_rotation;
 		Transform p = {};
 		p.Position() = { pos.x,pos.y,pos.z };
 		p.Rotation() = rotation;//Quaternion::RotationFromTo(Vec3::UP, PhysXUtils::ToVec3(up));
@@ -971,35 +971,44 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Ve
 
 	if (cct == nullptr)
 	{
-		// TODO: reset local buffer
 		SetEnableDeferPublicResult(false);
 
-		auto& currentRootGlobal = m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId];
-		auto rotation = Mat4::Rotation(m_cctStartRotation * currentRootGlobal.GetRotation());
+		auto& rotation = Mat4::Rotation(oldCCT->CCTGetRotation());
+		auto offset = GetGameObject()->GetCommittedGlobalTransform() * oldCCT->GetGameObject()->GetCommittedGlobalTransform().GetInverse();
+		auto mat = offset * (Mat4::Rotation(m_cctStartRotation) * rotation.GetInverse()) * offset.GetInverse();
 
-		if (m_cctLockedUpDirection != Vec3::ZERO)
 		{
-			auto& basis = rotation;
-			auto oriRotation = rotation;
-			auto up = basis.Up().Normal();
-			if (!up.Equals(m_cctLockedUpDirection, 0.000001f))
-			{
-				auto rot = Mat4::Rotation(Quaternion::RotationFromTo(up, m_cctLockedUpDirection));
-				basis *= rot;
+			auto& nodes = m_model3D->m_nodes;
+			auto& local = (Transform&)m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId];
 
-				//offsetRotation = oriRotation * basis.GetInverse();
+			auto parentId = nodes[m_model3D->m_rootBoneNodeId].parentId;
+			if (parentId != INVALID_ID)
+			{
+				auto& P = m_lastOutput->m_globalTransforms[nodes[m_model3D->m_rootBoneNodeId].parentId];
+				auto B = local.ToTransformMatrix() * P * mat * P.GetInverse();
+				B.Decompose(local.Scale(), local.Rotation(), local.Translation());
+				local.Scale() = { 1,1,1 };
+			}
+			else
+			{
+				auto& P = m_lastOutput->m_globalTransforms[m_model3D->m_rootBoneNodeId];
+				auto B = P * mat;
+				B.Decompose(local.Scale(), local.Rotation(), local.Translation());
+				local.Scale() = { 1,1,1 };
+			}
+			
+		}
+
+		{
+			auto currentOutput = (ResultBuffer*)m_deferBuffer.Read();
+			for (auto& m : currentOutput->m_globalTransforms)
+			{
+				m *= mat;
 			}
 		}
 
-		oldCCT->CCTSetRotation(rotation);
-
-		{
-			auto& local = (Transform&)m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId];
-			auto B = m_lastOutput->m_globalTransforms[m_model3D->m_rootBoneNodeId];
-			auto B_inv = B.GetInverse();
-
-			local.Rotation() = local.Rotation() * B_inv * (m_cctStartRotation * rotation.GetInverse()) * B;
-		}
+		//m_isRunning = false;
+		//UpdateDataToRenderer(GetGameObject()->GetScene(), m_deferBuffer.Read()->m_globalTransforms, m_deferBuffer.Read()->m_animMeshAABoxes);
 
 		return;
 	}
@@ -1029,6 +1038,28 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Ve
 
 void AnimatorSkeletalArray::SetForwardCCT(CharacterController* cct, const Vec3& lockUpDirection)
 {
+	if (cct == nullptr)
+	{
+		assert(m_cct != nullptr);
+
+		auto& currentRootGlobal = m_deferBuffer.Read()->m_localTransforms[m_model3D->m_rootBoneNodeId];
+		auto rotation = Mat4::Rotation(m_cctStartRotation * currentRootGlobal.GetRotation());
+
+		if (m_cctLockedUpDirection != Vec3::ZERO)
+		{
+			auto& basis = rotation;
+			auto oriRotation = rotation;
+			auto up = basis.Up().Normal();
+			if (!up.Equals(m_cctLockedUpDirection, 0.000001f))
+			{
+				auto rot = Mat4::Rotation(Quaternion::RotationFromTo(up, m_cctLockedUpDirection));
+				basis *= rot;
+			}
+		}
+
+		m_cct->CCTSetRotation(rotation);
+	}
+
 	MAIN_SYSTEM_TASK_COMMON_2(
 		AnimationSystem, AsyncTaskRunner, cct, lockUpDirection,
 		{

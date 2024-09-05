@@ -141,6 +141,11 @@ public:
 	}
 
 	void RemoveListener(EventListener* listener);
+
+	inline AnimLayer* GetInput()
+	{
+		return m_input->GetOutput();
+	}
 };
 
 NAMESPACE_END

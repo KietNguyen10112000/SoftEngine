@@ -30,6 +30,11 @@ struct SystemDialog
 		bool forceInsideResourcesPath = false;
 	};
 
+private:
+	static bool OpenSaveAsDialogImpl(SaveAsDialog& opt);
+	static bool OpenFileChooserImpl(FileChooserDialog& opt);
+
+public:
 	static bool OpenSaveAsDialog(SaveAsDialog& opt);
 	static bool OpenFileChooser(FileChooserDialog& opt);
 };

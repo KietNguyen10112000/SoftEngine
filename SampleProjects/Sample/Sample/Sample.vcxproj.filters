@@ -18,6 +18,9 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CharacterScript.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="..\Natvis\DebugView.natvis">
@@ -26,5 +29,13 @@
     <Natvis Include="..\Natvis\glm.natvis">
       <Filter>Source Files</Filter>
     </Natvis>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CharacterScript.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Character.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

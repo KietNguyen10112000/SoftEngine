@@ -84,6 +84,10 @@
     "UUID": "7fffffffffffffff000005fdab83c000"
   },
   {
+    "Path": "Resources/Editor/BlueprintBackground.png",
+    "UUID": "7fffffffffffffff00000a2dfe766000"
+  },
+  {
     "Path": "Resources/model/Character/IdleCarefully.fbx|0",
     "UUID": "7fffffffffffffff00000281ea552000"
   },

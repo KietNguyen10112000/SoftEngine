@@ -61,7 +61,7 @@ void Initialize(Runtime* runtime)
 				{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<SceneEditorTabFactory>();
 
-					factory->m_filePath = "Editor/SceneEditor/Test2.SceneEditor";
+					factory->m_filePath = "Editor/SceneEditor/Test.SceneEditor";
 					auto tab = factory->CreateInstance();
 					EditorContext::s_instance->RunTab(tab);
 

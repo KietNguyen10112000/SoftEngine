@@ -1,5 +1,7 @@
 #include "Plugins/Bridge/PluginImpl.h"
 
+#include "CharacterScript.h"
+
 void RegisterSerializables()
 {
 	// registers all custom serializable classes, includes all scripts, all custom components like child classes of RenderingComponent,...
@@ -8,6 +10,8 @@ void RegisterSerializables()
 	//	SerializableDB::Get()->Register<MyScript2>();
 	//	...
 	//	SerializableDB::Get()->Register<<custom serializable classes ClassName>>();
+
+	SerializableDB::Get()->Register<CharacterScript>();
 }
 
 void Initialize(Runtime* runtime)

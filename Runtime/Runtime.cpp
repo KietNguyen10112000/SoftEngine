@@ -600,7 +600,7 @@ void Runtime::Setup()
 			auto script = obj->NewComponent<TPPCameraScript>();
 			script->m_camera = camera;
 			script->m_fppCamScript = fppCamScript;
-			script->m_testBody = testBody;
+			//script->m_testBody = testBody;
 
 			transform = {};
 			transform.Position() = Vec3::ZERO + Vec3::UP;

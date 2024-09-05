@@ -626,7 +626,7 @@ bool DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 			ofn.lpstrFile = Filestring;
 			ofn.nMaxFile = sizeof(Filestring);
 			ofn.lpstrFilter = L"All\0*.*\0Text\0*.TXT\0";
-			ofn.nFilterIndex = 1;
+			ofn.nFilterIndex = 0;
 			ofn.lpstrFileTitle = initFilename.empty() ? NULL : initFilename.data();
 			ofn.nMaxFileTitle = initFilename.size();
 			ofn.lpstrInitialDir = initDir.empty() ? NULL : initDir.c_str();
@@ -739,7 +739,7 @@ bool DataInspector::InspectStringPathEx(ClassMetadata* metadata, Accessor& acces
 				std::string fullPath(size_needed, 0);
 				WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &fullPath[0], size_needed, NULL, NULL);
 
-				const std::filesystem::path base = FileUtils::PopPath(FileSystem::Get()->GetCurrentWorkingDirectory()).c_str();
+				const std::filesystem::path base = FileSystem::Get()->GetCurrentWorkingDirectory().c_str();
 				const std::filesystem::path p = fullPath.c_str();
 
 				auto input = Variant(VARIANT_TYPE::STRING_PATH);

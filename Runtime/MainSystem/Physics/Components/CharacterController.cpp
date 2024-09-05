@@ -500,6 +500,11 @@ void CharacterController::OnPrevUpdate(float dt)
 
 void CharacterController::OnTransformChanged()
 {
+	if (!m_pxCharacterController)
+	{
+		return;
+	}
+
 	auto gameObject = GetGameObject();
 	auto& globalTransform = gameObject->GetCommittedGlobalTransform();
 

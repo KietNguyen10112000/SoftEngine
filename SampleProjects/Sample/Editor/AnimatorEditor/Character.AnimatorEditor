@@ -1,7 +1,7 @@
 {
   "Meta": {
     "RootUUIDs": [
-      "87b55c15ca9671de00000595ab321000"
+      "0d895c15ca9671de000002f43fd42000"
     ],
     "UsedClassNames": [
       "Scene",
@@ -27,13 +27,13 @@
       "Data": {
         "LongLifeObjects": [],
         "ShortLifeObjects": [
-          "78695c15ca9671de00000d3e94efc000",
-          "3dbd5c15ca9671de00000eb83a3e5000"
+          "7fe05c15ca9671de00000086a867b000",
+          "33535c15ca9671de00000fe986603000"
         ]
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "b97d5c15ca9671de00000d28be119000"
+      "UUID": "f4395c15ca9671de000002acd0e28000"
     },
     {
       "ClassName": "GameObject",
@@ -84,9 +84,9 @@
           ]
         },
         "MainComponents": [
-          "7aba5c15ca9671de00000a789cc75000",
+          "82dc5c15ca9671de0000064c4381f000",
           null,
-          "b5a75c15ca9671de00000e5c8e570000",
+          "ee795c15ca9671de000009a312964000",
           null,
           null,
           null,
@@ -98,7 +98,7 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "78695c15ca9671de00000d3e94efc000"
+      "UUID": "7fe05c15ca9671de00000086a867b000"
     },
     {
       "ClassName": "Camera",
@@ -111,7 +111,7 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "7aba5c15ca9671de00000a789cc75000"
+      "UUID": "82dc5c15ca9671de0000064c4381f000"
     },
     {
       "ClassName": "FPPCameraScript",
@@ -129,14 +129,14 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "b5a75c15ca9671de00000e5c8e570000"
+      "UUID": "ee795c15ca9671de000009a312964000"
     },
     {
       "ClassName": "GameObject",
       "Data": {
         "Children": [
-          "62915c15ca9671de0000083e62d3c000",
-          "6b055c15ca9671de000004f5d0151000"
+          "63e95c15ca9671de00000d80bef22000",
+          "6e9f5c15ca9671de00000e2959e71000"
         ],
         "GlobalTransformMat": [
           [
@@ -186,7 +186,7 @@
           null,
           null,
           null,
-          "41925c15ca9671de00000bcb0854b000",
+          "3a0c5c15ca9671de00000f7a87aa7000",
           null,
           null,
           null,
@@ -197,24 +197,24 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "3dbd5c15ca9671de00000eb83a3e5000"
+      "UUID": "33535c15ca9671de00000fe986603000"
     },
     {
       "ClassName": "AnimatorSkeletalArray",
       "Data": {
         "AnimLayers": [
-          "45bd5c15ca9671de000008f3ed114000",
-          "4df05c15ca9671de00000479a58b5000",
-          "55125c15ca9671de0000076dd4842000",
-          "5bb45c15ca9671de0000098eb9213000"
+          "3f6a5c15ca9671de0000079d9f837000",
+          "49905c15ca9671de00000168621cd000",
+          "52895c15ca9671de00000f07cd7b8000",
+          "5b025c15ca9671de000007e38d1f3000"
         ],
-        "AnimMeshRenderingBuffer": "68375c15ca9671de00000719a54f3000",
-        "GameObject": "3dbd5c15ca9671de00000eb83a3e5000",
+        "AnimMeshRenderingBuffer": "6b4a5c15ca9671de000009e5c66ec000",
+        "GameObject": "33535c15ca9671de00000fe986603000",
         "MeshRendererObjs": [
-          "62915c15ca9671de0000083e62d3c000",
-          "6b055c15ca9671de000004f5d0151000"
+          "63e95c15ca9671de00000d80bef22000",
+          "6e9f5c15ca9671de00000e2959e71000"
         ],
-        "Model": "7fffffffffffffff000004a278acf000",
+        "Model": "7fffffffffffffff000005a634342000",
         "RigidBodyProxyCCT": "00000000000000000000000000000000",
         "RigidBodyProxyCCTOffset": [
           [
@@ -246,141 +246,141 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "41925c15ca9671de00000bcb0854b000"
+      "UUID": "3a0c5c15ca9671de00000f7a87aa7000"
     },
     {
       "ClassName": "class soft::AnimModel",
       "Data": [
-        "7fffffffffffffff00000e2149399000",
-        "7fffffffffffffff00000581473c3000",
-        "31285c15ca9671de0000047382385000",
-        "7fffffffffffffff00000d5520df0000",
-        "13155c15ca9671de000006fb6f6fb000",
-        "3d915c15ca9671de0000070501c28000",
-        "62555c15ca9671de00000e47e0c8e000",
-        "7fffffffffffffff000001ccf3d5a000",
-        "7fffffffffffffff00000b8f67080000",
-        "7fffffffffffffff00000b6e760f9000",
-        "72415c15ca9671de000003ee31b77000",
-        "02635c15ca9671de000002a78b3e1000",
-        "7fffffffffffffff00000976835d0000",
-        "7fffffffffffffff00000e1972e77000",
-        "1a335c15ca9671de00000c91767c6000",
-        "7fffffffffffffff0000017ad6a20000",
-        "293b5c15ca9671de00000cdacf80a000"
+        "7fffffffffffffff00000281ea552000",
+        "71f85c15ca9671de00000427adda2000",
+        "078d5c15ca9671de00000fef31d7a000",
+        "7fffffffffffffff000000798136c000",
+        "3f655c15ca9671de00000f7d47581000",
+        "7fffffffffffffff000008bae9f2d000",
+        "55675c15ca9671de00000993397b1000",
+        "7fffffffffffffff000009a2c7e70000",
+        "7a2a5c15ca9671de00000cf203bfa000",
+        "061b5c15ca9671de00000bafa99e5000",
+        "05ea5c15ca9671de00000507c9b1f000",
+        "7fffffffffffffff00000e54a9979000",
+        "1b625c15ca9671de00000693742a7000",
+        "7fffffffffffffff0000001878124000",
+        "7fffffffffffffff0000076bda30a000",
+        "7fffffffffffffff00000cb1d0ae5000",
+        "36ff5c15ca9671de000002d6f00fb000"
       ],
       "MemType": 3,
-      "UUID": "7fffffffffffffff000004a278acf000"
+      "UUID": "7fffffffffffffff000005a634342000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000e2149399000"
+      "UUID": "7fffffffffffffff00000281ea552000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000581473c3000"
+      "UUID": "71f85c15ca9671de00000427adda2000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "31285c15ca9671de0000047382385000"
+      "UUID": "078d5c15ca9671de00000fef31d7a000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000d5520df0000"
+      "UUID": "7fffffffffffffff000000798136c000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "13155c15ca9671de000006fb6f6fb000"
+      "UUID": "3f655c15ca9671de00000f7d47581000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "3d915c15ca9671de0000070501c28000"
+      "UUID": "7fffffffffffffff000008bae9f2d000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "62555c15ca9671de00000e47e0c8e000"
+      "UUID": "55675c15ca9671de00000993397b1000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff000001ccf3d5a000"
+      "UUID": "7fffffffffffffff000009a2c7e70000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000b8f67080000"
+      "UUID": "7a2a5c15ca9671de00000cf203bfa000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000b6e760f9000"
+      "UUID": "061b5c15ca9671de00000bafa99e5000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "72415c15ca9671de000003ee31b77000"
+      "UUID": "05ea5c15ca9671de00000507c9b1f000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "02635c15ca9671de000002a78b3e1000"
+      "UUID": "7fffffffffffffff00000e54a9979000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000976835d0000"
+      "UUID": "1b625c15ca9671de00000693742a7000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff00000e1972e77000"
+      "UUID": "7fffffffffffffff0000001878124000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "1a335c15ca9671de00000c91767c6000"
+      "UUID": "7fffffffffffffff0000076bda30a000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "7fffffffffffffff0000017ad6a20000"
+      "UUID": "7fffffffffffffff00000cb1d0ae5000"
     },
     {
       "ClassName": "class soft::AnimMotion",
       "Data": null,
       "MemType": 3,
-      "UUID": "293b5c15ca9671de00000cdacf80a000"
+      "UUID": "36ff5c15ca9671de000002d6f00fb000"
     },
     {
       "ClassName": "AnimPlayerLayer",
       "Data": {
-        "AnimMotion": "7fffffffffffffff00000e2149399000",
+        "AnimMotion": "7fffffffffffffff00000281ea552000",
         "IsEnabled": false,
-        "Model": "7fffffffffffffff000004a278acf000",
-        "OwnerComp": "41925c15ca9671de00000bcb0854b000",
+        "Model": "7fffffffffffffff000005a634342000",
+        "OwnerComp": "3a0c5c15ca9671de00000f7a87aa7000",
         "StartTick": 0.0,
         "TickDuration": 59.0,
         "TicksPerSecond": 30.0,
@@ -388,40 +388,40 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "45bd5c15ca9671de000008f3ed114000"
+      "UUID": "3f6a5c15ca9671de0000079d9f837000"
     },
     {
       "ClassName": "AnimPlayerLayer",
       "Data": {
-        "AnimMotion": "7fffffffffffffff00000e2149399000",
+        "AnimMotion": "7fffffffffffffff00000281ea552000",
         "IsEnabled": true,
-        "Model": "7fffffffffffffff000004a278acf000",
-        "OwnerComp": "41925c15ca9671de00000bcb0854b000",
+        "Model": "7fffffffffffffff000005a634342000",
+        "OwnerComp": "3a0c5c15ca9671de00000f7a87aa7000",
         "StartTick": 0.0,
         "TickDuration": 59.0,
         "TicksPerSecond": 30.0,
-        "Time": 52.85991287231445
+        "Time": 39.98977279663086
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "4df05c15ca9671de00000479a58b5000"
+      "UUID": "49905c15ca9671de00000168621cd000"
     },
     {
       "ClassName": "AnimBlendLayer",
       "Data": {
-        "ControlFunction": "5a345c15ca9671de000001f0537ac000",
-        "Input0": "45bd5c15ca9671de000008f3ed114000",
-        "Input1": "4df05c15ca9671de00000479a58b5000",
+        "ControlFunction": "58f75c15ca9671de00000fa2b08ae000",
+        "Input0": "3f6a5c15ca9671de0000079d9f837000",
+        "Input1": "49905c15ca9671de00000168621cd000",
         "IsEnabled": false,
-        "Model": "7fffffffffffffff000004a278acf000",
-        "OwnerComp": "41925c15ca9671de00000bcb0854b000",
+        "Model": "7fffffffffffffff000005a634342000",
+        "OwnerComp": "3a0c5c15ca9671de00000f7a87aa7000",
         "RangeMax": 1.0,
         "RangeMin": 0.0,
         "Time": 1.0
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "55125c15ca9671de0000076dd4842000"
+      "UUID": "52895c15ca9671de00000f07cd7b8000"
     },
     {
       "ClassName": "FunctionLinear1D",
@@ -430,19 +430,19 @@
         "b": 0.0
       },
       "MemType": 1,
-      "UUID": "5a345c15ca9671de000001f0537ac000"
+      "UUID": "58f75c15ca9671de00000fa2b08ae000"
     },
     {
       "ClassName": "AnimTransitLayer",
       "Data": {
-        "Input": "55125c15ca9671de0000076dd4842000",
+        "Input": "52895c15ca9671de00000f07cd7b8000",
         "IsEnabled": true,
-        "Model": "7fffffffffffffff000004a278acf000",
-        "OwnerComp": "41925c15ca9671de00000bcb0854b000"
+        "Model": "7fffffffffffffff000005a634342000",
+        "OwnerComp": "3a0c5c15ca9671de00000f7a87aa7000"
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "5bb45c15ca9671de0000098eb9213000"
+      "UUID": "5b025c15ca9671de000007e38d1f3000"
     },
     {
       "ClassName": "GameObject",
@@ -493,7 +493,7 @@
           ]
         },
         "MainComponents": [
-          "64d15c15ca9671de00000fb9ff623000",
+          "66dd5c15ca9671de000003dadf377000",
           null,
           null,
           null,
@@ -507,28 +507,28 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "62915c15ca9671de0000083e62d3c000"
+      "UUID": "63e95c15ca9671de00000d80bef22000"
     },
     {
       "ClassName": "AnimMeshRenderer",
       "Data": {
-        "AnimMeshRenderingBuffer": "68375c15ca9671de00000719a54f3000",
+        "AnimMeshRenderingBuffer": "6b4a5c15ca9671de000009e5c66ec000",
         "CascadeAlpha": true,
         "GlobalAlpha": 1.0,
         "LocalAlpha": 1.0,
         "MeshId": 0,
-        "Model": "7fffffffffffffff000004a278acf000",
-        "Texture2D": "53cc5c15ca9671de0000071bba831000"
+        "Model": "7fffffffffffffff000005a634342000",
+        "Texture2D": "5c175c15ca9671de000000e36976f000"
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "64d15c15ca9671de00000fb9ff623000"
+      "UUID": "66dd5c15ca9671de000003dadf377000"
     },
     {
       "ClassName": "class soft::Texture2D",
       "Data": null,
       "MemType": 3,
-      "UUID": "53cc5c15ca9671de0000071bba831000"
+      "UUID": "5c175c15ca9671de000000e36976f000"
     },
     {
       "ClassName": "AnimMeshRenderingBuffer",
@@ -537,7 +537,7 @@
         "MeshesAABBBufferSize": 2
       },
       "MemType": 1,
-      "UUID": "68375c15ca9671de00000719a54f3000"
+      "UUID": "6b4a5c15ca9671de000009e5c66ec000"
     },
     {
       "ClassName": "GameObject",
@@ -588,7 +588,7 @@
           ]
         },
         "MainComponents": [
-          "6d245c15ca9671de000008d6cace5000",
+          "715f5c15ca9671de00000e5135b32000",
           null,
           null,
           null,
@@ -602,27 +602,27 @@
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "6b055c15ca9671de000004f5d0151000"
+      "UUID": "6e9f5c15ca9671de00000e2959e71000"
     },
     {
       "ClassName": "AnimMeshRenderer",
       "Data": {
-        "AnimMeshRenderingBuffer": "68375c15ca9671de00000719a54f3000",
+        "AnimMeshRenderingBuffer": "6b4a5c15ca9671de000009e5c66ec000",
         "CascadeAlpha": true,
         "GlobalAlpha": 1.0,
         "LocalAlpha": 1.0,
         "MeshId": 1,
-        "Model": "7fffffffffffffff000004a278acf000",
-        "Texture2D": "53cc5c15ca9671de0000071bba831000"
+        "Model": "7fffffffffffffff000005a634342000",
+        "Texture2D": "5c175c15ca9671de000000e36976f000"
       },
       "MemHeapId": 0,
       "MemType": 0,
-      "UUID": "6d245c15ca9671de000008d6cace5000"
+      "UUID": "715f5c15ca9671de00000e5135b32000"
     },
     {
       "ClassName": "AnimatorEditorSaveData",
       "Data": {
-        "CameraUUID": "78695c15ca9671de00000d3e94efc000",
+        "CameraUUID": "7fe05c15ca9671de00000086a867b000",
         "DrawDebugAABBs": false,
         "EditorData": {
           "AnimationsEditingState": [
@@ -695,10 +695,10 @@
               "SrcNodeId": 69
             }
           ],
-          "NextId": 117,
+          "NextId": 131,
           "Nodes": [
             {
-              "Layer": "45bd5c15ca9671de000008f3ed114000",
+              "Layer": "3f6a5c15ca9671de0000079d9f837000",
               "LayerIdx": 0,
               "LayerType": 1,
               "NodeExternData": null,
@@ -712,7 +712,7 @@
               ]
             },
             {
-              "Layer": "5bb45c15ca9671de0000098eb9213000",
+              "Layer": "5b025c15ca9671de000007e38d1f3000",
               "LayerIdx": 3,
               "LayerType": 2,
               "NodeExternData": null,
@@ -726,7 +726,7 @@
               ]
             },
             {
-              "Layer": "4df05c15ca9671de00000479a58b5000",
+              "Layer": "49905c15ca9671de00000168621cd000",
               "LayerIdx": 1,
               "LayerType": 1,
               "NodeExternData": null,
@@ -740,7 +740,7 @@
               ]
             },
             {
-              "Layer": "55125c15ca9671de0000076dd4842000",
+              "Layer": "52895c15ca9671de00000f07cd7b8000",
               "LayerIdx": 2,
               "LayerType": 3,
               "NodeExternData": null,
@@ -757,94 +757,94 @@
         },
         "EditorName": "Character",
         "ExportData": {
-          "ExportCppPath": "Resources/AnimatorExport/",
+          "ExportCppPath": "Sample/",
           "ExportName": "Character",
           "ExportResourcePath": "Resources/AnimatorExport/"
         },
-        "ObjectUUID": "3dbd5c15ca9671de00000eb83a3e5000",
-        "SceneUUID": "b97d5c15ca9671de00000d28be119000"
+        "ObjectUUID": "33535c15ca9671de00000fe986603000",
+        "SceneUUID": "f4395c15ca9671de000002acd0e28000"
       },
       "MemHeapId": 204,
       "MemType": 0,
-      "UUID": "87b55c15ca9671de00000595ab321000"
+      "UUID": "0d895c15ca9671de000002f43fd42000"
     }
   ],
   "UsedResources": [
     {
-      "Path": "Resources/model/Character/RunJump.fbx|0",
-      "UUID": "02635c15ca9671de000002a78b3e1000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleLeftTurn180.fbx|0",
-      "UUID": "13155c15ca9671de000006fb6f6fb000"
-    },
-    {
-      "Path": "Resources/model/Character/FallIdle.fbx|0",
-      "UUID": "1a335c15ca9671de00000c91767c6000"
-    },
-    {
-      "Path": "Resources/model/Character/FallHardLanding.fbx|0",
-      "UUID": "293b5c15ca9671de00000cdacf80a000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleJumpUp.fbx|0",
-      "UUID": "31285c15ca9671de0000047382385000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleRightTurn90.fbx|0",
-      "UUID": "3d915c15ca9671de0000070501c28000"
-    },
-    {
-      "Path": "Resources/Default/default.png",
-      "UUID": "53cc5c15ca9671de0000071bba831000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleRightTurn180.fbx|0",
-      "UUID": "62555c15ca9671de00000e47e0c8e000"
-    },
-    {
       "Path": "Resources/model/Character/RunFast.fbx|0",
-      "UUID": "72415c15ca9671de000003ee31b77000"
-    },
-    {
-      "Path": "Resources/model/Character/FallSoftLanding.fbx|0",
-      "UUID": "7fffffffffffffff0000017ad6a20000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleTurnLeftNoRotationCarefully.fbx|0",
-      "UUID": "7fffffffffffffff000001ccf3d5a000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleCarefully.fbx",
-      "UUID": "7fffffffffffffff000004a278acf000"
-    },
-    {
-      "Path": "Resources/model/Character/Idle.fbx|0",
-      "UUID": "7fffffffffffffff00000581473c3000"
-    },
-    {
-      "Path": "Resources/model/Character/RunJumpInPlace.fbx|0",
-      "UUID": "7fffffffffffffff00000976835d0000"
+      "UUID": "05ea5c15ca9671de00000507c9b1f000"
     },
     {
       "Path": "Resources/model/Character/RunSlow.fbx|0",
-      "UUID": "7fffffffffffffff00000b6e760f9000"
+      "UUID": "061b5c15ca9671de00000bafa99e5000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleJumpUp.fbx|0",
+      "UUID": "078d5c15ca9671de00000fef31d7a000"
+    },
+    {
+      "Path": "Resources/model/Character/RunJumpInPlace.fbx|0",
+      "UUID": "1b625c15ca9671de00000693742a7000"
+    },
+    {
+      "Path": "Resources/model/Character/FallHardLanding.fbx|0",
+      "UUID": "36ff5c15ca9671de000002d6f00fb000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleLeftTurn180.fbx|0",
+      "UUID": "3f655c15ca9671de00000f7d47581000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleRightTurn180.fbx|0",
+      "UUID": "55675c15ca9671de00000993397b1000"
+    },
+    {
+      "Path": "Resources/Default/default.png",
+      "UUID": "5c175c15ca9671de000000e36976f000"
+    },
+    {
+      "Path": "Resources/model/Character/Idle.fbx|0",
+      "UUID": "71f85c15ca9671de00000427adda2000"
     },
     {
       "Path": "Resources/model/Character/IdleTurnRightNoRotationCarefully.fbx|0",
-      "UUID": "7fffffffffffffff00000b8f67080000"
-    },
-    {
-      "Path": "Resources/model/Character/IdleLeftTurn90.fbx|0",
-      "UUID": "7fffffffffffffff00000d5520df0000"
+      "UUID": "7a2a5c15ca9671de00000cf203bfa000"
     },
     {
       "Path": "Resources/model/Character/RunJumpInPlaceShort.fbx|0",
-      "UUID": "7fffffffffffffff00000e1972e77000"
+      "UUID": "7fffffffffffffff0000001878124000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleLeftTurn90.fbx|0",
+      "UUID": "7fffffffffffffff000000798136c000"
     },
     {
       "Path": "Resources/model/Character/IdleCarefully.fbx|0",
-      "UUID": "7fffffffffffffff00000e2149399000"
+      "UUID": "7fffffffffffffff00000281ea552000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleCarefully.fbx",
+      "UUID": "7fffffffffffffff000005a634342000"
+    },
+    {
+      "Path": "Resources/model/Character/FallIdle.fbx|0",
+      "UUID": "7fffffffffffffff0000076bda30a000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleRightTurn90.fbx|0",
+      "UUID": "7fffffffffffffff000008bae9f2d000"
+    },
+    {
+      "Path": "Resources/model/Character/IdleTurnLeftNoRotationCarefully.fbx|0",
+      "UUID": "7fffffffffffffff000009a2c7e70000"
+    },
+    {
+      "Path": "Resources/model/Character/FallSoftLanding.fbx|0",
+      "UUID": "7fffffffffffffff00000cb1d0ae5000"
+    },
+    {
+      "Path": "Resources/model/Character/RunJump.fbx|0",
+      "UUID": "7fffffffffffffff00000e54a9979000"
     }
   ]
 }

@@ -3,6 +3,8 @@
 #include "FileSystem/FileSystem.h"
 #include "FileSystem/FileUtils.h"
 
+#include "TaskSystem/TaskSystem.h"
+
 #ifdef _WIN32
 #include <Windows.h>
 #include <shlobj_core.h>
@@ -46,7 +48,7 @@ inline static void SystemDialog_ConvertToWin32FilterExtensionsString(std::vector
 	filterStr.swap(wextensions);
 }
 
-bool SystemDialog::OpenSaveAsDialog(SaveAsDialog& opt)
+bool SystemDialog::OpenSaveAsDialogImpl(SaveAsDialog& opt)
 {
 	std::wstring initDir = L"";
 	std::wstring initFilename = L"";
@@ -74,6 +76,10 @@ bool SystemDialog::OpenSaveAsDialog(SaveAsDialog& opt)
 
 	if (!initFilename.empty())
 	{
+		if (initFilename == L"<Unnamed>")
+		{
+			initFilename = L"Unnamed";
+		}
 		std::memcpy(Filestring, initFilename.data(), initFilename.size() * sizeof(wchar_t));
 	}
 
@@ -83,13 +89,15 @@ bool SystemDialog::OpenSaveAsDialog(SaveAsDialog& opt)
 	ofn.nMaxFile = sizeof(Filestring);
 	ofn.lpstrFilter = wextensions.c_str();
 	ofn.lpstrDefExt = defExtension.empty() ? NULL : defExtension.c_str();
-	ofn.nFilterIndex = 1;
+	ofn.nFilterIndex = 0;
 	//ofn.lpstrFileTitle = initFilename.empty() ? NULL : initFilename.data();
 	//ofn.nMaxFileTitle = initFilename.size();
 	ofn.lpstrInitialDir = initDir.empty() ? NULL : initDir.c_str();
 	ofn.Flags = OFN_NOCHANGEDIR;//OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
-	if (GetSaveFileName(&ofn) == TRUE)
+	auto v = GetSaveFileName(&ofn);
+	//auto err = CommDlgExtendedError();
+	if (v == TRUE)
 	{
 		//std::wcout << ofn.lpstrFile << "\n";
 
@@ -118,7 +126,30 @@ bool SystemDialog::OpenSaveAsDialog(SaveAsDialog& opt)
 #endif // WIN32
 }
 
-bool SystemDialog::OpenFileChooser(FileChooserDialog& opt)
+bool SystemDialog::OpenSaveAsDialog(SaveAsDialog& opt)
+{
+	/*struct Param
+	{
+		SaveAsDialog* opt;
+		bool ret = false;
+	};
+
+	Param p = { &opt, false };
+
+	Task task;
+	task.Params() = &p;
+	task.Entry() = [](void* p)
+	{
+		auto& param = *(Param*)p;
+		param.ret = OpenSaveAsDialogImpl(*param.opt);
+	};
+
+	TaskSystem::SubmitForThreadAndWait(task, 0);*/
+
+	return OpenSaveAsDialogImpl(opt);
+}
+
+bool SystemDialog::OpenFileChooserImpl(FileChooserDialog& opt)
 {
 #ifdef _WIN32
 	OPENFILENAME ofn;
@@ -183,4 +214,27 @@ bool SystemDialog::OpenFileChooser(FileChooserDialog& opt)
 #else
 	assert(0);
 #endif // WIN32
+}
+
+bool SystemDialog::OpenFileChooser(FileChooserDialog& opt)
+{
+	/*struct Param
+	{
+		FileChooserDialog* opt;
+		bool ret = false;
+	};
+
+	Param p = { &opt, false };
+
+	Task task;
+	task.Params() = &p;
+	task.Entry() = [](void* p)
+	{
+		auto& param = *(Param*)p;
+		param.ret = OpenFileChooserImpl(*param.opt);
+	};
+
+	TaskSystem::SubmitForThreadAndWait(task, 0);*/
+
+	return OpenFileChooserImpl(opt);
 }
