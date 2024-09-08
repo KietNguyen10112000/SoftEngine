@@ -15,6 +15,18 @@ NAMESPACE_BEGIN
 
 void AnimPlayerLayer::Run(float dt)
 {
+	size_t iter = 0;
+	if (GetComponent()->GetGameObject())
+	{
+		auto scene = GetComponent()->GetGameObject()->GetScene();
+		if (scene)
+		{
+			iter = scene->GetIterationCount();
+		}
+	}
+
+	m_timeLock.lock();
+
 	m_t += dt * m_ticksPerSecond;
 
 	// early dispatch event
@@ -52,6 +64,9 @@ void AnimPlayerLayer::Run(float dt)
 		std::memcpy(m_keyFramesIndex.data(), m_startKeyFrameIndex.data(),
 			m_keyFramesIndex.size() * sizeof(KeyFramesIndex));
 	}
+
+	m_timeSign = bool(iter % 2);
+	m_timeLock.unlock();
 
 	auto t = m_t + m_startTick;
 
@@ -358,7 +373,8 @@ void AnimPlayerLayer::SetDurationImpl(float duration)
 
 	duration = std::max(0.0f, duration);
 	float tickPerSecond = m_tickDuration / duration;
-	SetTimeImpl(-1, -1, -1, tickPerSecond);
+	//SetTimeImpl(-1, -1, -1, tickPerSecond);
+	m_ticksPerSecond = tickPerSecond;
 }
 
 void AnimPlayerLayer::SetDuration(float duration)
@@ -400,6 +416,21 @@ void AnimPlayerLayer::SetTime(float currentTime, float startTime, float endTime,
 			self->SetTimeImpl_(currentTime, startTime, endTime, duration);
 		}
 	);
+}
+
+float AnimPlayerLayer::GetTime() const
+{
+	auto scene = ((AnimPlayerLayer*)this)->GetComponent()->GetGameObject()->GetScene();
+	auto iter = scene->GetIterationCount();
+	auto dt = scene->Dt();
+	auto sign = bool(iter % 2);
+
+	m_timeLock.lock();
+	auto t = m_t;
+	auto timeSign = m_timeSign;
+	m_timeLock.unlock();
+
+	return (t / m_ticksPerSecond) + (timeSign == sign ? 0.0f : dt);
 }
 
 void AnimPlayerLayer::RemoveListener(EventListener* listener)

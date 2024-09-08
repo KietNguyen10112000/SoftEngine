@@ -45,6 +45,12 @@ void AnimTransitLayer::Initialize()
 
 void AnimTransitLayer::PrevRun(float dt)
 {
+	if (m_transitTime == -1.0f)
+	{
+		m_transitTime = -2.0f;
+		return;
+	}
+
 	if (m_transitTime < dt && m_transitTime > -1.0f)
 	{
 		m_transitTime = -1.0f;
@@ -120,7 +126,7 @@ void AnimTransitLayer::Run(float dt)
 
 	m_transitTime -= dt;
 
-	auto sBlend = 1.0f - std::min(1.0f, m_transitTime / m_transitTotalTime);
+	auto sBlend = std::clamp(1.0f - std::min(1.0f, m_transitTime / m_transitTotalTime), 0.0f, 1.0f);
 	if (m_curFadeState.direction == TransitDirection::BACKWARD)
 	{
 		sBlend = 1 - sBlend;
@@ -148,7 +154,7 @@ AnimLayer* AnimTransitLayer::GetOutput()
 		return m_input->GetOutput();
 	}
 
-	if (m_transitTime < 0)
+	if (m_transitTime == -2.0f)
 	{
 		return m_input->GetOutput();
 	}

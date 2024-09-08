@@ -62,6 +62,9 @@ protected:
 	bool m_disableRootMotionRotation = false;
 	bool m_disableRootMotionTranslation = false;
 
+	mutable spinlock m_timeLock;
+	bool m_timeSign = false;
+
 	spinlock m_lock;
 	Array<Handle<EventListener>> m_events = {};
 
@@ -112,9 +115,16 @@ public:
 	void SetDuration(float duration);
 	void SetTime(float currentTime, float startTime, float endTime, float duration);
 
-	inline float GetTime() const
+	float GetTime() const;
+
+	inline auto GetDuration() const
 	{
-		return m_t / m_ticksPerSecond;
+		return m_tickDuration / m_ticksPerSecond;
+	}
+
+	inline const auto GetAnimation() const
+	{
+		return m_animation;
 	}
 
 public:

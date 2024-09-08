@@ -21,15 +21,17 @@ void AnimBlendLayer::Run(float dt)
 		return;
 	}
 
+	m_timeLock.lock();
 	m_t = std::clamp(m_t + dt, m_rangeMin, m_rangeMax);
+	m_timeLock.unlock();
 
-	auto prevSBlend = m_blendFactor;
+	//auto prevSBlend = m_blendFactor;
 	auto& sBlend = m_blendFactor;
 	sBlend = std::clamp(m_controlFunction->Test(m_t), 0.0f, 1.0f);
-	if (prevSBlend == m_blendFactor)
+	/*if (prevSBlend == m_blendFactor)
 	{
 		return;
-	}
+	}*/
 
 	if (m_t == m_rangeMax && !m_flags.test(FLAG::NO_AUTO_DISABLE))
 	{
@@ -39,8 +41,8 @@ void AnimBlendLayer::Run(float dt)
 
 	auto num = m_localTransforms.size();
 
-	auto& transforms0 = l0->NodeLocalTransforms();
-	auto& transforms1 = l1->NodeLocalTransforms();
+	auto& transforms0 = l0->GetOutput()->NodeLocalTransforms();
+	auto& transforms1 = l1->GetOutput()->NodeLocalTransforms();
 
 	for (size_t i = 0; i < num; i++)
 	{
@@ -54,7 +56,7 @@ AnimLayer* AnimBlendLayer::GetOutput()
 {
 	if (!IsEnabledImpl() || m_blendFactor == 0.0f || m_blendFactor == 1.0f)
 	{
-		return GetMainLayer();
+		return GetMainLayer()->GetOutput();
 	}
 
 	return this;
@@ -89,6 +91,7 @@ void AnimBlendLayer::StartBlending(const SharedPtr<Function1D>& func1D, float ra
 
 			self->m_input[0]->SetEnabledImpl(true);
 			self->m_input[1]->SetEnabledImpl(true);
+			self->SetEnabledImpl(true);
 		}
 	);
 }
@@ -113,6 +116,20 @@ void AnimBlendLayer::SetTime(float t)
 			self->m_t = t;
 		}
 	);
+}
+
+float AnimBlendLayer::GetTime() const
+{
+	auto scene = ((AnimPlayerLayer*)this)->GetComponent()->GetGameObject()->GetScene();
+	auto iter = scene->GetIterationCount();
+	auto dt = scene->Dt();
+	auto sign = bool(iter % 2);
+
+	m_timeLock.lock();
+	auto t = m_t;
+	m_timeLock.unlock();
+
+	return std::clamp(t + dt, m_rangeMin, m_rangeMax);
 }
 
 void AnimBlendLayer::SetFlag(FLAG::ENUM flag, bool enable)

@@ -37,5 +37,8 @@
     <ClInclude Include="Character.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="AnimationUtils.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

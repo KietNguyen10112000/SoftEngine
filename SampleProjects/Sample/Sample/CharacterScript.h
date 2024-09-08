@@ -30,7 +30,8 @@ protected:
 		enum ENUM
 		{
 			IDLE,
-			MOVE,
+			MOVE_SLOW,
+			MOVE_FAST,
 			JUMP,
 			TURN,
 			RAGDOLL
@@ -61,7 +62,9 @@ protected:
 	STATE::ENUM m_currentBodyState = STATE::IDLE; 
 	STATE::ENUM m_nextBodyState = STATE::IDLE;
 
-	SharedPtr<Action> m_CCTRotationAction;
+	SharedPtr<ActionBase> m_switchRunSlowFastActionAnim;
+	SharedPtr<ActionBase> m_switchRunSlowFastActionState;
+	SharedPtr<ActionBase> m_switchRunSlowFastActionSpeed;
 
 public:
 	void OnStart() override;
@@ -72,6 +75,7 @@ private:
 	void ControlAnim(float dt);
 
 	bool IsBlockingControlCCT();
+	bool IsAnimTransiting();
 
 	// return true if current state of character is idling or moving
 	bool IsPlayingMotionAnim();
@@ -79,5 +83,6 @@ private:
 
 	void PlayAnimIdle(float dt);
 	void PlayAnimRun(float dt);
+	void PlayAnimSwitchRunSlowFast(float dt);
 	void PlayAnimTurnFromIdle(float dt);
 };

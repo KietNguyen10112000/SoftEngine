@@ -33,6 +33,8 @@ public:
 
 	std::bitset<64> m_flags;
 
+	mutable spinlock m_timeLock;
+
 protected:
 	// Inherited via AnimLayer
 	void CloneFrom(Serializer* serializer, Serializable* another) override;
@@ -55,10 +57,11 @@ public:
 	virtual AnimLayer* GetOutput() override;
 
 	void SetInput(AnimLayer* l1, AnimLayer* l2);
-	void StartBlending(const SharedPtr<Function1D>& func1D, float rangeMin, float rangeMax);
+	void StartBlending(const SharedPtr<Function1D>& func1D, float timeMin, float timeMax);
 	void Restart();
 
 	void SetTime(float t);
+	float GetTime() const;
 
 	void SetFlag(FLAG::ENUM flag, bool enable);
 	const std::bitset<64>& GetFlags() const;
@@ -66,6 +69,31 @@ public:
 	inline auto GetMainLayer() const
 	{
 		return m_input[(int)std::round(m_blendFactor)];
+	}
+
+	inline auto GetInput(ID index)
+	{
+		return m_input[index]->GetOutput();
+	}
+
+	inline const auto& GetControlFunction() const
+	{
+		return m_controlFunction;
+	}
+
+	inline auto GetTimeMin() const
+	{
+		return m_rangeMin;
+	}
+
+	inline auto GetTimeMax() const
+	{
+		return m_rangeMax;
+	}
+
+	inline auto GetBlendFactor() const
+	{
+		return std::clamp(GetControlFunction()->Test(GetTime()), 0.0f, 1.0f);
 	}
 
 };

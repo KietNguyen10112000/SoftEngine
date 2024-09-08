@@ -15,6 +15,8 @@
 
 #include "Math/Math.h"
 
+#include "AnimationUtils.h"
+
 void CharacterScript::OnStart()
 {
 	auto camera = GetScene()->FindObjectByIndexedName("#camera");
@@ -126,14 +128,21 @@ void CharacterScript::ControlAnim(float dt)
 
 bool CharacterScript::IsBlockingControlCCT()
 {
-	return m_currentBodyState == STATE::TURN || m_nextBodyState == STATE::TURN;
+	return m_currentBodyState == STATE::TURN || m_nextBodyState == STATE::TURN
+		|| (m_nextBodyState == STATE::IDLE && m_currentBodyState != STATE::IDLE);
+}
+
+bool CharacterScript::IsAnimTransiting()
+{
+	return m_nextBodyState != m_currentBodyState;
 }
 
 bool CharacterScript::IsPlayingMotionAnim()
 {
 	return 
 		m_currentBodyState == STATE::IDLE
-		|| m_currentBodyState == STATE::MOVE
+		|| m_currentBodyState == STATE::MOVE_SLOW
+		|| m_currentBodyState == STATE::MOVE_FAST
 		|| m_currentBodyState == STATE::JUMP;
 }
 
@@ -144,22 +153,171 @@ void CharacterScript::ControlMotionAnim(float dt)
 		PlayAnimTurnFromIdle(dt);
 	}
 
-	if (!IsBlockingControlCCT() && m_currentExpectedMovingDir != Vec3::ZERO && m_currentMovingSpeed == 0.0f && m_currentBodyState == STATE::IDLE)
+	if (!IsBlockingControlCCT() && !IsAnimTransiting() && m_currentExpectedMovingDir != Vec3::ZERO && m_currentMovingSpeed == 0.0f && m_currentBodyState == STATE::IDLE)
 	{
 		// player request moving character from idling state
+
+		PlayAnimRun(dt);
+	}
+
+	if (!IsBlockingControlCCT() /*&& !IsAnimTransiting()*/ && m_currentExpectedMovingDir == Vec3::ZERO && m_currentMovingSpeed != 0.0f 
+		&& (m_currentBodyState == STATE::MOVE_SLOW || m_currentBodyState == STATE::MOVE_FAST))
+	{
+		// player request stoping character from moving state
 
 		PlayAnimIdle(dt);
 	}
 
-	if (!IsBlockingControlCCT() && m_currentExpectedMovingDir == Vec3::ZERO && m_currentMovingSpeed != 0.0f && m_currentBodyState == STATE::MOVE)
+	if (!IsBlockingControlCCT() && !IsAnimTransiting()
+		&& (m_currentBodyState == STATE::MOVE_SLOW || m_currentBodyState == STATE::MOVE_FAST))
 	{
-		// player request stoping character from moving state
+		// player request moving character from idling state
 
-		PlayAnimRun(dt);
+		PlayAnimSwitchRunSlowFast(dt);
 	}
 }
 
 void CharacterScript::PlayAnimIdle(float dt)
+{
+	if (!IsAnimTransiting())
+	{
+		float transitTime = 0.15f;
+		float instantSpeed = 2.0f;
+		if (m_currentBodyState == STATE::MOVE_FAST)
+		{
+			transitTime = 0.3f;
+			instantSpeed = 5.0f;
+		}
+
+		m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, transitTime, m_character.Animations.IdleCarefully, -1, -1);
+
+		m_nextBodyState = STATE::IDLE;
+		m_actionExecution->RunAction(
+			ActionInterpolation<float>::New(
+				{
+					{ instantSpeed, 0.0f },
+					{ 0.0f, transitTime }
+				},
+				[&](const float& v)
+				{
+					m_currentMovingSpeed = v;
+					if (m_currentMovingSpeed == 0)
+					{
+						m_currentBodyState = STATE::IDLE;
+					}
+				}
+			)
+		);
+	}
+	else if (m_nextBodyState != STATE::IDLE)
+	{
+		const float TRANSIT_TIME_FROM_SLOW = 0.15f;
+		const float TRANSIT_TIME_FROM_FAST = 0.3f;
+
+		const float SPEED_FROM_SLOW = 2.0f;
+		const float SPEED_FROM_FAST = 5.0f;
+
+		auto srcPlayer0 = dynamic_cast<AnimPlayerLayer*>(m_character.Blend01->GetInput(0));
+
+		auto currentBlendFactor = m_character.Blend01->GetBlendFactor();
+
+		float srcTransitTime, destTransitTime, srcInstantSpeed, destInstantSpeed; int dir;
+		if (srcPlayer0->GetAnimation() == m_character.Animations.RunSlow && m_currentBodyState == STATE::MOVE_SLOW)
+		{
+			// blend from 0->1, slow->fast
+			srcTransitTime = TRANSIT_TIME_FROM_SLOW;
+			destTransitTime = TRANSIT_TIME_FROM_FAST;
+			srcInstantSpeed = SPEED_FROM_SLOW;
+			destInstantSpeed = SPEED_FROM_FAST;
+			dir = 0;
+		}
+		else if (srcPlayer0->GetAnimation() != m_character.Animations.RunSlow && m_currentBodyState == STATE::MOVE_SLOW)
+		{
+			// blend from 1->0, slow->fast
+			srcTransitTime = TRANSIT_TIME_FROM_SLOW;
+			destTransitTime = TRANSIT_TIME_FROM_FAST;
+			srcInstantSpeed = SPEED_FROM_SLOW;
+			destInstantSpeed = SPEED_FROM_FAST;
+			currentBlendFactor = 1 - currentBlendFactor;
+			dir = 0;
+		}
+		else if (srcPlayer0->GetAnimation() == m_character.Animations.RunSlow && m_currentBodyState != STATE::MOVE_SLOW)
+		{
+			// blend from 1->0, fast->slow
+			srcTransitTime = TRANSIT_TIME_FROM_FAST;
+			destTransitTime = TRANSIT_TIME_FROM_SLOW;
+			srcInstantSpeed = SPEED_FROM_FAST;
+			destInstantSpeed = SPEED_FROM_SLOW;
+			currentBlendFactor = 1 - currentBlendFactor;
+			dir = 1;
+		}
+		else if (srcPlayer0->GetAnimation() != m_character.Animations.RunSlow && m_currentBodyState != STATE::MOVE_SLOW)
+		{
+			// blend from 0->1, fast->slow
+			srcTransitTime = TRANSIT_TIME_FROM_FAST;
+			destTransitTime = TRANSIT_TIME_FROM_SLOW;
+			srcInstantSpeed = SPEED_FROM_FAST;
+			destInstantSpeed = SPEED_FROM_SLOW;
+			dir = 1;
+		}
+
+		auto transitTime = Lerp(srcTransitTime, destTransitTime, currentBlendFactor);
+		auto instantSpeed = Lerp(srcInstantSpeed, destInstantSpeed, currentBlendFactor);
+
+		m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, transitTime, m_character.Animations.IdleCarefully, -1, -1);
+
+		//AnimationUtils::TransitChangeDirection(m_actionExecution, m_character.Blend01, transitTime, dir);
+		m_character.Blend01->StartBlending(
+			std::make_shared<FunctionLinear1D>(0, m_character.Blend01->GetBlendFactor()),
+			0, transitTime
+		);
+
+		m_actionExecution->StopAction(m_switchRunSlowFastActionAnim);
+		m_actionExecution->StopAction(m_switchRunSlowFastActionState);
+		m_actionExecution->StopAction(m_switchRunSlowFastActionSpeed);
+		m_actionExecution->RunAction(
+			ActionSequence::New(
+				{
+					ActionDelay::New(transitTime),
+					ActionCallback::New([&]()
+						{
+							auto playerLayer = dynamic_cast<AnimPlayerLayer*>(m_character.Blend01->GetMainLayer());
+							assert(playerLayer);
+							playerLayer->SetAnimation(m_character.Animations.IdleCarefully, -1, -1);
+						}
+					)
+				}
+			)
+		);
+
+		m_actionExecution->RunAction(
+			ActionInterpolation<float>::New(
+				{
+					{ instantSpeed, 0.0f },
+					{ 0.0f, transitTime }
+				},
+				[&](const float& v)
+				{
+					m_currentMovingSpeed = v;
+				}
+			)
+		);
+
+		m_nextBodyState = STATE::IDLE;
+		m_actionExecution->RunAction(
+			ActionSequence::New({
+				ActionDelay::New(transitTime + MIN_FRAMETIME),
+				ActionCallback::New([&]()
+					{
+						m_currentBodyState = STATE::IDLE;
+					}
+				)
+			})
+		);
+	}
+}
+
+void CharacterScript::PlayAnimRun(float dt)
 {
 	float transitTime = 0.15f;
 
@@ -175,37 +333,86 @@ void CharacterScript::PlayAnimIdle(float dt)
 				m_currentMovingSpeed = v;
 				if (m_currentMovingSpeed == m_slowRunMovingSpeed)
 				{
-					m_currentBodyState = STATE::MOVE;
+					m_currentBodyState = STATE::MOVE_SLOW;
 				}
 			}
 		)
 	);
-	m_nextBodyState = STATE::MOVE;
+	m_nextBodyState = STATE::MOVE_SLOW;
 }
 
-void CharacterScript::PlayAnimRun(float dt)
+void CharacterScript::PlayAnimSwitchRunSlowFast(float dt)
 {
-	float transitTime = 0.15f;
+	// mode 1: hold LSHIFT to sprint
+	{
+		if (Input()->IsKeyDown(KEYBOARD::LSHIFT) && m_currentBodyState == STATE::MOVE_SLOW)
+		{
+			// switch to fast run
+			float transitTime = 0.5f;
 
-	m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, transitTime, m_character.Animations.IdleCarefully, -1, -1);
-	m_actionExecution->RunAction(
-		ActionInterpolation<float>::New(
-			{
-				{ 2.0f, 0.0f },
-				{ 0.0f, transitTime }
-			},
-			[&](const float& v)
-			{
-				m_currentMovingSpeed = v;
-				if (m_currentMovingSpeed == 0)
+			m_switchRunSlowFastActionAnim = AnimationUtils::Transit(m_actionExecution, m_character.Blend01, m_character.Animations.RunSlow, m_character.Animations.RunFast, transitTime);
+
+			// time out to set last state
+			m_nextBodyState = STATE::MOVE_FAST;
+			m_actionExecution->RunAction(
+				m_switchRunSlowFastActionState = ActionSequence::New({
+					ActionDelay::New(transitTime + MIN_FRAMETIME),
+					ActionCallback::New([&]()
+						{
+							m_currentBodyState = STATE::MOVE_FAST;
+						}
+					)
+				})
+			);
+
+			// iteratively increase both's duration to match RunFast duration
+			m_switchRunSlowFastActionSpeed = ActionInterpolation<float>::New(
 				{
-					m_currentBodyState = STATE::IDLE;
+					{ m_currentMovingSpeed, 0.0f },
+					{ m_fastRunMovingSpeed, transitTime },
+				},
+				[&](const float& v)
+				{
+					m_currentMovingSpeed = v;
 				}
-			}
-		)
-	);
+			);
+			m_actionExecution->RunAction(m_switchRunSlowFastActionSpeed);
+		}
 
-	m_nextBodyState = STATE::IDLE;
+		if (!Input()->IsKeyDown(KEYBOARD::LSHIFT) && m_currentBodyState == STATE::MOVE_FAST)
+		{
+			// switch to slow run
+			float transitTime = 0.5f;
+
+			m_switchRunSlowFastActionAnim = AnimationUtils::Transit(m_actionExecution, m_character.Blend01, m_character.Animations.RunFast, m_character.Animations.RunSlow, transitTime);
+
+			// time out to set last state
+			m_nextBodyState = STATE::MOVE_SLOW;
+			m_actionExecution->RunAction(
+				m_switchRunSlowFastActionState = ActionSequence::New({
+					ActionDelay::New(transitTime + MIN_FRAMETIME),
+					ActionCallback::New([&]()
+						{
+							m_currentBodyState = STATE::MOVE_SLOW;
+						}
+					)
+				})
+			);
+
+			// iteratively increase both's duration to match RunFast duration
+			m_switchRunSlowFastActionSpeed = ActionInterpolation<float>::New(
+				{
+					{ m_currentMovingSpeed, 0.0f },
+					{ m_slowRunMovingSpeed, transitTime },
+				},
+				[&](const float& v)
+				{
+					m_currentMovingSpeed = v;
+				}
+			);
+			m_actionExecution->RunAction(m_switchRunSlowFastActionSpeed);
+		}
+	}
 }
 
 void CharacterScript::PlayAnimTurnFromIdle(float dt)
@@ -257,12 +464,12 @@ void CharacterScript::PlayAnimTurnFromIdle(float dt)
 							m_currentBodyState = STATE::TURN;
 						}
 					)
-					})
+				})
 			);
 
 			m_actionExecution->RunAction(
 				ActionSequence::New({
-					ActionDelay::New(duration * coeff - 0.016f),
+					ActionDelay::New(duration * coeff - MIN_FRAMETIME),
 					ActionCallback::New([&]()
 						{
 							m_animator->SetForwardCCT(nullptr);
@@ -283,7 +490,7 @@ void CharacterScript::PlayAnimTurnFromIdle(float dt)
 							);
 						}
 					)
-					})
+				})
 			);
 
 			m_nextBodyState = STATE::TURN;

@@ -22,6 +22,15 @@ public:
 		Set(a, b);
 	}
 
+	inline FunctionLinear1D(const Vec2& p0, const Vec2& p1)
+	{
+		auto line = Line2D::FromPoints(p0, p1);
+		assert(line.b != 0 && "Invalid function 1D!");
+
+		m_a = line.a / line.b;
+		m_b = line.c / line.b;
+	}
+
 	inline void Set(float a, float b)
 	{
 		m_a = a;
