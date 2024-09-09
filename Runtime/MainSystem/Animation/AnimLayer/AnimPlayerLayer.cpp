@@ -202,6 +202,11 @@ void AnimPlayerLayer::SetAnimationImpl(const SharedPtr<Animation>& animation, fl
 	}
 
 	m_t = 0;
+
+	if (!IsEnabledImpl())
+	{
+		Run(0);
+	}
 }
 
 void AnimPlayerLayer::SetAnimation(const SharedPtr<Animation>& animation, float startTime, float endTime)

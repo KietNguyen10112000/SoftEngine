@@ -48,6 +48,19 @@ public:
 		m_tasks.ReserveNoSafe(8 * KB);
 	}
 
+	~AsyncTaskRunner()
+	{
+		m_tasks.ForEach(
+			[](AsyncTask& task) 
+			{ 
+				if (task.paramDtor) 
+				{
+					task.paramDtor(task.param);
+				}
+			}
+		);
+	}
+
 public:
 	inline void ProcessAllTasks(_C* self)
 	{
@@ -195,11 +208,31 @@ public:
 	{
 		for (auto& list : m_objectTasks)
 		{
+			list.list->ForEach(
+				[](AsyncTask& task)
+				{
+					if (task.paramDtor)
+					{
+						task.paramDtor(task.param);
+					}
+				}
+			);
+
 			delete list.list;
 		}
 
 		for (auto& list : m_cacheList)
 		{
+			list->ForEach(
+				[](AsyncTask& task)
+				{
+					if (task.paramDtor)
+					{
+						task.paramDtor(task.param);
+					}
+				}
+			);
+
 			delete list;
 		}
 	}

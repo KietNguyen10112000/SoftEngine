@@ -79,8 +79,6 @@ public:
 	Quaternion m_cctStartRotation;
 	Quaternion m_cctStartRootBoneGlobalRotation;
 
-	int m_test = 0;
-
 	// in local space of anim model
 	Mat4 m_cctOffset; 
 	Transform m_cctOffsetTransform;
@@ -94,6 +92,7 @@ public:
 	float m_rigidBodyAABBScale = 1.01f;
 	CharacterController* m_rigidBodyProxyCCT = nullptr;
 	Mat4 m_rigidBodyProxyCCTOffset;
+	size_t m_lastUnSetCctIterationCount = 0;
 
 protected:
 	TRACEABLE_FRIEND();

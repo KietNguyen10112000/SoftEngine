@@ -4,6 +4,11 @@
 
 #include "MainSystem/Scripting/Components/TPPCameraScript.h"
 
+#include "Common/Actions/ActionExecution.h"
+#include "Common/Actions/ActionSequence.h"
+#include "Common/Actions/ActionDelay.h"
+#include "Common/Actions/ActionCallback.h"
+
 using namespace soft;
 
 namespace soft
@@ -33,6 +38,7 @@ protected:
 			MOVE_SLOW,
 			MOVE_FAST,
 			JUMP,
+			FALL,
 			TURN,
 			RAGDOLL
 		};
@@ -63,8 +69,9 @@ protected:
 	STATE::ENUM m_nextBodyState = STATE::IDLE;
 
 	SharedPtr<ActionBase> m_switchRunSlowFastActionAnim;
-	SharedPtr<ActionBase> m_switchRunSlowFastActionState;
 	SharedPtr<ActionBase> m_switchRunSlowFastActionSpeed;
+
+	SharedPtr<ActionBase> m_switchBodyStateAction = nullptr;
 
 public:
 	void OnStart() override;
@@ -81,8 +88,23 @@ private:
 	bool IsPlayingMotionAnim();
 	void ControlMotionAnim(float dt);
 
+	void TimeoutTransitingBodyState(STATE::ENUM nextState, float timeout);
+
+	template <typename Fn>
+	void SetTimeout(float sec, const Fn& callback)
+	{
+		m_actionExecution->RunAction(
+			ActionSequence::New({
+				ActionDelay::New(sec),
+				ActionCallback::New(callback)
+			})
+		);
+	}
+
 	void PlayAnimIdle(float dt);
 	void PlayAnimRun(float dt);
 	void PlayAnimSwitchRunSlowFast(float dt);
 	void PlayAnimTurnFromIdle(float dt);
+
+	void PlayAnimJump(float dt);
 };

@@ -228,6 +228,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 	inline static const char* TRANSIT_DIRECTION_NAMES[] = {
 		"FORWARD",
 		"BACKWARD"
+		"FIXED"
 	};
 
 	AnimPlayerLayer::EventListener* m_inputPlayerLayerListener = nullptr;
@@ -282,7 +283,7 @@ struct AnimTransitLayerNode : public AnimatorEditorTab::Node
 			);
 		}
 
-		transitDirection = layer->m_lastFadeState.direction;
+		transitDirection = AnimTransitLayer::TransitDirection::FORWARD;//layer->m_lastFadeState.direction;
 
 		if (m_endTransitListener == nullptr)
 		{

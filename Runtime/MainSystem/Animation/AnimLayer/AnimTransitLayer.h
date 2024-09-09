@@ -46,7 +46,10 @@ public:
 			FORWARD,
 
 			// next animation stoped, current animation is still playing
-			BACKWARD
+			BACKWARD,
+
+			// both animations stoped
+			FIXED,
 		};
 	};
 
@@ -68,11 +71,12 @@ public:
 	AnimLayer* m_input = nullptr;
 
 	std::vector<Transform> m_lastLocalTransforms;
+	size_t m_lastUnSetCctIterationCount = INVALID_ID;
 
 	float m_transitTime = 0;
 	float m_transitTotalTime = 0;
 
-	FadeState m_lastFadeState = {};
+	//FadeState m_lastFadeState = {};
 	FadeState m_curFadeState = {};
 
 protected:
@@ -84,6 +88,8 @@ protected:
 
 private:
 	void OnEndTransit();
+
+	void CopyLastLocalTransforms(const std::vector<Transform>& lastLocalTransform);
 
 protected:
 	// Inherited via AnimLayer

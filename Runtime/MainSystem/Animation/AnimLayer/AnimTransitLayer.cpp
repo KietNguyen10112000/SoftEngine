@@ -38,6 +38,27 @@ void AnimTransitLayer::OnEndTransit()
 	m_lock.unlock();
 }
 
+void AnimTransitLayer::CopyLastLocalTransforms(const std::vector<Transform>& lastLocalTransform)
+{
+	std::memcpy(m_lastLocalTransforms.data(), lastLocalTransform.data(), m_lastLocalTransforms.size() * sizeof(Transform));
+
+	auto comp = GetComponentAs<AnimatorSkeletalArray>();
+	if (comp->m_cct)
+	{
+		m_lastUnSetCctIterationCount = comp->m_lastUnSetCctIterationCount;
+	}
+	else
+	{
+		m_lastUnSetCctIterationCount = INVALID_ID;
+
+		if (comp->m_lastUnSetCctIterationCount == comp->GetGameObject()->GetScene()->GetIterationCount())
+		{
+			m_lastLocalTransforms[comp->m_model3D->m_rootBoneNodeId].Position() = comp->m_cctOffsetTransform.Position();
+		}
+	}
+	
+}
+
 void AnimTransitLayer::Initialize()
 {
 	m_lastLocalTransforms.resize(NodeLocalTransforms().size());
@@ -56,6 +77,15 @@ void AnimTransitLayer::PrevRun(float dt)
 		m_transitTime = -1.0f;
 
 		OnEndTransit();
+
+		if (m_curFadeState.direction == TransitDirection::FIXED)
+		{
+			auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input->GetOutput());
+			if (l0)
+			{
+				l0->SetEnabledImpl(true);
+			}
+		}
 
 		if (m_curFadeState.direction == TransitDirection::BACKWARD)
 		{
@@ -86,9 +116,9 @@ void AnimTransitLayer::PrevRun(float dt)
 			if (buf)
 			{
 				auto lastLocalTransform = &buf->m_localTransforms;
-				if (currentFateState.direction == TransitDirection::FORWARD)
+				if (currentFateState.direction == TransitDirection::FORWARD || currentFateState.direction == TransitDirection::FIXED)
 				{
-					std::memcpy(m_lastLocalTransforms.data(), lastLocalTransform->data(), m_lastLocalTransforms.size() * sizeof(Transform));
+					CopyLastLocalTransforms(*lastLocalTransform);
 				}
 				else if (currentFateState.direction == TransitDirection::BACKWARD)
 				{
@@ -123,6 +153,15 @@ void AnimTransitLayer::Run(float dt)
 	}
 
 	//m_input->SetEnable(false);
+
+	auto comp = GetComponentAs<AnimatorSkeletalArray>();
+	if (m_lastUnSetCctIterationCount < comp->m_lastUnSetCctIterationCount)
+	{
+		CopyLastLocalTransforms(comp->GetLastOutputResultBuffer()->m_localTransforms);
+		m_transitTotalTime = m_transitTime;
+
+		m_lastUnSetCctIterationCount = INVALID_ID;
+	}
 
 	m_transitTime -= dt;
 
@@ -169,25 +208,32 @@ void AnimTransitLayer::SetInput(AnimLayer* l)
 
 void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeTime, const SharedPtr<Animation>& animation, float startTime, float endTime)
 {
-	if (direction == TransitDirection::FORWARD)
+	if (direction == TransitDirection::FORWARD || direction == TransitDirection::FIXED)
 	{
 		auto l0 = dynamic_cast<AnimPlayerLayer*>(m_input->GetOutput());
 		if (l0)
 		{
 			l0->SetAnimation(animation, startTime, endTime);
+
+			if (direction == TransitDirection::FIXED)
+			{
+				l0->SetEnabledImpl(false);
+			}
 		}
 	}
 
-	auto startTick = std::max(0.0f, startTime) * animation->GetTicksPerSecond();
-	m_lastFadeState.animation = animation;
-	m_lastFadeState.direction = direction;
-	m_lastFadeState.startTime = startTime;
-	m_lastFadeState.endTime = endTime;
-	m_lastFadeState.fadeTime = fadeTime;
+	//auto startTick = std::max(0.0f, startTime) * animation->GetTicksPerSecond();
+	//m_lastFadeState.animation = animation;
+	//m_lastFadeState.direction = direction;
+	//m_lastFadeState.startTime = startTime;
+	//m_lastFadeState.endTime = endTime;
+	//m_lastFadeState.fadeTime = fadeTime;
 
-	MAIN_SYSTEM_TASK_IMPL_4(GetComponent(),
-		AnimationSystem, AsyncTaskRunner, fadeTime, direction, animation, startTick,
+	MAIN_SYSTEM_TASK_IMPL_5(GetComponent(),
+		AnimationSystem, AsyncTaskRunner, startTime, endTime, fadeTime, direction, animation,
 		{
+			auto startTick = std::max(0.0f, startTime) * animation->GetTicksPerSecond();
+
 			self->m_transitTime = fadeTime;
 			self->m_transitTotalTime = fadeTime;
 
@@ -195,9 +241,9 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 			if (buf)
 			{
 				auto lastLocalTransform = &buf->m_localTransforms;
-				if (direction == TransitDirection::FORWARD)
+				if (direction == TransitDirection::FORWARD || direction == TransitDirection::FIXED)
 				{
-					std::memcpy(self->m_lastLocalTransforms.data(), lastLocalTransform->data(), self->m_lastLocalTransforms.size() * sizeof(Transform));
+					self->CopyLastLocalTransforms(*lastLocalTransform);
 				}
 				else if (direction == TransitDirection::BACKWARD)
 				{
@@ -206,7 +252,13 @@ void AnimTransitLayer::FadeTo(TransitDirection::DIRECTION direction, float fadeT
 				}
 			}
 
-			self->m_curFadeState = self->m_lastFadeState;
+			//self->m_curFadeState = self->m_lastFadeState;
+
+			self->m_curFadeState.animation = animation;
+			self->m_curFadeState.direction = direction;
+			self->m_curFadeState.startTime = startTime;
+			self->m_curFadeState.endTime = endTime;
+			self->m_curFadeState.fadeTime = fadeTime;
 		}
 	);
 
