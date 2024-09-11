@@ -157,9 +157,12 @@ void AnimTransitLayer::Run(float dt)
 	auto comp = GetComponentAs<AnimatorSkeletalArray>();
 	if (m_lastUnSetCctIterationCount < comp->m_lastUnSetCctIterationCount)
 	{
-		CopyLastLocalTransforms(comp->GetLastOutputResultBuffer()->m_localTransforms);
-		m_transitTotalTime = m_transitTime;
-
+		if (m_curFadeState.direction == TransitDirection::FORWARD || m_curFadeState.direction == TransitDirection::FIXED)
+		{
+			CopyLastLocalTransforms(comp->GetLastOutputResultBuffer()->m_localTransforms);
+			m_transitTotalTime = m_transitTime;
+		}
+		
 		m_lastUnSetCctIterationCount = INVALID_ID;
 	}
 

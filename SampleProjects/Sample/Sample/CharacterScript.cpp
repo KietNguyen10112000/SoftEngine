@@ -11,10 +11,14 @@
 #include "Common/Actions/ActionSequence.h"
 #include "Common/Actions/ActionDelay.h"
 #include "Common/Actions/ActionCallback.h"
+#include "Common/Actions/ActionRepeatUntil.h"
 
 #include "Input/Input.h"
 
 #include "Math/Math.h"
+
+#include "Graphics//Graphics.h"
+#include "Graphics/DebugGraphics.h"
 
 #include "AnimationUtils.h"
 
@@ -136,7 +140,8 @@ bool CharacterScript::IsBlockingControlCCT()
 {
 	return m_currentBodyState == STATE::TURN || m_nextBodyState == STATE::TURN
 		|| (m_nextBodyState == STATE::IDLE && m_currentBodyState != STATE::IDLE)
-		|| (m_nextBodyState == STATE::JUMP || m_currentBodyState == STATE::JUMP);
+		|| (m_nextBodyState == STATE::JUMP || m_currentBodyState == STATE::JUMP)
+		|| (m_nextBodyState == STATE::FALL || m_currentBodyState == STATE::FALL);
 }
 
 bool CharacterScript::IsAnimTransiting()
@@ -215,6 +220,33 @@ void CharacterScript::TimeoutTransitingBodyState(STATE::ENUM nextState, float ti
 	);
 }
 
+void CharacterScript::ModifyMovingSpeed(const ActionInterpolation<float>::KeyFrame& start, const ActionInterpolation<float>::KeyFrame& end)
+{
+	if (m_modifyingMovingSpeedAction)
+	{
+		m_actionExecution->StopAction(m_modifyingMovingSpeedAction);
+		m_modifyingMovingSpeedAction = nullptr;
+	}
+
+	auto endValue = end.value;
+	m_actionExecution->RunAction(
+		m_modifyingMovingSpeedAction = ActionInterpolation<float>::New(
+			{
+				start,
+				end
+			},
+			[&, endValue](const float& v)
+			{
+				m_currentMovingSpeed = v;
+				if (m_currentMovingSpeed == endValue)
+				{
+					m_modifyingMovingSpeedAction = nullptr;
+				}
+			}
+		)
+	);
+}
+
 void CharacterScript::PlayAnimIdle(float dt)
 {
 	if (!IsAnimTransiting())
@@ -229,23 +261,8 @@ void CharacterScript::PlayAnimIdle(float dt)
 
 		m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, transitTime, m_character.Animations.IdleCarefully, -1, -1);
 
-		m_nextBodyState = STATE::IDLE;
-		m_actionExecution->RunAction(
-			ActionInterpolation<float>::New(
-				{
-					{ instantSpeed, 0.0f },
-					{ 0.0f, transitTime }
-				},
-				[&](const float& v)
-				{
-					m_currentMovingSpeed = v;
-					if (m_currentMovingSpeed == 0)
-					{
-						m_currentBodyState = STATE::IDLE;
-					}
-				}
-			)
-		);
+		ModifyMovingSpeed({ instantSpeed, 0.0f }, { 0.0f, transitTime });
+		TimeoutTransitingBodyState(STATE::IDLE, transitTime);
 	}
 	else if (m_nextBodyState != STATE::IDLE)
 	{
@@ -311,7 +328,6 @@ void CharacterScript::PlayAnimIdle(float dt)
 		);
 
 		m_actionExecution->StopAction(m_switchRunSlowFastActionAnim);
-		m_actionExecution->StopAction(m_switchRunSlowFastActionSpeed);
 
 		SetTimeout(transitTime, 
 			[&]()
@@ -322,19 +338,7 @@ void CharacterScript::PlayAnimIdle(float dt)
 			}
 		);
 
-		m_actionExecution->RunAction(
-			ActionInterpolation<float>::New(
-				{
-					{ instantSpeed, 0.0f },
-					{ 0.0f, transitTime }
-				},
-				[&](const float& v)
-				{
-					m_currentMovingSpeed = v;
-				}
-			)
-		);
-
+		ModifyMovingSpeed({ instantSpeed, 0.0f }, { 0.0f, transitTime });
 		TimeoutTransitingBodyState(STATE::IDLE, transitTime + MIN_FRAMETIME);
 	}
 }
@@ -344,23 +348,9 @@ void CharacterScript::PlayAnimRun(float dt)
 	float transitTime = 0.15f;
 
 	m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, transitTime, m_character.Animations.RunSlow, -1, -1);
-	m_actionExecution->RunAction(
-		ActionInterpolation<float>::New(
-			{
-				{ 0.0f, 0.0f },
-				{ m_slowRunMovingSpeed, transitTime }
-			},
-			[&](const float& v)
-			{
-				m_currentMovingSpeed = v;
-				if (m_currentMovingSpeed == m_slowRunMovingSpeed)
-				{
-					m_currentBodyState = STATE::MOVE_SLOW;
-				}
-			}
-		)
-	);
-	m_nextBodyState = STATE::MOVE_SLOW;
+
+	ModifyMovingSpeed({ 0.0f, 0.0f }, { m_slowRunMovingSpeed, transitTime });
+	TimeoutTransitingBodyState(STATE::MOVE_SLOW, transitTime);
 }
 
 void CharacterScript::PlayAnimSwitchRunSlowFast(float dt)
@@ -376,18 +366,7 @@ void CharacterScript::PlayAnimSwitchRunSlowFast(float dt)
 
 			TimeoutTransitingBodyState(STATE::MOVE_FAST, transitTime + MIN_FRAMETIME);
 
-			// iteratively increase both's duration to match RunFast duration
-			m_switchRunSlowFastActionSpeed = ActionInterpolation<float>::New(
-				{
-					{ m_currentMovingSpeed, 0.0f },
-					{ m_fastRunMovingSpeed, transitTime },
-				},
-				[&](const float& v)
-				{
-					m_currentMovingSpeed = v;
-				}
-			);
-			m_actionExecution->RunAction(m_switchRunSlowFastActionSpeed);
+			ModifyMovingSpeed({ m_currentMovingSpeed, 0.0f }, { m_fastRunMovingSpeed, transitTime });
 		}
 
 		if (!Input()->IsKeyDown(KEYBOARD::LSHIFT) && m_currentBodyState == STATE::MOVE_FAST)
@@ -399,18 +378,7 @@ void CharacterScript::PlayAnimSwitchRunSlowFast(float dt)
 
 			TimeoutTransitingBodyState(STATE::MOVE_SLOW, transitTime + MIN_FRAMETIME);
 
-			// iteratively increase both's duration to match RunFast duration
-			m_switchRunSlowFastActionSpeed = ActionInterpolation<float>::New(
-				{
-					{ m_currentMovingSpeed, 0.0f },
-					{ m_slowRunMovingSpeed, transitTime },
-				},
-				[&](const float& v)
-				{
-					m_currentMovingSpeed = v;
-				}
-			);
-			m_actionExecution->RunAction(m_switchRunSlowFastActionSpeed);
+			ModifyMovingSpeed({ m_currentMovingSpeed, 0.0f }, { m_slowRunMovingSpeed, transitTime });
 		}
 	}
 }
@@ -475,45 +443,33 @@ void CharacterScript::PlayAnimTurnFromIdle(float dt)
 
 void CharacterScript::PlayAnimJump(float dt)
 {
-	if (m_currentBodyState == STATE::IDLE)
+	if (m_currentBodyState == STATE::MOVE_SLOW && !IsAnimTransiting())
 	{
 		// jump from idle
 
-		/*m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, 0.15f, m_character.Animations.RunJumpInPlace, -1, -1);
-
-		SetTimeout(0.5f - 0.15f,
-			[&]()
-			{
-				m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.6f, m_character.Animations.FallIdle, -1, -1);
-			}
-		);
-
-		SetTimeout(1.5f,
-			[&]()
-			{
-				m_nextBodyState = STATE::IDLE;
-				m_currentBodyState = STATE::IDLE;
-				m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.15f, m_character.Animations.IdleCarefully, -1, -1);
-			}
-		);*/
+		auto& g = GetScene()->GetPhysicsSystem()->GetGravity();
 		
-		float transitTime = 0.15f;
+		const float transitTime = 0.15f;
 		m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, transitTime, m_character.Animations.RunJumpInPlace, -1, -1);
-		//dynamic_cast<AnimPlayerLayer*>(m_character.Transit0->GetInput())->SetAnimation(m_character.Animations.RunJumpInPlace, -1, -1);
-		m_animator->SetForwardCCT(m_controller, m_characterUp);
-		m_controller->SetGravity({ 0,0,0 });
-		m_controller->CCTApplyVelocity({ 0,10,0 });
 
 		m_nextBodyState = STATE::JUMP;
 		m_currentBodyState = STATE::JUMP;
 
-		const float reachedTopTime = 0.5f;
-		TimeoutTransitingBodyState(STATE::FALL, reachedTopTime);
+		constexpr static float jumpUpVelocityLength = 6.0f;
+
+		SetTimeout(transitTime,
+			[&]()
+			{
+				m_animator->SetForwardCCT(m_controller, m_characterUp);
+				m_controller->CCTApplyVelocity(m_characterForward * 8.0f + Vec3(0, jumpUpVelocityLength, 0));
+			}
+		);
+
+		const float reachedTopTime = 0.377f + transitTime;
 
 		SetTimeout(reachedTopTime,
 			[&]()
 			{
-				m_controller->SetGravity(GetGameObject()->GetScene()->GetPhysicsSystem()->GetGravity());
 				m_animator->SetForwardCCT(nullptr);
 			}
 		);
@@ -525,23 +481,143 @@ void CharacterScript::PlayAnimJump(float dt)
 			}
 		);
 
-		SetTimeout(3.5f,
+		SetTimeout(5.5f,
 			[&]()
 			{
-				m_nextBodyState = STATE::IDLE;
-				m_currentBodyState = STATE::IDLE;
+				m_currentMovingSpeed = 0.0f;
+				TimeoutTransitingBodyState(STATE::IDLE, 0.15f);
 				m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.15f, m_character.Animations.IdleCarefully, -1, -1);
+
+				m_actionExecution->StopAction(m_fallingUpdateAction);
+				m_fallingUpdateAction = nullptr;
+			}
+		);
+
+		float t0 = jumpUpVelocityLength / g.Length() + transitTime;
+		TimeoutTransitingBodyState(STATE::FALL, t0);
+		SetTimeout(t0, 
+			[&]() 
+			{
+				m_actionExecution->RunAction(
+					m_fallingUpdateAction = ActionRepeatUntil::New(
+						ActionCallback::New(
+							[&]()
+							{
+								FallingUpdate(GetScene()->Dt());
+							}
+						),
+						nullptr
+					)
+				);
 			}
 		);
 	}
 
-	if (m_currentBodyState == STATE::MOVE_SLOW)
+	if (m_currentBodyState == STATE::MOVE_FAST && !IsAnimTransiting())
 	{
 		// jump from slow run
 	}
 
-	if (m_currentBodyState == STATE::MOVE_FAST)
+	if (m_currentBodyState == STATE::IDLE)
 	{
 		// jump from fast run
+	}
+}
+
+PhysicsQueryHitType::ENUM CharacterScript::FallingSweepFilter::PrevFilter(GameObject* obj, PhysicsShape* shape, PhysicsHitFlags& flags)
+{
+	if (obj->GetRoot() == m_script->GetGameObject()->GetRoot())
+	{
+		return PhysicsQueryHitType::ENUM::IGNORE;
+	}
+
+	return PhysicsQueryHitType::ENUM::TOUCH;
+}
+
+PhysicsQueryHitType::ENUM CharacterScript::FallingSweepFilter::PostFilter(GameObject* obj, PhysicsShape* shape, const PhysicsQueryHit& hit)
+{
+	return PhysicsQueryHitType::ENUM();
+}
+
+void CharacterScript::FallingUpdate(float dt)
+{
+	std::vector<Vec3> points;
+	points.reserve(10);
+	const float dtSample = 0.16f;
+	//const size_t numSamples = 100;
+
+	float deltaHeight = 0.0f;
+	auto g = m_controller->GetGravity();
+	auto velocity = m_controller->GetVelocity();
+
+	Transform start = Transform::FromTransformMatrix(GetGameObject()->GetCommittedGlobalTransform());
+	auto startPosition = start.Position();
+	auto pos = start.Position();
+
+	points.push_back(pos);
+
+	while (deltaHeight < 2.0f)
+	{
+		pos += velocity * dtSample;
+
+		if (velocity != Vec3::ZERO)
+			points.push_back(pos);
+
+		velocity += g * dtSample;
+
+		deltaHeight = startPosition.y - pos.y;
+
+		//assert(deltaHeight >= 0);
+	}
+
+	if (points.size() > 1)
+	{
+		auto physicsSystem = GetScene()->GetPhysicsSystem();
+		PhysicsSweepResult result;
+
+		FallingSweepFilter filter(this);
+
+		for (size_t i = 0; i < points.size() - 1; i++)
+		{
+			auto& begin = points[i];
+			auto& end = points[i + 1];
+
+			result.Clear();
+
+			if (physicsSystem->Sweep(
+				result,
+				m_controller->GetShape(0),
+				start,
+				end - begin,
+				&filter
+			)) {
+				break;
+			}
+		}
+
+		if (!result.touches.empty())
+		{
+			std::cout << "Will touch ground\n";
+		}
+	}
+
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (debugGraphics)
+	{
+		if (points.size() > 1)
+		{
+			std::cout << "Num points: " << points.size() << '\n';
+			for (size_t i = 0; i < points.size() - 1; i++)
+			{
+				auto& begin = points[i];
+				auto& end = points[i + 1];
+
+				if (begin != end)
+				{
+					debugGraphics->DrawLineSegment(begin, end);
+				}
+			}
+		}
+		
 	}
 }

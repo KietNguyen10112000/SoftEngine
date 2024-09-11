@@ -680,4 +680,14 @@ const CharacterController::CollisionPlanes& CharacterController::CCTGetCollision
 	return *m_collisionPlanesBuffer.Read();
 }
 
+Vec3 CharacterController::GetGravity() const
+{
+	return m_gravity;
+}
+
+Vec3 CharacterController::GetVelocity() const
+{
+	return m_velocity;
+}
+
 NAMESPACE_END

@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN
 
-class ActionRepeatUntil : public ActionCompound
+class API ActionRepeatUntil : public ActionCompound
 {
 private:
 	std::function<bool()> m_checker;

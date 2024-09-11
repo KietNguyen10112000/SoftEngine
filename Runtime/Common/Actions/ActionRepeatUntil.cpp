@@ -6,7 +6,7 @@ ActionBase::RETURN_CODE ActionRepeatUntil::Update(float dt)
 {
 	Front()->Update(dt);
 
-	if (m_checker())
+	if (m_checker != nullptr && m_checker())
 	{
 		return RETURN_CODE::FINISHED;
 	}

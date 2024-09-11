@@ -49,6 +49,8 @@ private:
 	ActionBase* m_tail = nullptr;
 	std::vector<SharedPtr<ActionBase>> m_storage;
 
+	ActionBase* m_iterator = nullptr;
+
 protected:
 	void AddAction(const SharedPtr<ActionBase>& action);
 	void RemoveAction(ActionBase* action);
@@ -57,12 +59,17 @@ protected:
 	template <typename Fn>
 	inline void ForEachAction(Fn callback)
 	{
-		auto it = m_head;
-		while (it)
+		m_iterator = m_head;
+		auto& it = m_iterator;
+
+		if (it)
 		{
-			auto next = it->m_next;
-			callback(it);
-			it = next;
+			do
+			{
+				callback(it);
+			} while (it && (it = it->m_next));
+
+			assert(it == nullptr);
 		}
 	}
 

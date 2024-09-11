@@ -1,6 +1,7 @@
 #include "PhysicsSystem.h"
 
 #include "PhysX/PhysX.h"
+#include "PhysX/Utils.h"
 
 #include "Components/PhysicsComponent.h"
 #include "Components/RigidBodyDynamic.h"
@@ -766,6 +767,7 @@ void PhysicsSystem::EndModification()
 
 void PhysicsSystem::PrevIteration()
 {
+	m_queryLocked = true;
 }
 
 void PhysicsSystem::Iteration(float dt)
@@ -795,6 +797,8 @@ void PhysicsSystem::Iteration(float dt)
 	{
 		GetScene()->GetAnimationSystem()->PrevPhysicsSimulationUpdate();
 	}
+
+	m_queryLocked = false;
 
 	m_pxScene->simulate(dt);
 
@@ -853,6 +857,85 @@ void PhysicsSystem::Iteration(float dt)
 
 void PhysicsSystem::PostIteration()
 {
+}
+
+#define PhysicsSystem_WAIT_TILL_ABLE_TO_QUERY() while (m_queryLocked == true) { Thread::Yield(); }
+
+#define PhysicsSystem_PxSweepHit_Convert(ownHit, pxHit)							\
+{																				\
+ownHit.position = PhysXUtils::ToVec3(pxHit.position);							\
+ownHit.normal = PhysXUtils::ToVec3(pxHit.normal);								\
+ownHit.obj = ((PhysicsComponent*)pxHit.actor->userData)->GetGameObject();		\
+ownHit.shape = ((PhysicsShape*)pxHit.shape->userData);							\
+}
+
+class PhysicsSystem_SweepCallback : public PxQueryFilterCallback
+{
+public:
+	PhysicsQueryFilterCallback* m_userCallback = nullptr;
+
+	PhysicsSystem_SweepCallback(PhysicsQueryFilterCallback* userCallback) : m_userCallback(userCallback)
+	{
+
+	}
+
+	// Inherited via PxQueryFilterCallback
+	PxQueryHitType::Enum preFilter(const PxFilterData& filterData, const PxShape* shape, const PxRigidActor* actor, PxHitFlags& queryFlags) override
+	{
+		auto comp = (PhysicsComponent*)actor->userData;
+		PhysicsHitFlags myFlag = uint8_t(queryFlags);
+		auto status = m_userCallback->PrevFilter(comp->GetGameObject(), (PhysicsShape*)shape->userData, myFlag);
+		return PxQueryHitType::Enum(status);
+	}
+
+	PxQueryHitType::Enum postFilter(const PxFilterData& filterData, const PxQueryHit& hit, const PxShape* shape, const PxRigidActor* actor) override
+	{
+		auto comp = (PhysicsComponent*)actor->userData;
+		auto status = m_userCallback->PostFilter(comp->GetGameObject(), (PhysicsShape*)shape->userData, {});
+		return PxQueryHitType::Enum(status);
+	}
+};
+
+bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter)
+{
+	PhysicsSystem_WAIT_TILL_ABLE_TO_QUERY();
+
+	PhysicsSystem_SweepCallback callback(filter);
+
+	PxQueryFilterData filterData = PxQueryFilterData();
+
+	filterData.flags = PxQueryFlag::Enum::eDYNAMIC | PxQueryFlag::Enum::eSTATIC |
+		PxQueryFlag::Enum::eANY_HIT | PxQueryFlag::ePREFILTER;
+
+	PxSweepBuffer hit;
+	auto status = m_pxScene->sweep(
+		shape->m_pxShape->getGeometry(),
+		PhysXUtils::ToPxTransform(startTransform),
+		PhysXUtils::ToPxVec3(distance.Normal()),
+		distance.Length(),
+		hit, PxHitFlag::eDEFAULT,
+		PxQueryFilterData(), (filter ? &callback : nullptr)
+	);
+
+	//PxHitFlag::eASSUME_NO_INITIAL_OVERLAP
+
+	output.hasBlock = hit.hasBlock;
+	PhysicsSystem_PxSweepHit_Convert(output.block, hit.block);
+
+	output.touches.reserve(output.touches.size() + hit.nbTouches);
+	for (size_t i = 0; i < hit.nbTouches; i++)
+	{
+		auto& ownHit = output.touches.emplace_back();
+		PhysicsSystem_PxSweepHit_Convert(ownHit, hit.touches[i]);
+	}
+
+	return status;
+}
+
+SharedPtr<ActionBase> PhysicsSystem::Sweep(const SweepResultCallback& callback, 
+	PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	return SharedPtr<ActionBase>();
 }
 
 NAMESPACE_END

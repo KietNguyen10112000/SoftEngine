@@ -25,6 +25,7 @@ NAMESPACE_BEGIN
 class MainComponent;
 class GameObject;
 class Input;
+class PhysicsSystem;
 
 // manage game objects and notify for main systems whenever game object add to scene, remove from scene, changed transform,...
 class API Scene final : public Serializable

@@ -27,6 +27,16 @@ void ActionCompound::AddAction(const SharedPtr<ActionBase>& action)
 
 void ActionCompound::RemoveAction(ActionBase* action)
 {
+	assert(action != nullptr);
+
+	if (m_iterator)
+	{
+		if (action == m_iterator)
+		{
+			m_iterator = m_iterator->m_prev;
+		}
+	}
+
 	auto& prev = action->m_prev;
 	auto& next = action->m_next;
 

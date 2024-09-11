@@ -88,6 +88,8 @@ file(
     "MainSystem/Physics/Shapes/*.cpp"
     "MainSystem/Physics/Joints/*.h"
     "MainSystem/Physics/Joints/*.cpp"
+    "MainSystem/Physics/Query/*.h"
+    "MainSystem/Physics/Query/*.cpp"
 
     "MainSystem/Scripting/*.h"
     "MainSystem/Scripting/*.cpp"

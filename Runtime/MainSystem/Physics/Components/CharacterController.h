@@ -126,6 +126,9 @@ public:
 		return m_lastRotation;
 	}
 
+	Vec3 GetGravity() const;
+	Vec3 GetVelocity() const;
+
 };
 
 NAMESPACE_END

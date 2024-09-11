@@ -13,6 +13,7 @@
 #include "Scene/GameObjectDependenciesResolver.h"
 
 #include "PhysicsClasses.h"
+#include "Query/PhysicsQueryFilterCallback.h"
 
 namespace physx
 {
@@ -24,6 +25,8 @@ NAMESPACE_BEGIN
 
 class PhysicsComponent;
 class Joint;
+class ActionBase;
+class ActionPhysicsSweep;
 
 class API PhysicsSystem : public MainSystem
 {
@@ -63,7 +66,8 @@ private:
 	Spinlock m_prevUpdateListLock;
 	Spinlock m_updateListLock;
 	//Spinlock m_postUpdateListLock;
-	bool m_padd[2];
+	Spinlock m_queryLock;
+	bool m_padd[1];
 
 	float m_dt;
 
@@ -80,6 +84,8 @@ private:
 	std::vector<Joint*> m_brokenJoints;
 
 	TaskWaitingHandle m_otherSubsystemsCallbackWaitingHandle = { 0,0 };
+
+	std::vector<SharedPtr<ActionPhysicsSweep>> m_sweep;
 
 private:
 	TRACEABLE_FRIEND();
@@ -222,6 +228,25 @@ public:
 	{
 		return std::make_shared<PhysicsSystemDependenciesResolver>();
 	}
+
+private:
+	bool SweepImpl(PhysicsSweepResult& output, PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter);
+
+public:
+	///
+	///	SweepResultCallback:
+	/// + ActionPhysicsSweep: the return from Sweep() call, use to retrieve some infomation about the query
+	/// + PhysicsSweepResult: the query result
+	/// 
+	/// Usage:
+	///		actionExecution->RunAction(
+	///			GetScene()->Sweep(...)
+	///		);
+	/// 
+	using SweepResultCallback = std::function<void(const ActionPhysicsSweep*, const PhysicsSweepResult&)>;
+	SharedPtr<ActionBase> Sweep(const SweepResultCallback& callback, 
+		PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, const SharedPtr<PhysicsQueryFilterCallback>& filter);
+
 };
 
 NAMESPACE_END

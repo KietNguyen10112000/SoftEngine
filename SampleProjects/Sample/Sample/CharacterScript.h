@@ -4,6 +4,11 @@
 
 #include "MainSystem/Scripting/Components/TPPCameraScript.h"
 
+#ifdef IGNORE
+#undef IGNORE
+#endif
+#include "MainSystem/Physics/Query/PhysicsQueryFilterCallback.h"
+
 #include "Common/Actions/ActionExecution.h"
 #include "Common/Actions/ActionSequence.h"
 #include "Common/Actions/ActionDelay.h"
@@ -39,9 +44,21 @@ protected:
 			MOVE_FAST,
 			JUMP,
 			FALL,
+			LANDING,
 			TURN,
 			RAGDOLL
 		};
+	};
+
+	class FallingSweepFilter : public PhysicsQueryFilterCallback
+	{
+	public:
+		CharacterScript* m_script;
+		inline FallingSweepFilter(CharacterScript* script) : m_script(script) {};
+
+		// Inherited via PhysicsQueryFilterCallback
+		PhysicsQueryHitType::ENUM PrevFilter(GameObject* obj, PhysicsShape* shape, PhysicsHitFlags& flags) override;
+		PhysicsQueryHitType::ENUM PostFilter(GameObject* obj, PhysicsShape* shape, const PhysicsQueryHit& hit) override;
 	};
 
 protected:
@@ -69,9 +86,11 @@ protected:
 	STATE::ENUM m_nextBodyState = STATE::IDLE;
 
 	SharedPtr<ActionBase> m_switchRunSlowFastActionAnim;
-	SharedPtr<ActionBase> m_switchRunSlowFastActionSpeed;
 
 	SharedPtr<ActionBase> m_switchBodyStateAction = nullptr;
+	SharedPtr<ActionBase> m_modifyingMovingSpeedAction = nullptr;
+
+	SharedPtr<ActionBase> m_fallingUpdateAction = nullptr;
 
 public:
 	void OnStart() override;
@@ -101,10 +120,15 @@ private:
 		);
 	}
 
+	void ModifyMovingSpeed(
+		const ActionInterpolation<float>::KeyFrame& start,
+		const ActionInterpolation<float>::KeyFrame& end);
+
 	void PlayAnimIdle(float dt);
 	void PlayAnimRun(float dt);
 	void PlayAnimSwitchRunSlowFast(float dt);
 	void PlayAnimTurnFromIdle(float dt);
 
 	void PlayAnimJump(float dt);
+	void FallingUpdate(float dt);
 };
