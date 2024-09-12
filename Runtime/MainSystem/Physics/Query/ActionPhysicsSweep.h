@@ -1,27 +1,27 @@
 #pragma once
 
-#include "Common/Actions/ActionBase.h"
+#include "ActionPhysicsQuery.h"
 
 #include "Math/Math.h"
 
 #include "PhysicsQueryFilterCallback.h"
 
+#include <functional>
+
 NAMESPACE_BEGIN
 
 class PhysicsSystem;
 
-class ActionPhysicsSweep : public ActionBase
+class ActionPhysicsSweep : public ActionPhysicsQuery
 {
 private:
 	friend class PhysicsSystem;
 
 	using SweepResultCallback = std::function<void(const ActionPhysicsSweep*, const PhysicsSweepResult&)>;
 
-	size_t m_activeIteration = 0;
-	PhysicsSystem* m_system = nullptr;
+	SweepResultCallback m_callback = nullptr;
 
-	SweepResultCallback m_callback;
-
+	SharedPtr<PhysicsShape> m_shape = nullptr;
 	Vec3 m_startPosition;
 	Quaternion m_startRotation;
 	Vec3 m_sweepDistance;
@@ -29,8 +29,21 @@ private:
 
 	PhysicsSweepResult m_result;
 	bool m_queryStatus = false;
+	bool m_executedQuery = false;
 
 	ActionPhysicsSweep(PhysicsSystem* sys, size_t activeIteration);
+
+	inline static SharedPtr<ActionPhysicsSweep> Create(PhysicsSystem* sys, size_t activeIteration)
+	{
+		struct make_shared_enabler : public ActionPhysicsSweep 
+		{
+			inline make_shared_enabler(PhysicsSystem* sys, size_t activeIteration) : ActionPhysicsSweep(sys, activeIteration) {};
+		};
+		return std::make_shared<make_shared_enabler>(sys, activeIteration);
+	}
+
+	virtual void CallCallback() override;
+	virtual void ExecuteQuery() override;
 
 public:
 	inline auto GetStartTransform() const
@@ -55,10 +68,6 @@ public:
 	{
 		return m_queryStatus;
 	}
-
-protected:
-	// Inherited via ActionBase
-	RETURN_CODE Update(float dt) override;
 
 };
 

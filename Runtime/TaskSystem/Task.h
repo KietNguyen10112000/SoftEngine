@@ -43,8 +43,8 @@ protected:
 public:
 	enum PRIORITY
 	{
-		CRITICAL,				// io tasks (read and write file)
-		HIGH,					// task belong to subsystems (eg: process input, physics, animation, rendering, ...)
+		CRITICAL,				// task belong to subsystems (eg: process input, physics, animation, rendering, ...), which must be completed within a iteration
+		HIGH,					// load, unload resources
 		NORMAL,					// task just submits other tasks (doesn't wait)
 		LOW,					// task submits and waits for other tasks
 		COUNT

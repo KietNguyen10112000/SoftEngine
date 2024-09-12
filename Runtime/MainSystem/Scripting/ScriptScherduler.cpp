@@ -19,7 +19,9 @@ void ScriptScheduler::CallOnUpdate(float dt)
 {
 	for (auto& script : m_onUpdates)
 	{
+		script->m_lock.lock();
 		script->OnUpdate(dt);
+		script->m_lock.unlock();
 	}
 }
 

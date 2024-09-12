@@ -95,6 +95,8 @@ file(
     "MainSystem/Scripting/*.cpp"
     "MainSystem/Scripting/Components/*.h"
     "MainSystem/Scripting/Components/*.cpp"
+    "MainSystem/Scripting/Interfaces/*.h"
+    "MainSystem/Scripting/Interfaces/*.cpp"
 
     "MainSystem/Audio/*.h"
     "MainSystem/Audio/*.cpp"

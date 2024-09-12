@@ -7,6 +7,8 @@
 #include "Components/RigidBodyDynamic.h"
 #include "Components/CharacterController.h"
 
+#include "MainSystem/Animation/AnimationSystem.h"
+
 #include "Joints/Joint.h"
 
 #include "Shapes/PhysicsShape.h"
@@ -15,7 +17,7 @@
 
 #include "FILTER_FLAG.h"
 
-#include "MainSystem/Animation/AnimationSystem.h"
+#include "Query/ActionPhysicsSweep.h"
 
 using namespace physx;
 
@@ -767,7 +769,8 @@ void PhysicsSystem::EndModification()
 
 void PhysicsSystem::PrevIteration()
 {
-	m_queryLocked = true;
+	assert(m_serialQueriesDebugBeginEndCall == 0);
+	m_isQueryAvailable = false;
 }
 
 void PhysicsSystem::Iteration(float dt)
@@ -798,8 +801,6 @@ void PhysicsSystem::Iteration(float dt)
 		GetScene()->GetAnimationSystem()->PrevPhysicsSimulationUpdate();
 	}
 
-	m_queryLocked = false;
-
 	m_pxScene->simulate(dt);
 
 	for (auto& joint : m_brokenJoints)
@@ -814,18 +815,62 @@ void PhysicsSystem::Iteration(float dt)
 	// lose 1 thread T___T
 	m_pxScene->fetchResults(true);
 
+	m_isQueryAvailable = true;
+
 	{
 		TaskSystem::PrepareHandle(&m_otherSubsystemsCallbackWaitingHandle);
 
-		Task task = {};
-		task.Params() = GetScene()->GetAnimationSystem();
-		task.Entry() = [](void* p)
+		// animation post call
 		{
-			auto animationSystem = (AnimationSystem*)p;
-			animationSystem->PostPhysicsSimulationUpdate();
-		};
+			Task task = {};
+			task.Params() = GetScene()->GetAnimationSystem();
+			task.Entry() = [](void* p)
+			{
+				auto animationSystem = (AnimationSystem*)p;
+				animationSystem->PostPhysicsSimulationUpdate();
+			};
 
-		TaskSystem::Submit(&m_otherSubsystemsCallbackWaitingHandle, task, Task::HIGH);
+			TaskSystem::Submit(&m_otherSubsystemsCallbackWaitingHandle, task, Task::CRITICAL);
+		}
+
+		// flush queries
+		{
+			Task task = {};
+			task.Params() = this;
+			task.Entry() = [](void* p)
+			{
+				auto system = (PhysicsSystem*)p;
+				system->FlushAllQueries();
+			};
+
+			TaskSystem::Submit(&m_otherSubsystemsCallbackWaitingHandle, task, Task::CRITICAL);
+		}
+
+		// flush serial queries
+		{
+			Task task = {};
+			task.Params() = this;
+			task.Entry() = [](void* p)
+				{
+					auto system = (PhysicsSystem*)p;
+					system->FlushAllSerialQueries();
+				};
+
+			TaskSystem::Submit(&m_otherSubsystemsCallbackWaitingHandle, task, Task::CRITICAL);
+		}
+
+		// flush direct queries
+		{
+			Task task = {};
+			task.Params() = this;
+			task.Entry() = [](void* p)
+			{
+				auto system = (PhysicsSystem*)p;
+				system->FlushAllDirectQueries();
+			};
+
+			TaskSystem::Submit(&m_otherSubsystemsCallbackWaitingHandle, task, Task::CRITICAL);
+		}
 	}
 
 	RebuildUpdateList();
@@ -858,8 +903,6 @@ void PhysicsSystem::Iteration(float dt)
 void PhysicsSystem::PostIteration()
 {
 }
-
-#define PhysicsSystem_WAIT_TILL_ABLE_TO_QUERY() while (m_queryLocked == true) { Thread::Yield(); }
 
 #define PhysicsSystem_PxSweepHit_Convert(ownHit, pxHit)							\
 {																				\
@@ -896,10 +939,8 @@ public:
 	}
 };
 
-bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter)
+bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter)
 {
-	PhysicsSystem_WAIT_TILL_ABLE_TO_QUERY();
-
 	PhysicsSystem_SweepCallback callback(filter);
 
 	PxQueryFilterData filterData = PxQueryFilterData();
@@ -932,10 +973,177 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, PhysicsShape* shape, c
 	return status;
 }
 
-SharedPtr<ActionBase> PhysicsSystem::Sweep(const SweepResultCallback& callback, 
-	PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, const SharedPtr<PhysicsQueryFilterCallback>& filter)
+void PhysicsSystem::FlushAllQueries()
 {
-	return SharedPtr<ActionBase>();
+	assert(m_isQueryAvailable);
+
+	while (m_numWritingQueries.load(std::memory_order_relaxed) != 0)
+	{
+		Thread::Yield();
+	}
+
+	// TODO: multi-threaded execute queries
+	for (auto& q : m_queries)
+	{
+		q->ExecuteQuery();
+	}
+	m_queries.Clear();
 }
+
+void PhysicsSystem::ExecuteSerialQueries(SerialQueries* queries)
+{
+	auto& arr = queries->queries;
+	for (size_t i = 0; i < arr.size(); i++)
+	{
+		auto prev = i == 0 ? nullptr : arr[i - 1].get();
+		auto cur = arr[i].get();
+		if (queries->checker == nullptr || queries->checker(this, prev, cur))
+		{
+			cur->ExecuteQuery();
+		}
+	}
+}
+
+void PhysicsSystem::FlushAllSerialQueries()
+{
+	assert(m_isQueryAvailable);
+
+	while (m_numWritingSerialQueries.load(std::memory_order_relaxed) != 0)
+	{
+		Thread::Yield();
+	}
+
+	// TODO: multi-threaded execute queries
+	for (auto& q : m_serialQueries)
+	{
+		ExecuteSerialQueries(q);
+		delete q;
+	}
+	m_serialQueries.Clear();
+}
+
+SharedPtr<ActionBase> PhysicsSystem::Sweep(const SweepResultCallback& callback,
+	const PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, 
+	const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	auto ret = ActionPhysicsSweep::Create(this, GetScene()->GetIterationCount() + 1);
+	ret->m_callback = callback;
+	ret->m_shape = ((PhysicsShape*)shape)->shared_from_this();
+	ret->m_startPosition = startTransform.GetPosition();
+	ret->m_startRotation = startTransform.GetRotation();
+	ret->m_sweepDistance = distance;
+	ret->m_filter = filter;
+
+	RecordOrExecuteQuery(ret);
+
+	return ret;
+}
+
+ID PhysicsSystem::BeginSerialQuery(const QueryPrevCheckCallback& prevCheckCallback)
+{
+#ifdef _DEBUG
+	++m_serialQueriesDebugBeginEndCall;
+#endif // _DEBUG
+
+	auto serialQuery = new SerialQueries();
+	serialQuery->checker = prevCheckCallback;
+	return ID(serialQuery);
+}
+
+void PhysicsSystem::EndSerialQuery(ID serialQueryID)
+{
+#ifdef _DEBUG
+	--m_serialQueriesDebugBeginEndCall;
+#endif // _DEBUG
+
+	++m_numWritingSerialQueries;
+
+	if (m_isQueryAvailable)
+	{
+		--m_numWritingSerialQueries;
+		ExecuteSerialQueries((SerialQueries*)serialQueryID);
+		return;
+	}
+
+	m_serialQueries.Add((SerialQueries*)serialQueryID);
+
+	--m_numWritingSerialQueries;
+}
+
+SharedPtr<ActionPhysicsQuery> PhysicsSystem::SerialSweep(
+	ID serialQueryID,
+	const SweepResultCallback& callback, 
+	const PhysicsShape* shape, 
+	const Transform& startTransform, 
+	const Vec3& distance,
+	const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	auto ret = ActionPhysicsSweep::Create(this, GetScene()->GetIterationCount() + 1);
+	ret->m_callback = callback;
+	ret->m_shape = ((PhysicsShape*)shape)->shared_from_this();
+	ret->m_startPosition = startTransform.GetPosition();
+	ret->m_startRotation = startTransform.GetRotation();
+	ret->m_sweepDistance = distance;
+	ret->m_filter = filter;
+
+	((SerialQueries*)serialQueryID)->queries.push_back(ret);
+
+	return ret;
+}
+
+
+///
+/// >>>>>>>>>>>>>>>> Direct query section >>>>>>>>>>>>>>>>>
+/// 
+bool PhysicsSystem::DirectQueryInterface::Sweep(PhysicsSweepResult& output, 
+	const PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter)
+{
+	return m_system->SweepImpl(output, shape, startTransform, distance, filter);
+}
+
+void PhysicsSystem::ImplDirectQuery(const std::function<void(DirectQueryInterface*)>& callback, ReentrantLock* lock)
+{
+	DirectQueryInterface interface(this);
+	if (lock) lock->lock();
+	callback(&interface);
+	if (lock) lock->unlock();
+}
+
+void PhysicsSystem::FlushAllDirectQueries()
+{
+	assert(m_isQueryAvailable);
+
+	while (m_numWritingDirectQueries.load(std::memory_order_relaxed) != 0)
+	{
+		Thread::Yield();
+	}
+
+	// TODO: multi-threaded execute queries
+	for (auto& q : m_directQueries)
+	{
+		ImplDirectQuery(q.callback, q.lock);
+	}
+	m_directQueries.Clear();
+}
+
+void PhysicsSystem::Query(const QueryCallback& callback, ReentrantLock* lock)
+{
+	++m_numWritingDirectQueries;
+
+	if (m_isQueryAvailable)
+	{
+		--m_numWritingDirectQueries;
+		ImplDirectQuery(callback, lock);
+		return;
+	}
+
+	m_directQueries.Add({ callback, lock });
+
+	--m_numWritingDirectQueries;
+}
+
+///
+/// <<<<<<<<<<<<<<<< End section <<<<<<<<<<<<<<<<<<<<
+///
 
 NAMESPACE_END

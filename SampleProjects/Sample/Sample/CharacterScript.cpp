@@ -6,6 +6,7 @@
 
 #include "MainSystem/Physics/Components/CharacterController.h"
 #include "MainSystem/Physics/PhysicsSystem.h"
+#include "MainSystem/Physics/Query/ActionPhysicsSweep.h"
 
 #include "Common/Actions/ActionExecution.h"
 #include "Common/Actions/ActionSequence.h"
@@ -573,32 +574,49 @@ void CharacterScript::FallingUpdate(float dt)
 	if (points.size() > 1)
 	{
 		auto physicsSystem = GetScene()->GetPhysicsSystem();
-		PhysicsSweepResult result;
+		auto shape = m_controller->GetShape(0);
 
-		FallingSweepFilter filter(this);
+		auto localState = std::make_shared<FallingSweepLocalState>();
+
+		auto serialId = Physics()->BeginSerialQuery(
+			[&, localState](PhysicsSystem* sys, const ActionPhysicsQuery* prev, const ActionPhysicsQuery*) -> bool
+			{
+				auto sweepPrev = (const ActionPhysicsSweep*)prev;
+				if (localState->stopSerialQuery || (sweepPrev && sweepPrev->HitOrTouchAnything()))
+				{
+					localState->stopSerialQuery = true;
+					return false;
+				}
+				return true;
+			}
+		);
 
 		for (size_t i = 0; i < points.size() - 1; i++)
 		{
 			auto& begin = points[i];
 			auto& end = points[i + 1];
 
-			result.Clear();
+			Transform transform = start;
+			transform.Position() = begin;
 
-			if (physicsSystem->Sweep(
-				result,
-				m_controller->GetShape(0),
-				start,
-				end - begin,
-				&filter
-			)) {
-				break;
-			}
+			m_actionExecution->RunAction(
+				Physics()->SerialSweep(
+					serialId,
+					[&](const ActionPhysicsSweep* action, const PhysicsSweepResult& result)
+					{
+						if (!action->HitOrTouchAnything())
+						{
+							return;
+						}
+
+						std::cout << "Will touch ground\n";
+					},
+					shape, transform, end - begin, m_fallingSweepFilter
+				)
+			);
 		}
 
-		if (!result.touches.empty())
-		{
-			std::cout << "Will touch ground\n";
-		}
+		Physics()->EndSerialQuery(serialId);
 	}
 
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
@@ -606,7 +624,7 @@ void CharacterScript::FallingUpdate(float dt)
 	{
 		if (points.size() > 1)
 		{
-			std::cout << "Num points: " << points.size() << '\n';
+			//std::cout << "Num points: " << points.size() << '\n';
 			for (size_t i = 0; i < points.size() - 1; i++)
 			{
 				auto& begin = points[i];

@@ -49,6 +49,10 @@ struct PhysicsHitFlag
 
 using PhysicsHitFlags = std::bitset<sizeof(size_t)>;
 
+#ifdef IGNORE
+#undef IGNORE
+#endif // IGNORE
+
 struct PhysicsQueryHitType
 {
 	enum ENUM

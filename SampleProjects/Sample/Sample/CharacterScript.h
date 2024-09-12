@@ -61,6 +61,11 @@ protected:
 		PhysicsQueryHitType::ENUM PostFilter(GameObject* obj, PhysicsShape* shape, const PhysicsQueryHit& hit) override;
 	};
 
+	struct FallingSweepLocalState
+	{
+		bool stopSerialQuery = false;
+	};
+
 protected:
 	SharedPtr<ActionExecution> m_actionExecution;
 
@@ -91,6 +96,7 @@ protected:
 	SharedPtr<ActionBase> m_modifyingMovingSpeedAction = nullptr;
 
 	SharedPtr<ActionBase> m_fallingUpdateAction = nullptr;
+	SharedPtr<FallingSweepFilter> m_fallingSweepFilter = std::make_shared<FallingSweepFilter>(this);
 
 public:
 	void OnStart() override;

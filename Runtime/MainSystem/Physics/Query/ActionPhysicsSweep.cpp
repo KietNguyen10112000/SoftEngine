@@ -4,21 +4,25 @@
 
 NAMESPACE_BEGIN
 
-ActionPhysicsSweep::ActionPhysicsSweep(PhysicsSystem* sys, size_t activeIteration) : m_system(sys), m_activeIteration(activeIteration)
+ActionPhysicsSweep::ActionPhysicsSweep(PhysicsSystem* sys, size_t activeIteration) : ActionPhysicsQuery(sys, activeIteration)
 {
 
 }
 
-ActionBase::RETURN_CODE ActionPhysicsSweep::Update(float dt)
+void ActionPhysicsSweep::CallCallback()
 {
-	if (m_system->GetScene()->GetIterationCount() != m_activeIteration)
+	if (m_executedQuery)
 	{
-		return RETURN_CODE::NONE;
+		m_callback(this, m_result);
 	}
+}
 
-	m_callback(this, m_result);
-
-	return RETURN_CODE::FINISHED;
+void ActionPhysicsSweep::ExecuteQuery()
+{
+	{
+		m_queryStatus = m_system->SweepImpl(m_result, m_shape.get(), GetStartTransform(), m_sweepDistance, m_filter.get());
+		m_executedQuery = true;
+	}
 }
 
 NAMESPACE_END

@@ -5,10 +5,11 @@
 #include "Common/Base/MainComponent.h"
 #include "Common/Base/AsyncTaskRunner.h"
 
-#include "../ScriptMeta.h"
-
 #include "Scene/Scene.h"
 #include "Scene/GameObject.h"
+
+#include "../ScriptMeta.h"
+#include "../Interfaces/ScriptPhysicsInterface.h"
 
 #include <bitset>
 
@@ -37,6 +38,7 @@ class API Script : public MainComponent
 {
 private:
 	MAIN_SYSTEM_FRIEND_CLASSES();
+	friend class ScriptPhysicsInterface;
 
 	constexpr static ID COMPONENT_ID = MainSystemInfo::SCRIPTING_ID;
 
@@ -49,7 +51,9 @@ private:
 
 	Scene* m_scene;
 
+	ScriptPhysicsInterface m_physicsInterface = this;
 
+	ReentrantLock m_lock;
 
 	//virtual const char* GetClassName() override;
 
@@ -113,6 +117,11 @@ protected:
 	inline auto Input()
 	{
 		return m_scene->GetInput();
+	}
+
+	inline auto Physics()
+	{
+		return &m_physicsInterface;
 	}
 
 	inline const auto& GetLocalTransform()
