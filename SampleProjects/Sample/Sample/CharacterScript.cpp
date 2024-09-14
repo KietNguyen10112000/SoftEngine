@@ -127,6 +127,32 @@ void CharacterScript::ControlMovement(float dt)
 			m_controller->CCTSetRotation(SLerp(cctRotation, destRotation, std::clamp((angleSpeed * dt) / angle, 0.0f, 1.0f)));
 		}
 	}
+
+	if (IsBlockingControlCCT() && (m_currentBodyState == STATE::JUMP || m_currentBodyState == STATE::FALL))
+	{
+		if (motion != Vec3::ZERO)
+		{
+			m_controller->Move(6.0f * dt * motion);
+		}
+
+		if (!m_characterForward.Equals(m_lastExpectedMovingDir, 0.0001f))
+		{
+			auto angle = std::abs(AngleBetween(m_characterForward, m_lastExpectedMovingDir));
+			const float angleSpeed = 2.0f * PI;
+
+			auto& cctRotation = m_controller->CCTGetRotation();
+			auto cctRotationMat = Mat4::Rotation(cctRotation);
+			auto up = cctRotationMat.Up().Normal();
+			auto destRotation = Mat4({
+				Vec4(up.Cross(m_lastExpectedMovingDir).Normal(), 0.0f),
+				Vec4(up, 0.0f),
+				Vec4(m_lastExpectedMovingDir, 0.0f),
+				Vec4(0,0,0,1.0f)
+				});
+
+			m_controller->CCTSetRotation(SLerp(cctRotation, destRotation, std::clamp((angleSpeed * dt) / angle, 0.0f, 1.0f)));
+		}
+	}
 }
 
 void CharacterScript::ControlAnim(float dt)
@@ -444,6 +470,11 @@ void CharacterScript::PlayAnimTurnFromIdle(float dt)
 
 void CharacterScript::PlayAnimJump(float dt)
 {
+	if (m_fallingUpdateAction)
+	{
+		return;
+	}
+
 	if (m_currentBodyState == STATE::MOVE_SLOW && !IsAnimTransiting())
 	{
 		// jump from idle
@@ -461,8 +492,15 @@ void CharacterScript::PlayAnimJump(float dt)
 		SetTimeout(transitTime,
 			[&]()
 			{
-				m_animator->SetForwardCCT(m_controller, m_characterUp);
-				m_controller->CCTApplyVelocity(m_characterForward * 8.0f + Vec3(0, jumpUpVelocityLength, 0));
+				//m_animator->SetForwardCCT(m_controller, m_characterUp);
+				auto srcPlayer = dynamic_cast<AnimPlayerLayer*>(m_character.Transit0->GetInput());
+				if (srcPlayer)
+				{
+					srcPlayer->SetEnableRootMotion(true, true, false);
+				}
+				
+				m_controller->CCTSetAdditionRotationEnabled(true);
+				m_controller->CCTApplyVelocity(/*m_characterForward * 6.0f +*/  Vec3(0, jumpUpVelocityLength, 0));
 			}
 		);
 
@@ -471,7 +509,12 @@ void CharacterScript::PlayAnimJump(float dt)
 		SetTimeout(reachedTopTime,
 			[&]()
 			{
-				m_animator->SetForwardCCT(nullptr);
+				auto srcPlayer = dynamic_cast<AnimPlayerLayer*>(m_character.Transit0->GetInput());
+				if (srcPlayer)
+				{
+					srcPlayer->SetEnableRootMotion(true, true, true);
+				}
+				//m_animator->SetForwardCCT(nullptr);
 			}
 		);
 
@@ -482,18 +525,7 @@ void CharacterScript::PlayAnimJump(float dt)
 			}
 		);
 
-		SetTimeout(5.5f,
-			[&]()
-			{
-				m_currentMovingSpeed = 0.0f;
-				TimeoutTransitingBodyState(STATE::IDLE, 0.15f);
-				m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.15f, m_character.Animations.IdleCarefully, -1, -1);
-
-				m_actionExecution->StopAction(m_fallingUpdateAction);
-				m_fallingUpdateAction = nullptr;
-			}
-		);
-
+		m_currentMovingSpeed = 0.0f;
 		float t0 = jumpUpVelocityLength / g.Length() + transitTime;
 		TimeoutTransitingBodyState(STATE::FALL, t0);
 		SetTimeout(t0, 
@@ -609,7 +641,7 @@ void CharacterScript::FallingUpdate(float dt)
 							return;
 						}
 
-						std::cout << "Will touch ground\n";
+						LandingUpdate(GetScene()->Dt(), result);
 					},
 					shape, transform, end - begin, m_fallingSweepFilter
 				)
@@ -619,23 +651,104 @@ void CharacterScript::FallingUpdate(float dt)
 		Physics()->EndSerialQuery(serialId);
 	}
 
-	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
-	if (debugGraphics)
-	{
-		if (points.size() > 1)
-		{
-			//std::cout << "Num points: " << points.size() << '\n';
-			for (size_t i = 0; i < points.size() - 1; i++)
-			{
-				auto& begin = points[i];
-				auto& end = points[i + 1];
+	//auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	//if (debugGraphics)
+	//{
+	//	if (points.size() > 1)
+	//	{
+	//		//std::cout << "Num points: " << points.size() << '\n';
+	//		for (size_t i = 0; i < points.size() - 1; i++)
+	//		{
+	//			auto& begin = points[i];
+	//			auto& end = points[i + 1];
 
-				if (begin != end)
-				{
-					debugGraphics->DrawLineSegment(begin, end);
-				}
+	//			if (begin != end)
+	//			{
+	//				debugGraphics->DrawLineSegment(begin, end);
+	//			}
+	//		}
+	//	}
+	//	
+	//}
+}
+
+void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
+{
+	//std::cout << "Will touch ground\n";
+
+	auto& pos = GetGameObject()->GetCommittedGlobalTransform().Position();
+	auto g = m_controller->GetGravity();
+
+	float nearestGroundDistance = INFINITY;
+	int nearestGroundIdx = -1;
+
+	auto FnMinDistance = [&](const PhysicsSweepHit& touch)
+	{
+		auto d = std::abs(touch.position.y - pos.y);//.Length();
+
+		// d must be greater than half body height because we are sweeping by body capsule with origin is in center of capsule
+		if (/*d > 1.0f &&*/ d < nearestGroundDistance)
+		{
+			bool isGround = g.Dot(touch.normal) < -0.00001f;
+			if (isGround)
+			{
+				nearestGroundIdx = &touch - result.touches.data();
+				nearestGroundDistance = d;
 			}
 		}
-		
+	};
+
+	if (result.hasBlock)
+	{
+		FnMinDistance(result.block);
+	}
+
+	for (auto& touch : result.touches)
+	{
+		FnMinDistance(touch);
+	}
+
+	assert(m_currentBodyState == STATE::LANDING || m_currentBodyState == STATE::FALL);
+
+	if (nearestGroundIdx != -1)
+	{
+		// has ground
+
+		//std::cout << "Has ground\n";
+
+		if (nearestGroundDistance <= 2.0f && m_currentBodyState == STATE::FALL)
+		{
+			m_controller->CCTSetAdditionRotationEnabled(false);
+			m_controller->CCTApplyVelocity(m_currentExpectedMovingDir * 2.0f);
+
+			m_nextBodyState = STATE::LANDING;
+			m_currentBodyState = STATE::LANDING;
+
+			m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.3f, m_character.Animations.FallSoftLanding, -1, -1);
+
+			auto duration = m_character.Animations.FallSoftLanding->GetDuration();
+			SetTimeout(duration - 0.45f,
+				[&]()
+				{
+					m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, 0.15f, m_character.Animations.IdleCarefully, -1, -1);
+					TimeoutTransitingBodyState(STATE::IDLE, 0.15f);
+
+					m_actionExecution->StopAction(m_fallingUpdateAction);
+					m_fallingUpdateAction = nullptr;
+				}
+			);
+		}
+	}
+	else
+	{
+		// doesn't have ground
+
+		//std::cout << "Doesn't have ground\n";
+
+		if (m_currentBodyState == STATE::LANDING)
+		{
+			// switch back to falling
+
+		}
 	}
 }

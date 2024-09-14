@@ -946,7 +946,12 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* sh
 	PxQueryFilterData filterData = PxQueryFilterData();
 
 	filterData.flags = PxQueryFlag::Enum::eDYNAMIC | PxQueryFlag::Enum::eSTATIC |
-		PxQueryFlag::Enum::eANY_HIT | PxQueryFlag::ePREFILTER;
+		PxQueryFlag::Enum::eANY_HIT;
+
+	if (filter)
+	{
+		filterData.flags |= PxQueryFlag::Enum::ePREFILTER;
+	}
 
 	PxSweepBuffer hit;
 	auto status = m_pxScene->sweep(
@@ -955,13 +960,16 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* sh
 		PhysXUtils::ToPxVec3(distance.Normal()),
 		distance.Length(),
 		hit, PxHitFlag::eDEFAULT,
-		PxQueryFilterData(), (filter ? &callback : nullptr)
+		filterData, (filter ? &callback : nullptr)
 	);
 
 	//PxHitFlag::eASSUME_NO_INITIAL_OVERLAP
 
 	output.hasBlock = hit.hasBlock;
-	PhysicsSystem_PxSweepHit_Convert(output.block, hit.block);
+	if (hit.hasBlock)
+	{
+		PhysicsSystem_PxSweepHit_Convert(output.block, hit.block);
+	}
 
 	output.touches.reserve(output.touches.size() + hit.nbTouches);
 	for (size_t i = 0; i < hit.nbTouches; i++)
@@ -1062,6 +1070,7 @@ void PhysicsSystem::EndSerialQuery(ID serialQueryID)
 	{
 		--m_numWritingSerialQueries;
 		ExecuteSerialQueries((SerialQueries*)serialQueryID);
+		delete (SerialQueries*)serialQueryID;
 		return;
 	}
 

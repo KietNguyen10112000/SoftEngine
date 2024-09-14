@@ -116,14 +116,16 @@ private:
 	void TimeoutTransitingBodyState(STATE::ENUM nextState, float timeout);
 
 	template <typename Fn>
-	void SetTimeout(float sec, const Fn& callback)
+	SharedPtr<ActionBase> SetTimeout(float sec, const Fn& callback)
 	{
+		SharedPtr<ActionBase> ret;
 		m_actionExecution->RunAction(
-			ActionSequence::New({
+			ret = ActionSequence::New({
 				ActionDelay::New(sec),
 				ActionCallback::New(callback)
 			})
-		);
+		); 
+		return ret;
 	}
 
 	void ModifyMovingSpeed(
@@ -137,4 +139,5 @@ private:
 
 	void PlayAnimJump(float dt);
 	void FallingUpdate(float dt);
+	void LandingUpdate(float dt, const PhysicsSweepResult& result);
 };

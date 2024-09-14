@@ -274,6 +274,11 @@ Begin:
 		break;
 	}
 
+	if (m_readFlags & READ_FLAG_UNIQUE_UUID)
+	{
+		((UUID&)obj->m_UUID) = uuid;
+	}
+
 	goto Begin;
 }
 
@@ -418,10 +423,8 @@ void Serializer::TryClone(Serializable* obj, Handle<Serializable>* output0, Seri
 	assert(0);
 }
 
-void Serializer::WriteToFileJson(const String& path)
+void Serializer::WriteToJson(json& j)
 {
-	json j;
-
 	json meta;
 	{
 		auto arr = json::array();
@@ -471,9 +474,11 @@ void Serializer::WriteToFileJson(const String& path)
 		}
 		j["UsedResources"] = arr;
 	}
+}
 
+void Serializer::WriteToFileJson(const String& path, json& j)
+{
 	auto str = j.dump(2);
-
 	FileUtils::WriteFile(path.c_str(), str.c_str(), str.length());
 }
 
@@ -481,14 +486,8 @@ void Serializer::WriteToFileBinary(const String& path)
 {
 }
 
-void Serializer::ReadFromFileJson(const String& path)
+void Serializer::ReadFromJson(const json& j)
 {
-	byte* buffer; size_t fileSize;
-	FileUtils::ReadFile(path, buffer, fileSize);
-	buffer[fileSize] = '\0';
-
-	json j = json::parse((const char*)buffer);
-
 	auto& meta = j["Meta"];
 	{
 		auto& arr = meta["UsedClassNames"];
@@ -507,7 +506,7 @@ void Serializer::ReadFromFileJson(const String& path)
 		for (size_t i = 0; i < count; i++)
 		{
 			auto& j1 = arr[i];
-			json& data = j1["Data"];
+			const json& data = j1["Data"];
 
 			SerializedRecord record;
 			record.idx			= i;
@@ -562,6 +561,17 @@ void Serializer::ReadFromFileJson(const String& path)
 		}
 	}
 
+}
+
+void Serializer::ReadFromFileJson(const String& path)
+{
+	byte* buffer; size_t fileSize;
+	FileUtils::ReadFile(path, buffer, fileSize);
+	buffer[fileSize] = '\0';
+
+	json j = json::parse((const char*)buffer);
+	ReadFromJson(j);
+
 	FileUtils::FreeBuffer(buffer);
 }
 
@@ -593,7 +603,9 @@ void Serializer::WriteToFile(const String& path)
 		break;
 	}
 	case Serializer::MODE_JSON: {
-		WriteToFileJson(path);
+		json j;
+		WriteToJson(j);
+		WriteToFileJson(path, j);
 		break;
 	}
 	default:
@@ -602,8 +614,10 @@ void Serializer::WriteToFile(const String& path)
 	}
 }
 
-void Serializer::ReadFromFile(const String& _path)
+void Serializer::ReadFromFile(const String& _path, READ_FLAG flags)
 {
+	m_readFlags = flags;
+
 	auto path = FileSystem::Get()->FindAbsoluteFilePath(_path);
 
 	switch (m_mode)
@@ -620,6 +634,19 @@ void Serializer::ReadFromFile(const String& _path)
 		assert(0);
 		break;
 	}
+}
+
+void Serializer::WriteToJsonBuffer(json& buffer)
+{
+	assert(m_mode == MODE_JSON);
+	WriteToJson(buffer);
+}
+
+void Serializer::ReadFromJsonBuffer(const json& buffer, READ_FLAG flags)
+{
+	assert(m_mode == MODE_JSON);
+	m_readFlags = flags;
+	ReadFromJson(buffer);
 }
 
 void Serializer::SetRootUUID(const UUID& uuid, ID id)

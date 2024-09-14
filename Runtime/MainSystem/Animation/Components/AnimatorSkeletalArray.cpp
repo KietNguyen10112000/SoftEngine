@@ -1363,6 +1363,12 @@ void AnimatorSkeletalArray::DeserializeFromJson(Serializer* serializer, const js
 	}
 
 	Initialize();
+
+	for (auto& buffer : m_animMeshRenderingBuffer->buffer.Buffers())
+	{
+		std::memset(buffer.bones.data(), 0, sizeof(Mat4) * buffer.bones.size());
+		std::memset(buffer.meshesAABB.data(), 0, sizeof(AABox) * buffer.meshesAABB.size());
+	}
 }
 
 void AnimatorSkeletalArray::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)

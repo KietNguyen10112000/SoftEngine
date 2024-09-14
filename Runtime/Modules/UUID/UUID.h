@@ -48,14 +48,14 @@ struct UUID
 		std::string part1(("0x" + str.SubString(16, 16)).c_str());
 
 		{
-			std::istringstream iss(part0);
-			iss >> std::hex >> ret.part0;
+			ret.part0 = std::stoull(part0, nullptr, 16);
 		}
 
 		{
-			std::istringstream iss(part1);
-			iss >> std::hex >> ret.part1;
+			ret.part1 = std::stoull(part1, nullptr, 16);
 		}
+
+		assert(ret.ToHexString() == str);
 
 		return ret;
 	}

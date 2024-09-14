@@ -217,6 +217,11 @@ void CharacterController::ApplyGravity(float dt)
 	m_velocity += sumG * dt;
 }
 
+void CharacterController::ApplyAditionRotation(float dt)
+{
+	CCTSetRotationImpl(m_rotation * m_additionRotation);
+}
+
 void CharacterController::CCTSetRotationImpl(const Quaternion& rotation)
 {
 	m_rotation = rotation;
@@ -474,13 +479,18 @@ void CharacterController::OnUpdate(float dt)
 void CharacterController::OnPrevUpdate(float dt)
 {
 	auto scene = GetGameObject()->GetScene();
-	auto& disp = m_sumDisp[scene->GetPrevDeferBufferIdx()];
+	auto& disp = m_sumDisp;//[scene->GetPrevDeferBufferIdx()];
 
 	ReduceVelocityByCollisionPlanes(dt);
 
 	if (m_isEnableGravity && m_gravity != Vec3::ZERO)
 	{
 		ApplyGravity(dt);
+	}
+
+	if (m_isEnableAdditionRotation)
+	{
+		ApplyAditionRotation(dt);
 	}
 
 	disp += m_velocity * dt;
@@ -540,47 +550,55 @@ void CharacterController::Move(const Vec3& disp)
 	if (atom.exchange(iteration) == iteration)
 	{
 		// to correct character movement, Move() function should be called only one time per frame. 
-		assert(0 && "Multiple actors called move() in a frame.");
-		return;
+		//assert(0 && "Multiple actors called move() in a frame.");
+		//return;
+		std::cout << "[WARN]: Multiple actors called move() in a single frame.\n";
 	}
 #endif // _DEBUG
 
-	//m_lastMoveIterationCount = iteration;
-
-	auto system = scene->GetPhysicsSystem();
-	auto taskRunner = system->AsyncTaskRunnerST();
-
-	struct Param
-	{
-		CharacterController* controller;
-		float dt;
-	};
-
-	auto task = taskRunner->CreateTask(
-		[](PhysicsSystem* system, void* p)
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunner, disp,
 		{
-			TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, dt);
-
-			if (controller->m_isEnableGravity || (controller->m_gravity != Vec3::ZERO || controller->m_velocity != Vec3::ZERO))
-			{
-				return;
-			}
-
-			auto& disp = controller->m_sumDisp[controller->GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
-			controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
-				PxControllerFilters(nullptr, controller->m_defaultCCTFilterCallback, nullptr));
-
-			disp = Vec3::ZERO;
+			self->m_sumDisp += disp;
 		}
 	);
 
-	auto param = taskRunner->CreateParam<Param>(&task);
-	param->controller = this;
-	param->dt = GetGameObject()->GetScene()->Dt();
+	////m_lastMoveIterationCount = iteration;
 
-	taskRunner->RunAsync(this, &task);
+	//auto system = scene->GetPhysicsSystem();
+	//auto taskRunner = system->AsyncTaskRunnerST();
 
-	m_sumDisp[scene->GetCurrentDeferBufferIdx()] += disp;
+	//struct Param
+	//{
+	//	CharacterController* controller;
+	//	float dt;
+	//};
+
+	//auto task = taskRunner->CreateTask(
+	//	[](PhysicsSystem* system, void* p)
+	//	{
+	//		TASK_SYSTEM_UNPACK_PARAM_REF_2(Param, p, controller, dt);
+
+	//		if (controller->m_isEnableGravity || (controller->m_gravity != Vec3::ZERO || controller->m_velocity != Vec3::ZERO))
+	//		{
+	//			return;
+	//		}
+
+	//		auto& disp = controller->m_sumDisp[controller->GetGameObject()->GetScene()->GetPrevDeferBufferIdx()];
+	//		controller->m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
+	//			PxControllerFilters(nullptr, controller->m_defaultCCTFilterCallback, nullptr));
+
+	//		disp = Vec3::ZERO;
+	//	}
+	//);
+
+	//auto param = taskRunner->CreateParam<Param>(&task);
+	//param->controller = this;
+	//param->dt = GetGameObject()->GetScene()->Dt();
+
+	//taskRunner->RunAsync(this, &task);
+
+	//m_sumDisp[scene->GetCurrentDeferBufferIdx()] += disp;
 }
 
 void CharacterController::SetGravity(const Vec3& g)
@@ -620,6 +638,21 @@ void CharacterController::SetGravityEnabled(bool enable)
 			}
 		}
 	);
+}
+
+void CharacterController::CCTSetVelocity(const Vec3& velocity)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunner, velocity,
+		{
+			self->m_velocity = velocity;
+		}
+	);
+}
+
+Vec3 CharacterController::CCTGetVelocity() const
+{
+	return m_velocity;
 }
 
 void CharacterController::CCTApplyVelocity(const Vec3& velocity)
@@ -670,6 +703,26 @@ void CharacterController::CCTSetRotation(const Quaternion& rotation)
 	);
 
 	m_lastRotation = rotation;
+}
+
+void CharacterController::CCTSetAdditionRotationEnabled(bool enable)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, enable,
+		{
+			self->m_isEnableAdditionRotation = enable;
+		}
+	);
+}
+
+void CharacterController::CCTSetAdditionRotation(const Quaternion& rotation)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, rotation,
+		{
+			self->m_additionRotation = rotation;
+		}
+	);
 }
 
 const CharacterController::CollisionPlanes& CharacterController::CCTGetCollisionPlanes()

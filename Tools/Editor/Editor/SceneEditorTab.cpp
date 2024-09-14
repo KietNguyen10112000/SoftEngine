@@ -1014,6 +1014,32 @@ void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 		obj->AddChild(mheap::New<GameObject>());
 	}
 
+	if (ImGui::MenuItem(ICON_FA_CLONE "  Clone"))
+	{
+		json j; UUID uuid;
+		{
+			Serializer s = {};
+			uuid = s.Serialize(obj);
+			s.WriteToJsonBuffer(j);
+		}
+
+		{
+			Handle<GameObject> o;
+			Serializer s = {};
+			s.ReadFromJsonBuffer(j, Serializer::READ_FLAG_NONE);
+			s.Deserialize(uuid, o);
+
+			if (obj->Parent().Get())
+			{
+				obj->Parent()->AddChild(o);
+			}
+			else
+			{
+				m_scene->AddObject(o);
+			}
+		}
+	}
+
 	ImGui::Separator();
 
 	if (ImGui::MenuItem("Rename"))

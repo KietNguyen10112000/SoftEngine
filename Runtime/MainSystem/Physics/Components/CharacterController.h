@@ -53,6 +53,7 @@ protected:
 
 	physx::PxController* m_pxCharacterController = nullptr;
 	Quaternion m_rotation = {};
+	Quaternion m_additionRotation = {};
 	Quaternion m_lastRotation = {};
 
 	Vec3 m_gravity = Vec3::ZERO;
@@ -63,7 +64,7 @@ protected:
 	float m_overrideVelocityStaticFriction = 0.0f;
 	float m_overrideVelocityDynamicFriction = 0.0f;
 
-	Vec3 m_sumDisp[2] = { Vec3::ZERO, Vec3::ZERO };
+	Vec3 m_sumDisp = Vec3::ZERO;
 	size_t m_lastMoveIterationCount = 0;
 
 	DeferredBuffer<CollisionPlanes> m_collisionPlanesBuffer;
@@ -72,6 +73,7 @@ protected:
 
 	bool m_isOnGround = false;
 	bool m_isEnableGravity = false;
+	bool m_isEnableAdditionRotation = false;
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
@@ -87,6 +89,7 @@ private:
 
 	void ReduceVelocityByCollisionPlanes(float dt);
 	void ApplyGravity(float dt);
+	void ApplyAditionRotation(float dt);
 
 	void CCTSetRotationImpl(const Quaternion& rotation);
 
@@ -111,12 +114,18 @@ public:
 	void SetGravity(const Vec3& g);
 	void SetGravityEnabled(bool enable);
 
+	void CCTSetVelocity(const Vec3& velocity);
+	Vec3 CCTGetVelocity() const;
 	void CCTApplyVelocity(const Vec3& velocity);
+
 	void CCTApplyImpulse(const Vec3& impulse);
 	bool CCTIsOnGround();
 	//void CCTSetContactFilterCallback(RigidBody::ContactReportFilterCallback callback);
 
 	void CCTSetRotation(const Quaternion& rotation);
+
+	void CCTSetAdditionRotationEnabled(bool enable);
+	void CCTSetAdditionRotation(const Quaternion& rotation);
 
 	// return the collision planes that the CCT is currenly in contact
 	const CollisionPlanes& CCTGetCollisionPlanes();

@@ -65,6 +65,11 @@ public:
 		return m_motion->m_tickDuration;
 	}
 
+	inline float GetDuration() const
+	{
+		return m_motion->m_tickDuration / m_motion->m_ticksPerSecond;
+	}
+
 	inline auto Name() const
 	{
 		return m_motion->m_name;

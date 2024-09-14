@@ -24,6 +24,13 @@ public:
 		MODE_JSON
 	};
 
+	enum READ_FLAG
+	{
+		READ_FLAG_NONE = 0,
+		// ensure that uuid of deserialized object equals to uuid of serialized object
+		READ_FLAG_UNIQUE_UUID = (1 << 0)
+	};
+
 private:
 	constexpr static size_t DEBUG_SIGN = 0xffeeddffaaffccbb;
 
@@ -109,6 +116,8 @@ private:
 
 	byte m_stableValuesMap[256] = {};
 
+	READ_FLAG m_readFlags = READ_FLAG_NONE;
+
 private:
 	TRACEABLE_FRIEND();
 	inline void Trace(Tracer* tracer)
@@ -150,9 +159,11 @@ private:
 		SharedPtr<Serializable>* output2
 	);
 
-	void WriteToFileJson(const String& path);
+	void WriteToJson(json& j);
+	void WriteToFileJson(const String& path, json& j);
 	void WriteToFileBinary(const String& path);
 
+	void ReadFromJson(const json& j);
 	void ReadFromFileJson(const String& path);
 	void ReadFromFileBinary(const String& path);
 
@@ -334,7 +345,10 @@ public:
 
 public:
 	void WriteToFile(const String& path);
-	void ReadFromFile(const String& path);
+	void ReadFromFile(const String& path, READ_FLAG flags = READ_FLAG::READ_FLAG_UNIQUE_UUID);
+
+	void WriteToJsonBuffer(json& buffer);
+	void ReadFromJsonBuffer(const json& buffer, READ_FLAG flags = READ_FLAG::READ_FLAG_UNIQUE_UUID);
 
 	void SetRootUUID(const UUID& uuid, ID id = 0);
 
