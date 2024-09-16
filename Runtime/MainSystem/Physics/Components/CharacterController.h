@@ -11,6 +11,23 @@ class PxQueryFilterCallback;
 
 NAMESPACE_BEGIN
 
+struct CharacterControllerDesc
+{
+	SharedPtr<PhysicsMaterial> material;
+
+	float slopeLimit = 0.707f;
+	float stepOffset = 0.5f;
+	float contactOffset = 0.1f;
+
+private:
+	friend class CharacterControllerCapsule;
+	void ToPxDesc(void* pxDesc);
+
+	void ToJson(Serializer* s, json& j);
+	void FromJson(Serializer* s, const json& j);
+
+};
+
 class API CharacterController : public RigidBody
 {
 private:
@@ -51,6 +68,8 @@ public:
 protected:
 	//Mat4 m_lastGlobalTransform;
 
+	CharacterControllerDesc* m_pDerivedDesc = nullptr;
+
 	physx::PxController* m_pxCharacterController = nullptr;
 	Quaternion m_rotation = {};
 	Quaternion m_additionRotation = {};
@@ -58,6 +77,7 @@ protected:
 
 	Vec3 m_gravity = Vec3::ZERO;
 	Vec3 m_velocity = Vec3::ZERO;
+	Vec3 m_committedVelocity = Vec3::ZERO;
 
 	float m_overrideGravityStaticFriction = 0.0f;
 	float m_overrideGravityDynamicFriction = 0.0f;
@@ -74,6 +94,8 @@ protected:
 	bool m_isOnGround = false;
 	bool m_isEnableGravity = false;
 	bool m_isEnableAdditionRotation = false;
+
+	mutable spinlock m_lock;
 
 	//size_t m_contributeVelocityToPositionIterationCount = 0;
 
@@ -99,6 +121,8 @@ protected:
 
 	virtual void OnUpdate(float dt);
 	virtual void OnPrevUpdate(float dt);
+
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 public:
 	void OnTransformChanged() override;
@@ -137,6 +161,16 @@ public:
 
 	Vec3 GetGravity() const;
 	Vec3 GetVelocity() const;
+
+public:
+	void CCTSetSlopeLimit(float cosAngle);
+	float CCTGetSlopeLimit() const;
+
+	void CCTSetStepOffset(float stepOffset);
+	float CCTGetStepOffset() const;
+
+	void CCTSetContactOffset(float contactOffset);
+	float CCTGetContactOffset() const;
 
 };
 

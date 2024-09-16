@@ -17,6 +17,8 @@
 
 #include "Graphics/DebugGraphics.h"
 
+#include "MainSystem/Scripting/ScriptingSystem.h"
+
 //#include "imgui/imgui.h"
 
 NAMESPACE_BEGIN
@@ -223,6 +225,12 @@ void RenderingSystem::DisplayAllCamera()
 	displayService->End();
 }
 
+void RenderingSystem::DispatchRenderGUI()
+{
+	GetScene()->GetScriptingSystem()->UpdateGUI(GetScene()->Dt());
+	EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+}
+
 void RenderingSystem::DisplayCamera(BaseCamera* camera, const GRAPHICS_VIEWPORT& viewport)
 {
     camera->m_isDisplaying = true;
@@ -326,14 +334,14 @@ void RenderingSystem::Iteration(float dt)
 		if (!graphics->GetDebugGraphics())
 		{
 			DisplayAllCamera();
-			EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+			DispatchRenderGUI();
 			graphics->EndFrame();
 		}
 	}
 	else
 	{
 		DisplayAllCamera();
-		EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+		DispatchRenderGUI();
 		graphics->EndFrame();
 	}
 }
@@ -363,7 +371,7 @@ void RenderingSystem::RenderWithDebugGraphics()
 			auto rt = m_HUDRenderTarget.get();
 			graphics->SetRenderTargets(1, &rt, nullptr);
 			graphics->ClearRenderTarget(rt, { 0,0,0,0 },0, 0);
-			EventDispatcher()->Dispatch(EVENT::EVENT_RENDER_GUI);
+			DispatchRenderGUI();
 			graphics->UnsetRenderTargets(1, &rt, nullptr);
 		}
 

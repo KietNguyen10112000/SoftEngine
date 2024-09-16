@@ -41,6 +41,7 @@ private:
 	friend class PhysXSimulationFilterCallback;
 
 	friend class ActionPhysicsSweep;
+	friend class ActionPhysicsOverlap;
 
 	constexpr static size_t NUM_DEFER_BUFFER = Config::NUM_DEFER_BUFFER;
 	constexpr static size_t NUM_TRASH_ARRAY = 2;
@@ -249,6 +250,7 @@ public:
 
 private:
 	bool SweepImpl(PhysicsSweepResult& output, const PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter);
+	bool OverlapImpl(PhysicsOverlapResult& output, const PhysicsShape* shape, const Transform& startTransform, PhysicsQueryFilterCallback* filter);
 
 	template <typename T> 
 	inline void RecordOrExecuteQuery(T& queryAction)
@@ -294,6 +296,16 @@ public:
 		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
 	);
 
+
+	using OverlapResultCallback = std::function<void(const ActionPhysicsOverlap*, const PhysicsOverlapResult&)>;
+
+	SharedPtr<ActionBase> Overlap(
+		const OverlapResultCallback& callback,
+		const PhysicsShape* shape,
+		const Transform& transform,
+		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
+	);
+
 ///
 /// >>>>>>>>>>>>>>>> Serial query section >>>>>>>>>>>>>>>>>
 /// 
@@ -329,6 +341,14 @@ public:
 		const PhysicsShape* shape,
 		const Transform& startTransform,
 		const Vec3& distance,
+		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
+	);
+
+	SharedPtr<ActionPhysicsQuery> SerialOverlap(
+		ID serialQueryID,
+		const OverlapResultCallback& callback,
+		const PhysicsShape* shape,
+		const Transform& transform,
 		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
 	);
 

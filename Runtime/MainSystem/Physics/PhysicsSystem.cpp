@@ -18,6 +18,7 @@
 #include "FILTER_FLAG.h"
 
 #include "Query/ActionPhysicsSweep.h"
+#include "Query//ActionPhysicsOverlap.h"
 
 using namespace physx;
 
@@ -912,12 +913,12 @@ ownHit.obj = ((PhysicsComponent*)pxHit.actor->userData)->GetGameObject();		\
 ownHit.shape = ((PhysicsShape*)pxHit.shape->userData);							\
 }
 
-class PhysicsSystem_SweepCallback : public PxQueryFilterCallback
+class PhysicsSystem_QueryFilterCallback : public PxQueryFilterCallback
 {
 public:
 	PhysicsQueryFilterCallback* m_userCallback = nullptr;
 
-	PhysicsSystem_SweepCallback(PhysicsQueryFilterCallback* userCallback) : m_userCallback(userCallback)
+	PhysicsSystem_QueryFilterCallback(PhysicsQueryFilterCallback* userCallback) : m_userCallback(userCallback)
 	{
 
 	}
@@ -941,16 +942,16 @@ public:
 
 bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* shape, const Transform& startTransform, const Vec3& distance, PhysicsQueryFilterCallback* filter)
 {
-	PhysicsSystem_SweepCallback callback(filter);
+	PhysicsSystem_QueryFilterCallback callback(filter);
 
 	PxQueryFilterData filterData = PxQueryFilterData();
 
-	filterData.flags = PxQueryFlag::Enum::eDYNAMIC | PxQueryFlag::Enum::eSTATIC |
-		PxQueryFlag::Enum::eANY_HIT;
+	filterData.flags = PxQueryFlag::eDYNAMIC | PxQueryFlag::eSTATIC |
+		PxQueryFlag::eANY_HIT;
 
 	if (filter)
 	{
-		filterData.flags |= PxQueryFlag::Enum::ePREFILTER;
+		filterData.flags |= PxQueryFlag::ePREFILTER;
 	}
 
 	PxSweepBuffer hit;
@@ -962,6 +963,8 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* sh
 		hit, PxHitFlag::eDEFAULT,
 		filterData, (filter ? &callback : nullptr)
 	);
+
+	//std::cout << "Length: " << distance.Length() << "\n";
 
 	//PxHitFlag::eASSUME_NO_INITIAL_OVERLAP
 
@@ -977,6 +980,44 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* sh
 		auto& ownHit = output.touches.emplace_back();
 		PhysicsSystem_PxSweepHit_Convert(ownHit, hit.touches[i]);
 	}
+
+	return status;
+}
+
+bool PhysicsSystem::OverlapImpl(PhysicsOverlapResult& output, const PhysicsShape* shape, const Transform& startTransform, PhysicsQueryFilterCallback* filter)
+{
+	PhysicsSystem_QueryFilterCallback callback(filter);
+
+	PxQueryFilterData filterData = PxQueryFilterData();
+
+	filterData.flags = PxQueryFlag::eDYNAMIC | PxQueryFlag::eSTATIC |
+		PxQueryFlag::eANY_HIT;
+
+	if (filter)
+	{
+		filterData.flags |= PxQueryFlag::ePREFILTER;
+	}
+
+	PxOverlapBuffer hit;
+	auto status = m_pxScene->overlap(
+		shape->m_pxShape->getGeometry(),
+		PhysXUtils::ToPxTransform(startTransform),
+		hit,
+		filterData, (filter ? &callback : nullptr)
+	);
+
+	/*output.hasBlock = hit.hasBlock;
+	if (hit.hasBlock)
+	{
+		PhysicsSystem_PxSweepHit_Convert(output.block, hit.block);
+	}
+
+	output.touches.reserve(output.touches.size() + hit.nbTouches);
+	for (size_t i = 0; i < hit.nbTouches; i++)
+	{
+		auto& ownHit = output.touches.emplace_back();
+		PhysicsSystem_PxSweepHit_Convert(ownHit, hit.touches[i]);
+	}*/
 
 	return status;
 }
@@ -1047,6 +1088,21 @@ SharedPtr<ActionBase> PhysicsSystem::Sweep(const SweepResultCallback& callback,
 	return ret;
 }
 
+SharedPtr<ActionBase> PhysicsSystem::Overlap(const OverlapResultCallback& callback, 
+	const PhysicsShape* shape, const Transform& transform, const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	auto ret = ActionPhysicsOverlap::Create(this, GetScene()->GetIterationCount() + 1);
+	ret->m_callback = callback;
+	ret->m_shape = ((PhysicsShape*)shape)->shared_from_this();
+	ret->m_startPosition = transform.GetPosition();
+	ret->m_startRotation = transform.GetRotation();
+	ret->m_filter = filter;
+
+	RecordOrExecuteQuery(ret);
+
+	return ret;
+}
+
 ID PhysicsSystem::BeginSerialQuery(const QueryPrevCheckCallback& prevCheckCallback)
 {
 #ifdef _DEBUG
@@ -1100,6 +1156,20 @@ SharedPtr<ActionPhysicsQuery> PhysicsSystem::SerialSweep(
 	return ret;
 }
 
+SharedPtr<ActionPhysicsQuery> PhysicsSystem::SerialOverlap(ID serialQueryID, 
+	const OverlapResultCallback& callback, const PhysicsShape* shape, const Transform& transform, const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	auto ret = ActionPhysicsOverlap::Create(this, GetScene()->GetIterationCount() + 1);
+	ret->m_callback = callback;
+	ret->m_shape = ((PhysicsShape*)shape)->shared_from_this();
+	ret->m_startPosition = transform.GetPosition();
+	ret->m_startRotation = transform.GetRotation();
+	ret->m_filter = filter;
+
+	((SerialQueries*)serialQueryID)->queries.push_back(ret);
+
+	return ret;
+}
 
 ///
 /// >>>>>>>>>>>>>>>> Direct query section >>>>>>>>>>>>>>>>>

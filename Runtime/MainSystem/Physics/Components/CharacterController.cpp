@@ -83,6 +83,36 @@ PxControllerFilters g_defaultPxControllerFilters;
 CharacterControllerHitCallback g_defaultPxControllerHitCallback;
 void* g_defaultPxControllerHitCallbackPtr = &g_defaultPxControllerHitCallback;
 
+
+void CharacterControllerDesc::ToPxDesc(void* pxDesc)
+{
+	auto& desc = *(PxControllerDesc*)pxDesc;
+	desc.material = material->m_pxMaterial;
+	desc.slopeLimit = slopeLimit;
+	desc.stepOffset = stepOffset;
+	desc.contactOffset = contactOffset;
+}
+
+void CharacterControllerDesc::ToJson(Serializer* serializer, json& j)
+{
+	j["Material"] = serializer->Serialize(material);
+	j["SlopeLimit"] = slopeLimit;
+	j["StepOffset"] = stepOffset;
+	j["ContactOffset"] = contactOffset;
+}
+
+void CharacterControllerDesc::FromJson(Serializer* serializer, const json& j)
+{
+	serializer->Deserialize(j["Material"], material);
+
+	if (j.contains("SlopeLimit"))
+	{
+		slopeLimit = j["SlopeLimit"];
+		stepOffset = j["StepOffset"];
+		contactOffset = j["ContactOffset"];
+	}
+}
+
 CharacterController::CharacterController()
 {
 	m_defaultCCTFilterCallback = new CCTDefaultFilterCallBack(this);
@@ -109,6 +139,10 @@ void CharacterController::ReduceVelocityByCollisionPlanes(float dt)
 
 	if (collisionPlanes.groundCount == 0 || m_velocity.Length2() < 0.00001f)
 	{
+		/*if (m_velocity.Length() < 0.0001f)
+		{
+			m_velocity = Vec3::ZERO;
+		}*/
 		return;
 	}
 	Vec3 sumV = Vec3::ZERO;
@@ -128,7 +162,8 @@ void CharacterController::ReduceVelocityByCollisionPlanes(float dt)
 	{
 		if (!plane.TestGround(m_velocity))
 		{
-			return;
+			sumV += m_velocity;
+			continue;
 		}
 
 		auto cosA = plane.normal.Dot(invDVelcity);
@@ -151,6 +186,11 @@ void CharacterController::ReduceVelocityByCollisionPlanes(float dt)
 
 	sumV /= float(collisionPlanes.groundCount);
 	m_velocity = sumV;
+
+	if (m_velocity.Length() < 0.00001f)
+	{
+		m_velocity = Vec3::ZERO;
+	}
 }
 
 void CharacterController::ApplyGravity(float dt)
@@ -219,7 +259,7 @@ void CharacterController::ApplyGravity(float dt)
 
 void CharacterController::ApplyAditionRotation(float dt)
 {
-	CCTSetRotationImpl(m_rotation * m_additionRotation);
+	//CCTSetRotationImpl(m_rotation * m_additionRotation);
 }
 
 void CharacterController::CCTSetRotationImpl(const Quaternion& rotation)
@@ -481,8 +521,6 @@ void CharacterController::OnPrevUpdate(float dt)
 	auto scene = GetGameObject()->GetScene();
 	auto& disp = m_sumDisp;//[scene->GetPrevDeferBufferIdx()];
 
-	ReduceVelocityByCollisionPlanes(dt);
-
 	if (m_isEnableGravity && m_gravity != Vec3::ZERO)
 	{
 		ApplyGravity(dt);
@@ -493,19 +531,95 @@ void CharacterController::OnPrevUpdate(float dt)
 		ApplyAditionRotation(dt);
 	}
 
+	ReduceVelocityByCollisionPlanes(dt);
+
+	m_lock.lock();
+	m_committedVelocity = m_velocity;
+	m_lock.unlock();
+
 	disp += m_velocity * dt;
+	
+	if (disp != Vec3::ZERO)
+	{
+		scene->BeginWrite<false>(m_collisionPlanesBuffer);
+		auto p = m_collisionPlanesBuffer.Write();
+		p->planes.clear();
+		p->groundCount = 0;
 
-	scene->BeginWrite<false>(m_collisionPlanesBuffer);
-	auto p = m_collisionPlanesBuffer.Write();
-	p->planes.clear();
-	p->groundCount = 0;
+		//std::cout << "m_velocity: " << m_velocity.x << ", " << m_velocity.y << ", " << m_velocity.z << '\n';
+		//std::cout << "Move: " << disp.x << ", " << disp.y << ", " << disp.z << "\n\n";
 
-	m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt, 
-		PxControllerFilters(nullptr, m_defaultCCTFilterCallback, nullptr));
+		m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt,
+			PxControllerFilters(nullptr, m_defaultCCTFilterCallback, nullptr));
 
-	scene->EndWrite(m_collisionPlanesBuffer);
+		scene->EndWrite(m_collisionPlanesBuffer);
 
-	disp = Vec3::ZERO;
+		disp = Vec3::ZERO;
+	}
+}
+
+Handle<ClassMetadata> CharacterController::GetMetadata(size_t sign)
+{
+	auto meta = mheap::New<ClassMetadata>("CharacterController", this);
+
+	{
+		auto accessor = Accessor(
+			"Contact Offset",
+			1,
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				auto obj = (CharacterController*)instance;
+				obj->CCTSetContactOffset(std::max(input.As<float>(), 0.0f));
+			},
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				auto obj = (CharacterController*)instance;
+				return Variant::Of(obj->CCTGetContactOffset());
+			},
+			this
+		);
+		meta->AddProperty(accessor);
+	}
+
+	{
+		auto accessor = Accessor(
+			"Step Offset",
+			1,
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				auto obj = (CharacterController*)instance;
+				obj->CCTSetStepOffset(std::max(input.As<float>(), 0.0f));
+			},
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				auto obj = (CharacterController*)instance;
+				return Variant::Of(obj->CCTGetStepOffset());
+			},
+			this
+		);
+		meta->AddProperty(accessor);
+	}
+
+	{
+		auto accessor = Accessor(
+			"Slop Limit",
+			1,
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				auto obj = (CharacterController*)instance;
+				obj->CCTSetSlopeLimit(std::clamp(input.As<float>(), 0.0f, 1.0f));
+			},
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				auto obj = (CharacterController*)instance;
+				return Variant::Of(obj->CCTGetSlopeLimit());
+			},
+			this
+		);
+		meta->AddProperty(accessor);
+	}
+
+	return meta;
 }
 
 void CharacterController::OnTransformChanged()
@@ -740,7 +854,58 @@ Vec3 CharacterController::GetGravity() const
 
 Vec3 CharacterController::GetVelocity() const
 {
-	return m_velocity;
+	m_lock.lock();
+	auto ret = m_committedVelocity;
+	m_lock.unlock();
+	return ret;
+}
+
+void CharacterController::CCTSetSlopeLimit(float cosAngle)
+{
+	m_pDerivedDesc->slopeLimit = cosAngle;
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, cosAngle,
+		{
+			self->m_pxCharacterController->setSlopeLimit(cosAngle);
+		}
+	);
+}
+
+float CharacterController::CCTGetSlopeLimit() const
+{
+	return m_pDerivedDesc->slopeLimit;
+}
+
+void CharacterController::CCTSetStepOffset(float stepOffset)
+{
+	m_pDerivedDesc->stepOffset = stepOffset;
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, stepOffset,
+		{
+			self->m_pxCharacterController->setStepOffset(stepOffset);
+		}
+	);
+}
+
+float CharacterController::CCTGetStepOffset() const
+{
+	return m_pDerivedDesc->stepOffset;
+}
+
+void CharacterController::CCTSetContactOffset(float contactOffset)
+{
+	m_pDerivedDesc->contactOffset = contactOffset;
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, contactOffset,
+		{
+			self->m_pxCharacterController->setContactOffset(contactOffset);
+		}
+	);
+}
+
+float CharacterController::CCTGetContactOffset() const
+{
+	return m_pDerivedDesc->contactOffset;
 }
 
 NAMESPACE_END

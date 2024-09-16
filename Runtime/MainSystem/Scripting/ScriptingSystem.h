@@ -16,6 +16,7 @@ class ScriptingSystem : public MainSystem
 {
 public:
 	friend class Script;
+	friend class RenderingSystem;
 
 	constexpr static size_t NUM_DEFER_BUFFER = 2;
 	std::vector<ScriptScheduler*> m_schedulers;
@@ -44,7 +45,7 @@ private:
 		return &m_mAsyncTaskRunnerST[m_scene->GetPrevDeferBufferIdx()];
 	}
 
-public:
+protected:
 	// Inherited via MainSystem
 	virtual void FlushAsyncTasks() override;
 
@@ -66,6 +67,8 @@ public:
 
 private:
 	void OnScriptRecordAsyncTask(Script* script);
+
+	void UpdateGUI(float dt);
 
 public:
 #ifdef PLUGIN_ALLOW_HOT_RELOAD

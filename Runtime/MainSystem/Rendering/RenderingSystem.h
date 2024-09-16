@@ -115,6 +115,8 @@ private:
 	void RenderForEachCamera();
 	void DisplayAllCamera();
 
+	void DispatchRenderGUI();
+
 	inline auto* GetCurrentAsyncTaskRunnerST()
 	{
 		return &m_asyncTaskRunnerST[m_scene->GetCurrentDeferBufferIdx()];

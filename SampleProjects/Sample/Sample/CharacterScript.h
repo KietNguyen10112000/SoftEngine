@@ -97,10 +97,17 @@ protected:
 
 	SharedPtr<ActionBase> m_fallingUpdateAction = nullptr;
 	SharedPtr<FallingSweepFilter> m_fallingSweepFilter = std::make_shared<FallingSweepFilter>(this);
+	Vec3 m_fallingMovingMotion = Vec3::ZERO;
+
+	SharedPtr<PhysicsShape> m_testQueryShape;
+	SharedPtr<ActionExecution> m_testQueryShapeActionExecution;
 
 public:
 	void OnStart() override;
 	void OnUpdate(float dt) override;
+	void OnGUI() override;
+
+	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 private:
 	void ControlMovement(float dt);

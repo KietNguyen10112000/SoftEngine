@@ -2,6 +2,10 @@
 
 #include "PhysX/PhysX.h"
 #include "MainSystem/Physics/PhysicsSystem.h"
+#include "MainSystem/MainSystemTaskPacking.h"
+
+#include "Scene/Scene.h"
+#include "Scene/GameObject.h"
 
 #include "Graphics/DebugGraphics.h"
 #include "Graphics/Graphics.h"
@@ -37,6 +41,8 @@ CharacterControllerCapsule::~CharacterControllerCapsule()
 
 void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 {
+	m_pDerivedDesc = &m_desc;
+
 	auto& desc = m_desc;
 
 	PxCapsuleControllerDesc pxDesc = {};
@@ -44,10 +50,10 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 	pxDesc.radius = desc.capsule.m_radius;
 	pxDesc.upDirection = reinterpret_cast<const PxVec3&>(desc.capsule.m_up);
 	pxDesc.position = PxExtendedVec3(desc.capsule.m_center.x, desc.capsule.m_center.y, desc.capsule.m_center.z);
-	pxDesc.material = desc.material->m_pxMaterial;
 	pxDesc.reportCallback = (decltype(pxDesc.reportCallback))g_defaultPxControllerHitCallbackPtr;
 	pxDesc.scaleCoeff = 1.0f;
-	pxDesc.contactOffset = 0.01f;
+	
+	m_pDerivedDesc->ToPxDesc(&pxDesc);
 
 	m_pxCharacterController = scene->GetPhysicsSystem()->m_pxControllerManager->createController(pxDesc);
 	m_pxCharacterController->setUserData(this);
@@ -145,6 +151,57 @@ AABox CharacterControllerCapsule::GetGlobalAABB()
 	return AABox();
 }
 
+void CharacterControllerCapsule::CCTSetRadius(float radius)
+{
+	m_desc.capsule.m_radius = radius;
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, radius,
+		{
+			auto cct = (PxCapsuleController*)self->m_pxCharacterController;
+			cct->setRadius(std::max(radius, 0.0f));
+		}
+	);
+}
+
+float CharacterControllerCapsule::CCTGetRadius() const
+{
+	return m_desc.capsule.m_radius;
+}
+
+void CharacterControllerCapsule::CCTSetHeight(float height)
+{
+	m_desc.capsule.m_height = height;
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, height,
+		{
+			auto cct = (PxCapsuleController*)self->m_pxCharacterController;
+			cct->setHeight(std::max(height, 0.0f));
+		}
+	);
+}
+
+float CharacterControllerCapsule::CCTGetHeight() const
+{
+	return m_desc.capsule.m_height;
+}
+
+void CharacterControllerCapsule::CCTSetClimbMode(CLIMB_MODE::ENUM mode)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, mode,
+		{
+			auto cct = (PxCapsuleController*)self->m_pxCharacterController;
+			cct->setClimbingMode(PxCapsuleClimbingMode::Enum(mode));
+		}
+	);
+}
+
+CharacterControllerCapsule::CLIMB_MODE::ENUM CharacterControllerCapsule::CCTGetClimbMode() const
+{
+	auto cct = (PxCapsuleController*)m_pxCharacterController;
+	return CLIMB_MODE::ENUM(cct->getClimbingMode());
+}
+
 void CharacterControllerCapsule::CloneFrom(Serializer* serializer, Serializable* another)
 {
 }
@@ -162,23 +219,68 @@ void CharacterControllerCapsule::SerializeToJson(Serializer* serializer, json& j
 	PhysicsComponent::SerializeToJson(serializer, j);
 
 	json jDesc;
-	jDesc["Capsule"] = m_desc.capsule; 
-	jDesc["Material"] = serializer->Serialize(m_desc.material);
+	jDesc["Capsule"] = m_desc.capsule;
+
+	m_pDerivedDesc->ToJson(serializer, jDesc);
+
 	j["Desc"] = jDesc;
 }
 
 void CharacterControllerCapsule::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	m_pDerivedDesc = &m_desc;
 	PhysicsComponent::DeserializeFromJson(serializer, j);
 
 	auto& jDesc = j["Desc"];
 	m_desc.capsule = jDesc["Capsule"];
-	serializer->Deserialize(jDesc["Material"], m_desc.material);
+	
+	m_pDerivedDesc->FromJson(serializer, jDesc);
 }
 
 Handle<ClassMetadata> CharacterControllerCapsule::GetMetadata(size_t sign)
 {
-	return Handle<ClassMetadata>();
+	auto meta = CharacterController::GetMetadata(sign);
+
+	{
+		auto accessor = Accessor(
+			"Capsule Radius",
+			1,
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				auto obj = (CharacterControllerCapsule*)instance;
+				obj->CCTSetRadius(std::max(input.As<float>(), 0.0f));
+			},
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				auto obj = (CharacterControllerCapsule*)instance;
+				return Variant::Of(obj->CCTGetRadius());
+			},
+			this
+		);
+		meta->AddProperty(accessor);
+	}
+
+	{
+		auto accessor = Accessor(
+			"Capsule Height",
+			1,
+			[](const Variant& input, UnknownAddress& var, Serializable* instance) -> void
+			{
+				auto obj = (CharacterControllerCapsule*)instance;
+				obj->CCTSetHeight(std::max(input.As<float>(), 0.0f));
+			},
+			[](UnknownAddress& var, Serializable* instance) -> Variant
+			{
+				auto obj = (CharacterControllerCapsule*)instance;
+				return Variant::Of(obj->CCTGetHeight());
+			},
+			this
+		);
+		meta->AddProperty(accessor);
+	}
+
+	meta->SetName(GetClassName());
+	return meta;
 }
 
 void CharacterControllerCapsule::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)

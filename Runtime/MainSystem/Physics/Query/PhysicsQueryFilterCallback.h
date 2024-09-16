@@ -12,7 +12,7 @@ class GameObject;
 class RigidBody;
 class PhysicsShape;
 
-struct PhysicsSweepHit
+struct PhysicsQueryHitLocation
 {
 	Vec3 position;
 	Vec3 normal;
@@ -21,10 +21,33 @@ struct PhysicsSweepHit
 	PhysicsShape* shape = nullptr;
 };
 
+struct PhysicsSweepHit : public PhysicsQueryHitLocation
+{
+	
+};
+
 struct PhysicsSweepResult
 {
 	std::vector<PhysicsSweepHit> touches;
 	PhysicsSweepHit block;
+	bool hasBlock = false;
+
+	inline void Clear()
+	{
+		touches.clear();
+		hasBlock = false;
+	}
+};
+
+struct PhysicsOverlapHit : public PhysicsQueryHitLocation
+{
+
+};
+
+struct PhysicsOverlapResult
+{
+	std::vector<PhysicsOverlapHit> touches;
+	PhysicsOverlapHit block;
 	bool hasBlock = false;
 
 	inline void Clear()

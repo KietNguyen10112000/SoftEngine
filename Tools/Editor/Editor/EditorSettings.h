@@ -12,6 +12,7 @@ public:
 		float scalingAdjustmentPrecision = 0.001f;
 		float rotationAdjustmentPrecision = 0.0001f;
 		float positionAdjustmentPrecision = 0.001f;
+		float floatAdjustmentPrecision = 0.001f;
 	} GeneralSetting;
 
 	void Render();

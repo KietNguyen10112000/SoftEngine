@@ -1169,6 +1169,11 @@ void SceneEditorTab::OnRenderMenuBar(const String& menuName)
 		{
 			m_isDrawingInspectingObjectAABB = !m_isDrawingInspectingObjectAABB;
 		}
+
+		if (ImGui::MenuItem("Draw Selected Object Axes", NULL, m_isDrawingInspectingObjectTransformEditingBasis))
+		{
+			m_isDrawingInspectingObjectTransformEditingBasis = !m_isDrawingInspectingObjectTransformEditingBasis;
+		}
 	}
 }
 
@@ -1224,6 +1229,22 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 				}
 			}
 		);
+	}
+
+	if (m_isDrawingInspectingObjectTransformEditingBasis && m_inspectingObject)
+	{
+		auto& mat = m_inspectingObject->GetCommittedGlobalTransform();
+		Vec3 rotationAxis = Vec3::ZERO; Vec4 color;
+		if (DataInspector::GetInspectingTransformRotatingAxis(m_inspectingObjectData, "Global Transform", &rotationAxis, &color))
+		{
+			debugGraphics->DrawLineSegment(mat.Position() - rotationAxis.Normal() * 100.0f, mat.Position() + rotationAxis.Normal() * 100.0f, { 0,0,1,1 });
+		}
+		else
+		{
+			debugGraphics->DrawLineSegment(mat.Position() - mat.Forward().Normal() * 100.0f, mat.Position() + mat.Forward().Normal() * 100.0f, { 0,0,1,1 });
+			debugGraphics->DrawLineSegment(mat.Position() - mat.Right().Normal() * 100.0f, mat.Position() + mat.Right().Normal() * 100.0f, { 1,0,0,1 });
+			debugGraphics->DrawLineSegment(mat.Position() - mat.Up().Normal() * 100.0f, mat.Position() + mat.Up().Normal() * 100.0f, { 0,1,0,1 });
+		}
 	}
 
 	if (m_isDrawingDebug)
@@ -1586,6 +1607,7 @@ void SceneEditorTab::WriteSaveDataToJson(Serializer* serializer, json& j)
 		j["DrawDebug"] = m_isDrawingDebug;
 		j["DrawingInspectingObjectBasis"] = m_isDrawingInspectingObjectBasis;
 		j["DrawingInspectingObjectAABB"] = m_isDrawingInspectingObjectAABB;
+		j["DrawingInspectingObjectTransformEditingBasis"] = m_isDrawingInspectingObjectTransformEditingBasis;
 	}
 }
 
@@ -1744,6 +1766,11 @@ void SceneEditorTab::ReadSaveDataFromJson(Serializer* serializer, const json& j)
 	if (j.contains("DrawingInspectingObjectAABB"))
 	{
 		m_isDrawingInspectingObjectAABB = j["DrawingInspectingObjectAABB"];
+	}
+
+	if (j.contains("DrawingInspectingObjectTransformEditingBasis"))
+	{
+		m_isDrawingInspectingObjectTransformEditingBasis = j["DrawingInspectingObjectTransformEditingBasis"];
 	}
 }
 

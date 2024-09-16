@@ -23,6 +23,8 @@ public:
 		bool hideScale = false, Vec3* outputRotateAxis = nullptr);
 	static bool InspectTransform(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
+	static bool GetInspectingTransformRotatingAxis(ClassMetadata* metadata, const char* propertyName, Vec3* outputRotateAxis, Vec4* color = nullptr);
+
 	static bool InspectProjectionMat4(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);
 
 	static bool InspectString(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName);

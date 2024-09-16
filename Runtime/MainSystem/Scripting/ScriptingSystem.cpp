@@ -149,4 +149,15 @@ void ScriptingSystem::OnScriptRecordAsyncTask(Script* script)
 	}
 }
 
+void ScriptingSystem::UpdateGUI(float dt)
+{
+	for (auto& scheduler : m_schedulers)
+	{
+		if (scheduler)
+		{
+			scheduler->CallOnGUI();
+		}
+	}
+}
+
 NAMESPACE_END

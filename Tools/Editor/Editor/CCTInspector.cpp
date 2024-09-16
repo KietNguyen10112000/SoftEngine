@@ -5,6 +5,8 @@
 
 #include "imgui/imgui.h"
 
+#include "DataInspector.h"
+
 using namespace soft;
 
 CCTInspector::CCTInspector(CharacterController* cct, ClassMetadata* metadata)
@@ -24,4 +26,17 @@ void CCTInspector::Inspect()
 		}
 		ImGui::Separator();
 	}
+
+	m_metadata->ForEachProperties(
+		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+		{
+			ImGui::Text(propertyName);
+			DataInspector::Inspect(metadata, accessor, propertyName);
+			return false;
+		},
+
+		[&](ClassMetadata* metadata, const char* propertyName, Accessor& accessor, size_t depth)
+		{
+		}
+	);
 }

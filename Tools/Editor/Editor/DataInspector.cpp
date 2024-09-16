@@ -32,6 +32,24 @@
 
 DataInspector::InspectFunc DataInspector::s_inspectFunc[MAX_TYPE] = {};
 
+struct TransformCache
+{
+	Transform transform;
+	Vec3 euler;
+
+	// 0 - Euler
+	// 1 - around Right
+	// 2 - around Up
+	// 3 - around Forward
+	byte rotationInspectType = 0;
+	float rotationOffset = 0;
+	Vec3 rotationAxis;
+	ImVec4 rotationAxisColor;
+	Quaternion startQuat;
+
+	bool uniqueScale = true;
+};
+
 bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName, 
 	bool hideScale, Vec3* outputRotateAxis)
 {
@@ -41,24 +59,7 @@ bool DataInspector::InspectTransformEx(ClassMetadata* metadata, Accessor& access
 	};
 
 	const static char* cacheNameFmt = "editor_InspectTransform_{}";
-	struct TransformCache
-	{
-		Transform transform;
-		Vec3 euler;
-
-		// 0 - Euler
-		// 1 - around Right
-		// 2 - around Up
-		// 3 - around Forward
-		byte rotationInspectType = 0;
-		float rotationOffset = 0;
-		Vec3 rotationAxis;
-		ImVec4 rotationAxisColor;
-		Quaternion startQuat;
-
-		bool uniqueScale = true;
-	};
-
+	
 	Transform transform = variant.As<Transform>();
 
 	Vec3 euler;
@@ -318,6 +319,29 @@ bool DataInspector::InspectTransform(ClassMetadata* metadata, Accessor& accessor
 	return InspectTransformEx(metadata, accessor, variant, propertyName);
 }
 
+bool DataInspector::GetInspectingTransformRotatingAxis(ClassMetadata* metadata, const char* propertyName, Vec3* outputRotateAxis, Vec4* color)
+{
+	const static char* cacheNameFmt = "editor_InspectTransform_{}";
+	auto cacheName = String::Format(cacheNameFmt, propertyName);
+	auto cache = metadata->GenericDictionary()->Get<TransformCache>(cacheName);
+	if (cache)
+	{
+		if (cache->rotationInspectType == 0)
+		{
+			return false;
+		}
+
+		*outputRotateAxis = cache->rotationAxis;
+
+		if (color)
+			*color = reinterpret_cast<Vec4&>(cache->rotationAxisColor);
+
+		return true;
+	}
+
+	return false;
+}
+
 bool DataInspector::InspectBool(ClassMetadata* metadata, Accessor& accessor, const Variant& variant, const char* propertyName)
 {
 	auto& v = variant.As<bool>();
@@ -338,7 +362,7 @@ bool DataInspector::InspectFloat(ClassMetadata* metadata, Accessor& accessor, co
 {
 	auto& v = variant.As<float>();
 	auto name = "## " + String(propertyName);
-	if (ImGui::DragFloat(name.c_str(), &v, 0.01f, -INFINITY, INFINITY))
+	if (ImGui::DragFloat(name.c_str(), &v, EditorSettings::Get()->GeneralSetting.floatAdjustmentPrecision, -INFINITY, INFINITY))
 	{
 		auto input = Variant::Of<float>();
 		input.As<float>() = v;

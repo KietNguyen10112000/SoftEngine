@@ -80,6 +80,8 @@ public:
 	bool m_isDrawingInspectingObjectBasis = true;
 	bool m_isDrawingInspectingObjectAABB = true;
 
+	bool m_isDrawingInspectingObjectTransformEditingBasis = true;
+
 	bool m_isHotDeserializingGameObjectFromFile = false;
 	std::map<UUID, LoadedObjectFromFileData> m_loadFromFileObject;
 

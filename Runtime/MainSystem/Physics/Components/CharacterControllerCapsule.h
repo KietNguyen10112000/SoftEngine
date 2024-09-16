@@ -10,16 +10,24 @@ NAMESPACE_BEGIN
 
 class PhysicsShape;
 
-struct CharacterControllerCapsuleDesc
+struct CharacterControllerCapsuleDesc : public CharacterControllerDesc
 {
 	Capsule capsule = {};
-	SharedPtr<PhysicsMaterial> material;
 };
 
-class CharacterControllerCapsule : public CharacterController
+class API CharacterControllerCapsule : public CharacterController
 {
 public:
 	COMPONENT_CLASS(CharacterControllerCapsule);
+
+	struct CLIMB_MODE
+	{
+		enum ENUM
+		{
+			DEFAULT,
+			CONSTRAINED_STEP_OFFSET
+		};
+	};
 
 	SharedPtr<PhysicsShape> m_shape;
 
@@ -51,6 +59,16 @@ public:
 	void OnComponentRemoved() override;
 
 	AABox GetGlobalAABB() override;
+
+public:
+	void CCTSetRadius(float radius);
+	float CCTGetRadius() const;
+
+	void CCTSetHeight(float height);
+	float CCTGetHeight() const;
+
+	void CCTSetClimbMode(CLIMB_MODE::ENUM mode);
+	CLIMB_MODE::ENUM CCTGetClimbMode() const;
 
 };
 

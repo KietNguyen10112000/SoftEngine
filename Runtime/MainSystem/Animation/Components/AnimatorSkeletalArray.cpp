@@ -1018,11 +1018,12 @@ void AnimatorSkeletalArray::SetForwardCCTImpl(CharacterController* cct, const Ve
 	SetEnableDeferPublicResult(true);
 	ResetDeferBufferLayer();
 
-	m_cctOffset = m_cct->GetGameObject()->GetCommittedGlobalTransform() * GetGameObject()->GetCommittedGlobalTransform().GetInverse();
-	auto temp = Transform::FromTransformMatrix(m_cctOffset);
+	//m_cctOffset = m_cct->GetGameObject()->GetCommittedGlobalTransform() 
+	//	* (/*m_lastOutput->m_globalTransforms[m_model3D->m_rootBoneNodeId] **/ GetGameObject()->GetCommittedGlobalTransform()).GetInverse();
+	auto temp = Transform::FromTransformMatrix(m_lastOutput->m_globalTransforms[m_model3D->m_rootBoneNodeId]);
 	temp.Scale() = { 1,1,1 };
 	m_cctOffsetTransform = temp;
-	m_cctOffset = temp.ToTransformMatrix();
+	//m_cctOffset = temp.ToTransformMatrix();
 	m_cctStartRotation = Transform::FromTransformMatrix(m_cct->GetGameObject()->GetCommittedGlobalTransform()).Rotation();
 	m_cctPrevRootBonePosition = m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId].GetPosition();
 	m_cctLastRootBoneLocalTransform = m_lastOutput->m_localTransforms[m_model3D->m_rootBoneNodeId];

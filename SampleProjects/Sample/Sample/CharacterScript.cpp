@@ -5,8 +5,10 @@
 #include "MainSystem/Scripting/Components/FPPCameraScript.h"
 
 #include "MainSystem/Physics/Components/CharacterController.h"
+#include "MainSystem/Physics/Components/CharacterControllerCapsule.h"
 #include "MainSystem/Physics/PhysicsSystem.h"
 #include "MainSystem/Physics/Query/ActionPhysicsSweep.h"
+#include "MainSystem/Physics/Shapes/PhysicsShapeCapsule.h"
 
 #include "Common/Actions/ActionExecution.h"
 #include "Common/Actions/ActionSequence.h"
@@ -20,6 +22,8 @@
 
 #include "Graphics//Graphics.h"
 #include "Graphics/DebugGraphics.h"
+
+#include "imgui/imgui.h"
 
 #include "AnimationUtils.h"
 
@@ -52,6 +56,97 @@ void CharacterScript::OnUpdate(float dt)
 
 	ControlMovement(dt);
 	ControlAnim(dt);
+}
+
+void CharacterScript::OnGUI()
+{
+	static Transform start = {};
+	static Vec3 distance = Vec3(1,1,1);
+	static float height = 1.0f;
+	static float radius = 1.0f;
+	static Vec3 euler = Vec3::ZERO;
+
+	if (!m_testQueryShape)
+	{
+		m_testQueryShape = std::make_shared<PhysicsShapeCapsule>(height, radius, m_controller->GetShape(0)->GetFirstMaterial());
+		m_testQueryShapeActionExecution = ActionExecution::New({});
+	}
+
+	ImGui::Begin("CharacterScript");
+	
+	if (ImGui::DragFloat3("Position", &start.Position()[0], 0.001f, -FLT_MAX, FLT_MAX))
+	{
+
+	}
+
+	if (ImGui::DragFloat3("Rotation", &euler[0], 0.001f, -FLT_MAX, FLT_MAX))
+	{
+		start.Rotation() = Quaternion(euler);
+	}
+
+	if (ImGui::DragFloat3("Distance", &distance[0], 0.001f, -FLT_MAX, FLT_MAX))
+	{
+		
+	}
+
+	ImGui::End();
+
+	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+	if (debugGraphics)
+	{
+		debugGraphics->DrawCapsule(Capsule(
+			start.Rotation().ToMat4().Right().Normal(),
+			start.Position(),
+			height, radius
+		));
+
+		debugGraphics->DrawCapsule(Capsule(
+			start.Rotation().ToMat4().Right().Normal(),
+			start.Position() + distance,
+			height, radius
+		));
+
+		debugGraphics->DrawRay(start.Position(), distance);
+	}
+
+	m_testQueryShapeActionExecution->Update(0);
+
+	m_testQueryShapeActionExecution->RunAction(
+		Physics()->Sweep(
+			[&, debugGraphics](const ActionPhysicsSweep* action, const PhysicsSweepResult& result)
+			{
+				if (!action->HitOrTouchAnything())
+				{
+					return;
+				}
+
+				if (debugGraphics)
+				{
+					if (result.hasBlock)
+					{
+						debugGraphics->DrawRay(result.block.position, result.block.normal);
+					}
+					
+					for (auto& touch : result.touches)
+					{
+						debugGraphics->DrawRay(touch.position, touch.normal);
+					}
+				}
+			},
+			m_testQueryShape.get(),
+			start,
+			distance
+		)
+	);
+}
+
+Handle<ClassMetadata> CharacterScript::GetMetadata(size_t sign)
+{
+	auto meta = mheap::New<ClassMetadata>(GetClassName(), this);
+
+	
+
+	return meta;
 }
 
 void CharacterScript::ControlMovement(float dt)
@@ -112,7 +207,7 @@ void CharacterScript::ControlMovement(float dt)
 		if (!m_characterForward.Equals(m_lastExpectedMovingDir, 0.0001f))
 		{
 			auto angle = std::abs(AngleBetween(m_characterForward, m_lastExpectedMovingDir));
-			const float angleSpeed = 1.0f * PI;
+			const float angleSpeed = 1.6f * PI;
 
 			auto& cctRotation = m_controller->CCTGetRotation();
 			auto cctRotationMat = Mat4::Rotation(cctRotation);
@@ -130,9 +225,11 @@ void CharacterScript::ControlMovement(float dt)
 
 	if (IsBlockingControlCCT() && (m_currentBodyState == STATE::JUMP || m_currentBodyState == STATE::FALL))
 	{
+		m_fallingMovingMotion = Vec3::ZERO;
 		if (motion != Vec3::ZERO)
 		{
-			m_controller->Move(6.0f * dt * motion);
+			m_fallingMovingMotion = 6.0f * motion;
+			m_controller->Move(m_fallingMovingMotion * dt);
 		}
 
 		if (!m_characterForward.Equals(m_lastExpectedMovingDir, 0.0001f))
@@ -428,13 +525,13 @@ void CharacterScript::PlayAnimTurnFromIdle(float dt)
 		if (angle <= PI / 2.0f)
 		{
 			turnAnimation = dir == 0 ? m_character.Animations.IdleTurnLeft90 : m_character.Animations.IdleTurnRight90;
-			duration = 0.5f - transitTime;
+			duration = 0.35f - transitTime;
 			coeff = angle / (PI / 2.0f);
 		}
 		else
 		{
 			turnAnimation = dir == 0 ? m_character.Animations.IdleTurnLeft180 : m_character.Animations.IdleTurnRight180;
-			duration = 1.0f - transitTime;
+			duration = 0.7f - transitTime;
 			coeff = angle / (PI);
 		}
 
@@ -564,7 +661,7 @@ PhysicsQueryHitType::ENUM CharacterScript::FallingSweepFilter::PrevFilter(GameOb
 		return PhysicsQueryHitType::ENUM::IGNORE;
 	}
 
-	return PhysicsQueryHitType::ENUM::TOUCH;
+	return PhysicsQueryHitType::ENUM::BLOCK;
 }
 
 PhysicsQueryHitType::ENUM CharacterScript::FallingSweepFilter::PostFilter(GameObject* obj, PhysicsShape* shape, const PhysicsQueryHit& hit)
@@ -581,9 +678,17 @@ void CharacterScript::FallingUpdate(float dt)
 
 	float deltaHeight = 0.0f;
 	auto g = m_controller->GetGravity();
-	auto velocity = m_controller->GetVelocity();
+	auto velocity = m_controller->GetVelocity() + m_fallingMovingMotion;
 
 	Transform start = Transform::FromTransformMatrix(GetGameObject()->GetCommittedGlobalTransform());
+	auto startRotationMat = start.Rotation().ToMat4();
+	start.Rotation() = Mat4(
+		Vec4(startRotationMat.Up(), 0.0f),
+		Vec4(startRotationMat.Forward(), 0.0f),
+		Vec4(startRotationMat.Right(), 0.0f),
+		Vec4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+
 	auto startPosition = start.Position();
 	auto pos = start.Position();
 
@@ -593,7 +698,7 @@ void CharacterScript::FallingUpdate(float dt)
 	{
 		pos += velocity * dtSample;
 
-		if (velocity != Vec3::ZERO)
+		if (velocity.Length() > 0.0001f)
 			points.push_back(pos);
 
 		velocity += g * dtSample;
@@ -631,6 +736,8 @@ void CharacterScript::FallingUpdate(float dt)
 			Transform transform = start;
 			transform.Position() = begin;
 
+			assert(begin != end);
+
 			m_actionExecution->RunAction(
 				Physics()->SerialSweep(
 					serialId,
@@ -656,6 +763,8 @@ void CharacterScript::FallingUpdate(float dt)
 	//{
 	//	if (points.size() > 1)
 	//	{
+	//		auto cct = ((CharacterControllerCapsule*)m_controller);
+
 	//		//std::cout << "Num points: " << points.size() << '\n';
 	//		for (size_t i = 0; i < points.size() - 1; i++)
 	//		{
@@ -666,9 +775,12 @@ void CharacterScript::FallingUpdate(float dt)
 	//			{
 	//				debugGraphics->DrawLineSegment(begin, end);
 	//			}
+
+	//			debugGraphics->DrawCapsule(
+	//				Capsule(start.Rotation().ToMat4().Right().Normal(), begin, cct->CCTGetHeight(), cct->CCTGetRadius())
+	//			);
 	//		}
 	//	}
-	//	
 	//}
 }
 
@@ -680,7 +792,11 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 	auto g = m_controller->GetGravity();
 
 	float nearestGroundDistance = INFINITY;
+	float distanceFromUpAxis = INFINITY;
 	int nearestGroundIdx = -1;
+
+	Vec3 touchPos;
+	Vec3 touchNormal;
 
 	auto FnMinDistance = [&](const PhysicsSweepHit& touch)
 	{
@@ -694,6 +810,10 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 			{
 				nearestGroundIdx = &touch - result.touches.data();
 				nearestGroundDistance = d;
+
+				distanceFromUpAxis = (Vec3(touch.position.x, 0, touch.position.z) - Vec3(pos.x, 0, pos.z)).Length();
+				touchPos = touch.position;
+				touchNormal = touch.normal;
 			}
 		}
 	};
@@ -716,10 +836,19 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 
 		//std::cout << "Has ground\n";
 
-		if (nearestGroundDistance <= 2.0f && m_currentBodyState == STATE::FALL)
+		auto r = ((CharacterControllerCapsule*)m_controller)->CCTGetRadius();
+
+		//std::cout << "distanceFromUpAxis: " << distanceFromUpAxis << "\n";
+		auto debugGraphics = Graphics::Get()->GetDebugGraphics();
+		if (debugGraphics)
+		{
+			debugGraphics->DrawRay(touchPos, touchNormal);
+		}
+
+		if (nearestGroundDistance <= 2.0f /*&& distanceFromUpAxis <= r * 0.5f*/ && m_currentBodyState == STATE::FALL)
 		{
 			m_controller->CCTSetAdditionRotationEnabled(false);
-			m_controller->CCTApplyVelocity(m_currentExpectedMovingDir * 2.0f);
+			//m_controller->CCTApplyVelocity(m_currentExpectedMovingDir * 2.0f);
 
 			m_nextBodyState = STATE::LANDING;
 			m_currentBodyState = STATE::LANDING;
