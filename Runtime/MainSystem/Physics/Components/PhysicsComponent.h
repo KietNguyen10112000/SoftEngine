@@ -290,9 +290,15 @@ protected:
 	//bool HasCollisionModified();
 	bool HasCollisionAnyChanged();
 
-	inline auto* GetCollision()
+public:
+	inline auto* GetCollision() const
 	{
 		return m_collisionResult->collision.Read();
+	}
+
+	inline auto* GetCollisionResult() const
+	{
+		return m_collisionResult;
 	}
 	
 public:

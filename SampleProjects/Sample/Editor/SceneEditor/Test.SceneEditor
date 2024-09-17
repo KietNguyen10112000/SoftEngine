@@ -223,10 +223,10 @@
           },
           "ContactOffset": 0.10000000149011612,
           "Material": "df775c15ca9671de000008372a2f2000",
-          "SlopeLimit": 0.5960000157356262,
+          "SlopeLimit": 0.3000000157356262,
           "StepOffset": 0.0
         },
-        "PhysicsFlags": 0
+        "PhysicsFlags": 2
       },
       "MemHeapId": 0,
       "MemType": 0,

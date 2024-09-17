@@ -98,6 +98,8 @@ protected:
 	SharedPtr<ActionBase> m_fallingUpdateAction = nullptr;
 	SharedPtr<FallingSweepFilter> m_fallingSweepFilter = std::make_shared<FallingSweepFilter>(this);
 	Vec3 m_fallingMovingMotion = Vec3::ZERO;
+	size_t m_landingStartTime = 0;
+	size_t m_landingAllowMovingDeltaTime = size_t(0.5f * 1000); // 0.5s
 
 	SharedPtr<PhysicsShape> m_testQueryShape;
 	SharedPtr<ActionExecution> m_testQueryShapeActionExecution;
@@ -110,6 +112,7 @@ public:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
 private:
+	void ControlCCTRotation(float dt, float rotationSpeed);
 	void ControlMovement(float dt);
 	void ControlAnim(float dt);
 
@@ -147,4 +150,9 @@ private:
 	void PlayAnimJump(float dt);
 	void FallingUpdate(float dt);
 	void LandingUpdate(float dt, const PhysicsSweepResult& result);
+	void PlayAnimSoftLanding(float dt, float dY);
+
+	bool IsOnGround(float slopLimit = 0.0f) const;
+	void PlayAnimFalling(float dt);
+
 };

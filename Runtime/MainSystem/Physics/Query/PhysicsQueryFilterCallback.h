@@ -39,9 +39,10 @@ struct PhysicsSweepResult
 	}
 };
 
-struct PhysicsOverlapHit : public PhysicsQueryHitLocation
+struct PhysicsOverlapHit
 {
-
+	GameObject* obj = nullptr;
+	PhysicsShape* shape = nullptr;
 };
 
 struct PhysicsOverlapResult

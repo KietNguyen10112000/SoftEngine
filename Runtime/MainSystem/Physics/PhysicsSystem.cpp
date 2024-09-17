@@ -266,6 +266,11 @@ class PhysXSimulationFilterCallback : public PxSimulationFilterCallback
 
 		pairFlags = (PxPairFlags)myPairFlags;
 
+		if (myPairFlags == 0)
+		{
+			return PxFilterFlag::eSUPPRESS;
+		}
+
 		if ((filterData0.word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE) && (filterData1.word0 & PHYSICS_FILTER_FLAG::FAMILY_NO_COLLIDE))
 		{
 			if (AComp->GetGameObject()->GetCommittedRoot() == BComp->GetGameObject()->GetCommittedRoot())
@@ -954,7 +959,24 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* sh
 		filterData.flags |= PxQueryFlag::ePREFILTER;
 	}
 
-	PxSweepBuffer hit;
+	const PxU32 bufferSize = 256;
+	PxSweepHit hitBuffer[bufferSize];
+	PxSweepBuffer hit(hitBuffer, bufferSize);
+
+	/*struct MySweepCallback : public PxSweepCallback
+	{
+		PhysicsSweepResult* output = nullptr;
+
+		MySweepCallback(PhysicsSweepResult* output) : output(output) {};
+
+		virtual PxAgain processTouches(const PxSweepHit* buffer, PxU32 nbHits) override
+		{
+
+		}
+	};
+
+	MySweepCallback callback(&output);*/
+
 	auto status = m_pxScene->sweep(
 		shape->m_pxShape->getGeometry(),
 		PhysXUtils::ToPxTransform(startTransform),

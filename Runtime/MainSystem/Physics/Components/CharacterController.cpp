@@ -158,36 +158,49 @@ void CharacterController::ReduceVelocityByCollisionPlanes(float dt)
 		ourDynamicFriction = m_overrideVelocityDynamicFriction;
 	}
 
+	auto slopeLimit = CCTGetSlopeLimit();
+
+	int groundCount = 0;
 	for (auto& plane : collisionPlanes.planes)
 	{
 		if (!plane.TestGround(m_velocity))
 		{
-			sumV += m_velocity;
+			//sumV += m_velocity;
 			continue;
 		}
-
 		auto cosA = plane.normal.Dot(invDVelcity);
-		if (std::abs(cosA - 1.0f) < 0.00001f)
+		//std::cout << cosA << "\n";
+		if (cosA < slopeLimit)
 		{
+			//sumV += m_velocity;
 			continue;
 		}
 
-		auto Vn = -VLength * cosA * plane.normal;
-		auto Vt = m_velocity - Vn;
+		groundCount++;
+		//if (std::abs(cosA - 1.0f) < 0.00001f)
+		//{
+		//	continue;
+		//}
 
-		auto material = plane.shape->GetFirstMaterial().get();
-		//auto staticFriction = material->GetStaticFriction();
-		auto dynamicFriction = std::clamp((material->GetDynamicFriction() + ourDynamicFriction) / 2.0f, 0.0f, 1.0f);
+		//auto Vn = -VLength * cosA * plane.normal;
+		//auto Vt = m_velocity - Vn;
 
-		Vt = (1.0f - dynamicFriction) * Vt;
+		//auto material = plane.shape->GetFirstMaterial().get();
+		////auto staticFriction = material->GetStaticFriction();
+		//auto dynamicFriction = std::clamp((material->GetDynamicFriction() + ourDynamicFriction) / 2.0f, 0.0f, 1.0f);
 
-		sumV += Vt;
+		//Vt = (1.0f - dynamicFriction) * Vt;
+
+		//sumV += Vt;
 	}
 
-	sumV /= float(collisionPlanes.groundCount);
-	m_velocity = sumV;
+	/*if (groundCount != 0)
+	{
+		sumV /= float(groundCount);
+		m_velocity = sumV;
+	}*/
 
-	if (m_velocity.Length() < 0.00001f)
+	if (groundCount != 0 || m_velocity.Length() < 0.0001f)
 	{
 		m_velocity = Vec3::ZERO;
 	}
@@ -539,7 +552,7 @@ void CharacterController::OnPrevUpdate(float dt)
 
 	disp += m_velocity * dt;
 	
-	if (disp != Vec3::ZERO)
+	if (disp.Length() > 0.0001f)
 	{
 		scene->BeginWrite<false>(m_collisionPlanesBuffer);
 		auto p = m_collisionPlanesBuffer.Write();
@@ -549,13 +562,15 @@ void CharacterController::OnPrevUpdate(float dt)
 		//std::cout << "m_velocity: " << m_velocity.x << ", " << m_velocity.y << ", " << m_velocity.z << '\n';
 		//std::cout << "Move: " << disp.x << ", " << disp.y << ", " << disp.z << "\n\n";
 
-		m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0f, dt,
+		auto flag = m_pxCharacterController->move(reinterpret_cast<const PxVec3&>(disp), 0.0001f, dt,
 			PxControllerFilters(nullptr, m_defaultCCTFilterCallback, nullptr));
 
-		scene->EndWrite(m_collisionPlanesBuffer);
+		//std::cout << flag.isSet(PxControllerCollisionFlag::eCOLLISION_DOWN) << "\n";
 
-		disp = Vec3::ZERO;
+		scene->EndWrite(m_collisionPlanesBuffer);
 	}
+
+	disp = Vec3::ZERO;
 }
 
 Handle<ClassMetadata> CharacterController::GetMetadata(size_t sign)

@@ -7,6 +7,7 @@ namespace physx
 {
 class PxController;
 class PxQueryFilterCallback;
+class PxShape;
 }
 
 NAMESPACE_BEGIN
@@ -36,6 +37,7 @@ private:
 	friend class PhysicsSystem;
 	friend class AnimatorSkeletalArray;
 	friend class CharacterControllerHitCallback;
+	friend class CCTDefaultFilterCallBack;
 	
 public:
 	struct CollisionPlane

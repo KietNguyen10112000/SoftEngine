@@ -68,6 +68,11 @@ void RigidBody::SetupCollisionStruct()
 
 	collision->UpdateContactCount();
 
+	if (m_collisionResult)
+	{
+		delete m_collisionResult;
+	}
+
 	m_collisionResult = collisionResult;
 }
 

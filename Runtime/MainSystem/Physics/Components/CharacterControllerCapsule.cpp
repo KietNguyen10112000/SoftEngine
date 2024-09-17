@@ -27,6 +27,7 @@ CharacterControllerCapsule::CharacterControllerCapsule()
 {
 	m_desc.capsule = Capsule({ 0,0,0 }, 1.0f, 0.5f);
 	m_desc.material = std::make_shared<PhysicsMaterial>(0.5f, 0.5f, 0.5f);
+	SetPhysicsFlag(PHYSICS_FLAG_COLLISION_RESULT, true);
 }
 
 CharacterControllerCapsule::CharacterControllerCapsule(const CharacterControllerCapsuleDesc& desc)
@@ -76,7 +77,7 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 		data.word0 = PHYSICS_FILTER_FLAG::CCT;
 		shape->setSimulationFilterData(data);
 
-		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 2.0f * pxDesc.contactOffset + 0.05f, pxDesc.height / 2.0f + 2.0f * pxDesc.contactOffset + 0.05f));
+		shape->setGeometry(PxCapsuleGeometry(pxDesc.radius + 1.0f * pxDesc.contactOffset /*+ 0.05f*/, pxDesc.height / 2.0f + 1.0f * pxDesc.contactOffset /*+ 0.05f*/));
 	}
 
 	auto mass = m_pxCharacterController->getActor()->getMass();
@@ -84,6 +85,27 @@ void CharacterControllerCapsule::InitializeCCT(Scene* scene)
 	m_mass = mass;
 
 	m_pxActor = pxActor;
+
+	SetContactFilterCallback([](
+			GameObject* self, PhysicsShape* selfShape, PHYSICS_TYPE selfType,
+			GameObject* another, PhysicsShape* anotherShape, PHYSICS_TYPE anotherType,
+			size_t& pairFlags)
+		{
+			if (another->GetRoot() == self->GetRoot())
+			{
+				return;
+			}
+
+			pairFlags =
+				PhysicsCollisionPairFlag::DETECT_DISCRETE_CONTACT
+				| PhysicsCollisionPairFlag::NOTIFY_TOUCH_FOUND
+				| PhysicsCollisionPairFlag::NOTIFY_TOUCH_LOST
+				| PhysicsCollisionPairFlag::NOTIFY_TOUCH_PERSISTS
+				| PhysicsCollisionPairFlag::NOTIFY_CONTACT_POINTS;
+		}
+	);
+
+	//m_pxCharacterController->setNonWalkableMode(PxControllerNonWalkableMode::ePREVENT_CLIMBING_AND_FORCE_SLIDING);
 }
 
 void CharacterControllerCapsule::OnDrawDebug()
