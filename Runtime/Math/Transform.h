@@ -41,6 +41,40 @@ public:
 			&& m_rotation == transform.m_rotation;
 	}
 
+	inline Transform operator*(const Transform& transform) const
+	{
+		assert(m_scale.xyz() == Vec3(1, 1, 1));
+
+		Transform ret = {};
+		auto& q = ret.m_rotation;
+		auto& p = ret.m_translation.xyz();
+
+		auto v = Vec4(transform.m_translation.xyz(), 1.0f) * q.ToMat4();
+		v.xyz() /= v.w;
+
+		p = v.xyz() + p;
+		q = q * transform.m_rotation;
+
+		return ret;
+	}
+
+	inline Transform& operator*=(const Transform& transform)
+	{
+		assert(m_scale.xyz() == Vec3(1, 1, 1));
+
+		Transform& ret = *this;
+		auto& q = ret.m_rotation;
+		auto& p = ret.m_translation.xyz();
+
+		auto v = Vec4(transform.m_translation.xyz(), 1.0f) * q.ToMat4();
+		v.xyz() /= v.w;
+
+		p = v.xyz() + p;
+		q = q * transform.m_rotation;
+
+		return *this;
+	}
+
 public:
 	inline auto& Scale()
 	{

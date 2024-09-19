@@ -25,16 +25,23 @@ PhysicsShape::~PhysicsShape()
 	if (m_pxShape)
 		m_pxShape->release();
 
+	if (m_pxQueryGeometry)
+	{
+		m_pxQueryGeometryDtor(m_pxQueryGeometry);
+		m_pxQueryGeometry = nullptr;
+		m_pxQueryGeometryDtor = nullptr;
+	}
+
 	m_pxShape = nullptr;
 }
 
-void PhysicsShape::SetTransform(const Transform& transform)
-{
-	PxTransform pxTransform;
-	pxTransform.p = reinterpret_cast<PxVec3&>(transform.GetPosition());
-	pxTransform.q = PxQuat(transform.GetRotation().x, transform.GetRotation().y, transform.GetRotation().z, transform.GetRotation().w);
-	m_pxShape->setLocalPose(pxTransform);
-}
+//void PhysicsShape::SetTransform(const Transform& transform)
+//{
+//	PxTransform pxTransform;
+//	pxTransform.p = reinterpret_cast<PxVec3&>(transform.GetPosition());
+//	pxTransform.q = PxQuat(transform.GetRotation().x, transform.GetRotation().y, transform.GetRotation().z, transform.GetRotation().w);
+//	m_pxShape->setLocalPose(pxTransform);
+//}
 
 SharedPtr<PhysicsMaterial> PhysicsShape::GetDeserializedMaterial(Serializer* serializer, const json& j)
 {
@@ -61,9 +68,11 @@ void PhysicsShape::RecalculateMass()
 
 void PhysicsShape::CloneFrom(Serializer* serializer, Serializable* another)
 {
-	auto src = (PhysicsShape*)another;
-	m_pxShape->setLocalPose(src->m_pxShape->getLocalPose());
-	m_meterial = serializer->Clone(src->m_meterial);
+	//auto src = (PhysicsShape*)another;
+	//m_pxShape->setLocalPose(src->m_pxShape->getLocalPose());
+	//m_meterial = serializer->Clone(src->m_meterial);
+
+	assert(0);
 }
 
 void PhysicsShape::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
@@ -76,7 +85,7 @@ void PhysicsShape::DeserializeFromBinary(Serializer* serializer, const ByteStrea
 
 void PhysicsShape::SerializeToJson(Serializer* serializer, json& j) const
 {
-	j["Transform"] = PhysXUtils::ToTransform(m_pxShape->getLocalPose());
+	j["Transform"] = GetLocalTransform();//PhysXUtils::ToTransform(m_pxShape->getLocalPose());
 	j["Meterial"] = serializer->Serialize(m_meterial);
 
 	auto filterData = m_pxShape->getSimulationFilterData();
@@ -87,7 +96,7 @@ void PhysicsShape::SerializeToJson(Serializer* serializer, json& j) const
 void PhysicsShape::DeserializeFromJson(Serializer* serializer, const json& j)
 {
 	serializer->Deserialize(j["Meterial"], m_meterial);
-	m_pxShape->setLocalPose(PhysXUtils::ToPxTransform(j["Transform"]));
+	SetLocalTransform(j["Transform"]);
 
 	if (j.contains("FilterFlags"))
 	{
@@ -123,6 +132,9 @@ Handle<ClassMetadata> PhysicsShape::GetMetadata(size_t sign)
 
 void PhysicsShape::SetLocalTransform(const Transform& transform)
 {
+	m_localPosition = transform.GetPosition();
+	m_localRotation = transform.GetRotation();
+
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, transform,
 		{
 			self->m_pxShape->setLocalPose(PhysXUtils::ToPxTransform(transform));
@@ -144,7 +156,22 @@ void PhysicsShape::SetLocalTransform(const Transform& transform)
 
 Transform PhysicsShape::GetLocalTransform() const
 {
-	return PhysXUtils::ToTransform(m_pxShape->getLocalPose());
+	Transform ret = {};
+	ret.Position() = m_localPosition;
+	ret.Rotation() = m_localRotation;
+	return ret;
+}
+
+Transform PhysicsShape::GetGlobalTransform() const
+{
+	assert(m_attachedRigidBody != nullptr && "Shape must be attached to a RigidBody to get global transform!");
+
+	//auto body = m_attachedRigidBody->m_pxActor->is<PxRigidActor>();
+	//return PhysXUtils::ToTransform(m_pxShape->getLocalPose().transform(body->getGlobalPose()));
+
+	auto t = Transform::FromTransformMatrix(m_attachedRigidBody->GetGameObject()->GetCommittedGlobalTransform());
+	t.Scale() = { 1,1,1 };
+	return GetLocalTransform() * t;
 }
 
 void PhysicsShape::SetCollisionMask(uint32_t mask)
@@ -186,6 +213,52 @@ void PhysicsShape::SetFamilyNoCollide(bool enable)
 			self->m_pxShape->setSimulationFilterData(data);
 		}
 	);
+}
+
+bool PhysicsShape::Raycast(PhysicsShapeRaycastResult& output, const Vec3& rayOrigin, const Vec3& rayDistance)
+{
+	return Raycast(output, rayOrigin, rayDistance, GetGlobalTransform());
+}
+
+bool PhysicsShape::Raycast(PhysicsShapeRaycastResult& output, const Vec3& rayOrigin, const Vec3& rayDistance, const Mat4& shapeGlobalTransform)
+{
+	return Raycast(output, rayOrigin, rayDistance, Transform::FromTransformMatrix(shapeGlobalTransform));
+}
+
+bool PhysicsShape::Raycast(PhysicsShapeRaycastResult& output, const Vec3& rayOrigin, const Vec3& rayDistance,
+	const Transform& shapeGlobalTransform)
+{
+	PxGeomRaycastHit hitInfo;
+	const PxU32 maxHits = 1;
+	const PxHitFlags hitFlags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL;
+	const PxU32 stride = sizeof(PxGeomRaycastHit);
+	const PxGeometryQueryFlags queryFlags = PxGeometryQueryFlag::eDEFAULT;
+
+	if (m_pxQueryGeometry == nullptr)
+	{
+		m_pxQueryGeometry = NewQueryGeometry(m_pxQueryGeometryDtor);
+		assert(m_pxQueryGeometry && m_pxQueryGeometryDtor);
+	}
+
+	UpdateQueryGeometry(m_pxQueryGeometry);
+
+	auto ret = PxGeometryQuery::raycast(
+		PhysXUtils::ToPxVec3(rayOrigin), PhysXUtils::ToPxVec3(rayDistance.Normal()),
+		*m_pxQueryGeometry, PhysXUtils::ToPxTransform(shapeGlobalTransform), rayDistance.Length(),
+		PxHitFlag::eDEFAULT, 
+		maxHits,
+		&hitInfo
+	);
+
+	if (ret)
+	{
+		auto& hit = output.hits.emplace_back();
+		hit.position = PhysXUtils::ToVec3(hitInfo.position);
+		hit.normal = PhysXUtils::ToVec3(hitInfo.normal);
+		hit.distance = hitInfo.distance;
+	}
+
+	return bool(ret);
 }
 
 NAMESPACE_END

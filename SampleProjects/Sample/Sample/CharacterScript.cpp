@@ -280,6 +280,7 @@ void CharacterScript::ControlMotionAnim(float dt)
 		&& (m_currentBodyState == STATE::IDLE
 			|| m_currentBodyState == STATE::MOVE_FAST
 			|| m_currentBodyState == STATE::MOVE_SLOW
+			|| m_currentBodyState == STATE::LANDING
 			)
 		)
 	{
@@ -747,12 +748,7 @@ void CharacterScript::FallingUpdate(float dt)
 					serialId,
 					[&](const ActionPhysicsSweep* action, const PhysicsSweepResult& result)
 					{
-						if (!action->HitOrTouchAnything())
-						{
-							return;
-						}
-
-						LandingUpdate(GetScene()->Dt(), result);
+						LandingUpdate(GetScene()->Dt(), action, result);
 					},
 					shape, transform, end - begin, m_fallingSweepFilter
 				)
@@ -788,8 +784,32 @@ void CharacterScript::FallingUpdate(float dt)
 	//}
 }
 
-void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
+void CharacterScript::LandingUpdate(float dt, const ActionPhysicsSweep* action, const PhysicsSweepResult& result)
 {
+	auto FnSwitchBackToFalling = [&]()
+	{
+		if (m_landingTransitAction)
+		{
+			m_actionExecution->StopAction(m_landingTransitAction);
+			m_landingTransitAction = nullptr;
+		}
+
+		m_currentBodyState = STATE::FALL;
+		m_nextBodyState = STATE::FALL;
+		m_currentMovingSpeed = 0;
+		m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.2f, m_character.Animations.FallIdle, -1, -1);
+	};
+
+	if (!action->HitOrTouchAnything())
+	{
+		if (m_currentBodyState == STATE::LANDING)
+		{
+			FnSwitchBackToFalling();
+		}
+
+		return;
+	}
+
 	/*static CollisionContactPoint cpoint;
 	auto debugGraphics = Graphics::Get()->GetDebugGraphics();
 	if (debugGraphics)
@@ -806,53 +826,21 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 
 	auto& pos = GetGameObject()->GetCommittedGlobalTransform().Position();
 	auto g = m_controller->GetGravity();
-	auto invG = -g.Normal();
-
-	float nearestGroundDistance = INFINITY;
-	float distanceFromUpAxis = INFINITY;
-	//int nearestGroundIdx = -1;
-
-	Vec3 touchPos;
-	Vec3 touchNormal;
+	auto nG = g.Normal();
+	auto invG = -nG;
 
 	auto slopeLimit = m_controller->CCTGetSlopeLimit();
-	auto FnMinDistance = [&](const PhysicsSweepHit& touch)
-	{
-		auto d = std::abs(touch.position.y - pos.y);//.Length();
 
-		// d must be greater than half body height because we are sweeping by body capsule with origin is in center of capsule
-		if (/*d > 1.0f &&*/ d < nearestGroundDistance)
-		{
-			bool isGround = invG.Dot(touch.normal) >= slopeLimit;
-			if (isGround)
-			{
-				//nearestGroundIdx = &touch - result.touches.data();
-				nearestGroundDistance = d;
+	auto capsuleRadius = ((CharacterControllerCapsule*)m_controller)->CCTGetRadius();
+	auto capsuleRadiusToAllowLanding = capsuleRadius * 0.4f;
 
-				distanceFromUpAxis = (Vec3(touch.position.x, 0, touch.position.z) - Vec3(pos.x, 0, pos.z)).Length();
-				touchPos = touch.position;
-				touchNormal = touch.normal;
-			}
-		}
-	};
+	auto capsuleHeight = ((CharacterControllerCapsule*)m_controller)->CCTGetHeight();
 
-	if (result.hasBlock)
-	{
-		FnMinDistance(result.block);
-	}
-
-	for (auto& touch : result.touches)
-	{
-		FnMinDistance(touch);
-	}
-
-	assert(m_currentBodyState == STATE::LANDING || m_currentBodyState == STATE::FALL);
-
+	bool hasGround = false;
 	if (!m_controller->GetCollision()->contacts.empty())
 	{
 		//auto slopeLimit = m_controller->CCTGetSlopeLimit();
-		
-		bool hasGround = false;
+
 		for (auto& contact : m_controller->GetCollision()->contacts)
 		{
 			bool isA = contact->A == m_controller->GetGameObject() ? true : false;
@@ -862,7 +850,22 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 				{
 					auto normal = isA ? point.normal : -point.normal;
 					auto isGround = invG.Dot(normal) >= slopeLimit;
-					if (isGround)
+
+					auto distanceFromUpAxis = (Vec3(pos.x, 0, pos.z) - Vec3(point.position.x, 0, point.position.z)).Length();
+
+					if (isGround && distanceFromUpAxis > capsuleRadiusToAllowLanding)
+					{
+						auto capsule = m_controller->GetShape(0);
+						auto touchShape = isA ? pair->BShape : pair->AShape;
+
+						PhysicsShapeRaycastResult result;
+						if (touchShape->Raycast(result, pos, nG * (capsuleHeight / 2.0f + capsuleRadius + 0.3f)))
+						{
+							distanceFromUpAxis = 0.0f;
+						}
+					}
+
+					if (isGround && distanceFromUpAxis <= capsuleRadiusToAllowLanding)
 					{
 						//cpoint = point;
 						//cpoint.normal = normal;
@@ -881,14 +884,58 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 		}
 	}
 
-	//if (nearestGroundIdx != -1)
-	if (nearestGroundDistance != INFINITY)
+	auto sweepDir = action->GetSweepDistance().Normal();
+	auto sweepStartPos = action->GetStartTransform().Position();
+
+	float nearestGroundDistance = INFINITY;
+	float distanceFromUpAxis = INFINITY;
+	//int nearestGroundIdx = -1;
+
+	Vec3 touchPos;
+	Vec3 touchNormal;
+
+	auto FnMinDistance = [&](const PhysicsSweepHit& touch)
+	{
+		if (touch.distance <= 0)
+		{
+			return;
+		}
+
+		auto d = std::abs(touch.position.y - pos.y);//.Length();
+		if (d < nearestGroundDistance)
+		{
+			bool isGround = invG.Dot(touch.normal) >= slopeLimit;
+			if (isGround)
+			{
+				//nearestGroundIdx = &touch - result.touches.data();
+				nearestGroundDistance = d;
+
+				auto p = sweepStartPos + sweepDir * touch.distance;
+
+				distanceFromUpAxis = (Vec3(p.x, 0, p.z) - Vec3(touch.position.x, 0, touch.position.z)).Length();
+				touchPos = touch.position;
+				touchNormal = touch.normal;
+			}
+		}
+	};
+
+	if (result.hasBlock)
+	{
+		FnMinDistance(result.block);
+	}
+
+	for (auto& touch : result.touches)
+	{
+		FnMinDistance(touch);
+	}
+
+	assert(m_currentBodyState == STATE::LANDING || m_currentBodyState == STATE::FALL);
+
+	if (nearestGroundDistance != INFINITY && !hasGround)
 	{
 		// has ground
 
 		//std::cout << "Has ground\n";
-
-		auto r = ((CharacterControllerCapsule*)m_controller)->CCTGetRadius();
 
 		//std::cout << "distanceFromUpAxis: " << distanceFromUpAxis << "\n";
 		auto debugGraphics = Graphics::Get()->GetDebugGraphics();
@@ -897,16 +944,17 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 			debugGraphics->DrawRay(touchPos, touchNormal);
 		}
 
-		if (nearestGroundDistance <= 2.0f && distanceFromUpAxis <= r * 0.2f && m_currentBodyState == STATE::FALL)
+		if (nearestGroundDistance <= 2.0f && distanceFromUpAxis <= capsuleRadiusToAllowLanding && m_currentBodyState == STATE::FALL)
 		{
 			//m_controller->CCTSetAdditionRotationEnabled(false);
 			//m_controller->CCTApplyVelocity(m_currentExpectedMovingDir * 2.0f);
 
 			PlayAnimSoftLanding(dt, nearestGroundDistance);
 		}
-		else if (nearestGroundDistance >= 2.0f && m_currentBodyState == STATE::LANDING)
+		
+		if (m_currentBodyState == STATE::LANDING && (nearestGroundDistance > 2.0f || distanceFromUpAxis > capsuleRadiusToAllowLanding))
 		{
-			goto SwitchBackToFalling;
+			FnSwitchBackToFalling();
 		}
 	}
 	else
@@ -915,19 +963,14 @@ void CharacterScript::LandingUpdate(float dt, const PhysicsSweepResult& result)
 
 		//std::cout << "Doesn't have ground\n";
 
-	SwitchBackToFalling:
-		if (m_currentBodyState == STATE::LANDING)
-		{
-			// switch back to falling
-			std::cout << "Switch To Falling\n";
-		}
+	
 	}
 }
 
 void CharacterScript::PlayAnimSoftLanding(float dt, float dY)
 {
 	m_landingStartTime = Clock::ms::now();
-	m_landingAllowMovingDeltaTime = 0;//size_t(0.3f * 1000);// size_t(0.1f * (2.0f - dY) * 1000);
+	m_landingAllowMovingDeltaTime = size_t(0.3f * dY / 2.0f * 1000);//size_t(0.3f * 1000);// size_t(0.1f * (2.0f - dY) * 1000);
 
 	m_nextBodyState = STATE::LANDING;
 	m_currentBodyState = STATE::LANDING;
@@ -935,7 +978,7 @@ void CharacterScript::PlayAnimSoftLanding(float dt, float dY)
 	m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::FORWARD, 0.3f, m_character.Animations.FallSoftLanding, -1, -1);
 
 	auto duration = m_character.Animations.FallSoftLanding->GetDuration();
-	SetTimeout(duration - 0.45f,
+	m_landingTransitAction = SetTimeout(duration - 0.45f,
 		[&]()
 		{
 			m_character.Transit0->FadeTo(AnimTransitLayer::TransitDirection::BACKWARD, 0.15f, m_character.Animations.IdleCarefully, -1, -1);
@@ -943,6 +986,8 @@ void CharacterScript::PlayAnimSoftLanding(float dt, float dY)
 
 			m_actionExecution->StopAction(m_fallingUpdateAction);
 			m_fallingUpdateAction = nullptr;
+
+			m_landingTransitAction = nullptr;
 		}
 	);
 }

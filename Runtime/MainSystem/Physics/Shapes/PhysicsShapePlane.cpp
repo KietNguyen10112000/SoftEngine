@@ -54,6 +54,19 @@ void PhysicsShapePlane::OnPropertyChanged(const UnknownAddress& var, const Varia
 {
 }
 
+physx::PxGeometry* PhysicsShapePlane::NewQueryGeometry(PxQueryGeometryDtor& dtor) const
+{
+	dtor = [](PxGeometry* geo)
+	{
+		delete (PxPlaneGeometry*)geo;
+	};
+	return new PxPlaneGeometry();
+}
+
+void PhysicsShapePlane::UpdateQueryGeometry(physx::PxGeometry*) const
+{
+}
+
 void PhysicsShapePlane::ScaleBy(float scale)
 {
 }

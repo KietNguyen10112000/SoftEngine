@@ -13,6 +13,9 @@ class PhysicsMaterial;
 class API PhysicsShapeSphere : public PhysicsShape
 {
 	SERIALIZABLE_CLASS(PhysicsShapeSphere, SERIALIZABLE_MEM_SHARED);
+
+	float m_radius = 0.0f;
+
 public:
 	inline PhysicsShapeSphere() {};
 	PhysicsShapeSphere(float radius, const SharedPtr<PhysicsMaterial>& material);
@@ -30,6 +33,9 @@ public:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+	virtual physx::PxGeometry* NewQueryGeometry(PxQueryGeometryDtor& dtor) const override;
+	virtual void UpdateQueryGeometry(physx::PxGeometry*) const override;
 
 public:
 	virtual void ScaleBy(float scale) override;

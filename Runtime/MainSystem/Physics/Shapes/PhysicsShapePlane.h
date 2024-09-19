@@ -31,6 +31,9 @@ public:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
+	virtual physx::PxGeometry* NewQueryGeometry(PxQueryGeometryDtor& dtor) const override;
+	virtual void UpdateQueryGeometry(physx::PxGeometry*) const override;
+
 	virtual void ScaleBy(float scale) override;
 };
 

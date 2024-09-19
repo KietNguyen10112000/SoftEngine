@@ -23,11 +23,17 @@ PhysicsShapeCapsule::PhysicsShapeCapsule(void* pxShape, float h, float r, const 
 	m_pxShape->acquireReference();
 	m_pxShape->userData = this;
 	m_meterial = material;
+
+	m_height = h;
+	m_radius = r;
 }
 
 PhysicsShapeCapsule::PhysicsShapeCapsule(float h, float r, const SharedPtr<PhysicsMaterial>& material)
 {
 	PhysicsShapeUtils::InitializeShape<PxCapsuleGeometry>(this, material, false, r, h / 2.0f);
+
+	m_height = h;
+	m_radius = r;
 }
 
 void PhysicsShapeCapsule::CloneFrom(Serializer* serializer, Serializable* another)
@@ -38,6 +44,9 @@ void PhysicsShapeCapsule::CloneFrom(Serializer* serializer, Serializable* anothe
 	auto material = serializer->Clone(src->m_meterial);
 	PhysicsShapeUtils::InitializeShape<PxCapsuleGeometry>(this, material, false, src->GetRadius(), src->GetHeight() / 2.0f);
 	PhysicsShape::CloneFrom(serializer, another);
+
+	m_height = src->m_height;
+	m_radius = src->m_radius;
 }
 
 void PhysicsShapeCapsule::SerializeToBinary(Serializer* serializer, ByteStream& stream) const
@@ -50,16 +59,19 @@ void PhysicsShapeCapsule::DeserializeFromBinary(Serializer* serializer, const By
 
 void PhysicsShapeCapsule::SerializeToJson(Serializer* serializer, json& j) const
 {
-	auto geo = (PxCapsuleGeometry*)&m_pxShape->getGeometry();
-	j["Height"] = geo->halfHeight * 2.0f;
-	j["Radius"] = geo->radius;
+	//auto geo = (PxCapsuleGeometry*)&m_pxShape->getGeometry();
+	j["Height"] = GetHeight();//geo->halfHeight * 2.0f;
+	j["Radius"] = GetRadius();//geo->radius;
 	PhysicsShape::SerializeToJson(serializer, j);
 }
 
 void PhysicsShapeCapsule::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	m_height = j["Height"];
+	m_radius = j["Radius"];
+
 	assert(m_pxShape == nullptr);
-	PhysicsShapeUtils::InitializeShape<PxCapsuleGeometry>(this, GetDeserializedMaterial(serializer, j), false, float(j["Radius"]), float(j["Height"]) / 2.0f);
+	PhysicsShapeUtils::InitializeShape<PxCapsuleGeometry>(this, GetDeserializedMaterial(serializer, j), false, m_radius, m_height / 2.0f);
 	PhysicsShape::DeserializeFromJson(serializer, j);
 }
 
@@ -107,6 +119,22 @@ void PhysicsShapeCapsule::OnPropertyChanged(const UnknownAddress& var, const Var
 {
 }
 
+physx::PxGeometry* PhysicsShapeCapsule::NewQueryGeometry(PxQueryGeometryDtor& dtor) const
+{
+	dtor = [](PxGeometry* geo)
+	{
+		delete (PxCapsuleGeometry*)geo;
+	};
+	return new PxCapsuleGeometry(m_height, m_radius);
+}
+
+void PhysicsShapeCapsule::UpdateQueryGeometry(physx::PxGeometry* geometry) const
+{
+	auto capsule = (PxCapsuleGeometry*)geometry;
+	capsule->halfHeight = m_height / 2.0f;
+	capsule->radius = m_radius;
+}
+
 void PhysicsShapeCapsule::ScaleBy(float scale)
 {
 	auto r = GetRadius();
@@ -117,6 +145,7 @@ void PhysicsShapeCapsule::ScaleBy(float scale)
 
 void PhysicsShapeCapsule::SetHeight(float h)
 {
+	m_height = h;
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, h,
 		{
 			auto capsule = (PxCapsuleGeometry*)&self->m_pxShape->getGeometry();
@@ -128,12 +157,12 @@ void PhysicsShapeCapsule::SetHeight(float h)
 
 float PhysicsShapeCapsule::GetHeight() const
 {
-	auto capsule = (PxCapsuleGeometry*)&m_pxShape->getGeometry();
-	return capsule->halfHeight * 2.0f;
+	return m_height;
 }
 
 void PhysicsShapeCapsule::SetRadius(float r)
 {
+	m_radius = r;
 	MAIN_SYSTEM_TASK_IMPL_COMMON_1(m_attachedRigidBody, PhysicsSystem, AsyncTaskRunnerST, r,
 		{
 			auto capsule = (PxCapsuleGeometry*)&self->m_pxShape->getGeometry();
@@ -145,8 +174,7 @@ void PhysicsShapeCapsule::SetRadius(float r)
 
 float PhysicsShapeCapsule::GetRadius() const
 {
-	auto capsule = (PxCapsuleGeometry*)&m_pxShape->getGeometry();
-	return capsule->radius;
+	return m_radius;
 }
 
 NAMESPACE_END

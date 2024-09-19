@@ -95,6 +95,7 @@ protected:
 	SharedPtr<ActionBase> m_switchBodyStateAction = nullptr;
 	SharedPtr<ActionBase> m_modifyingMovingSpeedAction = nullptr;
 
+	SharedPtr<ActionBase> m_landingTransitAction = nullptr;
 	SharedPtr<ActionBase> m_fallingUpdateAction = nullptr;
 	SharedPtr<FallingSweepFilter> m_fallingSweepFilter = std::make_shared<FallingSweepFilter>(this);
 	Vec3 m_fallingMovingMotion = Vec3::ZERO;
@@ -149,7 +150,7 @@ private:
 
 	void PlayAnimJump(float dt);
 	void FallingUpdate(float dt);
-	void LandingUpdate(float dt, const PhysicsSweepResult& result);
+	void LandingUpdate(float dt, const ActionPhysicsSweep* action, const PhysicsSweepResult& result);
 	void PlayAnimSoftLanding(float dt, float dY);
 
 	bool IsOnGround(float slopLimit = 0.0f) const;

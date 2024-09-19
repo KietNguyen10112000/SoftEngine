@@ -13,6 +13,9 @@ class PhysicsMaterial;
 class API PhysicsShapeBox : public PhysicsShape
 {
 	SERIALIZABLE_CLASS(PhysicsShapeBox, SERIALIZABLE_MEM_SHARED);
+
+	Vec3 m_dimensions;
+
 public:
 	PhysicsShapeBox();
 	PhysicsShapeBox(const Vec3& dimensions, const SharedPtr<PhysicsMaterial>& material);
@@ -31,6 +34,9 @@ protected:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+	virtual physx::PxGeometry* NewQueryGeometry(PxQueryGeometryDtor& dtor) const override;
+	virtual void UpdateQueryGeometry(physx::PxGeometry*) const override;
 
 public:
 	virtual void ScaleBy(float scale) override;

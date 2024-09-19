@@ -29,6 +29,9 @@ private:
 		return std::make_shared<make_shared_enabler>(pxShape, height, radius, material);
 	}
 
+	float m_height = 1.0f;
+	float m_radius = 1.0f;
+
 public:
 	inline PhysicsShapeCapsule() {};
 	PhysicsShapeCapsule(float height, float radius, const SharedPtr<PhysicsMaterial>& material);
@@ -48,6 +51,9 @@ protected:
 	void DeserializeFromJson(Serializer* serializer, const json& j) override;
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
+
+	virtual physx::PxGeometry* NewQueryGeometry(PxQueryGeometryDtor& dtor) const override;
+	virtual void UpdateQueryGeometry(physx::PxGeometry*) const override;
 
 public:
 	virtual void ScaleBy(float scale) override;

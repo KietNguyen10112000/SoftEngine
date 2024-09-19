@@ -17,8 +17,28 @@ struct PhysicsQueryHitLocation
 	Vec3 position;
 	Vec3 normal;
 
+	float distance;
+
 	GameObject* obj = nullptr;
 	PhysicsShape* shape = nullptr;
+};
+
+struct PhysicsRaycastHit : public PhysicsQueryHitLocation
+{
+
+};
+
+struct PhysicsRaycastResult
+{
+	std::vector<PhysicsRaycastHit> touches;
+	PhysicsRaycastHit block;
+	bool hasBlock = false;
+
+	inline void Clear()
+	{
+		touches.clear();
+		hasBlock = false;
+	}
 };
 
 struct PhysicsSweepHit : public PhysicsQueryHitLocation

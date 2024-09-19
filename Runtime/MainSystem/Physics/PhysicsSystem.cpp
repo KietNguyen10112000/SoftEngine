@@ -914,6 +914,7 @@ void PhysicsSystem::PostIteration()
 {																				\
 ownHit.position = PhysXUtils::ToVec3(pxHit.position);							\
 ownHit.normal = PhysXUtils::ToVec3(pxHit.normal);								\
+ownHit.distance = pxHit.distance;												\
 ownHit.obj = ((PhysicsComponent*)pxHit.actor->userData)->GetGameObject();		\
 ownHit.shape = ((PhysicsShape*)pxHit.shape->userData);							\
 }
