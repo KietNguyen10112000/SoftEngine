@@ -200,6 +200,7 @@ void CharacterController::ReduceVelocityByCollisionPlanes(float dt)
 		m_velocity = sumV;
 	}*/
 
+	//std::cout << "groundCount: " << groundCount << "\n";
 	if (groundCount != 0 || m_velocity.Length() < 0.0001f)
 	{
 		m_velocity = Vec3::ZERO;
@@ -267,7 +268,10 @@ void CharacterController::ApplyGravity(float dt)
 		sumG += Gt;
 	}
 
+	//std::cout << "sumG: " << sumG.x << ", " << sumG.y << ", " << sumG.z << "\n";
+	//auto temp = m_velocity;
 	m_velocity += sumG * dt;
+	//assert(temp.y >= m_velocity.y);
 }
 
 void CharacterController::ApplyAditionRotation(float dt)
