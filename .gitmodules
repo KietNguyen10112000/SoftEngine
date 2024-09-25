@@ -31,3 +31,6 @@
 [submodule "Tools/Editor/Libraries/exprtk"]
 	path = Tools/Editor/Libraries/exprtk
 	url = git@github.com:ArashPartow/exprtk.git
+[submodule "SampleProjects/Sample"]
+	path = SampleProjects/Sample
+	url = git@github.com:KietNguyen10112000/SoftEngineSample.git
