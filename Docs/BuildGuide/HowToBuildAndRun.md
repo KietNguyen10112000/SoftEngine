@@ -8,7 +8,11 @@ Step 1: Install Visual Studio with C/C++, CMake toolchain
 
 Step 2: Install Python 3, Watchman
 
-Step 3: Clone Engine's repository and all sub-repositories
+Step 3: Clone Engine's repository and all sub-repositories:
+
+```batch
+git clone --recurse-submodules -j8 git@github.com:KietNguyen10112000/SoftEngine.git
+```
 
 Step 4: Set System Path`SOFT_ENGINE_HOME` to the cloned repository's directory above
 
@@ -26,9 +30,13 @@ Open `SOFT_ENGINE_HOME/Tools/Editor/Editor.sln` in Visual Studio and build it as
 
 ### 1.3. Build Sample project
 
+Pull the latest changes:
+
+```batch
+git submodule update SampleProjects/Sample
+```
+
 Open `SOFT_ENGINE_HOME/SampleProjects/Sample.sln` in Visual Studio and build it as a normal Visual Studio solution.
-
-
 
 ### 2. Run
 
