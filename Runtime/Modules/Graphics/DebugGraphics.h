@@ -140,6 +140,8 @@ private:
 	void InitCubeRenderer();
 	void InitSphereRenderer();
 
+	void DrawCubeImpl(const Mat4& transform, const Vec4& color, bool solid);
+
 public:
 	//void SetWireframe(bool on);
 

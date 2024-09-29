@@ -182,19 +182,32 @@ float RigidBodyDynamic::GetMass() const
 	return pxRigidBody->getMass();
 }
 
+void RigidBodyDynamic::SetKinematicImpl(bool enable, bool wakeUp)
+{
+	auto pxRigidBody = (PxRigidDynamic*)m_pxActor;
+	pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
+	if (wakeUp && !enable && pxRigidBody->getScene() && pxRigidBody->isSleeping())
+	{
+		pxRigidBody->wakeUp();
+	}
+
+	m_isKinematic = (byte)enable;
+
+	/*auto obj = GetGameObject();
+	if (obj->Parent().Get() != nullptr && m_isKinematic == 0 && enable == true)
+	{
+		auto& parent = obj->Parent()->GetCommittedGlobalTransform();
+		auto& self = obj->GetCommittedGlobalTransform();
+		GetGameObject()->SetLocalTransform(Transform::FromTransformMatrix(self * parent.GetInverse()));
+	}*/
+}
+
 void RigidBodyDynamic::SetKinematic(bool enable, bool wakeUp)
 {
 	MAIN_SYSTEM_TASK_COMMON_2(
 		PhysicsSystem, AsyncTaskRunnerST, enable, wakeUp,
 		{
-			auto pxRigidBody = (PxRigidDynamic*)self->m_pxActor;
-			pxRigidBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, enable);
-			if (wakeUp && !enable && pxRigidBody->getScene() && pxRigidBody->isSleeping())
-			{
-				pxRigidBody->wakeUp();
-			}
-
-			self->m_isKinematic = (byte)enable;
+			self->SetKinematicImpl(enable, wakeUp);
 		}
 	);
 }

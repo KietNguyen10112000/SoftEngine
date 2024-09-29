@@ -17,6 +17,12 @@ SharedPtr<ActionBase> ScriptPhysicsInterface::Sweep(const SweepResultCallback& c
 	return physicsSystem->Sweep(callback, shape, startTransform, distance, filter);
 }
 
+SharedPtr<ActionBase> ScriptPhysicsInterface::Overlap(const OverlapResultCallback& callback, const PhysicsShape* shape, const Transform& transform, const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	auto physicsSystem = m_script->GetScene()->GetPhysicsSystem();
+	return physicsSystem->Overlap(callback, shape, transform, filter);
+}
+
 ID ScriptPhysicsInterface::BeginSerialQuery(const QueryPrevCheckCallback& prevCheckCallback)
 {
 	auto physicsSystem = m_script->GetScene()->GetPhysicsSystem();
@@ -39,6 +45,12 @@ SharedPtr<ActionPhysicsQuery> ScriptPhysicsInterface::SerialSweep(
 {
 	auto physicsSystem = m_script->GetScene()->GetPhysicsSystem();
 	return physicsSystem->SerialSweep(serialQueryID, callback, shape, startTransform, distance, filter);
+}
+
+SharedPtr<ActionPhysicsQuery> ScriptPhysicsInterface::SerialOverlap(ID serialQueryID, const OverlapResultCallback& callback, const PhysicsShape* shape, const Transform& transform, const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	auto physicsSystem = m_script->GetScene()->GetPhysicsSystem();
+	return physicsSystem->SerialOverlap(serialQueryID, callback, shape, transform, filter);
 }
 
 void ScriptPhysicsInterface::Query(const QueryCallback& callback)

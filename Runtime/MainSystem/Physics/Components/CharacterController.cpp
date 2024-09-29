@@ -12,6 +12,7 @@
 #include "../Materials/PhysicsMaterial.h"
 #include "../Shapes/PhysicsShape.h"
 #include "../FILTER_FLAG.h"
+#include "../Query/PhysicsQueryFilterCallback.h"
 
 #include "Common/Actions/ActionInterpolation.h"
 #include "MainSystem/Animation/Utils/Animation.h"
@@ -37,6 +38,13 @@ public:
 		if (comp->GetGameObject()->GetRoot() == m_cct->GetGameObject()->GetRoot())
 		{
 			return PxQueryHitType::eNONE;
+		}
+
+		if (m_cct->m_filterCallback)
+		{
+			auto obj = ((PhysicsComponent*)actor->userData)->GetGameObject();
+			PhysicsHitFlags flags = uint32_t(queryFlags);
+			return PxQueryHitType::Enum(m_cct->m_filterCallback->PrevFilter(obj, (PhysicsShape*)shape->userData, flags));
 		}
 
 		return PxQueryHitType::eTOUCH;
@@ -925,6 +933,16 @@ void CharacterController::CCTSetContactOffset(float contactOffset)
 float CharacterController::CCTGetContactOffset() const
 {
 	return m_pDerivedDesc->contactOffset;
+}
+
+void CharacterController::CCTSetFilterCallback(const SharedPtr<PhysicsQueryFilterCallback>& filter)
+{
+	MAIN_SYSTEM_TASK_1(
+		PhysicsSystem, AsyncTaskRunnerST, filter,
+		{
+			self->m_filterCallback = filter;
+		}
+	);
 }
 
 NAMESPACE_END

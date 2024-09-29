@@ -1,5 +1,7 @@
 #include "EditorSettings.h"
 
+#include "TagManager.h"
+
 #include "imgui/imgui.h"
 
 void EditorSettings::Render()
@@ -13,6 +15,16 @@ void EditorSettings::Render()
 		ImGui::DragFloat("Position Adjustment Precise", &GeneralSetting.positionAdjustmentPrecision,
 			0.0000001f, 0.0000001f, 0.1f, "%f", ImGuiSliderFlags_::ImGuiSliderFlags_AlwaysClamp);
 
+		ImGui::TreePop();
+	}
+
+	ImGui::Separator();
+
+	if (ImGui::TreeNode("Tag"))
+	{
+		TagManager::Get()->RenderSettingGUI();
+
+		//ImGui::Separator();
 		ImGui::TreePop();
 	}
 }
@@ -55,4 +67,14 @@ const char* EditorSettings::GetPrecisionCFormatStr(float precision)
 	}
 
 	return nullptr;
+}
+
+void EditorSettings::WriteToJson(json& j)
+{
+	TagManager::Get()->WriteToJson(j);
+}
+
+void EditorSettings::ReadFromJson(const json& j)
+{
+	TagManager::Get()->ReadFromJson(j);
 }

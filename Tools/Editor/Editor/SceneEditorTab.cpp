@@ -6,10 +6,13 @@
 #include "Scene/Scene.h"
 
 #include "MainSystem/Rendering/Components/RenderingComponent.h"
+
 #include "MainSystem/Scripting/Components/Script.h"
 #include "MainSystem/Physics/Components/PhysicsComponent.h"
 #include "MainSystem/Physics/Components/RigidBodyDynamic.h"
 #include "MainSystem/Physics/Joints/Joint.h"
+#include "MainSystem/Physics/Components/CharacterController.h"
+
 #include "MainSystem/Animation/Components/AnimationComponent.h"
 
 #include "Graphics/Graphics.h"
@@ -22,7 +25,7 @@
 #include "EditorFont.h"
 
 #include "SystemDialog.h"
-#include <MainSystem/Physics/Components/CharacterController.h>
+#include "TagManager.h"
 
 SceneEditorTab::SceneEditorTab()
 {
@@ -126,70 +129,72 @@ void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 					target_flags |= ImGuiDragDropFlags_AcceptBeforeDelivery;    // Don't wait until the delivery (release mouse button on a target) to do something
 					//target_flags |= ImGuiDragDropFlags_AcceptNoDrawDefaultRect; // Don't display the yellow rectangle
 					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GAMEOBJECT_DND_PAYLOAD", target_flags);
-					if (payload && ImGui::IsMouseReleased(0) &&
-						(obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false))
+					if (payload && ImGui::IsMouseReleased(0))
 					{
-						auto dragObj = *(GameObject**)payload->Data;
-
-						if (dragObj != obj)
+						bool allowDrop = (obj->GetComponentRaw<GameObjectEditorComponent>()->hotReloadFromFile == false || obj->Parent().Get() == nullptr);
+						if (allowDrop)
 						{
-						RetryAddDragObject:
-							if (dragObj->Parent().Get() == obj->Parent().Get())
+							auto dragObj = *(GameObject**)payload->Data;
+
+							if (dragObj != obj)
 							{
-								if (dragObj->Parent().Get() == nullptr)
+							RetryAddDragObject:
+								if (dragObj->Parent().Get() == obj->Parent().Get())
 								{
-									// move dragObj upper
+									if (dragObj->Parent().Get() == nullptr)
+									{
+										// move dragObj upper
 
-									auto upperObjIdx = dragObj->GetComponentRaw<GameObjectEditorComponent>()->id;
-									m_objects.erase(m_objects.begin() + upperObjIdx);
-									ReindexObjects();
+										auto upperObjIdx = dragObj->GetComponentRaw<GameObjectEditorComponent>()->id;
+										m_objects.erase(m_objects.begin() + upperObjIdx);
+										ReindexObjects();
 
-									auto lowerObjIdx = obj->GetComponentRaw<GameObjectEditorComponent>()->id;
-									m_objects.insert(m_objects.begin() + lowerObjIdx, dragObj);
-									ReindexObjects();
+										auto lowerObjIdx = obj->GetComponentRaw<GameObjectEditorComponent>()->id;
+										m_objects.insert(m_objects.begin() + lowerObjIdx, dragObj);
+										ReindexObjects();
+									}
+									else
+									{
+										auto& children = *(Array<Handle<GameObject>>*)&dragObj->Parent()->Children();
+										dragObj->Lock()->lock();
+										obj->Lock()->lock();
+
+										auto upperObjIdx = dragObj->ParentIdx();
+										children.Remove(children.begin() + upperObjIdx);
+										ReindexChildren(children);
+
+										auto lowerObjIdx = obj->ParentIdx();
+										children.insert(children.begin() + lowerObjIdx, dragObj);
+										ReindexChildren(children);
+
+										obj->Lock()->unlock();
+										dragObj->Lock()->unlock();
+									}
 								}
 								else
 								{
-									auto& children = *(Array<Handle<GameObject>>*)&dragObj->Parent()->Children();
-									dragObj->Lock()->lock();
-									obj->Lock()->lock();
+									if (dragObj->Parent().Get() == nullptr)
+									{
+										dragObj->GetScene()->RemoveObject(dragObj);
+									}
+									else
+									{
+										dragObj->RemoveFromParent(true);
+									}
 
-									auto upperObjIdx = dragObj->ParentIdx();
-									children.Remove(children.begin() + upperObjIdx);
-									ReindexChildren(children);
+									if (obj->Parent().Get() == nullptr)
+									{
+										m_scene->AddObject(dragObj);
+									}
+									else
+									{
+										obj->Parent()->AddChild(dragObj);
+									}
 
-									auto lowerObjIdx = obj->ParentIdx();
-									children.insert(children.begin() + lowerObjIdx, dragObj);
-									ReindexChildren(children);
-
-									obj->Lock()->unlock();
-									dragObj->Lock()->unlock();
+									goto RetryAddDragObject;
 								}
-							}
-							else
-							{
-								if (dragObj->Parent().Get() == nullptr)
-								{
-									dragObj->GetScene()->RemoveObject(dragObj);
-								}
-								else
-								{
-									dragObj->RemoveFromParent(true);
-								}
-
-								if (obj->Parent().Get() == nullptr)
-								{
-									m_scene->AddObject(dragObj);
-								}
-								else
-								{
-									obj->Parent()->AddChild(dragObj);
-								}
-
-								goto RetryAddDragObject;
 							}
 						}
-
 						m_dragingObject = nullptr;
 					}
 
@@ -1237,13 +1242,16 @@ void SceneEditorTab::OnRenderInGameDebugGraphics()
 		Vec3 rotationAxis = Vec3::ZERO; Vec4 color;
 		if (DataInspector::GetInspectingTransformRotatingAxis(m_inspectingObjectData, "Global Transform", &rotationAxis, &color))
 		{
-			debugGraphics->DrawLineSegment(mat.Position() - rotationAxis.Normal() * 100.0f, mat.Position() + rotationAxis.Normal() * 100.0f, { 0,0,1,1 });
+			debugGraphics->DrawLineSegment(mat.Position() - rotationAxis.Normal() * 100.0f, mat.Position() + rotationAxis.Normal() * 100.0f, color);
 		}
 		else
 		{
-			debugGraphics->DrawLineSegment(mat.Position() - mat.Forward().Normal() * 100.0f, mat.Position() + mat.Forward().Normal() * 100.0f, { 0,0,1,1 });
+			/*debugGraphics->DrawLineSegment(mat.Position() - mat.Forward().Normal() * 100.0f, mat.Position() + mat.Forward().Normal() * 100.0f, { 0,0,1,1 });
 			debugGraphics->DrawLineSegment(mat.Position() - mat.Right().Normal() * 100.0f, mat.Position() + mat.Right().Normal() * 100.0f, { 1,0,0,1 });
-			debugGraphics->DrawLineSegment(mat.Position() - mat.Up().Normal() * 100.0f, mat.Position() + mat.Up().Normal() * 100.0f, { 0,1,0,1 });
+			debugGraphics->DrawLineSegment(mat.Position() - mat.Up().Normal() * 100.0f, mat.Position() + mat.Up().Normal() * 100.0f, { 0,1,0,1 });*/
+			debugGraphics->DrawLineSegment(mat.Position() - Vec3::Z_AXIS * 100.0f, mat.Position() + Vec3::Z_AXIS * 100.0f, { 0,0,1,1 });
+			debugGraphics->DrawLineSegment(mat.Position() - Vec3::X_AXIS * 100.0f, mat.Position() + Vec3::X_AXIS * 100.0f, { 1,0,0,1 });
+			debugGraphics->DrawLineSegment(mat.Position() - Vec3::Y_AXIS * 100.0f, mat.Position() + Vec3::Y_AXIS * 100.0f, { 0,1,0,1 });
 		}
 	}
 
@@ -1361,6 +1369,9 @@ void SceneEditorTab::Inspect(ClassMetadata* metaData)
 
 				if (depth == 0)
 				{
+					TagManager::Get()->RenderTagInput(m_inspectingObject, m_inspectingObjectData);
+
+					ImGui::Separator();
 					if (ImGui::Button(ICON_FA_ROTATE " Synch Transform"))
 					{
 						auto& globalTransform = m_inspectingObject->GetCommittedGlobalTransform();

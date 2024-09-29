@@ -47,6 +47,9 @@
     <Filter Include="Source Files\EditorTabs\GameObjectEditor">
       <UniqueIdentifier>{9297112c-7dfb-4e63-a43a-bc66a0c921cf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Tag">
+      <UniqueIdentifier>{ebcd28ae-ce31-4e69-b6ea-8426cb3b5494}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -141,6 +144,9 @@
     </ClCompile>
     <ClCompile Include="CCTInspector.cpp">
       <Filter>Source Files\ComponentInspectors</Filter>
+    </ClCompile>
+    <ClCompile Include="TagManager.cpp">
+      <Filter>Source Files\Tag</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -245,6 +251,9 @@
     </ClInclude>
     <ClInclude Include="CCTInspector.h">
       <Filter>Source Files\ComponentInspectors</Filter>
+    </ClInclude>
+    <ClInclude Include="TagManager.h">
+      <Filter>Source Files\Tag</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

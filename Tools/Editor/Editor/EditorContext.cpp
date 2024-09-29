@@ -169,6 +169,7 @@ void EditorContext::RenderMenuBar()
 					if (result == EditorContext::DIALOG_RESULT::OK)
 					{
 						EditorSettings::Get()->OnApplySetting();
+						EditorContext::Get()->SaveConfig();
 					}
 
 					return true;
@@ -503,18 +504,58 @@ void EditorContext::RenderDialogs()
 	}
 
 	bool close = false;
-	for (auto& pdialog : m_dialogs)
+	/*if (!m_dialogs.empty())
 	{
-		auto& dialog = *pdialog;
+		auto& dialog = *m_dialogs.back().get();
+		if (dialog.popUpId.empty())
+		{
+			dialog.popUpId = String::Format("{} {} {}", dialog.desc.title, "## dialog", m_dialogs.back().get());
+		}
+		ImGui::SetWindowFocus(dialog.popUpId.c_str());
+	}*/
+
+	//for (auto& pdialog : m_dialogs)
+	bool overlayFocused = false;
+	if (!m_dialogs.empty())
+	{
+		float w = Graphics::Get()->GetWindowWidth();
+		float h = Graphics::Get()->GetWindowHeight();
+		//ImGui::SetNextWindowFocus();
+		ImGui::SetNextWindowSize({ w * 2.0f, h * 2.0f });
+		ImGui::SetNextWindowPos({ -float(w) * 0.5f, -float(h) * 0.5f });
+
+		w = w * 2.0f;
+		h = h * 2.0f;
+
+		//ImGui::SetNextWindowSize({ w, h });
+		//ImGui::SetNextWindowPos({ 0, 0 });
+
+		ImGui::SetNextWindowBgAlpha(0.5f);
+
+		ImGui::Begin("Overlay ## dialog", 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+		if (ImGui::IsWindowFocused())
+		{
+			overlayFocused = true;
+		}
+		
+		ImGui::End();
+	}
+
+	if (!m_dialogs.empty())
+	{
+		auto& pdialog = m_dialogs.back();
+		//auto& dialog = *pdialog;
+		auto& dialog = *m_dialogs.back().get();
 
 		if (dialog.popUpId.empty())
 		{
 			dialog.popUpId = String::Format("{} {} {}", dialog.desc.title, "## dialog", pdialog.get());
-			ImGui::OpenPopup(dialog.popUpId.c_str());
 		}
 
 		ImVec2 center = ImGui::GetMainViewport()->GetCenter();
 		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		//ImGui::SetNextWindowPos({0,0});
 		if (dialog.desc.size.x <= 1.0f && dialog.desc.size.y <= 1.0f)
 		{
 			auto viewPortSize = ImGui::GetMainViewport()->Size;
@@ -525,39 +566,43 @@ void EditorContext::RenderDialogs()
 			ImGui::SetNextWindowSize(ImVec2(dialog.desc.size.x, dialog.desc.size.y));
 		}
 
-		if (!ImGui::BeginPopupModal(dialog.popUpId.c_str(), 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize))
+		if (overlayFocused)
 		{
-			continue;
+			ImGui::SetNextWindowFocus();
 		}
-
-		dialog.bodyCallback(dialog.bodyUserPtr);
-
-		ImGui::Separator();
-
-		ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() / 2 - 100, ImGui::GetWindowHeight() - 40));
-
-		if (ImGui::Button("OK", ImVec2(100, 0)))
+		
+		ImGui::Begin(dialog.popUpId.c_str(), 0, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse);
 		{
-			if (dialog.resultCallback(DIALOG_RESULT::OK, dialog.resultUserPtr))
+			dialog.bodyCallback(dialog.bodyUserPtr);
+
+			ImGui::Separator();
+
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowWidth() / 2 - 100, ImGui::GetWindowHeight() - 40));
+
+			if (ImGui::Button("OK", ImVec2(100, 0)))
 			{
-				close = true;
-				assert(&pdialog - m_dialogs.data() == m_dialogs.size() - 1);
-				ImGui::CloseCurrentPopup();
+				if (dialog.resultCallback(DIALOG_RESULT::OK, dialog.resultUserPtr))
+				{
+					close = true;
+					assert(&pdialog - m_dialogs.data() == m_dialogs.size() - 1);
+					ImGui::CloseCurrentPopup();
+				}
 			}
-		}
 
-		ImGui::SameLine(0, 20);
-		if (ImGui::Button("Cancel", ImVec2(100, 0)))
-		{
-			if (dialog.resultCallback(DIALOG_RESULT::CANCEL, dialog.resultUserPtr))
+			ImGui::SameLine(0, 20);
+			if (ImGui::Button("Cancel", ImVec2(100, 0)))
 			{
-				close = true;
-				assert(&pdialog - m_dialogs.data() == m_dialogs.size() - 1);
-				ImGui::CloseCurrentPopup();
+				if (dialog.resultCallback(DIALOG_RESULT::CANCEL, dialog.resultUserPtr))
+				{
+					close = true;
+					assert(&pdialog - m_dialogs.data() == m_dialogs.size() - 1);
+					ImGui::CloseCurrentPopup();
+				}
 			}
-		}
 
-		ImGui::EndPopup();
+			//ImGui::EndPopup();
+		}
+		ImGui::End();
 	}
 
 	if (close)
@@ -883,4 +928,32 @@ void EditorContext::PlaceHolderTab(EditorTab* tab)
 
 		m_tabHolder = tab;
 	}
+}
+
+void EditorContext::SaveConfig()
+{
+	auto configFile = FileSystem::Get()->GetCurrentWorkingDirectory() + "Editor/Editor.config";
+
+	json j = {};
+	EditorSettings::Get()->WriteToJson(j);
+
+	auto str = j.dump(2);
+	FileUtils::WriteFile(configFile.c_str(), str.c_str(), str.length());
+}
+
+void EditorContext::LoadConfig()
+{
+	auto configFile = FileSystem::Get()->GetCurrentWorkingDirectory() + "Editor/Editor.config";
+	if (!FileSystem::Get()->IsFileExisted(configFile))
+	{
+		return;
+	}
+
+	byte* str = nullptr; size_t size;
+	FileUtils::ReadFile(configFile, str, size);
+
+	json j = json::parse(str);
+	EditorSettings::Get()->ReadFromJson(j);
+
+	FileUtils::FreeBuffer(str);
 }

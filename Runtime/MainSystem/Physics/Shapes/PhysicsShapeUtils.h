@@ -2,6 +2,8 @@
 
 #include "PhysicsShape.h"
 
+#include "../Materials/PhysicsDefaultMaterial.h"
+
 NAMESPACE_BEGIN
 
 class PhysicsShapeUtils
@@ -12,8 +14,9 @@ class PhysicsShapeUtils
 	friend class PhysicsShapeSphere;
 
 	template <typename PxGeo, typename S, typename M, typename... Args>
-	inline static void InitializeShape(S* shape, const M& material, bool exclusive, Args&&... args)
+	inline static void InitializeShape(S* shape, const M& pMaterial, bool exclusive, Args&&... args)
 	{
+		auto& material = bool(pMaterial) ? pMaterial : PhysicsDefaultMaterial::Get()->GetDefault();
 		auto physics = PhysX::Get()->GetPxPhysics();
 		auto& m = *(material->m_pxMaterial);
 		shape->m_pxShape = physics->createShape(PxGeo(std::forward<Args>(args)...), m, true);

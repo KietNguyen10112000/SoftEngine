@@ -46,6 +46,9 @@ protected:
 
 	void RunAnimatorMotionMatchingCallback(void (*callback)(AnimatorSkeletalArray*, ID), AnimatorSkeletalArray* animator, ID param);
 
+private:
+	void SetKinematicImpl(bool enable, bool wakeUp = true);
+
 public:
 	inline virtual PHYSICS_TYPE GetPhysicsType() const 
 	{

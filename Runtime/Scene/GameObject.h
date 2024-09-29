@@ -93,6 +93,7 @@ private:
 	ID m_committedSceneId = INVALID_ID;
 
 	String m_name;
+	size_t m_tag = INVALID_ID;
 
 	bool m_isLongLife = true;
 	bool m_recorded = false;
@@ -507,6 +508,11 @@ public:
 	inline auto& Name()
 	{
 		return m_name;
+	}
+
+	inline const auto& Tag() const
+	{
+		return m_tag;
 	}
 
 	inline auto* Lock()

@@ -481,7 +481,7 @@ void DebugGraphics::DrawLineSegment(const Vec3& begin, const Vec3& end, const Ve
 	cubeTransform *= Mat4::Translation(Vec3::UP * d);
 	cubeTransform *= rot;
 	cubeTransform *= Mat4::Translation(begin);
-	DrawCube(cubeTransform, color, true);
+	DrawCubeImpl(cubeTransform, color, true);
 }
 
 void DebugGraphics::DrawRay(const Vec3& origin, const Vec3& direction, const Vec4& headColor, const Vec4& tailColor, float thickness)
@@ -517,7 +517,7 @@ void DebugGraphics::DrawRay(const Vec3& origin, const Vec3& direction, const Vec
 	cubeTransform *= Mat4::Translation(Vec3::UP * d);
 	cubeTransform *= rot;
 	cubeTransform *= Mat4::Translation(origin);
-	DrawCube(cubeTransform, tailColor, true);
+	DrawCubeImpl(cubeTransform, tailColor, true);
 
 	renderer.lock.unlock();
 }
@@ -550,7 +550,7 @@ void DebugGraphics::DrawAABox(const AABox& aaBox, const Vec4& color, bool solid)
 	renderer.lock.unlock();
 }
 
-void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color, bool solid)
+void DebugGraphics::DrawCubeImpl(const Mat4& transform, const Vec4& color, bool solid)
 {
 	auto& renderer = solid ? m_solidCubeRenderer : m_wireFrameCubeRenderer;
 
@@ -571,6 +571,11 @@ void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color, bool soli
 	renderer.lock.unlock();
 }
 
+void DebugGraphics::DrawCube(const Mat4& transform, const Vec4& color, bool solid)
+{
+	DrawCubeImpl(Mat4::Scaling(Vec3(0.5f)) * transform, color, solid);
+}
+
 void DebugGraphics::DrawBox(const Box& box, const Vec4& color, bool solid)
 {
 	Mat4 mat = Mat4(
@@ -580,7 +585,7 @@ void DebugGraphics::DrawBox(const Box& box, const Vec4& color, bool solid)
 		Vec4(box.m_position + (box.m_d1 + box.m_d2 + box.m_d3) / 2.0f, 1.0f)
 	);
 
-	DrawCube(mat, color, solid);
+	DrawCubeImpl(mat, color, solid);
 }
 
 void DebugGraphics::DrawFrustum(const Frustum& frustum, const Vec4& color)

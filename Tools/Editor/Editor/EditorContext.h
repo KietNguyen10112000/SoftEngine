@@ -169,6 +169,9 @@ public:
 
 	void PlaceHolderTab(EditorTab* tab);
 
+	void SaveConfig();
+	void LoadConfig();
+
 public:
 	inline auto& Lock()
 	{

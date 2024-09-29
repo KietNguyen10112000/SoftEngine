@@ -444,6 +444,7 @@ void GameObject::DeserializeFromBinary(Serializer* serializer, const ByteStream&
 
 void GameObject::SerializeToJson(Serializer* serializer, json& j) const
 {
+	j["Tag"] = m_tag;
 	j["Name"] = ((GameObject*)this)->Name();
 	j["LocalTransform"] = m_localTransform;
 	j["GlobalTransformMat"] = m_globalTransform;
@@ -480,6 +481,11 @@ void GameObject::SerializeToJson(Serializer* serializer, json& j) const
 
 void GameObject::DeserializeFromJson(Serializer* serializer, const json& j)
 {
+	if (j.contains("Tag"))
+	{
+		m_tag = j["Tag"];
+	}
+
 	Name() = j["Name"];
 
 	Transform localTransform = j["LocalTransform"];

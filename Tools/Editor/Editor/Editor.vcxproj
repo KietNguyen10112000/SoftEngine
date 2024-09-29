@@ -171,6 +171,7 @@
     <ClCompile Include="SceneEditorTab.cpp" />
     <ClCompile Include="SceneEditorTabFactory.cpp" />
     <ClCompile Include="SystemDialog.cpp" />
+    <ClCompile Include="TagManager.cpp" />
     <ClCompile Include="TestScript.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -207,6 +208,7 @@
     <ClInclude Include="SceneEditorTabFactory.h" />
     <ClInclude Include="ScriptList.h" />
     <ClInclude Include="SystemDialog.h" />
+    <ClInclude Include="TagManager.h" />
     <ClInclude Include="TestScript.h" />
   </ItemGroup>
   <ItemGroup>

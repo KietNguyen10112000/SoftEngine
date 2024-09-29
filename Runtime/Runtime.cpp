@@ -57,6 +57,7 @@
 #include "MainSystem/Physics/Shapes/PhysicsShapePlane.h"
 #include "MainSystem/Physics/Shapes/PhysicsShapeBox.h"
 #include "MainSystem/Physics/Materials/PhysicsMaterial.h"
+#include "MainSystem/Physics/Materials/PhysicsDefaultMaterial.h"
 #include "MainSystem/Physics/Joints/RevoluteJoint.h"
 #include "MainSystem/Physics/PhysicsSystem.h"
 
@@ -145,6 +146,7 @@ void Runtime::Finalize()
 	resource::internal::Finalize();
 
 	Graphics::Finalize();
+	PhysicsDefaultMaterial::SingletonFinalize();
 	PhysX::SingletonFinalize();
 	MetadataParser::Finalize();
 	FileSystem::Finalize();
@@ -168,6 +170,7 @@ void Runtime::InitializeModules()
 	InitNetwork();
 	InitGraphics();
 	PhysX::SingletonInitialize();
+	PhysicsDefaultMaterial::SingletonInitialize();
 	InitPlugins();
 
 	BuiltinConstantBuffers::SingletonInitialize();

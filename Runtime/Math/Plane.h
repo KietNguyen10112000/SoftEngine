@@ -48,7 +48,7 @@ public:
 	inline Plane(const Vec3& point, const Vec3& normal)
 	{
 		m_normal = normal.Normal();
-		d = -normal.Dot(point);
+		d = -m_normal.Dot(point);
 	};
 
 public:

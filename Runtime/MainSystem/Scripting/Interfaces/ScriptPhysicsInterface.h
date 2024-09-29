@@ -26,6 +26,14 @@ public:
 		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
 	);
 
+	using OverlapResultCallback = PhysicsSystem::OverlapResultCallback;
+	SharedPtr<ActionBase> Overlap(
+		const OverlapResultCallback& callback,
+		const PhysicsShape* shape,
+		const Transform& transform,
+		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
+	);
+
 public:
 	using QueryPrevCheckCallback = PhysicsSystem::QueryPrevCheckCallback;
 	// see PhysicsSystem::BeginSerialQuery
@@ -38,6 +46,14 @@ public:
 		const PhysicsShape* shape,
 		const Transform& startTransform,
 		const Vec3& distance,
+		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
+	);
+
+	SharedPtr<ActionPhysicsQuery> SerialOverlap(
+		ID serialQueryID,
+		const OverlapResultCallback& callback,
+		const PhysicsShape* shape,
+		const Transform& transform,
 		const SharedPtr<PhysicsQueryFilterCallback>& filter = nullptr
 	);
 

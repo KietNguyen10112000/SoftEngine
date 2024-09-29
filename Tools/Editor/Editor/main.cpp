@@ -20,6 +20,7 @@
 
 #include "EditorFont.h"
 #include "EditorSettings.h"
+#include "TagManager.h"
 
 
 void RegisterSerializables()
@@ -35,6 +36,7 @@ void Initialize(Runtime* runtime)
 	DataInspector::Initialize();
 	ComponentInspector::SingletonInitialize();
 	EditorTabFactoryManager::SingletonInitialize();
+	TagManager::SingletonInitialize();
 
 	runtime->EventDispatcher()->AddListener(Runtime::EVENT_SCENE_CREATED,
 		[](Runtime* runtime, int argc, void** argv, ID editorId)
@@ -47,6 +49,8 @@ void Initialize(Runtime* runtime)
 				auto editorContextId = Runtime::Get()->GenericStorage()->Store(editorContext);
 				EditorContext::s_instance = editorContext;
 				EditorContext::s_instance->m_runTimeId = editorContextId;
+
+				EditorContext::Get()->LoadConfig();
 
 				/*{
 					auto factory = EditorTabFactoryManager::Get()->GetFactory<AnimatorEditorTabFactory>();
@@ -186,6 +190,9 @@ void Initialize(Runtime* runtime)
 void Finalize(Runtime* runtime)
 {
 	//Runtime::Get()->GenericStorage()->Remove(EditorContext::GetInstance()->m_runTimeId);
+	EditorContext::Get()->SaveConfig();
+
+	TagManager::SingletonFinalize();
 	EditorContext::GetInstance()->OnFinalize();
 
 	ComponentInspector::SingletonFinalize();

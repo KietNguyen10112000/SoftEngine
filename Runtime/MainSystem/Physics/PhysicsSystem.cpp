@@ -1007,6 +1007,12 @@ bool PhysicsSystem::SweepImpl(PhysicsSweepResult& output, const PhysicsShape* sh
 	return status;
 }
 
+#define PhysicsSystem_PxOverlapHit_Convert(ownHit, pxHit)						\
+{																				\
+ownHit.obj = ((PhysicsComponent*)pxHit.actor->userData)->GetGameObject();		\
+ownHit.shape = ((PhysicsShape*)pxHit.shape->userData);							\
+}
+
 bool PhysicsSystem::OverlapImpl(PhysicsOverlapResult& output, const PhysicsShape* shape, const Transform& startTransform, PhysicsQueryFilterCallback* filter)
 {
 	PhysicsSystem_QueryFilterCallback callback(filter);
@@ -1029,18 +1035,18 @@ bool PhysicsSystem::OverlapImpl(PhysicsOverlapResult& output, const PhysicsShape
 		filterData, (filter ? &callback : nullptr)
 	);
 
-	/*output.hasBlock = hit.hasBlock;
+	output.hasBlock = hit.hasBlock;
 	if (hit.hasBlock)
 	{
-		PhysicsSystem_PxSweepHit_Convert(output.block, hit.block);
+		PhysicsSystem_PxOverlapHit_Convert(output.block, hit.block);
 	}
 
 	output.touches.reserve(output.touches.size() + hit.nbTouches);
 	for (size_t i = 0; i < hit.nbTouches; i++)
 	{
 		auto& ownHit = output.touches.emplace_back();
-		PhysicsSystem_PxSweepHit_Convert(ownHit, hit.touches[i]);
-	}*/
+		PhysicsSystem_PxOverlapHit_Convert(ownHit, hit.touches[i]);
+	}
 
 	return status;
 }

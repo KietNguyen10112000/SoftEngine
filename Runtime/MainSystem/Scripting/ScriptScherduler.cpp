@@ -27,7 +27,7 @@ void ScriptScheduler::CallOnUpdate(float dt)
 
 void ScriptScheduler::CallOnGUI()
 {
-	for (auto& script : m_onUpdates)
+	for (auto& script : m_onGUIs)
 	{
 		script->OnGUI();
 	}

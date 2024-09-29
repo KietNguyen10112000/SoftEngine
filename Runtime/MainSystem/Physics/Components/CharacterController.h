@@ -12,6 +12,8 @@ class PxShape;
 
 NAMESPACE_BEGIN
 
+class PhysicsQueryFilterCallback;
+
 struct CharacterControllerDesc
 {
 	SharedPtr<PhysicsMaterial> material;
@@ -105,6 +107,8 @@ protected:
 
 	physx::PxQueryFilterCallback* m_defaultCCTFilterCallback = nullptr;
 
+	SharedPtr<PhysicsQueryFilterCallback> m_filterCallback = nullptr;
+
 	CharacterController();
 	~CharacterController();
 
@@ -173,6 +177,8 @@ public:
 
 	void CCTSetContactOffset(float contactOffset);
 	float CCTGetContactOffset() const;
+
+	void CCTSetFilterCallback(const SharedPtr<PhysicsQueryFilterCallback>& filter);
 
 };
 

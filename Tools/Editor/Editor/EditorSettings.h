@@ -4,6 +4,8 @@
 
 #include "Math/Math.h"
 
+#include "JSON/JSON.h"
+
 class EditorSettings : public Singleton<EditorSettings>
 {
 public:
@@ -19,5 +21,8 @@ public:
 	void OnApplySetting();
 
 	const char* GetPrecisionCFormatStr(float precision);
+
+	void WriteToJson(json& j);
+	void ReadFromJson(const json& j);
 
 };

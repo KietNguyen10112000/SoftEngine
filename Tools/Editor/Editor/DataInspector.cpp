@@ -11,14 +11,14 @@
 
 #include "IconFontCppHeaders/IconsFontAwesome6.h"
 
-#include "EditorSettings.h"
-
 #ifdef _WIN32
 #include <Windows.h>
 #include <shlobj_core.h>
 #undef near
 #undef far
 #endif
+
+#include "EditorSettings.h"
 
 #include "Graphics/Graphics.h"
 #include "Graphics/DebugGraphics.h"
