@@ -53,6 +53,8 @@ protected:
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 	void OnPropertyChanged(const UnknownAddress& var, const Variant& newValue) override;
 
+	virtual void OnDimensionsModified(void* what) override;
+
 public:
 	void OnComponentAdded() override;
 

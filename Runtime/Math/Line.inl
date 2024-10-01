@@ -23,7 +23,7 @@ inline bool Line::Intersect(const Plane& plane, Vec3& intersectPoint) const noex
 		return false;
 	}
 
-	intersectPoint = m_point - m_direction * (length / dot);
+	intersectPoint = m_point - ((plane.SideOf(m_point) < 0) ? -1.0f : 1.0f) * m_direction * (length / dot);
 	return true;
 }
 

@@ -115,7 +115,7 @@ class )";
 
 	str += "\t};\n};";
 
-	if (FileSystem::Get()->IsFileChanged(exportPath))
+	if (FileSystem::Get()->IsFileExisted(exportPath) && FileSystem::Get()->IsFileChanged(exportPath))
 	{
 		byte* buffer = nullptr; size_t size = 0;
 		FileUtils::ReadFile(exportPath, buffer, size);
@@ -129,6 +129,7 @@ class )";
 		FileUtils::FreeBuffer(buffer);
 	}
 
+	std::cout << "[LOG]: TagManager::ExportCppHeader\n";
 	FileUtils::WriteFile(exportPath.c_str(), str.c_str(), str.length());
 }
 

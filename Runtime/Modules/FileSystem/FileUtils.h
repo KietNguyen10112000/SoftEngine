@@ -28,13 +28,13 @@ inline void ReadFile(String fileName, byte*& buffer, size_t& fileSize)
 	// so custom memory allocator doesn't work
 	// using C instead
 
-	assert(!fileName.empty() && std::filesystem::exists(fileName.c_str()));
-
 	if (!std::filesystem::exists(fileName.c_str()))
 	{
 		std::cerr << "File: " << fileName << "doesn't exist!\n";
 	}
 
+	assert(!fileName.empty() && std::filesystem::exists(fileName.c_str()));
+	
 	FILE* fp = fopen(fileName.c_str(), "rb");
 	fseek(fp, 0L, SEEK_END);
 	size_t size = ftell(fp);

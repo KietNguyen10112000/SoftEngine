@@ -130,6 +130,8 @@ protected:
 
 	Handle<ClassMetadata> GetMetadata(size_t sign) override;
 
+	virtual void OnDimensionsModified(void* what) = 0;
+
 public:
 	void OnTransformChanged() override;
 

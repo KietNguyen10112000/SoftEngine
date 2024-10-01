@@ -14,6 +14,11 @@ DebugVar DebugVar::s_instance = {};
 
 void StartupConfig::LoadConfigFile(const String& path)
 {
+	if (!FileSystem::Get()->IsFileExisted(path))
+	{
+		return;
+	}
+
 	assert(std::filesystem::path(path.c_str()).is_absolute());
 
 	configFilePath = path;

@@ -562,6 +562,11 @@ void CharacterController::OnPrevUpdate(float dt)
 	m_committedVelocity = m_velocity;
 	m_lock.unlock();
 
+	if (GetCollision()->contactPairsCount == 0 && m_velocity == Vec3::ZERO)
+	{
+		m_velocity += m_gravity * 0.016f;
+	}
+
 	disp += m_velocity * dt;
 	
 	if (disp.Length() > 0.0001f)
@@ -894,6 +899,7 @@ void CharacterController::CCTSetSlopeLimit(float cosAngle)
 		PhysicsSystem, AsyncTaskRunnerST, cosAngle,
 		{
 			self->m_pxCharacterController->setSlopeLimit(cosAngle);
+			self->OnDimensionsModified(&self->m_pDerivedDesc->slopeLimit);
 		}
 	);
 }
@@ -910,6 +916,7 @@ void CharacterController::CCTSetStepOffset(float stepOffset)
 		PhysicsSystem, AsyncTaskRunnerST, stepOffset,
 		{
 			self->m_pxCharacterController->setStepOffset(stepOffset);
+			self->OnDimensionsModified(&self->m_pDerivedDesc->stepOffset);
 		}
 	);
 }
@@ -926,6 +933,7 @@ void CharacterController::CCTSetContactOffset(float contactOffset)
 		PhysicsSystem, AsyncTaskRunnerST, contactOffset,
 		{
 			self->m_pxCharacterController->setContactOffset(contactOffset);
+			self->OnDimensionsModified(&self->m_pDerivedDesc->contactOffset);
 		}
 	);
 }

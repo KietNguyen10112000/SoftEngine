@@ -184,6 +184,11 @@ bool FileSystem::IsFileChanged(const String& relativePath, bool updateLastModifi
 {
 	auto fullpath = std::filesystem::path(relativePath.c_str()).is_relative() ? FindAbsoluteFilePath(relativePath) : relativePath;
 
+	if (fullpath.empty())
+	{
+		std::cout << relativePath << "\n";
+	}
+
 	assert(!fullpath.empty());
 
 	//std::string_view fullpath = path;

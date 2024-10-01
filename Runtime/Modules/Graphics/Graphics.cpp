@@ -16,6 +16,7 @@ NAMESPACE_BEGIN
 
 int InvokeShaderCompiler(GRAPHICS_BACKEND_API backendAPI)
 {
+	return 0;
 	/*std::string_view file_path = __FILE__;
 	std::string_view dir_path = file_path.substr(0, file_path.rfind("\\"));
 	std::string msg;

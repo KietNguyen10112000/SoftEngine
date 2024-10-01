@@ -181,6 +181,7 @@ void CharacterControllerCapsule::CCTSetRadius(float radius)
 		{
 			auto cct = (PxCapsuleController*)self->m_pxCharacterController;
 			cct->setRadius(std::max(radius, 0.0f));
+			self->OnDimensionsModified(&self->m_desc.capsule.m_radius);
 		}
 	);
 }
@@ -198,6 +199,7 @@ void CharacterControllerCapsule::CCTSetHeight(float height)
 		{
 			auto cct = (PxCapsuleController*)self->m_pxCharacterController;
 			cct->setHeight(std::max(height, 0.0f));
+			self->OnDimensionsModified(&self->m_desc.capsule.m_height);
 		}
 	);
 }
@@ -307,6 +309,12 @@ Handle<ClassMetadata> CharacterControllerCapsule::GetMetadata(size_t sign)
 
 void CharacterControllerCapsule::OnPropertyChanged(const UnknownAddress& var, const Variant& newValue)
 {
+}
+
+void CharacterControllerCapsule::OnDimensionsModified(void* what)
+{
+	auto shape = GetShape(0)->m_pxShape;
+	shape->setGeometry(PxCapsuleGeometry(m_desc.capsule.m_radius + 1.0f * m_desc.contactOffset /*+ 0.05f*/, m_desc.capsule.m_height / 2.0f + 1.0f * m_desc.contactOffset /*+ 0.05f*/));
 }
 
 NAMESPACE_END

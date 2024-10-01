@@ -103,6 +103,11 @@ void SceneEditorTab::OnObjectSelected(GameObject* obj)
 
 void SceneEditorTab::RenderHierarchyPanelOf(GameObject* _obj)
 {
+	if (_obj->GetComponentRaw<GameObjectEditorComponent>() == nullptr)
+	{
+		return;
+	}
+
 	auto preFunc = [&](GameObject* obj)
 		{
 			ImGuiTreeNodeFlags nodeFlags = 
@@ -1033,6 +1038,8 @@ void SceneEditorTab::RenderObjectContextPopup(GameObject* obj)
 			Serializer s = {};
 			s.ReadFromJsonBuffer(j, Serializer::READ_FLAG_NONE);
 			s.Deserialize(uuid, o);
+
+			IndexObject(o);
 
 			if (obj->Parent().Get())
 			{
